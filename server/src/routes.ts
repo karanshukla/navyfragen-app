@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 import { isValidHandle } from "@atproto/syntax";
@@ -8,10 +7,7 @@ import { Agent } from "@atproto/api";
 import express from "express";
 import { getIronSession } from "iron-session";
 import type { AppContext } from "#/index";
-import { home } from "#/pages/home";
-import { login } from "#/pages/login";
 import { env } from "#/lib/env";
-import { page } from "#/lib/view";
 import * as Status from "#/lexicon/types/app/navyfragen/status";
 import * as Profile from "#/lexicon/types/app/bsky/actor/profile";
 
@@ -56,15 +52,9 @@ async function getSessionAgent(
 export const createRouter = (ctx: AppContext) => {
   const router = express.Router();
 
-  // Static assets
-  router.use(
-    "/public",
-    express.static(path.join(__dirname, "pages", "public"))
-  );
-
   // OAuth metadata
   router.get(
-    "/client-metadata.json",
+    "/api/client-metadata.json",
     handler((_req, res) => {
       return res.json(ctx.oauthClient.clientMetadata);
     })
@@ -72,7 +62,7 @@ export const createRouter = (ctx: AppContext) => {
 
   // OAuth callback to complete session creation
   router.get(
-    "/oauth/callback",
+    "/api/oauth/callback",
     handler(async (req, res) => {
       const params = new URLSearchParams(req.originalUrl.split("?")[1]);
       try {
@@ -86,73 +76,56 @@ export const createRouter = (ctx: AppContext) => {
         await clientSession.save();
       } catch (err) {
         ctx.logger.error({ err }, "oauth callback failed");
-        return res.redirect("/?error");
+        return res.status(500).json({ error: "OAuth callback failed" });
       }
-      return res.redirect("/");
-    })
-  );
-
-  // Login page
-  router.get(
-    "/login",
-    handler(async (_req, res) => {
-      return res.type("html").send(page(login({})));
+      return res
+        .status(200)
+        .json({ message: "OAuth successful, session created" });
     })
   );
 
   // Login handler
   router.post(
-    "/login",
+    "/api/login",
     handler(async (req, res) => {
-      // Validate
       const handle = req.body?.handle;
       if (typeof handle !== "string" || !isValidHandle(handle)) {
-        return res.type("html").send(page(login({ error: "invalid handle" })));
+        return res.status(400).json({ error: "invalid handle" });
       }
-
-      // Initiate the OAuth flow
       try {
         const url = await ctx.oauthClient.authorize(handle, {
           scope: "atproto transition:generic",
         });
-        return res.redirect(url.toString());
+        return res.json({ redirectUrl: url.toString() });
       } catch (err) {
         ctx.logger.error({ err }, "oauth authorize failed");
-        return res.type("html").send(
-          page(
-            login({
-              error:
-                err instanceof OAuthResolverError
-                  ? err.message
-                  : "couldn't initiate login",
-            })
-          )
-        );
+        const message =
+          err instanceof OAuthResolverError
+            ? err.message
+            : "couldn't initiate login";
+        return res.status(500).json({ error: message });
       }
     })
   );
 
   // Logout handler
   router.post(
-    "/logout",
+    "/api/logout",
     handler(async (req, res) => {
       const session = await getIronSession<Session>(req, res, {
         cookieName: "sid",
         password: env.COOKIE_SECRET,
       });
       await session.destroy();
-      return res.redirect("/");
+      return res.status(200).json({ message: "Logged out successfully" });
     })
   );
 
-  // Homepage
+  // API endpoint for homepage data
   router.get(
-    "/",
+    "/api/home-data",
     handler(async (req, res) => {
-      // If the user is signed in, get an agent which communicates with their server
       const agent = await getSessionAgent(req, res, ctx);
-
-      // Fetch data stored in our SQLite
       const statuses = await ctx.db
         .selectFrom("status")
         .selectAll()
@@ -167,63 +140,45 @@ export const createRouter = (ctx: AppContext) => {
             .orderBy("indexedAt", "desc")
             .executeTakeFirst()
         : undefined;
-
-      // Map user DIDs to their domain-name handles
       const didHandleMap = await ctx.resolver.resolveDidsToHandles(
         statuses.map((s) => s.authorDid)
       );
-
-      if (!agent) {
-        // Serve the logged-out view
-        return res.type("html").send(page(home({ statuses, didHandleMap })));
-      }
-
-      // Fetch additional information about the logged-in user
-      const profileResponse = await agent.com.atproto.repo
-        .getRecord({
-          repo: agent.assertDid,
-          collection: "app.bsky.actor.profile",
-          rkey: "self",
-        })
-        .catch(() => undefined);
-
-      const profileRecord = profileResponse?.data;
-
-      const profile =
-        profileRecord &&
-        Profile.isRecord(profileRecord.value) &&
-        Profile.validateRecord(profileRecord.value).success
-          ? profileRecord.value
-          : {};
-
-      // Serve the logged-in view
-      return res.type("html").send(
-        page(
-          home({
-            statuses,
-            didHandleMap,
-            profile,
-            myStatus,
+      let userProfile = null;
+      if (agent) {
+        const profileResponse = await agent.com.atproto.repo
+          .getRecord({
+            repo: agent.assertDid,
+            collection: "app.bsky.actor.profile",
+            rkey: "self",
           })
-        )
-      );
+          .catch(() => undefined);
+        if (
+          profileResponse?.data &&
+          Profile.isRecord(profileResponse.data.value) &&
+          Profile.validateRecord(profileResponse.data.value).success
+        ) {
+          userProfile = profileResponse.data.value;
+        }
+      }
+      return res.json({
+        statuses,
+        didHandleMap,
+        profile: userProfile,
+        myStatus,
+        isLoggedIn: !!agent,
+        currentUserDid: agent?.assertDid || null,
+      });
     })
   );
 
   // "Set status" handler
   router.post(
-    "/status",
+    "/api/status",
     handler(async (req, res) => {
-      // If the user is signed in, get an agent which communicates with their server
       const agent = await getSessionAgent(req, res, ctx);
       if (!agent) {
-        return res
-          .status(401)
-          .type("html")
-          .send("<h1>Error: Session required</h1>");
+        return res.status(401).json({ error: "Session required" });
       }
-
-      // Construct & validate their status record
       const rkey = TID.nextStr();
       const record = {
         $type: "app.navyfragen.status",
@@ -231,48 +186,33 @@ export const createRouter = (ctx: AppContext) => {
         createdAt: new Date().toISOString(),
       };
       if (!Status.validateRecord(record).success) {
-        return res
-          .status(400)
-          .type("html")
-          .send("<h1>Error: Invalid status</h1>");
+        return res.status(400).json({ error: "Invalid status" });
       }
-
-      let uri;
+      let recordUri;
       try {
-        // Write the status record to the user's repository
-        const res = await agent.com.atproto.repo.putRecord({
+        const putRecordRes = await agent.com.atproto.repo.putRecord({
           repo: agent.assertDid,
           collection: "app.navyfragen.status",
           rkey,
           record,
           validate: false,
         });
-        uri = res.data.uri;
+        recordUri = putRecordRes.data.uri;
       } catch (err) {
         ctx.logger.warn({ err }, "failed to write record");
-        return res
-          .status(500)
-          .type("html")
-          .send("<h1>Error: Failed to write record</h1>");
+        return res.status(500).json({ error: "Failed to write record" });
       }
-
       try {
-        // Optimistically update our SQLite
-        // This isn't strictly necessary because the write event will be
-        // handled in #/firehose/ingestor.ts, but it ensures that future reads
-        // will be up-to-date after this method finishes.
         await ctx.db
           .insertInto("status")
           .values({
-            uri,
+            uri: recordUri,
             authorDid: agent.assertDid,
             status: record.status,
             createdAt: record.createdAt,
             indexedAt: new Date().toISOString(),
           })
           .execute();
-
-        // Also create a Bluesky post with the status emoji
         try {
           await agent.post({
             text: `My current status: ${record.status}`,
@@ -284,7 +224,6 @@ export const createRouter = (ctx: AppContext) => {
             { err: postErr },
             "Failed to create Bluesky post, but status was set"
           );
-          // We don't want to fail the whole request if just the post creation fails
         }
       } catch (err) {
         ctx.logger.warn(
@@ -292,8 +231,44 @@ export const createRouter = (ctx: AppContext) => {
           "failed to update computed view; ignoring as it should be caught by the firehose"
         );
       }
+      return res
+        .status(201)
+        .json({ message: "Status updated", status: record, uri: recordUri });
+    })
+  );
 
-      return res.redirect("/");
+  // API endpoint to get current session/user info
+  router.get(
+    "/api/session",
+    handler(async (req, res) => {
+      const agent = await getSessionAgent(req, res, ctx);
+      if (!agent) {
+        return res.json({ isLoggedIn: false, profile: null, did: null });
+      }
+      let userProfileData = null;
+      try {
+        const profileResponse = await agent.com.atproto.repo.getRecord({
+          repo: agent.assertDid,
+          collection: "app.bsky.actor.profile",
+          rkey: "self",
+        });
+        if (
+          profileResponse?.data &&
+          Profile.isRecord(profileResponse.data.value)
+        ) {
+          userProfileData = profileResponse.data.value;
+        }
+      } catch (err) {
+        ctx.logger.warn(
+          { err, did: agent.assertDid },
+          "Failed to fetch profile for session"
+        );
+      }
+      return res.json({
+        isLoggedIn: true,
+        profile: userProfileData,
+        did: agent.assertDid,
+      });
     })
   );
 

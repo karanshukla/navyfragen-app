@@ -1,5 +1,5 @@
 {
-    "name": "navyfragen-app",
+    "name": "navyfragen-server",
     "version": "0.0.1",
     "description": "For answering anonymous questions and posting them to BlueSky",
     "author": "Karan Shukla",
@@ -23,6 +23,7 @@
         "@atproto/syntax": "^0.3.0",
         "@atproto/xrpc-server": "^0.7.9",
         "better-sqlite3": "^11.1.2",
+        "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "envalid": "^8.0.0",
         "express": "^4.19.2",
@@ -35,6 +36,7 @@
     "devDependencies": {
         "@atproto/lex-cli": "^0.4.1",
         "@types/better-sqlite3": "^7.6.11",
+        "@types/cors": "^2.8.18",
         "@types/express": "^4.17.21",
         "pino-pretty": "^11.0.0",
         "rimraf": "^5.0.0",
