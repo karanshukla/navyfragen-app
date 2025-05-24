@@ -271,6 +271,21 @@ export const createRouter = (ctx: AppContext) => {
             indexedAt: new Date().toISOString(),
           })
           .execute();
+
+        // Also create a Bluesky post with the status emoji
+        try {
+          await agent.post({
+            text: `My current status: ${record.status}`,
+            createdAt: record.createdAt,
+          });
+          ctx.logger.info("Created Bluesky post from Navyfragen with status");
+        } catch (postErr) {
+          ctx.logger.warn(
+            { err: postErr },
+            "Failed to create Bluesky post, but status was set"
+          );
+          // We don't want to fail the whole request if just the post creation fails
+        }
       } catch (err) {
         ctx.logger.warn(
           { err },
