@@ -1,6 +1,6 @@
-# AT Protocol "Statusphere" Example App
+# NavyFragen for BlueSky
 
-An example application covering:
+An application covering:
 
 - Signin via OAuth
 - Fetch information about users (profiles)
@@ -12,8 +12,8 @@ See https://atproto.com/guides/applications for a guide through the codebase.
 ## Getting Started
 
 ```sh
-git clone https://github.com/bluesky-social/statusphere-example-app.git
-cd statusphere-example-app
+git clone https://github.com/karanshukla/navyfragen-app.git
+cd navyfragen-app
 cp .env.template .env
 npm install
 npm run dev

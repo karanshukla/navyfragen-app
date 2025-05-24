@@ -16,11 +16,11 @@ export function isRecord(v: unknown): v is Record {
   return (
     isObj(v) &&
     hasProp(v, '$type') &&
-    (v.$type === 'xyz.statusphere.status#main' ||
-      v.$type === 'xyz.statusphere.status')
+    (v.$type === 'app.navyfragen.status#main' ||
+      v.$type === 'app.navyfragen.status')
   )
 }
 
 export function validateRecord(v: unknown): ValidationResult {
-  return lexicons.validate('xyz.statusphere.status#main', v)
+  return lexicons.validate('app.navyfragen.status#main', v)
 }

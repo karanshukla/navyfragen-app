@@ -238,9 +238,9 @@ export const schemaDict = {
       },
     },
   },
-  XyzStatusphereStatus: {
+  AppNavyfragenStatus: {
     lexicon: 1,
-    id: 'xyz.statusphere.status',
+    id: 'app.navyfragen.status',
     defs: {
       main: {
         type: 'record',
@@ -291,6 +291,6 @@ export const lexicons: Lexicons = new Lexicons(schemas)
 export const ids = {
   ComAtprotoLabelDefs: 'com.atproto.label.defs',
   AppBskyActorProfile: 'app.bsky.actor.profile',
-  XyzStatusphereStatus: 'xyz.statusphere.status',
+  AppNavyfragenStatus: 'app.navyfragen.status',
   ComAtprotoRepoStrongRef: 'com.atproto.repo.strongRef',
 }

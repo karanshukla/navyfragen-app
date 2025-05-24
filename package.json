@@ -1,8 +1,8 @@
 {
-  "name": "atproto-example-app",
+  "name": "navyfragen-app",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "For answering anonymous questions and posting them to BlueSky",
+  "author": "Karan Shukla",
   "license": "MIT",
   "main": "index.ts",
   "private": true,

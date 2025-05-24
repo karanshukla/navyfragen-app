@@ -1,58 +1,58 @@
-import type { Status } from '#/db'
-import { html } from '../lib/view'
-import { shell } from './shell'
+import type { Status } from "#/db";
+import { html } from "../lib/view";
+import { shell } from "./shell";
 
-const TODAY = new Date().toDateString()
+const TODAY = new Date().toDateString();
 
 const STATUS_OPTIONS = [
-  '👍',
-  '👎',
-  '💙',
-  '🥹',
-  '😧',
-  '😤',
-  '🙃',
-  '😉',
-  '😎',
-  '🤓',
-  '🤨',
-  '🥳',
-  '😭',
-  '😤',
-  '🤯',
-  '🫡',
-  '💀',
-  '✊',
-  '🤘',
-  '👀',
-  '🧠',
-  '👩‍💻',
-  '🧑‍💻',
-  '🥷',
-  '🧌',
-  '🦋',
-  '🚀',
-]
+  "👍",
+  "👎",
+  "💙",
+  "🥹",
+  "😧",
+  "😤",
+  "🙃",
+  "😉",
+  "😎",
+  "🤓",
+  "🤨",
+  "🥳",
+  "😭",
+  "😤",
+  "🤯",
+  "🫡",
+  "💀",
+  "✊",
+  "🤘",
+  "👀",
+  "🧠",
+  "👩‍💻",
+  "🧑‍💻",
+  "🥷",
+  "🧌",
+  "🦋",
+  "🚀",
+];
 
 type Props = {
-  statuses: Status[]
-  didHandleMap: Record<string, string>
-  profile?: { displayName?: string }
-  myStatus?: Status
-}
+  statuses: Status[];
+  didHandleMap: Record<string, string>;
+  profile?: { displayName?: string };
+  myStatus?: Status;
+};
 
 export function home(props: Props) {
   return shell({
-    title: 'Home',
+    title: "Home",
     content: content(props),
-  })
+  });
 }
 
 function content({ statuses, didHandleMap, profile, myStatus }: Props) {
   return html`<div id="root">
     <div class="error"></div>
     <div id="header">
-      <h1>Statusphere</h1>
+      <h1>NavyFragen</h1>
       <p>Set your status on the Atmosphere.</p>
     </div>
     <div class="container">
@@ -60,7 +60,7 @@ function content({ statuses, didHandleMap, profile, myStatus }: Props) {
         ${profile
           ? html`<form action="/logout" method="post" class="session-form">
               <div>
-                Hi, <strong>${profile.displayName || 'friend'}</strong>. What's
+                Hi, <strong>${profile.displayName || "friend"}</strong>. What's
                 your status today?
               </div>
               <div>
@@ -79,8 +79,8 @@ function content({ statuses, didHandleMap, profile, myStatus }: Props) {
           (status) =>
             html`<button
               class=${myStatus?.status === status
-                ? 'status-option selected'
-                : 'status-option'}
+                ? "status-option selected"
+                : "status-option"}
               name="status"
               value="${status}"
             >
@@ -89,10 +89,10 @@ function content({ statuses, didHandleMap, profile, myStatus }: Props) {
         )}
       </form>
       ${statuses.map((status, i) => {
-        const handle = didHandleMap[status.authorDid] || status.authorDid
-        const date = ts(status)
+        const handle = didHandleMap[status.authorDid] || status.authorDid;
+        const date = ts(status);
         return html`
-          <div class=${i === 0 ? 'status-line no-line' : 'status-line'}>
+          <div class=${i === 0 ? "status-line no-line" : "status-line"}>
             <div>
               <div class="status">${status.status}</div>
             </div>
@@ -103,19 +103,19 @@ function content({ statuses, didHandleMap, profile, myStatus }: Props) {
                 : `was feeling ${status.status} on ${date}`}
             </div>
           </div>
-        `
+        `;
       })}
     </div>
-  </div>`
+  </div>`;
 }
 
 function toBskyLink(did: string) {
-  return `https://bsky.app/profile/${did}`
+  return `https://bsky.app/profile/${did}`;
 }
 
 function ts(status: Status) {
-  const createdAt = new Date(status.createdAt)
-  const indexedAt = new Date(status.indexedAt)
-  if (createdAt < indexedAt) return createdAt.toDateString()
-  return indexedAt.toDateString()
+  const createdAt = new Date(status.createdAt);
+  const indexedAt = new Date(status.indexedAt);
+  if (createdAt < indexedAt) return createdAt.toDateString();
+  return indexedAt.toDateString();
 }

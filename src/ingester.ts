@@ -1,28 +1,28 @@
-import pino from 'pino'
-import { IdResolver } from '@atproto/identity'
-import { Firehose } from '@atproto/sync'
-import type { Database } from '#/db'
-import * as Status from '#/lexicon/types/xyz/statusphere/status'
+import pino from "pino";
+import { IdResolver } from "@atproto/identity";
+import { Firehose } from "@atproto/sync";
+import type { Database } from "#/db";
+import * as Status from "#/lexicon/types/app/navyfragen/status";
 
 export function createIngester(db: Database, idResolver: IdResolver) {
-  const logger = pino({ name: 'firehose ingestion' })
+  const logger = pino({ name: "firehose ingestion" });
   return new Firehose({
     idResolver,
     handleEvent: async (evt) => {
       // Watch for write events
-      if (evt.event === 'create' || evt.event === 'update') {
-        const now = new Date()
-        const record = evt.record
+      if (evt.event === "create" || evt.event === "update") {
+        const now = new Date();
+        const record = evt.record;
 
         // If the write is a valid status update
         if (
-          evt.collection === 'xyz.statusphere.status' &&
+          evt.collection === "app.navyfragen.status" &&
           Status.isRecord(record) &&
           Status.validateRecord(record).success
         ) {
           // Store the status in our SQLite
           await db
-            .insertInto('status')
+            .insertInto("status")
             .values({
               uri: evt.uri.toString(),
               authorDid: evt.did,
@@ -31,26 +31,29 @@ export function createIngester(db: Database, idResolver: IdResolver) {
               indexedAt: now.toISOString(),
             })
             .onConflict((oc) =>
-              oc.column('uri').doUpdateSet({
+              oc.column("uri").doUpdateSet({
                 status: record.status,
                 indexedAt: now.toISOString(),
               })
             )
-            .execute()
+            .execute();
         }
       } else if (
-        evt.event === 'delete' &&
-        evt.collection === 'xyz.statusphere.status'
+        evt.event === "delete" &&
+        evt.collection === "app.navyfragen.status"
       ) {
         // Remove the status from our SQLite
-        await db.deleteFrom('status').where('uri', '=', evt.uri.toString()).execute()
+        await db
+          .deleteFrom("status")
+          .where("uri", "=", evt.uri.toString())
+          .execute();
       }
     },
     onError: (err) => {
-      logger.error({ err }, 'error on firehose ingestion')
+      logger.error({ err }, "error on firehose ingestion");
     },
-    filterCollections: ['xyz.statusphere.status'],
+    filterCollections: ["app.navyfragen.status"],
     excludeIdentity: true,
     excludeAccount: true,
-  })
+  });
 }

@@ -1,19 +1,19 @@
-import { html } from '../lib/view'
-import { shell } from './shell'
+import { html } from "../lib/view";
+import { shell } from "./shell";
 
-type Props = { error?: string }
+type Props = { error?: string };
 
 export function login(props: Props) {
   return shell({
-    title: 'Log in',
+    title: "Log in",
     content: content(props),
-  })
+  });
 }
 
 function content({ error }: Props) {
   return html`<div id="root">
     <div id="header">
-      <h1>Statusphere</h1>
+      <h1>NavyFragen</h1>
       <p>Set your status on the Atmosphere.</p>
     </div>
     <div class="container">
@@ -32,5 +32,5 @@ function content({ error }: Props) {
         <a href="https://bsky.app">Sign up for Bluesky</a> to create one now!
       </div>
     </div>
-  </div>`
+  </div>`;
 }
