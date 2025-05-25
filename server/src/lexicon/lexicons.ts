@@ -183,6 +183,32 @@ export const schemaDict = {
       },
     },
   },
+  AppNavyfragenMessage: {
+    lexicon: 1,
+    id: 'app.navyfragen.message',
+    defs: {
+      main: {
+        type: 'record',
+        key: 'tid',
+        record: {
+          type: 'object',
+          required: ['message', 'createdAt'],
+          properties: {
+            message: {
+              type: 'string',
+              minLength: 1,
+              maxGraphemes: 1,
+              maxLength: 500,
+            },
+            createdAt: {
+              type: 'string',
+              format: 'datetime',
+            },
+          },
+        },
+      },
+    },
+  },
   AppBskyActorProfile: {
     lexicon: 1,
     id: 'app.bsky.actor.profile',
@@ -238,32 +264,6 @@ export const schemaDict = {
       },
     },
   },
-  AppNavyfragenStatus: {
-    lexicon: 1,
-    id: 'app.navyfragen.status',
-    defs: {
-      main: {
-        type: 'record',
-        key: 'tid',
-        record: {
-          type: 'object',
-          required: ['status', 'createdAt'],
-          properties: {
-            status: {
-              type: 'string',
-              minLength: 1,
-              maxGraphemes: 1,
-              maxLength: 32,
-            },
-            createdAt: {
-              type: 'string',
-              format: 'datetime',
-            },
-          },
-        },
-      },
-    },
-  },
   ComAtprotoRepoStrongRef: {
     lexicon: 1,
     id: 'com.atproto.repo.strongRef',
@@ -290,7 +290,7 @@ export const schemas: LexiconDoc[] = Object.values(schemaDict) as LexiconDoc[]
 export const lexicons: Lexicons = new Lexicons(schemas)
 export const ids = {
   ComAtprotoLabelDefs: 'com.atproto.label.defs',
+  AppNavyfragenMessage: 'app.navyfragen.message',
   AppBskyActorProfile: 'app.bsky.actor.profile',
-  AppNavyfragenStatus: 'app.navyfragen.status',
   ComAtprotoRepoStrongRef: 'com.atproto.repo.strongRef',
 }

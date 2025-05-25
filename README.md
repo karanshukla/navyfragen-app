@@ -1,5 +1,3 @@
-Navyfragen App
-
 ## Description
 
 Allows users to receive anonymous messages and post the answers directly to BlueSky.

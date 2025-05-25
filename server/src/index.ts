@@ -5,6 +5,7 @@ import { pino } from "pino";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import { Firehose } from "@atproto/sync";
 import { rateLimit } from "express-rate-limit";
+import cors from "cors";
 
 import { createDb, migrateToLatest } from "#/db";
 import { env } from "#/lib/env";
