@@ -1,8 +1,29 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { AppShell, createTheme, MantineProvider } from "@mantine/core";
+import {
+  AppShell,
+  Burger,
+  createTheme,
+  MantineProvider,
+  Group,
+  Title,
+  Container,
+  Flex,
+  NavLink,
+  Image,
+  rem,
+  Button,
+} from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link,
+  useLocation,
+} from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Status from "./pages/Status";
@@ -47,17 +68,83 @@ const theme = createTheme({
   headings: { fontFamily: "Inter, sans-serif" },
 });
 
+// Navigation wrapper component for active link styling
+function Navigation() {
+  const location = useLocation();
+
+  return (
+    <>
+      <NavLink
+        label="Home"
+        component={Link}
+        to="/"
+        active={location.pathname === "/"}
+      />
+      <NavLink
+        label="Login"
+        component={Link}
+        to="/login"
+        active={location.pathname === "/login"}
+      />
+      <NavLink
+        label="Status"
+        component={Link}
+        to="/status"
+        active={location.pathname === "/status"}
+      />
+    </>
+  );
+}
+
+// App layout component
+function AppLayout() {
+  const [opened, setOpened] = React.useState(false);
+  return (
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{ width: 250, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      padding="md"
+    >
+      <AppShell.Header></AppShell.Header>
+
+      <AppShell.Navbar p="md">
+        <Navigation />
+      </AppShell.Navbar>
+
+      <AppShell.Main pt={70}>
+        <Container>
+          {" "}
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/status" element={<Status />} />
+          </Routes>
+        </Container>
+      </AppShell.Main>
+    </AppShell>
+  );
+}
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider defaultColorScheme="auto" theme={theme}>
-      <Notifications />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/status" element={<Status />} />
-        </Routes>
-      </BrowserRouter>
-    </MantineProvider>
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider defaultColorScheme="auto" theme={theme}>
+        <Notifications />
+        <BrowserRouter>
+          <AppLayout />
+        </BrowserRouter>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </MantineProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );
