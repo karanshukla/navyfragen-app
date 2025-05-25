@@ -20,3 +20,7 @@ You will need to install Node, Git and a compatible web browser to run the app l
    npm run dev
    ```
 4. Open your web browser and navigate to `http://localhost:8080`.
+
+## Important to note
+
+Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with ./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/*
