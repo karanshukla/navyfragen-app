@@ -24,7 +24,6 @@ import {
 } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Status from "./pages/Status";
 import "@mantine/core/styles.css";
 
 const theme = createTheme({
@@ -96,13 +95,6 @@ function Navigation({ onLinkClick }: NavigationProps) {
         active={location.pathname === "/login"}
         onClick={handleClick}
       />
-      <NavLink
-        label="Status"
-        component={Link}
-        to="/status"
-        active={location.pathname === "/status"}
-        onClick={handleClick}
-      />
     </>
   );
 }
@@ -145,7 +137,6 @@ function AppLayout() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/status" element={<Status />} />
           </Routes>
         </Container>
       </AppShell.Main>
