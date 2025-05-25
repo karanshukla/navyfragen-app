@@ -4,6 +4,7 @@ import express, { type Express } from "express";
 import { pino } from "pino";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import { Firehose } from "@atproto/sync";
+import { rateLimit } from "express-rate-limit";
 
 import { createDb, migrateToLatest } from "#/db";
 import { env } from "#/lib/env";
@@ -68,6 +69,13 @@ export class Server {
     app.use(express.urlencoded({ extended: true }));
     app.use(router);
     app.use((_req, res) => res.sendStatus(404));
+    app.use(
+      rateLimit({
+        windowMs: 60 * 1000, // 1 minute
+        max: 100,
+        message: "Too many requests, please try again later.",
+      })
+    );
 
     // Bind our server to the port
     const server = app.listen(env.PORT);
