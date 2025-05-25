@@ -10,7 +10,6 @@ import {
   Center,
   Box,
 } from "@mantine/core";
-import { IconCheck } from "@tabler/icons-react";
 
 export default function Home() {
   return (
@@ -26,15 +25,7 @@ export default function Home() {
       </Paper>
 
       <Paper p="xl" radius="md" withBorder shadow="xs">
-        <List
-          spacing="md"
-          size="md"
-          icon={
-            <ThemeIcon color="deepBlue" size={24} radius="xl">
-              <IconCheck size="1rem" />
-            </ThemeIcon>
-          }
-        >
+        <List spacing="md" size="md">
           <List.Item>
             <Text fw={500}>Fast and free</Text>
             <Text c="dimmed">

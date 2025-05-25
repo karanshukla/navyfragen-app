@@ -22,8 +22,6 @@ import {
   Link,
   useLocation,
 } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Status from "./pages/Status";
@@ -99,14 +97,33 @@ function Navigation() {
 // App layout component
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
+
   return (
     <AppShell
       header={{ height: 60 }}
-      navbar={{ width: 250, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      navbar={{
+        width: 250,
+        breakpoint: "sm",
+        collapsed: { mobile: !opened, desktop: false },
+      }}
       padding="md"
     >
-      <AppShell.Header></AppShell.Header>
-
+      <AppShell.Header>
+        <Group h="100%" px="md">
+          <Burger
+            opened={opened}
+            onClick={() => setOpened((o) => !o)}
+            hiddenFrom="sm"
+            size="sm"
+          />
+          <Group justify="space-between" style={{ flex: 1 }}>
+            <Title order={3}>NavyFragen</Title>
+            <Group ml="auto" visibleFrom="sm">
+              <Navigation />
+            </Group>
+          </Group>
+        </Group>
+      </AppShell.Header>
       <AppShell.Navbar p="md">
         <Navigation />
       </AppShell.Navbar>
@@ -125,26 +142,13 @@ function AppLayout() {
   );
 }
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <MantineProvider defaultColorScheme="auto" theme={theme}>
-        <Notifications />
-        <BrowserRouter>
-          <AppLayout />
-        </BrowserRouter>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </MantineProvider>
-    </QueryClientProvider>
+    <MantineProvider defaultColorScheme="auto" theme={theme}>
+      <Notifications />
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </MantineProvider>
   </React.StrictMode>
 );
