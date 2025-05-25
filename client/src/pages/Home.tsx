@@ -1,25 +1,40 @@
-import { useEffect, useState } from "react";
-import { Button, Container, Title, Text, Group, Card } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
-
-type Status = {
-  uri: string;
-  authorDid: string;
-  status: string;
-};
-
-type HomeData = {
-  statuses: Status[];
-  didHandleMap: Record<string, string>;
-  isLoggedIn: boolean;
-};
+import {
+  Button,
+  Container,
+  Group,
+  List,
+  Text,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
 
 export default function Home() {
-  const navigate = useNavigate();
-
   return (
-    <Container>
-      <Title>NavyFragen</Title>
+    <Container size="md">
+      <Title>Navyfragen - Anonymous questions and answers on BlueSky</Title>
+      <Text c="dimmed" mt="md">
+        Receive questions from the web and post the answers directly on BlueSky.
+      </Text>
+
+      <List
+        mt={30}
+        spacing="sm"
+        size="sm"
+        icon={<ThemeIcon size={20} radius="xl"></ThemeIcon>}
+      >
+        <List.Item>
+          <b>Fast and free</b> – No downloads required, just log in with your
+          BlueSky credentials and share your inbox link
+        </List.Item>
+        <List.Item>
+          <b>Spam protection, without captchas</b> – Protected by Anubis, a
+          powerful bot detection service
+        </List.Item>
+        <List.Item>
+          <b>Open source</b> – Contribute directly to the project, or host your
+          own version if you want!
+        </List.Item>
+      </List>
     </Container>
   );
 }
