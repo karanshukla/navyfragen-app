@@ -67,8 +67,18 @@ const theme = createTheme({
 });
 
 // Navigation wrapper component for active link styling
-function Navigation() {
+interface NavigationProps {
+  onLinkClick?: () => void;
+}
+
+function Navigation({ onLinkClick }: NavigationProps) {
   const location = useLocation();
+
+  const handleClick = () => {
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
 
   return (
     <>
@@ -77,18 +87,21 @@ function Navigation() {
         component={Link}
         to="/"
         active={location.pathname === "/"}
+        onClick={handleClick}
       />
       <NavLink
         label="Login"
         component={Link}
         to="/login"
         active={location.pathname === "/login"}
+        onClick={handleClick}
       />
       <NavLink
         label="Status"
         component={Link}
         to="/status"
         active={location.pathname === "/status"}
+        onClick={handleClick}
       />
     </>
   );
@@ -116,16 +129,14 @@ function AppLayout() {
             hiddenFrom="sm"
             size="sm"
           />
-          <Group justify="space-between" style={{ flex: 1 }}>
+          <Group>
             <Title order={3}>NavyFragen</Title>
-            <Group ml="auto" visibleFrom="sm">
-              <Navigation />
-            </Group>
           </Group>
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        <Navigation />
+        {/* Navigation links, visible when Navbar is open (mobile) or always visible (desktop) */}
+        <Navigation onLinkClick={() => setOpened(false)} />
       </AppShell.Navbar>
 
       <AppShell.Main pt={70}>
