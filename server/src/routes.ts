@@ -513,16 +513,6 @@ export const createRouter = (ctx: AppContext) => {
       if (!token && req.cookies && req.cookies.auth_token) {
         token = req.cookies.auth_token;
       }
-      ctx.logger.info(
-        {
-          token,
-          headers: req.headers,
-          cookies: req.cookies,
-          query: req.query,
-          body: req.body,
-        },
-        "Token extraction in respond endpoint"
-      );
       let did = null;
       let agent = null;
       let rawToken = token;
@@ -533,10 +523,6 @@ export const createRouter = (ctx: AppContext) => {
       if (rawToken && typeof rawToken === "string") {
         try {
           did = Buffer.from(rawToken, "base64").toString("ascii");
-          ctx.logger.info(
-            { rawToken, did },
-            "Decoded DID from token in respond endpoint"
-          );
           // Check if session exists in DB before attempting restore
           const dbSession = await ctx.db
             .selectFrom("auth_session")
@@ -544,10 +530,6 @@ export const createRouter = (ctx: AppContext) => {
             .where("key", "=", did)
             .executeTakeFirst();
           if (!dbSession) {
-            ctx.logger.warn(
-              { did },
-              "No session found in database for DID in respond endpoint"
-            );
             sessionExists = false;
           } else {
             sessionExists = true;
@@ -557,80 +539,38 @@ export const createRouter = (ctx: AppContext) => {
               if (oauthSession) {
                 const { Agent } = require("@atproto/api");
                 agent = new Agent(oauthSession);
-                ctx.logger.info(
-                  { did, dbSession },
-                  "Session row found, attempting authenticated call"
-                );
                 try {
                   await agent.app.bsky.actor.getProfile({ actor: did });
                 } catch (err) {
-                  ctx.logger.warn(
-                    { did, err },
-                    "Session appears invalid or expired, cannot refresh (no refreshSession method available)"
-                  );
                   agent = null;
                 }
-              } else {
-                ctx.logger.warn(
-                  { did },
-                  "No OAuth session found for DID in respond endpoint"
-                );
               }
             } catch (restoreErr) {
-              ctx.logger.error(
-                { did, dbSession, restoreErr },
-                "Exception thrown by oauthClient.restore in respond endpoint"
-              );
+              // ignore
             }
           }
         } catch (err) {
-          ctx.logger.error(
-            { err, rawToken },
-            "Failed to decode/restore session from token in respond endpoint"
-          );
+          // ignore
         }
       }
       // Fallback: try to get session from request body (for dev/testing)
       if (!agent && req.body && req.body.token) {
         try {
           const did2 = Buffer.from(req.body.token, "base64").toString("ascii");
-          ctx.logger.info(
-            { did2 },
-            "Decoded fallback DID from body token in respond endpoint"
-          );
           const dbSession2 = await ctx.db
             .selectFrom("auth_session")
             .selectAll()
             .where("key", "=", did2)
             .executeTakeFirst();
-          if (!dbSession2) {
-            ctx.logger.warn(
-              { did2 },
-              "No fallback session found in database for DID in respond endpoint"
-            );
-            sessionExists = false;
-          } else {
-            sessionExists = true;
+          if (dbSession2) {
             const oauthSession = await ctx.oauthClient.restore(did2);
             if (oauthSession) {
               const { Agent } = require("@atproto/api");
               agent = new Agent(oauthSession);
-              ctx.logger.info(
-                { did2 },
-                "Restored fallback OAuth session and created Agent in respond endpoint"
-              );
-            } else {
-              ctx.logger.warn(
-                { did2 },
-                "No fallback OAuth session found for DID in respond endpoint"
-              );
             }
           }
         } catch (err) {
-          ctx.logger.error(
-            { err },
-            "Failed to decode/restore fallback session from body token in respond endpoint"
-          );
+          // ignore
         }
       }
       if (!agent) {
@@ -639,74 +579,88 @@ export const createRouter = (ctx: AppContext) => {
           errorMsg =
             "Session for this user was deleted or expired. Please log in again.";
         }
-        // Extra debug: dump session and oauthSession if available
-        let debugSession = null;
-        let debugOauthSession = null;
-        try {
-          // Try to fetch and parse the session row for debug
-          const debugRow = did
-            ? await ctx.db
-                .selectFrom("auth_session")
-                .selectAll()
-                .where("key", "=", did)
-                .executeTakeFirst()
-            : null;
-          debugSession = debugRow ? debugRow.session : null;
-          debugOauthSession = debugSession ? JSON.parse(debugSession) : null;
-        } catch (e) {
-          debugSession = `Error: ${e}`;
-        }
-        ctx.logger.error(
-          {
-            tid,
-            recipient,
-            original,
-            response,
-            token,
-            did,
-            sessionExists,
-            debugSession,
-            debugOauthSession,
-          },
-          "DEBUG: Not authenticated in respond endpoint - session and oauthSession dump"
-        );
         return res.status(401).json({ error: errorMsg });
       }
       // Post the response to Bluesky
       try {
-        ctx.logger.info(
-          { tid, recipient, original, response, did },
-          "Posting response to Bluesky in respond endpoint"
-        );
         const postRes = await agent.post({
           text: `Reply to anonymous message: "${original}"
 \n${response}`,
         });
-        ctx.logger.info(
-          { uri: postRes.uri },
-          "Successfully posted response to Bluesky in respond endpoint"
-        );
         // Convert at:// URI to a proper Bluesky web link
-        // Example: at://did:plc:jsvtouhag7lgnq75f2ze5raf/app.bsky.feed.post/3lq46b6qi572p
-        // becomes https://bsky.app/profile/did:plc:jsvtouhag7lgnq75f2ze5raf/post/3lq46b6qi572p
         let webUrl = null;
+        let profileName = null;
         const match = postRes.uri.match(
           /^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/
         );
         if (match) {
           const did = match[1];
           const rkey = match[2];
-          // DO NOT encode the colon in the DID, only encode the rkey
-          webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
+          // Try to resolve the handle/profile name for the DID
+          try {
+            const profileRes = await agent.app.bsky.actor.getProfile({
+              actor: did,
+            });
+            if (profileRes?.data?.handle) {
+              profileName = profileRes.data.handle;
+              webUrl = `https://bsky.app/profile/${profileName}/post/${encodeURIComponent(rkey)}`;
+            } else {
+              webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
+            }
+          } catch (e) {
+            webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
+          }
         }
         return res.json({ success: true, uri: postRes.uri, link: webUrl });
       } catch (err) {
-        ctx.logger.error(
-          { err, tid, recipient, original, response, did },
-          "Failed to post response to Bluesky in respond endpoint"
-        );
         return res.status(500).json({ error: "Failed to post to Bluesky" });
       }
+    })
+  );
+
+  // Public profile for a DID
+  router.get(
+    "/api/public-profile/:did",
+    handler(async (req, res) => {
+      const did = req.params.did;
+      if (!did) return res.status(400).json({ error: "DID required" });
+      try {
+        const agent = new AtpAgent({ service: "https://api.bsky.app" });
+        const profileResponse = await agent.getProfile({ actor: did });
+        if (profileResponse.success) {
+          return res.json({ profile: profileResponse.data });
+        } else {
+          return res.status(404).json({ error: "Profile not found" });
+        }
+      } catch (err) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+    })
+  );
+
+  // Allow anyone to send an anonymous message to a DID
+  router.post(
+    "/api/messages/send",
+    handler(async (req, res) => {
+      const { recipient, message } = req.body;
+      if (!recipient || !message) {
+        return res
+          .status(400)
+          .json({ error: "Recipient and message required" });
+      }
+      const tid = `anon-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      const msg = {
+        tid,
+        message,
+        createdAt: new Date().toISOString(),
+        recipient,
+      };
+      await ctx.db
+        .insertInto("message")
+        .values(msg)
+        .onConflict((oc) => oc.column("tid").doNothing())
+        .execute();
+      return res.json({ success: true });
     })
   );
 

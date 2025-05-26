@@ -26,6 +26,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
 import CookieTest from "./pages/CookieTest";
+import PublicProfile from "./pages/PublicProfile";
 import "@mantine/core/styles.css";
 
 // Use the API URL from environment variable
@@ -216,8 +217,7 @@ function AppLayout() {
             <Route path="/login" element={<Login />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/cookie-test" element={<CookieTest />} />
-            <Route path="/oauth/callback" element={<Login />} />
-            <Route path="/api/oauth/callback" element={<Login />} />
+            <Route path="/profile/:did" element={<PublicProfile />} />
           </Routes>
         </Container>
       </AppShell.Main>
