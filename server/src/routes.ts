@@ -470,11 +470,11 @@ export const createRouter = (ctx: AppContext) => {
         }
         return res.status(401).json({ error: errorMsg });
       }
-      // Post the response to Bluesky
+      // Post the response as text, including the original message and hashtag
       try {
+        const postText = `Q: ${original}\n\nA: ${response}\n\n#Navyfragen`;
         const postRes = await agent.post({
-          text: `Reply to anonymous message: "${original}"
-\n${response}`,
+          text: postText,
         });
         // Convert at:// URI to a proper Bluesky web link
         let webUrl = null;
@@ -565,6 +565,36 @@ export const createRouter = (ctx: AppContext) => {
         .where("key", "=", did)
         .executeTakeFirst();
       return res.json({ exists: !!userExists });
+    })
+  );
+
+  // Endpoint for a user to delete their data from the DB
+  router.delete(
+    "/api/delete-account",
+    handler(async (req, res) => {
+      // Get the token from Authorization header, query, or cookie
+      let token =
+        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
+      if (!token && req.cookies && req.cookies.auth_token) {
+        token = req.cookies.auth_token;
+      }
+      let did = null;
+      if (Array.isArray(token)) token = token[0];
+      if (typeof token === "object" && token !== null) token = String(token);
+      if (token && typeof token === "string") {
+        try {
+          did = Buffer.from(token, "base64").toString("ascii");
+        } catch (err) {
+          return res.status(400).json({ error: "Invalid token" });
+        }
+      }
+      if (!did) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      // Delete all messages and session for this DID
+      await ctx.db.deleteFrom("message").where("recipient", "=", did).execute();
+      await ctx.db.deleteFrom("auth_session").where("key", "=", did).execute();
+      return res.json({ success: true });
     })
   );
 

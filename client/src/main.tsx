@@ -132,6 +132,34 @@ function Navigation({ onLinkClick, isLoggedIn, userProfile }: NavigationProps) {
               handleClick();
             }}
           />
+          <NavLink
+            label="Delete My Data"
+            onClick={async () => {
+              if (
+                !window.confirm(
+                  "Are you sure you want to delete your account and all data? This cannot be undone."
+                )
+              )
+                return;
+              const token = localStorage.getItem("auth_token");
+              try {
+                const res = await fetch(`${API_URL}/api/delete-account`, {
+                  method: "DELETE",
+                  headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+                if (res.ok) {
+                  localStorage.removeItem("auth_token");
+                  alert("Your data has been deleted.");
+                  window.location.href = "/";
+                } else {
+                  const data = await res.json();
+                  alert(data.error || "Failed to delete data.");
+                }
+              } catch (e) {
+                alert("Failed to delete data.");
+              }
+            }}
+          />
         </>
       ) : (
         <>
