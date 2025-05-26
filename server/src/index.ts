@@ -22,7 +22,7 @@ import { IdResolver, MemoryCache } from "@atproto/identity";
 // Application state passed to the router and elsewhere
 export type AppContext = {
   db: Database;
-  ingester: Firehose;
+  ingester?: Firehose;
   logger: pino.Logger;
   oauthClient: OAuthClient;
   resolver: BidirectionalResolver;
@@ -46,18 +46,17 @@ export class Server {
     // Create the atproto utilities
     const oauthClient = await createClient(db);
     const baseIdResolver = createIdResolver();
-    const ingester = createIngester(db, baseIdResolver);
+    //const ingester = createIngester(db, baseIdResolver);
     const resolver = createBidirectionalResolver(baseIdResolver);
     const ctx = {
       db,
-      ingester,
       logger,
       oauthClient,
       resolver,
     };
 
     // Subscribe to events on the firehose
-    ingester.start();
+    //ingester.start();
 
     // Create our server
     const app: Express = express();
@@ -95,7 +94,7 @@ export class Server {
 
   async close() {
     this.ctx.logger.info("sigint received, shutting down");
-    await this.ctx.ingester.destroy();
+    //await this.ctx.ingester.destroy();
     return new Promise<void>((resolve) => {
       this.server.close(() => {
         this.ctx.logger.info("server closed");

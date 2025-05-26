@@ -170,7 +170,7 @@ export const createRouter = (ctx: AppContext) => {
     })
   );
 
-  // "Set status" handler
+  /*
   router.post(
     "/api/status",
     handler(async (req, res) => {
@@ -235,7 +235,7 @@ export const createRouter = (ctx: AppContext) => {
         .json({ message: "Status updated", status: record, uri: recordUri });
     })
   );
-
+  */
   // API endpoint to get current session/user info
   router.get(
     "/api/session",
