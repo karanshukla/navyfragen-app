@@ -70,12 +70,21 @@ export const createRouter = (ctx: AppContext) => {
           cookieName: "sid",
           password: env.COOKIE_SECRET,
         });
-        assert(!clientSession.did, "session already exists");
+        // Instead of asserting, always overwrite the session
         clientSession.did = session.did;
         await clientSession.save();
       } catch (err) {
-        ctx.logger.error({ err }, "oauth callback failed");
-        return res.status(500).json({ error: "OAuth callback failed" });
+        ctx.logger.error(
+          {
+            err: err instanceof Error ? err.stack || err.message : err,
+            params: Object.fromEntries(params.entries()),
+          },
+          "oauth callback failed"
+        );
+        return res.status(500).json({
+          error: "OAuth callback failed",
+          details: err instanceof Error ? err.message : String(err),
+        });
       }
       return res
         .status(200)
