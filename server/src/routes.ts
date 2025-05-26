@@ -121,11 +121,7 @@ export const createRouter = (ctx: AppContext) => {
       );
 
       try {
-        // The callback returns { session, ... }. The session is already stored by the sessionStore.
         const callbackResult = await ctx.oauthClient.callback(params);
-        // Do NOT manually save callbackResult.session to the DB!
-        // The session is already stored by the sessionStore (see auth/storage.ts).
-        // Only generate the token for the client.
         const token = Buffer.from(callbackResult.session.did).toString(
           "base64"
         );
@@ -189,121 +185,6 @@ export const createRouter = (ctx: AppContext) => {
     })
   );
 
-  // API endpoint for homepage data
-  router.get(
-    "/api/home-data",
-    handler(async (req, res) => {
-      const agent = await getSessionAgent(req, res, ctx);
-      const statuses = await ctx.db
-        .selectFrom("status")
-        .selectAll()
-        .orderBy("indexedAt", "desc")
-        .limit(10)
-        .execute();
-      const myStatus = agent
-        ? await ctx.db
-            .selectFrom("status")
-            .selectAll()
-            .where("authorDid", "=", agent.assertDid)
-            .orderBy("indexedAt", "desc")
-            .executeTakeFirst()
-        : undefined;
-      const didHandleMap = await ctx.resolver.resolveDidsToHandles(
-        statuses.map((s) => s.authorDid)
-      );
-      let userProfile = null;
-      if (agent) {
-        const profileResponse = await agent.com.atproto.repo
-          .getRecord({
-            repo: agent.assertDid,
-            collection: "app.bsky.actor.profile",
-            rkey: "self",
-          })
-          .catch(() => undefined);
-        if (
-          profileResponse?.data &&
-          Profile.isRecord(profileResponse.data.value) &&
-          Profile.validateRecord(profileResponse.data.value).success
-        ) {
-          userProfile = profileResponse.data.value;
-        }
-      }
-      return res.json({
-        statuses,
-        didHandleMap,
-        profile: userProfile,
-        myStatus,
-        isLoggedIn: !!agent,
-        currentUserDid: agent?.assertDid || null,
-      });
-    })
-  );
-
-  /*
-  router.post(
-    "/api/status",
-    handler(async (req, res) => {
-      const agent = await getSessionAgent(req, res, ctx);
-      if (!agent) {
-        return res.status(401).json({ error: "Session required" });
-      }
-      const rkey = TID.nextStr();
-      const record = {
-        $type: "app.navyfragen.status",
-        status: req.body?.status,
-        createdAt: new Date().toISOString(),
-      };
-      if (!Status.validateRecord(record).success) {
-        return res.status(400).json({ error: "Invalid status" });
-      }
-      let recordUri;
-      try {
-        const putRecordRes = await agent.com.atproto.repo.putRecord({
-          repo: agent.assertDid,
-          collection: "app.navyfragen.status",
-          rkey,
-          record,
-          validate: false,
-        });
-        recordUri = putRecordRes.data.uri;
-      } catch (err) {
-        ctx.logger.warn({ err }, "failed to write record");
-        return res.status(500).json({ error: "Failed to write record" });
-      }
-      try {
-        await ctx.db
-          .insertInto("status")
-          .values({
-            uri: recordUri,
-            authorDid: agent.assertDid,
-            status: record.status,
-            createdAt: record.createdAt,
-            indexedAt: new Date().toISOString(),
-          })
-          .execute();
-        try {
-          await agent.post({
-            text: `My current status: ${record.status}`,
-            createdAt: record.createdAt,
-          });
-          ctx.logger.info("Created Bluesky post from Navyfragen with status");
-        } catch (postErr) {
-          ctx.logger.warn(
-            { err: postErr },
-            "Failed to create Bluesky post, but status was set"
-          );
-        }
-      } catch (err) {
-        ctx.logger.warn(
-          { err },
-          "failed to update computed view; ignoring as it should be caught by the firehose"
-        );
-      }
-      return res
-        .status(201)
-        .json({ message: "Status updated", status: record, uri: recordUri });
-    })
-  );  */ // API endpoint to get current session/user info
   router.get(
     "/api/session",
     handler(async (req, res) => {
@@ -422,9 +303,8 @@ export const createRouter = (ctx: AppContext) => {
     "/api/messages/:recipient",
     handler(async (req, res) => {
       const recipient = req.params.recipient;
-      if (!recipient) {
+      if (!recipient)
         return res.status(400).json({ error: "Recipient DID required" });
-      }
       const messages = await ctx.db
         .selectFrom("message")
         .selectAll()

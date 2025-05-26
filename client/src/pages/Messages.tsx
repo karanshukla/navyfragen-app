@@ -245,8 +245,26 @@ export default function Messages() {
           <Text fw={500} size="lg">
             Hi, {session.profile.displayName || "there"}!
           </Text>
-          <Text c="dimmed" size="sm" mb="md">
-            {session.did}
+          <Text size="sm">
+            You can share your inbox link to receive anonymous questions.
+          </Text>
+          <Text size="sm" mt="md">
+            Your inbox link:{" "}
+            <Button
+              size="xs"
+              variant="outline"
+              color="blue"
+              onClick={() => {
+                const link = `${window.location.origin}/profile/${session.did}`;
+                navigator.clipboard.writeText(link);
+              }}
+              style={{ marginLeft: 8 }}
+            >
+              Copy Inbox Link
+            </Button>
+            <span style={{ marginLeft: 8 }}>
+              {`${window.location.origin}/profile/${session.did}`}
+            </span>
           </Text>
         </Paper>
       ) : null}
@@ -318,17 +336,19 @@ export default function Messages() {
                       </Button>
                     </Stack>
                   )}
-                  {lastPostLink && lastPostLink.tid === msg.tid && lastPostLink.link && (
-                    <Alert color="blue" mt="xs" title="Response posted!">
-                      <a
-                        href={lastPostLink.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View your Bluesky post
-                      </a>
-                    </Alert>
-                  )}
+                  {lastPostLink &&
+                    lastPostLink.tid === msg.tid &&
+                    lastPostLink.link && (
+                      <Alert color="blue" mt="xs" title="Response posted!">
+                        <a
+                          href={lastPostLink.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View your Bluesky post
+                        </a>
+                      </Alert>
+                    )}
                 </Paper>
               ))}
             </Stack>
