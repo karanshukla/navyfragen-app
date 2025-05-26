@@ -10,6 +10,7 @@
         "dev": "tsx watch --clear-screen=false src/index.ts | pino-pretty",
         "build": "tsup",
         "start": "node dist/index.js",
+        "postinstall": "npm run build",
         "lexgen": "lex gen-server ./src/lexicon ./lexicons/*",
         "clean": "rimraf dist coverage",
         "lint": "eslint . --ext .ts",
