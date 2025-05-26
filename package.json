@@ -10,5 +10,9 @@
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
+    },
+    "dependencies": {
+        "@types/ws": "^8.18.1",
+        "ws": "^8.18.2"
     }
 }

@@ -18,6 +18,8 @@ import {
 } from "#/id-resolver";
 import type { Database } from "#/db";
 import { IdResolver, MemoryCache } from "@atproto/identity";
+import { createFirehoseStream } from "./firehose";
+import { ingestFirehoseMessages } from "./ingest";
 
 // Application state passed to the router and elsewhere
 export type AppContext = {
@@ -56,7 +58,10 @@ export class Server {
     };
 
     // Subscribe to events on the firehose
-    //ingester.start();
+    (async () => {
+      const firehose = createFirehoseStream();
+      ingestFirehoseMessages(db, firehose);
+    })();
 
     // Create our server
     const app: Express = express();

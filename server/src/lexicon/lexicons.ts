@@ -192,17 +192,19 @@ export const schemaDict = {
         key: 'tid',
         record: {
           type: 'object',
-          required: ['message', 'createdAt'],
+          required: ['message', 'createdAt', 'recipient'],
           properties: {
             message: {
               type: 'string',
               minLength: 1,
-              maxGraphemes: 1,
               maxLength: 500,
             },
             createdAt: {
               type: 'string',
               format: 'datetime',
+            },
+            recipient: {
+              type: 'string',
             },
           },
         },

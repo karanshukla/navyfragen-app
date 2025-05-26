@@ -9,6 +9,7 @@ import { CID } from 'multiformats/cid'
 export interface Record {
   message: string
   createdAt: string
+  recipient: string
   [k: string]: unknown
 }
 

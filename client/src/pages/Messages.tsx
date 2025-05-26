@@ -8,6 +8,8 @@ import {
   Loader,
   Center,
   Alert,
+  Button,
+  Group,
 } from "@mantine/core";
 
 // Use the API URL from environment variable
@@ -24,6 +26,7 @@ export default function Messages() {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [welcomeMessage, setWelcomeMessage] = useState<boolean>(false);
+  const [messages, setMessages] = useState<any[]>([]);
 
   // Show a welcome message for newly logged-in users
   useEffect(() => {
@@ -85,15 +88,111 @@ export default function Messages() {
 
         setSession(data);
         setIsLoading(false);
+        // Fetch messages if logged in
+        if (data.isLoggedIn && data.did) {
+          fetchMessages(data.did);
+        }
       } catch (err) {
         setError("Failed to load session data");
         setIsLoading(false);
         console.error("Session error:", err);
       }
     };
-
+    const fetchMessages = async (did: string) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await fetch(
+          `${API_URL}/api/messages/${encodeURIComponent(did)}`
+        );
+        if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
+        const data = await res.json();
+        setMessages(data.messages || []);
+        setIsLoading(false);
+      } catch (err) {
+        setError("Failed to load messages");
+        setIsLoading(false);
+      }
+    };
     fetchSession();
   }, []);
+
+  // Add example messages for testing
+  const addExampleMessages = async () => {
+    if (!session?.did) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Example: POST to a new endpoint to add test messages (you must implement this endpoint in your backend)
+      const res = await fetch(`${API_URL}/api/messages/example`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient: session.did }),
+      });
+      if (!res.ok) throw new Error("Failed to add example messages");
+      // Re-fetch messages after adding
+      const data = await res.json();
+      setMessages(data.messages || []);
+    } catch (err) {
+      setError("Failed to add example messages");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Respond to a message
+  const [respondingTid, setRespondingTid] = useState<string | null>(null);
+  const [responseText, setResponseText] = useState<string>("");
+
+  const handleDelete = async (tid: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/messages/${tid}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete message");
+      setMessages((msgs) => msgs.filter((msg) => msg.tid !== tid));
+    } catch (err) {
+      setError("Failed to delete message");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRespond = (tid: string) => {
+    setRespondingTid(tid);
+    setResponseText("");
+  };
+
+  const handleSendResponse = async (msg: any) => {
+    if (!responseText.trim()) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`${API_URL}/api/messages/respond`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          tid: msg.tid,
+          recipient: msg.recipient,
+          original: msg.message,
+          response: responseText,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to send response");
+      setRespondingTid(null);
+      setResponseText("");
+    } catch (err) {
+      setError("Failed to send response");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -116,6 +215,9 @@ export default function Messages() {
   return (
     <Container>
       <Title mb="md">Your Messages</Title>
+      <Button mb="md" onClick={addExampleMessages} disabled={isLoading}>
+        Add Example Messages
+      </Button>
       {error && <Alert color="red">{error}</Alert>}
 
       {welcomeMessage && (
@@ -141,16 +243,77 @@ export default function Messages() {
         </Paper>
       ) : null}
 
-      {/* Message list placeholder */}
+      {/* Message list */}
       <Stack gap="md">
         <Paper p="md" withBorder>
           <Text fw={500} size="md" mb="sm">
             Inbox
           </Text>
-          <Text c="dimmed" size="sm" mb="md">
-            You don't have any messages yet. Share your inbox link to start
-            receiving questions.
-          </Text>
+          {messages.length === 0 ? (
+            <Text c="dimmed" size="sm" mb="md">
+              You don't have any messages yet. Share your inbox link to start
+              receiving questions.
+            </Text>
+          ) : (
+            <Stack gap="sm">
+              {messages.map((msg) => (
+                <Paper key={msg.tid} p="sm" withBorder>
+                  <Text size="sm">{msg.message}</Text>
+                  <Text c="dimmed" size="xs">
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </Text>
+                  <Group gap="xs" mt="xs">
+                    <Button
+                      size="xs"
+                      color="red"
+                      variant="light"
+                      onClick={() => handleDelete(msg.tid)}
+                      disabled={isLoading}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      size="xs"
+                      color="blue"
+                      variant="light"
+                      onClick={() => handleRespond(msg.tid)}
+                      disabled={isLoading}
+                    >
+                      Respond
+                    </Button>
+                  </Group>
+                  {respondingTid === msg.tid && (
+                    <Stack gap="xs" mt="xs">
+                      <textarea
+                        value={responseText}
+                        onChange={(e) => setResponseText(e.target.value)}
+                        rows={3}
+                        style={{ width: "100%" }}
+                        placeholder="Type your response..."
+                        disabled={isLoading}
+                      />
+                      <Button
+                        size="xs"
+                        color="green"
+                        onClick={() => handleSendResponse(msg)}
+                        disabled={isLoading || !responseText.trim()}
+                      >
+                        Send to Bluesky
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => setRespondingTid(null)}
+                        disabled={isLoading}
+                      >
+                        Cancel
+                      </Button>
+                    </Stack>
+                  )}
+                </Paper>
+              ))}
+            </Stack>
+          )}
         </Paper>
       </Stack>
     </Container>
