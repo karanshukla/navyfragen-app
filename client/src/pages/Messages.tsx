@@ -143,6 +143,10 @@ export default function Messages() {
   // Respond to a message
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
+  const [lastPostLink, setLastPostLink] = useState<{
+    tid: string;
+    link: string;
+  } | null>(null);
 
   const handleDelete = async (tid: string) => {
     setIsLoading(true);
@@ -185,8 +189,12 @@ export default function Messages() {
         }),
       });
       if (!res.ok) throw new Error("Failed to send response");
+      const data = await res.json();
       setRespondingTid(null);
       setResponseText("");
+      if (data.link) {
+        setLastPostLink({ tid: msg.tid, link: data.link });
+      }
     } catch (err) {
       setError("Failed to send response");
     } finally {
@@ -309,6 +317,17 @@ export default function Messages() {
                         Cancel
                       </Button>
                     </Stack>
+                  )}
+                  {lastPostLink && lastPostLink.tid === msg.tid && lastPostLink.link && (
+                    <Alert color="blue" mt="xs" title="Response posted!">
+                      <a
+                        href={lastPostLink.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View your Bluesky post
+                      </a>
+                    </Alert>
                   )}
                 </Paper>
               ))}

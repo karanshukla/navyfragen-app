@@ -121,37 +121,17 @@ export const createRouter = (ctx: AppContext) => {
       );
 
       try {
-        // The callback returns { session, ... }. We want the session property, which is the user's session with tokens.
+        // The callback returns { session, ... }. The session is already stored by the sessionStore.
         const callbackResult = await ctx.oauthClient.callback(params);
-        // Log for debug
-        console.log("OAuth callback result:", callbackResult);
-        // Store the full session object (with accessToken, refreshToken, etc)
-        await ctx.db
-          .insertInto("auth_session")
-          .values({
-            key: callbackResult.session.did,
-            session: JSON.stringify(callbackResult.session),
-          })
-          .onConflict((oc) =>
-            oc
-              .column("key")
-              .doUpdateSet({ session: JSON.stringify(callbackResult.session) })
-          )
-          .execute();
-
-        console.log(
-          "Saved session to DB with DID:",
-          callbackResult.session.did
-        );
-
-        // Generate a simple token by encoding the DID
+        // Do NOT manually save callbackResult.session to the DB!
+        // The session is already stored by the sessionStore (see auth/storage.ts).
+        // Only generate the token for the client.
         const token = Buffer.from(callbackResult.session.did).toString(
           "base64"
         );
-
         // Redirect to client with token in query param
         return res.redirect(`${env.CLIENT_URL}/messages?token=${token}`);
-      } catch (err) {n
+      } catch (err) {
         ctx.logger.error(
           {
             err: err instanceof Error ? err.stack || err.message : err,
@@ -362,12 +342,15 @@ export const createRouter = (ctx: AppContext) => {
         let authenticated = false;
         try {
           const oauthSession = await ctx.oauthClient.restore(did);
+          // Remove all session expiration/refresh logic, just check if oauthSession exists
           if (oauthSession) {
             agent = new Agent(oauthSession);
             // Test if the session is valid by checking assertDid
             const agentDid = agent.assertDid;
             authenticated = true;
             console.log("Authenticated session for DID:", agentDid);
+          } else {
+            console.log("No OAuth session found for DID:", did);
           }
         } catch (err) {
           console.warn(
@@ -568,23 +551,25 @@ export const createRouter = (ctx: AppContext) => {
             sessionExists = false;
           } else {
             sessionExists = true;
+            let oauthSession;
             try {
-              ctx.logger.info(
-                { did, dbSession },
-                "Session row found, attempting oauthClient.restore"
-              );
-              const oauthSession = await ctx.oauthClient.restore(did);
-              ctx.logger.info(
-                { did, oauthSession },
-                "Result of oauthClient.restore"
-              );
+              oauthSession = await ctx.oauthClient.restore(did);
               if (oauthSession) {
                 const { Agent } = require("@atproto/api");
                 agent = new Agent(oauthSession);
                 ctx.logger.info(
-                  { did },
-                  "Restored OAuth session and created Agent in respond endpoint"
+                  { did, dbSession },
+                  "Session row found, attempting authenticated call"
                 );
+                try {
+                  await agent.app.bsky.actor.getProfile({ actor: did });
+                } catch (err) {
+                  ctx.logger.warn(
+                    { did, err },
+                    "Session appears invalid or expired, cannot refresh (no refreshSession method available)"
+                  );
+                  agent = null;
+                }
               } else {
                 ctx.logger.warn(
                   { did },
@@ -701,7 +686,20 @@ export const createRouter = (ctx: AppContext) => {
           { uri: postRes.uri },
           "Successfully posted response to Bluesky in respond endpoint"
         );
-        return res.json({ success: true, uri: postRes.uri });
+        // Convert at:// URI to a proper Bluesky web link
+        // Example: at://did:plc:jsvtouhag7lgnq75f2ze5raf/app.bsky.feed.post/3lq46b6qi572p
+        // becomes https://bsky.app/profile/did:plc:jsvtouhag7lgnq75f2ze5raf/post/3lq46b6qi572p
+        let webUrl = null;
+        const match = postRes.uri.match(
+          /^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/
+        );
+        if (match) {
+          const did = match[1];
+          const rkey = match[2];
+          // DO NOT encode the colon in the DID, only encode the rkey
+          webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
+        }
+        return res.json({ success: true, uri: postRes.uri, link: webUrl });
       } catch (err) {
         ctx.logger.error(
           { err, tid, recipient, original, response, did },
