@@ -17,27 +17,42 @@ const API_URL = import.meta.env.VITE_API_URL || "";
 export default function PublicProfile() {
   const { did } = useParams();
   const [profile, setProfile] = useState<any>(null);
+  const [userExists, setUserExists] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setError(null);
-      setProfile(null);
-      try {
-        const res = await fetch(
-          `${API_URL}/api/public-profile/${encodeURIComponent(did)}`
-        );
-        if (!res.ok) throw new Error("Profile not found");
-        const data = await res.json();
-        setProfile(data.profile);
-      } catch (err) {
-        setError("Profile not found");
-      }
-    };
-    if (did) fetchProfile();
+    if (!did) return;
+    setLoading(true);
+    setError(null);
+    // Check if user exists in app DB first
+    fetch(`${API_URL}/api/user-exists/${encodeURIComponent(did)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.exists) {
+          setUserExists(false);
+          setLoading(false);
+        } else {
+          setUserExists(true);
+          // Fetch public profile only if user exists
+          fetch(`${API_URL}/api/public-profile/${encodeURIComponent(did)}`)
+            .then((res) => res.json())
+            .then((data) => {
+              setProfile(data.profile || null);
+              setLoading(false);
+            })
+            .catch(() => {
+              setError("Failed to load profile");
+              setLoading(false);
+            });
+        }
+      })
+      .catch(() => {
+        setError("Failed to check user existence");
+        setLoading(false);
+      });
   }, [did]);
 
   const handleSend = async () => {
@@ -59,6 +74,20 @@ export default function PublicProfile() {
       setLoading(false);
     }
   };
+
+  if (loading) return <Container>Loading...</Container>;
+  if (userExists === false)
+    return (
+      <Container>
+        <Alert color="red">This user has not signed up for NavyFragen.</Alert>
+      </Container>
+    );
+  if (error)
+    return (
+      <Container>
+        <Alert color="red">{error}</Alert>
+      </Container>
+    );
 
   return (
     <Container>

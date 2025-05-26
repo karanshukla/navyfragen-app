@@ -305,6 +305,15 @@ export const createRouter = (ctx: AppContext) => {
       const recipient = req.params.recipient;
       if (!recipient)
         return res.status(400).json({ error: "Recipient DID required" });
+      // Check if recipient exists in auth_session table
+      const userExists = await ctx.db
+        .selectFrom("auth_session")
+        .select("key")
+        .where("key", "=", recipient)
+        .executeTakeFirst();
+      if (!userExists) {
+        return res.status(404).json({ error: "User not found" });
+      }
       const messages = await ctx.db
         .selectFrom("message")
         .selectAll()
@@ -541,6 +550,21 @@ export const createRouter = (ctx: AppContext) => {
         .onConflict((oc) => oc.column("tid").doNothing())
         .execute();
       return res.json({ success: true });
+    })
+  );
+
+  // Check if a DID exists in the app's database
+  router.get(
+    "/api/user-exists/:did",
+    handler(async (req, res) => {
+      const did = req.params.did;
+      if (!did) return res.status(400).json({ error: "DID required" });
+      const userExists = await ctx.db
+        .selectFrom("auth_session")
+        .select("key")
+        .where("key", "=", did)
+        .executeTakeFirst();
+      return res.json({ exists: !!userExists });
     })
   );
 
