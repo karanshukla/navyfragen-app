@@ -8,7 +8,6 @@ import express from "express";
 import { getIronSession } from "iron-session";
 import type { AppContext } from "#/index";
 import { env } from "#/lib/env";
-import * as Status from "#/lexicon/types/app/navyfragen/status";
 import * as Profile from "#/lexicon/types/app/bsky/actor/profile";
 
 type Session = { did: string };

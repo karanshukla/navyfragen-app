@@ -9,7 +9,6 @@ import cors from "cors";
 
 import { createDb, migrateToLatest } from "#/db";
 import { env } from "#/lib/env";
-import { createIngester } from "#/ingester";
 import { createRouter } from "#/routes";
 import { createClient } from "#/auth/client";
 import {
@@ -63,6 +62,14 @@ export class Server {
     // Create our server
     const app: Express = express();
     app.set("trust proxy", true);
+
+    // Enable CORS for the frontend client
+    app.use(
+      cors({
+        origin: env.CLIENT_URL,
+        credentials: true, // Allow cookies to be sent
+      })
+    );
 
     // Routes & middlewares
     const router = createRouter(ctx);
