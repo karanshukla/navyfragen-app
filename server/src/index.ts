@@ -68,12 +68,12 @@ export class Server {
         origin: env.CLIENT_URL,
         credentials: true, // Allow cookies to be sent
       })
-    );
-
-    // Routes & middlewares
-    const router = createRouter(ctx);
+    ); // Apply middleware first
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+
+    // Then apply the router
+    const router = createRouter(ctx);
     app.use(router);
     app.use((_req, res) => res.sendStatus(404));
     app.use(

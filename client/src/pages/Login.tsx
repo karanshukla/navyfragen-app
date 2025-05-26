@@ -16,45 +16,27 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const location = useLocation();
-
-  // Handle OAuth callback
+  // Check for error query param (e.g. from OAuth callback redirect)
   useEffect(() => {
-    if (
-      location.pathname === "/oauth/callback" ||
-      location.pathname === "/api/oauth/callback"
-    ) {
-      fetch(`${API_URL}/api/oauth/callback${location.search}`, {
-        credentials: "include",
-      })
-        .then(async (res) => {
-          // If the response is a redirect (from Bluesky), force redirect
-          if (res.redirected && res.url) {
-            window.location.href = "/";
-            return;
-          }
-          const data = await res.json();
-          if (data.message) {
-            setSuccess(data.message);
-            setTimeout(() => {
-              window.location.href = "/";
-            }, 1000); // Redirect to home after 1s
-          } else setError(data.error || "OAuth callback failed");
-        })
-        .catch(() => setError("OAuth callback failed"));
+    const searchParams = new URLSearchParams(location.search);
+    const errorParam = searchParams.get("error");
+    if (errorParam === "oauth_failed") {
+      setError("Login failed. Please try again.");
     }
   }, [location]);
-
+  // No longer need to manually handle the callback - server does the redirect
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     const res = await fetch(`${API_URL}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ handle }),
     });
     const data = await res.json();
     if (data.redirectUrl) {
+      // Set a flag that we're performing a new login
+      sessionStorage.setItem("newLogin", "true");
       window.location.href = data.redirectUrl;
     } else {
       setError(data.error || "Unknown error");

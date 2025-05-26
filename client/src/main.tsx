@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import {
   AppShell,
@@ -10,9 +10,8 @@ import {
   Container,
   Flex,
   NavLink,
-  Image,
-  rem,
-  Button,
+  Avatar,
+  Text,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import {
@@ -21,10 +20,16 @@ import {
   Route,
   Link,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Messages from "./pages/Messages";
+import CookieTest from "./pages/CookieTest";
 import "@mantine/core/styles.css";
+
+// Use the API URL from environment variable
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 const theme = createTheme({
   colors: {
@@ -65,12 +70,21 @@ const theme = createTheme({
   headings: { fontFamily: "Inter, sans-serif" },
 });
 
+// Type for user profile
+interface UserProfile {
+  displayName?: string;
+  description?: string;
+  avatar?: string;
+}
+
 // Navigation wrapper component for active link styling
 interface NavigationProps {
   onLinkClick?: () => void;
+  isLoggedIn: boolean;
+  userProfile: UserProfile | null;
 }
 
-function Navigation({ onLinkClick }: NavigationProps) {
+function Navigation({ onLinkClick, isLoggedIn, userProfile }: NavigationProps) {
   const location = useLocation();
 
   const handleClick = () => {
@@ -87,14 +101,55 @@ function Navigation({ onLinkClick }: NavigationProps) {
         to="/"
         active={location.pathname === "/"}
         onClick={handleClick}
-      />
-      <NavLink
-        label="Login"
-        component={Link}
-        to="/login"
-        active={location.pathname === "/login"}
-        onClick={handleClick}
-      />
+      />{" "}
+      {isLoggedIn ? (
+        <>
+          <NavLink
+            label="Messages"
+            component={Link}
+            to="/messages"
+            active={location.pathname === "/messages"}
+            onClick={handleClick}
+          />
+          <NavLink
+            label="Cookie Test"
+            component={Link}
+            to="/cookie-test"
+            active={location.pathname === "/cookie-test"}
+            onClick={handleClick}
+          />{" "}
+          <NavLink
+            label="Logout"
+            onClick={async () => {
+              try {
+                // Remove the token from localStorage for logout
+                localStorage.removeItem("auth_token");
+                window.location.reload();
+              } catch (e) {
+                console.error("Logout failed", e);
+              }
+              handleClick();
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <NavLink
+            label="Login"
+            component={Link}
+            to="/login"
+            active={location.pathname === "/login"}
+            onClick={handleClick}
+          />
+          <NavLink
+            label="Cookie Test"
+            component={Link}
+            to="/cookie-test"
+            active={location.pathname === "/cookie-test"}
+            onClick={handleClick}
+          />
+        </>
+      )}
     </>
   );
 }
@@ -102,6 +157,26 @@ function Navigation({ onLinkClick }: NavigationProps) {
 // App layout component
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    // Check if the user is logged in using token-based auth
+    const token = localStorage.getItem("auth_token");
+    let url = `${API_URL}/api/session`;
+    if (token) {
+      url += `?token=${token}`;
+    }
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        setIsLoggedIn(data.isLoggedIn);
+        setUserProfile(data.profile);
+      })
+      .catch((err) => console.error("Session check failed:", err))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <AppShell
@@ -128,15 +203,21 @@ function AppLayout() {
       </AppShell.Header>
       <AppShell.Navbar p="md">
         {/* Navigation links, visible when Navbar is open (mobile) or always visible (desktop) */}
-        <Navigation onLinkClick={() => setOpened(false)} />
-      </AppShell.Navbar>
-
+        <Navigation
+          onLinkClick={() => setOpened(false)}
+          isLoggedIn={isLoggedIn}
+          userProfile={userProfile}
+        />
+      </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>
         <Container>
-          {" "}
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/cookie-test" element={<CookieTest />} />
+            <Route path="/oauth/callback" element={<Login />} />
+            <Route path="/api/oauth/callback" element={<Login />} />
           </Routes>
         </Container>
       </AppShell.Main>

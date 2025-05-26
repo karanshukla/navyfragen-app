@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Button,
   Group,
@@ -11,7 +13,24 @@ import {
   Box,
 } from "@mantine/core";
 
+// Use the API URL from environment variable
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check if user is logged in
+  useEffect(() => {
+    fetch(`${API_URL}/api/session`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsLoggedIn(data.isLoggedIn);
+      })
+      .catch((err) => console.error("Failed to check login status:", err));
+  }, []);
+
   return (
     <>
       <Paper p="lg" radius="md" withBorder shadow="sm" mb="xl">
@@ -49,8 +68,14 @@ export default function Home() {
         </List>
 
         <Center mt="xl">
-          <Button size="lg" radius="md" color="deepBlue">
-            Get Started
+          <Button
+            component={Link}
+            to={isLoggedIn ? "/messages" : "/login"}
+            size="lg"
+            radius="md"
+            color="deepBlue"
+          >
+            {isLoggedIn ? "View Your Messages" : "Get Started"}
           </Button>
         </Center>
       </Paper>
