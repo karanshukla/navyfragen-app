@@ -1,39 +1,20 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Button,
-  Group,
   List,
   Text,
-  ThemeIcon,
   Title,
   Paper,
   Stack,
   Center,
   Box,
+  Loader,
 } from "@mantine/core";
-
-// Use the API URL from environment variable (on prod this is would be the reverse proxy URL)
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { useSession } from "../api/authService";
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    let url = `${API_URL}/session`;
-    if (token) {
-      url += `?token=${token}`;
-    }
-    fetch(`${url}/session`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setIsLoggedIn(data.isLoggedIn);
-      })
-      .catch((err) => console.error("Failed to check login status:", err));
-  }, []);
+  // Use the useSession hook to get authentication status
+  const { data: sessionData, isLoading } = useSession();
 
   return (
     <>
@@ -69,18 +50,21 @@ export default function Home() {
               you want!
             </Text>
           </List.Item>
-        </List>
-
+        </List>{" "}
         <Center mt="xl">
-          <Button
-            component={Link}
-            to={isLoggedIn ? "/messages" : "/login"}
-            size="lg"
-            radius="md"
-            color="deepBlue"
-          >
-            {isLoggedIn ? "View Your Messages" : "Get Started"}
-          </Button>
+          {isLoading ? (
+            <Loader size="md" />
+          ) : (
+            <Button
+              component={Link}
+              to={sessionData?.isLoggedIn ? "/messages" : "/login"}
+              size="lg"
+              radius="md"
+              color="deepBlue"
+            >
+              {sessionData?.isLoggedIn ? "View Your Messages" : "Get Started"}
+            </Button>
+          )}
         </Center>
       </Paper>
     </>

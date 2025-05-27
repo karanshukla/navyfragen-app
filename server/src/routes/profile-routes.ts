@@ -11,22 +11,21 @@ export function profileRoutes(
 
   // Public profile for a DID
   router.get(
-    "/public-profile/:did", // Changed from :handle to :did
-    param("did").isString().notEmpty().withMessage("DID required"), // Changed from handle to DID
+    "/public-profile/:did",
+    param("did").isString().notEmpty().withMessage("DID required"),
     checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
-      const did = req.params.did; // Directly use DID from params
+      const did = req.params.did;
       if (!did) {
         return res.status(400).json({ error: "DID required" });
       }
       try {
-        // No longer need to resolve handle to DID here
         const AtpAgent = require("@atproto/api").AtpAgent;
         const agent = new AtpAgent({ service: "https://api.bsky.app" });
         const profileResponse = await agent.getProfile({ actor: did });
         if (profileResponse.success) {
           // Attempt to resolve DID to handle for convenience, but don't fail if it doesn't resolve
-          let handle = did; // Default to DID if handle can't be resolved
+          let handle = did;
           try {
             const resolvedHandle = await ctx.resolver.resolveDidToHandle(did);
             if (resolvedHandle) {
@@ -53,24 +52,22 @@ export function profileRoutes(
     })
   );
 
-  // Check if a user (by DID) exists
   router.get(
-    "/user-exists/:did", // Changed from :handle to :did
-    param("did").isString().notEmpty().withMessage("DID required"), // Changed from handle to DID
+    "/user-exists/:did",
+    param("did").isString().notEmpty().withMessage("DID required"),
     checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
-      const did = req.params.did; // Directly use DID from params
+      const did = req.params.did;
       if (!did) {
         return res.status(400).json({ error: "DID required" });
       }
       try {
-        // No longer need to resolve handle to DID here
         const userExists = await ctx.db
           .selectFrom("auth_session")
           .select("key")
           .where("key", "=", did)
           .executeTakeFirst();
-        return res.json({ exists: !!userExists, did }); // Return existence and the original DID
+        return res.json({ exists: !!userExists, did });
       } catch (err) {
         ctx.logger.error(
           { err, did }, // Log with DID
@@ -83,7 +80,6 @@ export function profileRoutes(
     })
   );
 
-  // Resolve a handle to a DID
   router.get(
     "/resolve-handle/:handle",
     param("handle").isString().notEmpty().withMessage("Handle required"),

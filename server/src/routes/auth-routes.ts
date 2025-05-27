@@ -50,30 +50,6 @@ export function authRoutes(
       } catch (err) {
         // Basic console.error for Railway as a test
         console.error("OAuth Authorize Failed (raw console.error):", err);
-
-        // Use Pino's dedicated error logging, simplifying other properties
-        if (err instanceof Error) {
-          ctx.logger.error(
-            {
-              err: err, // Pino's standard way to log an error object
-              handle: handle,
-              publicUrl: env.PUBLIC_URL,
-              clientUrl: env.CLIENT_URL,
-            },
-            "oauth authorize failed (Pino err):"
-          );
-        } else {
-          ctx.logger.error(
-            {
-              error_raw: String(err), // Fallback for non-Error objects
-              handle: handle,
-              publicUrl: env.PUBLIC_URL,
-              clientUrl: env.CLIENT_URL,
-            },
-            "oauth authorize failed (Pino raw string):"
-          );
-        }
-
         const message =
           err instanceof OAuthResolverError
             ? err.message
@@ -87,6 +63,15 @@ export function authRoutes(
   router.post(
     "/logout",
     handler(async (req: express.Request, res: express.Response) => {
+      // Clear the auth_token cookie
+      res.clearCookie("auth_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use 'none' in production for cross-domain cookies
+        path: "/",
+      });
+
+      // Also clear the iron session if it exists
       const session = await getIronSession(req, res, {
         cookieName: "sid",
         password: env.COOKIE_SECRET,
@@ -99,6 +84,7 @@ export function authRoutes(
         },
       });
       session.destroy();
+
       return res.status(200).json({ message: "Logged out successfully" });
     })
   );
@@ -107,8 +93,9 @@ export function authRoutes(
   router.get(
     "/session",
     handler(async (req: express.Request, res: express.Response) => {
-      // Check for token in query param or Authorization header
+      // Check for token in cookie first, then fall back to query param or Authorization header
       const token =
+        req.cookies?.auth_token ||
         (req.query.token as string) ||
         req.headers.authorization?.replace("Bearer ", "") ||
         null;
@@ -219,11 +206,23 @@ export function authRoutes(
       const params = new URLSearchParams(req.originalUrl.split("?")[1]);
       try {
         const callbackResult = await ctx.oauthClient.callback(params);
-        const token = Buffer.from(callbackResult.session.did).toString(
-          "base64"
-        );
-        // Redirect to client with token in query param
-        return res.redirect(`${env.CLIENT_URL}/messages?token=${token}`);
+        const did = callbackResult.session.did;
+        const token = Buffer.from(did).toString("base64");
+        res.cookie("auth_token", token, {
+          httpOnly: true,
+          secure: env.NODE_ENV === "production",
+          sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          path: "/",
+        });
+        // For local dev, also include token in redirect URL for localStorage fallback
+        if (env.NODE_ENV !== "production") {
+          return res.redirect(
+            `${env.CLIENT_URL}/messages?token=${encodeURIComponent(token)}`
+          );
+        }
+        // Production: normal redirect
+        return res.redirect(`${env.CLIENT_URL}/messages`);
       } catch (err) {
         ctx.logger.error(
           {
@@ -232,54 +231,28 @@ export function authRoutes(
           },
           "oauth callback failed"
         );
-        // Redirect to login page with error
         return res.redirect(`${env.CLIENT_URL}/login?error=oauth_failed`);
       }
     })
   );
 
-  // Debug endpoint
-  router.get(
-    "/debug-cookies",
+  // Local dev: set cookie via direct API call
+  router.post(
+    "/set-cookie",
     handler(async (req: express.Request, res: express.Response) => {
-      // Check for token in query param or Authorization header
-      const token =
-        (req.query.token as string) ||
-        req.headers.authorization?.replace("Bearer ", "") ||
-        null;
-
-      let authStatus = "Not authenticated";
-      let userData = null;
-
-      if (token) {
-        try {
-          // Decode DID from token
-          const did = Buffer.from(token, "base64").toString("ascii");
-
-          // Get session from DB
-          const savedSession = await ctx.db
-            .selectFrom("auth_session")
-            .selectAll()
-            .where("key", "=", did)
-            .executeTakeFirst();
-
-          if (savedSession) {
-            authStatus = "Authenticated";
-            userData = { did };
-          }
-        } catch (err) {
-          ctx.logger.error({ err }, "Failed to verify token");
-        }
+      const token = req.body.token || req.query.token;
+      if (!token) {
+        return res.status(400).json({ error: "Missing token" });
       }
-
-      return res.json({
-        authStatus,
-        userData,
-        token: token ? "Present" : "Missing",
-        message: "Auth check complete",
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: env.NODE_ENV === "production",
+        sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
       });
+      return res.json({ success: true });
     })
   );
-
   return router;
 }

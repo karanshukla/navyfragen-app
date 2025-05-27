@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import {
   AppShell,
@@ -22,10 +22,13 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "./api/queryClient";
+import { useSession, useLogout } from "./api/authService";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
-import CookieTest from "./pages/CookieTest";
 import PublicProfile from "./pages/PublicProfile";
 import "@mantine/core/styles.css";
 
@@ -87,6 +90,7 @@ interface NavigationProps {
 
 function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   const location = useLocation();
+  const { mutate: logout } = useLogout();
 
   const handleClick = () => {
     if (onLinkClick) {
@@ -105,32 +109,25 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
       />{" "}
       {isLoggedIn ? (
         <>
+          {" "}
           <NavLink
             label="Messages"
             component={Link}
             to="/messages"
             active={location.pathname === "/messages"}
             onClick={handleClick}
-          />
-          <NavLink
-            label="Cookie Test"
-            component={Link}
-            to="/cookie-test"
-            active={location.pathname === "/cookie-test"}
-            onClick={handleClick}
           />{" "}
           <NavLink
             label="Logout"
-            onClick={async () => {
+            onClick={() => {
               try {
-                localStorage.removeItem("auth_token");
-                window.location.reload();
+                logout();
               } catch (e) {
                 console.error("Logout failed", e);
               }
               handleClick();
             }}
-          />
+          />{" "}
           <NavLink
             label="Delete My Data"
             onClick={async () => {
@@ -140,25 +137,16 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
                 )
               )
                 return;
-              const token = localStorage.getItem("auth_token");
               try {
-                const res = await fetch(`${API_URL}/delete-account`, {
-                  method: "DELETE",
-                  headers: token ? { Authorization: `Bearer ${token}` } : {},
-                });
-                if (res.ok) {
-                  localStorage.removeItem("auth_token");
-                  alert("Your data has been deleted.");
-                  window.location.href = "/";
-                } else {
-                  const data = await res.json();
-                  alert(data.error || "Failed to delete data.");
-                }
-              } catch (e) {
-                alert("Failed to delete data.");
+                const { apiClient } = await import("./api/apiClient");
+                const res = await apiClient.delete("/delete-account");
+                alert("Your data has been deleted.");
+                window.location.href = "/";
+              } catch (e: any) {
+                alert(e.error || "Failed to delete data.");
               }
             }}
-          />
+          />{" "}
         </>
       ) : (
         <>
@@ -167,13 +155,6 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             component={Link}
             to="/login"
             active={location.pathname === "/login"}
-            onClick={handleClick}
-          />
-          <NavLink
-            label="Cookie Test"
-            component={Link}
-            to="/cookie-test"
-            active={location.pathname === "/cookie-test"}
             onClick={handleClick}
           />
         </>
@@ -185,26 +166,10 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
 // App layout component
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    // Check if user is logged in, may want to move this to react query/global state
-    const token = localStorage.getItem("auth_token");
-    let url = `${API_URL}/session`;
-    if (token) {
-      url += `?token=${token}`;
-    }
+  const { data: sessionData, isLoading } = useSession();
 
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        setIsLoggedIn(data.isLoggedIn);
-        setUserProfile(data.profile);
-      })
-      .catch((err) => console.error("Session check failed:", err))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const isLoggedIn = !!sessionData?.isLoggedIn;
+  const userProfile = sessionData?.profile;
 
   return (
     <AppShell
@@ -255,16 +220,17 @@ function AppLayout() {
         <Navigation
           onLinkClick={() => setOpened(false)}
           isLoggedIn={isLoggedIn}
-          userProfile={userProfile}
+          userProfile={userProfile || null}
         />
       </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>
         <Container>
+          {" "}
           <Routes>
+            {" "}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/messages" element={<Messages />} />
-            <Route path="/cookie-test" element={<CookieTest />} />
             <Route path="/profile/:handle" element={<PublicProfile />} />
           </Routes>
         </Container>
@@ -278,7 +244,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <MantineProvider defaultColorScheme="auto" theme={theme}>
       <Notifications />
       <BrowserRouter>
-        <AppLayout />
+        <QueryClientProvider client={queryClient}>
+          <AppLayout />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
       </BrowserRouter>
     </MantineProvider>
   </React.StrictMode>

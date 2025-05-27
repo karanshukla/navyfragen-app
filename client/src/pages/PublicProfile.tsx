@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Container,
   Title,
@@ -10,80 +10,60 @@ import {
   Group,
   Textarea,
   Avatar,
+  Loader,
+  Center,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || "";
+import {
+  useResolveHandle,
+  useUserExists,
+  usePublicProfile,
+} from "../api/profileService";
+import { useSendMessage } from "../api/messageService";
 
 export default function PublicProfile() {
-  const { handle } = useParams();
-  const [profile, setProfile] = useState<any>(null);
-  const [userExists, setUserExists] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { handle } = useParams<{ handle: string }>();
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Resolve DID from handle
-  const [did, setDid] = useState<string | null>(null);
-  useEffect(() => {
-    if (!handle) return;
-    setLoading(true);
-    setError(null);
-    fetch(`${API_URL}/resolve-handle/${encodeURIComponent(handle)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.did) {
-          setDid(data.did);
-        } else {
-          setError("Handle not found");
-          setUserExists(false);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to resolve handle");
-        setLoading(false);
-      });
-  }, [handle]);
+  const {
+    data: handleData,
+    isLoading: handleLoading,
+    error: handleError,
+  } = useResolveHandle(handle || null);
 
-  useEffect(() => {
-    if (!did) return;
-    setLoading(true);
-    setError(null);
-    // Check if user exists in app DB first
-    fetch(`${API_URL}/user-exists/${encodeURIComponent(did)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.exists) {
-          setUserExists(false);
-          setLoading(false);
-        } else {
-          setUserExists(true);
-          // Fetch public profile only if user exists
-          fetch(`${API_URL}/public-profile/${encodeURIComponent(did)}`)
-            .then((res) => res.json())
-            .then((data) => {
-              setProfile(data.profile || null);
-              setLoading(false);
-            })
-            .catch(() => {
-              setError("Failed to load profile");
-              setLoading(false);
-            });
-        }
-      })
-      .catch(() => {
-        setError("Failed to check user existence");
-        setLoading(false);
-      });
-  }, [did]);
+  const did = handleData?.did || null;
 
-  const handleSend = async () => {
+  const {
+    data: userExistsData,
+    isLoading: userExistsLoading,
+    error: userExistsError,
+  } = useUserExists(did);
+
+  const userExists = userExistsData?.exists;
+
+  const {
+    data: profileData,
+    isLoading: profileLoading,
+    error: profileError,
+  } = usePublicProfile(userExists ? did : null);
+
+  const profile = profileData?.profile || null;
+
+  const {
+    mutate: sendMessage,
+    isPending: sendLoading,
+    error: sendError,
+  } = useSendMessage();
+
+  // Handle message sending
+  const handleSend = () => {
     if (!message.trim()) {
       setError("Message cannot be empty.");
       return;
     }
+
     // Add confirmation dialog
     if (
       !window.confirm("Are you sure you want to send this anonymous message?")
@@ -91,84 +71,125 @@ export default function PublicProfile() {
       return;
     }
 
-    setLoading(true);
     setError(null);
     setSuccess(null);
-    try {
-      const res = await fetch(`${API_URL}/messages/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient: did, message }),
-      });
-      if (!res.ok) throw new Error("Failed to send message");
-      setSuccess("Message sent anonymously!");
-      setMessage("");
-    } catch (err) {
-      setError("Failed to send message");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleTextareaKeyDown = (
-    event: React.KeyboardEvent<HTMLTextAreaElement>
-  ) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault(); // Prevent new line
-      if (message.trim()) {
-        handleSend();
+    sendMessage(
+      { recipient: did!, message },
+      {
+        onSuccess: () => {
+          setSuccess(
+            "Message sent! The recipient will receive your anonymous message."
+          );
+          setMessage("");
+        },
+        onError: (err: any) => {
+          setError(err.error || "Failed to send message. Please try again.");
+        },
       }
-    }
+    );
   };
 
-  if (loading) return <Container>Loading...</Container>;
-  if (userExists === false)
+  // Combined loading state
+  const isLoading =
+    handleLoading || userExistsLoading || profileLoading || sendLoading;
+
+  // Display error if handle resolution fails
+  if (handleError) {
     return (
       <Container>
-        <Alert color="red">This user has not signed up for NavyFragen.</Alert>
+        <Alert color="red" title="Error">
+          {typeof handleError === "object" &&
+          handleError !== null &&
+          "error" in handleError
+            ? (handleError as any).error
+            : "Failed to resolve handle. The handle may not exist."}
+        </Alert>
       </Container>
     );
-  if (error)
+  }
+
+  // Loading state
+  if (isLoading) {
     return (
       <Container>
-        <Alert color="red">{error}</Alert>
+        <Center style={{ minHeight: "200px" }}>
+          <Loader />
+        </Center>
       </Container>
     );
+  }
+
+  // If user doesn't exist in the app
+  if (did && !userExists) {
+    return (
+      <Container>
+        <Alert color="yellow" title="User not found">
+          This user hasn't set up their Navyfragen inbox yet.
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container>
       {profile ? (
-        <Paper p="md" withBorder mb="lg">
-          <Avatar src={profile.avatar} size="xl" mb="md" />
-          <Title order={2} mb="xs">
-            {profile.displayName || profile.handle || did}
+        <>
+          <Paper p="md" withBorder mb="lg">
+            <Group>
+              <Avatar
+                src={profile.avatar}
+                alt={profile.displayName || profile.handle || "User"}
+                size="xl"
+                radius="xl"
+              />
+              <div>
+                <Title order={3}>{profile.displayName}</Title>
+                <Text>@{profile.handle}</Text>
+                {profile.description && (
+                  <Text mt="xs">{profile.description}</Text>
+                )}
+              </div>
+            </Group>
+          </Paper>
+
+          <Title order={4} mb="md">
+            Send an anonymous message
           </Title>
-          <Text c="dimmed" size="sm" mb="md">
-            {profile.handle ? `@${profile.handle}` : did}
-          </Text>
-          {profile.description && <Text mb="md">{profile.description}</Text>}
-        </Paper>
-      ) : error ? (
-        <Alert color="red">{error}</Alert>
+
+          {error && (
+            <Alert color="red" title="Error" mb="md">
+              {error}
+            </Alert>
+          )}
+
+          {success && (
+            <Alert color="green" title="Success" mb="md">
+              {success}
+            </Alert>
+          )}
+
+          <Stack>
+            <Textarea
+              placeholder="Type your anonymous message or question..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              minRows={3}
+              maxLength={1000}
+              disabled={sendLoading}
+            />
+            <Group justify="flex-end">
+              <Button onClick={handleSend} loading={sendLoading}>
+                Send Anonymous Message
+              </Button>
+            </Group>
+          </Stack>
+        </>
       ) : (
-        <Text>Loading profile...</Text>
+        <Alert color="red" title="Error">
+          Failed to load profile information.
+        </Alert>
       )}
-      <Stack gap="md" mt="md">
-        <Title order={3}>Send an anonymous message</Title>
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleTextareaKeyDown} // Add keydown listener
-          placeholder="Type your message... (Press Enter to send)"
-          minRows={3}
-          disabled={loading}
-        />
-        <Button onClick={handleSend} disabled={loading || !message.trim()}>
-          Send
-        </Button>
-        {success && <Alert color="green">{success}</Alert>}
-        {error && !profile && <Alert color="red">{error}</Alert>}
-      </Stack>
     </Container>
   );
 }

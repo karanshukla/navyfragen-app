@@ -115,26 +115,6 @@ export function messageRoutes(
           // ignore
         }
       }
-      // Fallback: try to get session from request body (for dev/testing)
-      if (!agent && req.body && req.body.token) {
-        try {
-          const did2 = Buffer.from(req.body.token, "base64").toString("ascii");
-          const dbSession2 = await ctx.db
-            .selectFrom("auth_session")
-            .selectAll()
-            .where("key", "=", did2)
-            .executeTakeFirst();
-          if (dbSession2) {
-            const oauthSession = await ctx.oauthClient.restore(did2);
-            if (oauthSession) {
-              const { Agent } = require("@atproto/api");
-              agent = new Agent(oauthSession);
-            }
-          }
-        } catch (err) {
-          // ignore
-        }
-      }
       if (!agent) {
         let errorMsg = "Not authenticated";
         if (did && sessionExists === false) {
@@ -145,7 +125,7 @@ export function messageRoutes(
       }
       // Post the response as text, including the original message and hashtag
       try {
-        const postText = `Q: ${original}\n\nA: ${response}\n\n#Navyfragen`;
+        const postText = `Q: ${original}\n\nA: ${response}\n\n (posted via navyfragen.app)`;
         const postRes = await agent.post({
           text: postText,
         });

@@ -10,358 +10,301 @@ import {
   Alert,
   Button,
   Group,
+  TextInput,
+  Textarea,
+  CopyButton,
+  Tooltip,
 } from "@mantine/core";
-
-// Use the API URL from environment variable
-const API_URL = import.meta.env.VITE_API_URL || "";
-
-type SessionResponse = {
-  isLoggedIn: boolean;
-  profile: any;
-  did: string | null;
-};
+import { useSession } from "../api/authService";
+import {
+  useMessages,
+  useDeleteMessage,
+  useRespondToMessage,
+  useAddExampleMessages,
+  Message,
+} from "../api/messageService";
 
 export default function Messages() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<SessionResponse | null>(null);
   const [welcomeMessage, setWelcomeMessage] = useState<boolean>(false);
-  const [messages, setMessages] = useState<any[]>([]);
-
-  // Show a welcome message for newly logged-in users
-  useEffect(() => {
-    // If we were just redirected after login, show a welcome message
-    const isNewLogin = sessionStorage.getItem("newLogin");
-    if (isNewLogin === "true") {
-      setWelcomeMessage(true);
-      sessionStorage.removeItem("newLogin");
-    }
-  }, []); // Fetch user session data
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        // Get the token from URL parameters if present
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get("token");
-
-        if (token) {
-          // Save token in localStorage for future requests
-          localStorage.setItem("auth_token", token);
-
-          // Clean up URL by removing the token parameter
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, newUrl);
-        }
-
-        // Get the token from localStorage
-        const storedToken = localStorage.getItem("auth_token");
-
-        // Request options with token in Authorization header
-        const options: RequestInit = {
-          method: "GET",
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        };
-
-        // Add token to the URL if available
-        let url = `${API_URL}/session`;
-        if (storedToken) {
-          url += `?token=${storedToken}`;
-        }
-
-        const res = await fetch(url, options);
-
-        if (!res.ok) {
-          throw new Error(`Server responded with status: ${res.status}`);
-        }
-
-        const data = await res.json();
-        console.log("Session data:", data);
-        // If logged in, ensure token is saved
-        if (data.isLoggedIn && data.did) {
-          // Keep using the existing token if available
-          if (storedToken) {
-            localStorage.setItem("auth_token", storedToken);
-          }
-        }
-
-        setSession(data);
-        setIsLoading(false);
-        // Fetch messages if logged in
-        if (data.isLoggedIn && data.did) {
-          fetchMessages(data.did);
-        }
-      } catch (err) {
-        setError("Failed to load session data");
-        setIsLoading(false);
-        console.error("Session error:", err);
-      }
-    };
-    const fetchMessages = async (did: string) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const res = await fetch(
-          `${API_URL}/messages/${encodeURIComponent(did)}`
-        );
-        if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
-        const data = await res.json();
-        setMessages(data.messages || []);
-        setIsLoading(false);
-      } catch (err) {
-        setError("Failed to load messages");
-        setIsLoading(false);
-      }
-    };
-    fetchSession();
-  }, []);
-
-  // Add example messages for testing
-  const addExampleMessages = async () => {
-    if (!session?.did) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Example: POST to a new endpoint to add test messages (you must implement this endpoint in your backend)
-      const res = await fetch(`${API_URL}/messages/example`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient: session.did }),
-      });
-      if (!res.ok) throw new Error("Failed to add example messages");
-      // Re-fetch messages after adding
-      const data = await res.json();
-      setMessages(data.messages || []);
-    } catch (err) {
-      setError("Failed to add example messages");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Respond to a message
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
   const [lastPostLink, setLastPostLink] = useState<{
     tid: string;
     link: string;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = async (tid: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem("auth_token"); // Get token
-      const res = await fetch(`${API_URL}/messages/${tid}`, {
-        method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}), // Add Authorization header
-        },
-      });
-      if (!res.ok) {
-        const errorData = await res
-          .json()
-          .catch(() => ({ error: "Failed to delete message" }));
-        throw new Error(errorData.error || "Failed to delete message");
-      }
-      setMessages((msgs) => msgs.filter((msg) => msg.tid !== tid));
-    } catch (err) {
-      setError("Failed to delete message");
-    } finally {
-      setIsLoading(false);
+  // Get session data
+  const {
+    data: session,
+    isLoading: sessionLoading,
+    error: sessionError,
+  } = useSession();
+
+  // Get messages data using the session's DID
+  const {
+    data: messagesData,
+    isLoading: messagesLoading,
+    error: messagesError,
+    refetch: refetchMessages,
+  } = useMessages(session?.did || null);
+
+  // Get mutation functions
+  const { mutate: deleteMessage, isPending: deleteLoading } =
+    useDeleteMessage();
+  const { mutate: respondToMessage, isPending: respondLoading } =
+    useRespondToMessage();
+  const { mutate: addExamples, isPending: examplesLoading } =
+    useAddExampleMessages();
+
+  // Show a welcome message for newly logged-in users
+  useEffect(() => {
+    const isNewLogin = sessionStorage.getItem("newLogin");
+    if (isNewLogin === "true") {
+      setWelcomeMessage(true);
+      sessionStorage.removeItem("newLogin");
     }
+  }, []);
+
+  // The combined loading state
+  const isLoading =
+    sessionLoading ||
+    messagesLoading ||
+    deleteLoading ||
+    respondLoading ||
+    examplesLoading;
+
+  // Add example messages for testing
+  const handleAddExampleMessages = () => {
+    if (!session?.did) return;
+    setError(null);
+    addExamples(session.did, {
+      onSuccess: () => {
+        refetchMessages();
+      },
+      onError: (err: any) => {
+        setError(err.error || "Failed to add example messages");
+      },
+    });
   };
 
+  // Handle message deletion
+  const handleDelete = (tid: string) => {
+    setError(null);
+    deleteMessage(tid, {
+      onError: (err: any) => {
+        setError(err.error || "Failed to delete message");
+      },
+    });
+  };
+
+  // Handle response preparation
   const handleRespond = (tid: string) => {
     setRespondingTid(tid);
     setResponseText("");
   };
 
-  const handleSendResponse = async (msg: any) => {
+  // Handle sending a response
+  const handleSendResponse = (msg: Message) => {
     if (!responseText.trim()) return;
-    setIsLoading(true);
     setError(null);
-    try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${API_URL}/messages/respond`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+
+    respondToMessage(
+      {
+        tid: msg.tid,
+        recipient: msg.recipient,
+        original: msg.message,
+        response: responseText,
+      },
+      {
+        onSuccess: (data) => {
+          setRespondingTid(null);
+          if (data.link) {
+            setLastPostLink({ tid: msg.tid, link: data.link });
+          }
+          refetchMessages();
         },
-        body: JSON.stringify({
-          tid: msg.tid,
-          recipient: msg.recipient,
-          original: msg.message,
-          response: responseText,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to send response");
-      const data = await res.json();
-      setRespondingTid(null);
-      setResponseText("");
-      if (data.link) {
-        setLastPostLink({ tid: msg.tid, link: data.link });
+        onError: (err: any) => {
+          setError(err.error || "Failed to send response");
+        },
       }
-    } catch (err) {
-      setError("Failed to send response");
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
-  if (isLoading) {
-    return (
-      <Center h={200}>
-        <Loader size="lg" />
-      </Center>
-    );
-  }
-
-  // Show login prompt if not logged in
-  if (!session?.isLoggedIn) {
-    return (
-      <Container>
-        <Alert color="red" title="Not logged in">
-          You need to log in to view your messages.
-        </Alert>
-      </Container>
-    );
-  }
   return (
     <Container>
-      <Title mb="md">Your Messages</Title>
-      <Button mb="md" onClick={addExampleMessages} disabled={isLoading}>
-        Add Example Messages
-      </Button>
-      {error && <Alert color="red">{error}</Alert>}
+      <Title>Messages</Title>
 
       {welcomeMessage && (
-        <Alert
-          color="green"
-          title="Welcome!"
-          mb="md"
-          withCloseButton
-          onClose={() => setWelcomeMessage(false)}
-        >
-          You've successfully logged in with your Bluesky account.
+        <Alert color="green" title="Welcome back!" mb="lg">
+          You have successfully logged in.
         </Alert>
       )}
 
-      {session?.profile ? (
-        <Paper p="md" withBorder mb="lg">
-          <Text fw={500} size="lg">
-            Hi, {session.profile.displayName || "there"}!
-          </Text>
-          <Text size="sm">
-            You can share your inbox link to receive anonymous messages.
-          </Text>
-          <Text size="sm" mt="md" c="dimmed">
-            Your inbox link is {window.location.origin}/profile/
-            {session.profile.handle}{" "}
-            <Button
-              size="xs"
-              variant="outline"
-              color="blue"
-              onClick={() => {
-                const link = `${window.location.origin}/profile/${session.profile.handle}`;
-                navigator.clipboard.writeText(link);
-              }}
-              style={{ marginLeft: 8 }}
-            >
-              Copy Inbox Link
-            </Button>
-          </Text>
-        </Paper>
-      ) : null}
+      {error && (
+        <Alert color="red" title="Error" mb="lg">
+          {error}
+        </Alert>
+      )}
 
-      {/* Message list */}
-      <Stack gap="md">
-        <Paper p="md" withBorder>
-          <Text fw={500} size="md" mb="sm">
-            Inbox
-          </Text>
-          {messages.length === 0 ? (
-            <Text c="dimmed" size="sm" mb="md">
-              You don't have any messages yet. Share your inbox link to start
-              receiving questions.
+      {sessionError && (
+        <Alert color="red" title="Session Error" mb="lg">
+          {typeof sessionError === "object" &&
+          sessionError !== null &&
+          "error" in sessionError
+            ? (sessionError as any).error
+            : "Failed to load session data"}
+        </Alert>
+      )}
+
+      {messagesError && (
+        <Alert color="red" title="Messages Error" mb="lg">
+          {typeof messagesError === "object" &&
+          messagesError !== null &&
+          "error" in messagesError
+            ? (messagesError as any).error
+            : "Failed to load messages"}
+        </Alert>
+      )}
+
+      {sessionLoading ? (
+        <Center>
+          <Loader size="xl" />
+        </Center>
+      ) : !session?.isLoggedIn ? (
+        <Alert color="red" title="Not logged in">
+          Please log in to see your messages.
+        </Alert>
+      ) : (
+        <>
+          <Paper p="md" withBorder mb="lg">
+            <Text mb="md">
+              This is your anonymous inbox. Share the link below to let others
+              send you anonymous questions and messages.
             </Text>
-          ) : (
-            <Stack gap="sm">
-              {messages.map((msg) => (
-                <Paper key={msg.tid} p="sm" withBorder>
-                  <Text size="sm">{msg.message}</Text>
-                  <Text c="dimmed" size="xs">
-                    {new Date(msg.createdAt).toLocaleString()}
-                  </Text>
-                  <Group gap="xs" mt="xs">
-                    <Button
-                      size="xs"
-                      color="red"
-                      variant="light"
-                      onClick={() => handleDelete(msg.tid)}
-                      disabled={isLoading}
-                    >
-                      Delete
+            <Group>
+              <TextInput
+                readOnly
+                value={`${window.location.origin}/profile/${
+                  session.profile?.handle || ""
+                }`}
+                style={{ flexGrow: 1 }}
+              />
+              <CopyButton
+                value={`${window.location.origin}/profile/${
+                  session.profile?.handle || ""
+                }`}
+              >
+                {({ copied, copy }) => (
+                  <Tooltip
+                    label={copied ? "Copied" : "Copy"}
+                    withArrow
+                    position="right"
+                  >
+                    <Button onClick={copy}>
+                      {copied ? "Copied" : "Copy Inbox Link"}
                     </Button>
-                    <Button
-                      size="xs"
-                      color="blue"
-                      variant="light"
-                      onClick={() => handleRespond(msg.tid)}
-                      disabled={isLoading}
-                    >
-                      Respond
-                    </Button>
-                  </Group>
-                  {respondingTid === msg.tid && (
-                    <Stack gap="xs" mt="xs">
-                      <textarea
-                        value={responseText}
-                        onChange={(e) => setResponseText(e.target.value)}
-                        rows={3}
-                        style={{ width: "100%" }}
-                        placeholder="Type your response..."
-                        disabled={isLoading}
-                      />
-                      <Button
-                        size="xs"
-                        color="green"
-                        onClick={() => handleSendResponse(msg)}
-                        disabled={isLoading || !responseText.trim()}
-                      >
-                        Send to Bluesky
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        onClick={() => setRespondingTid(null)}
-                        disabled={isLoading}
-                      >
-                        Cancel
-                      </Button>
-                    </Stack>
-                  )}
-                  {lastPostLink &&
-                    lastPostLink.tid === msg.tid &&
-                    lastPostLink.link && (
-                      <Alert color="blue" mt="xs" title="Response posted!">
-                        <a
-                          href={lastPostLink.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                  </Tooltip>
+                )}
+              </CopyButton>
+              <Button onClick={handleAddExampleMessages}>
+                Add Test Messages
+              </Button>
+            </Group>
+          </Paper>
+
+          {messagesLoading ? (
+            <Center>
+              <Loader size="lg" />
+            </Center>
+          ) : messagesData?.messages && messagesData.messages.length > 0 ? (
+            <Stack gap="md">
+              <Text c="dimmed" size="sm" mb="md">
+                You have {messagesData.messages.length} messages.
+              </Text>
+              {messagesData.messages.map((msg) => (
+                <Paper key={msg.tid} p="md" withBorder>
+                  <Stack>
+                    <Group justify="space-between">
+                      <Text size="sm" c="dimmed">
+                        {new Date(msg.createdAt).toLocaleString()}
+                      </Text>
+                      <Group>
+                        <Button
+                          size="xs"
+                          onClick={() => handleDelete(msg.tid)}
+                          color="red"
+                          variant="outline"
                         >
-                          View your Bluesky post
-                        </a>
+                          Delete
+                        </Button>
+                        <Button
+                          size="xs"
+                          onClick={() => handleRespond(msg.tid)}
+                          color="blue"
+                          variant="filled"
+                        >
+                          Respond
+                        </Button>
+                      </Group>
+                    </Group>
+                    <Text>{msg.message}</Text>
+
+                    {respondingTid === msg.tid && (
+                      <Stack>
+                        <Textarea
+                          placeholder="Write your response..."
+                          value={responseText}
+                          onChange={(e) => setResponseText(e.target.value)}
+                          autosize
+                          minRows={3}
+                          maxRows={10}
+                        />
+                        <Group justify="flex-end">
+                          <Button
+                            size="sm"
+                            onClick={() => setRespondingTid(null)}
+                            variant="outline"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendResponse(msg)}
+                            loading={respondLoading}
+                          >
+                            Post Response
+                          </Button>
+                        </Group>
+                      </Stack>
+                    )}
+
+                    {lastPostLink && lastPostLink.tid === msg.tid && (
+                      <Alert color="green" title="Response posted">
+                        <Group>
+                          <Text>View your response on Bluesky:</Text>
+                          <a
+                            href={lastPostLink.link}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {lastPostLink.link}
+                          </a>
+                        </Group>
                       </Alert>
                     )}
+                  </Stack>
                 </Paper>
               ))}
             </Stack>
+          ) : (
+            <Alert color="blue" title="No messages">
+              You don't have any messages yet. Share your profile link to
+              receive anonymous messages.
+            </Alert>
           )}
-        </Paper>
-      </Stack>
+        </>
+      )}
     </Container>
   );
 }

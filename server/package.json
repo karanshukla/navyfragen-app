@@ -1,6 +1,6 @@
 {
     "name": "navyfragen-server",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "For answering anonymous questions and posting them to BlueSky",
     "author": "Karan Shukla",
     "license": "MIT",
@@ -25,7 +25,9 @@
         "@atproto/sync": "^0.1.4",
         "@atproto/syntax": "^0.3.4",
         "@atproto/xrpc-server": "^0.7.9",
+        "@types/cookie-parser": "^1.4.8",
         "better-sqlite3": "^11.1.2",
+        "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "envalid": "^8.0.0",

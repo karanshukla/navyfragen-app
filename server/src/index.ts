@@ -5,6 +5,7 @@ import { pino } from "pino";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
+import cookieParser from "cookie-parser"; // Add cookie-parser import
 
 import { createDb, migrateToLatest } from "./database/db";
 import { env } from "#/lib/env";
@@ -65,6 +66,7 @@ export class Server {
     ); // Apply middleware first
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+    app.use(cookieParser()); // Add cookie parser middleware
     app.use(
       rateLimit({
         windowMs: 60 * 1000, // 1 minute
