@@ -7,6 +7,7 @@ import {
   Notification,
 } from "@mantine/core";
 import { useLocation } from "react-router-dom";
+import { z } from "zod";
 
 // Use the VITE_API_URL env variable for backend API calls
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -22,12 +23,22 @@ export default function Login() {
     const errorParam = searchParams.get("error");
     if (errorParam === "oauth_failed") {
       setError("Login failed. Please try again.");
+      setSuccess(null);
     }
   }, [location]);
-  // No longer need to manually handle the callback - server does the redirect
+  const handleSchema = z
+    .string()
+    .min(1, "Handle is required")
+    .max(64, "Handle too long");
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const result = handleSchema.safeParse(handle);
+    if (!result.success) {
+      setError(result.error.errors[0].message);
+      return;
+    }
     const res = await fetch(`${API_URL}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,7 +46,6 @@ export default function Login() {
     });
     const data = await res.json();
     if (data.redirectUrl) {
-      // Set a flag that we're performing a new login
       sessionStorage.setItem("newLogin", "true");
       window.location.href = data.redirectUrl;
     } else {
@@ -49,7 +59,7 @@ export default function Login() {
       {success && <Notification color="green">{success}</Notification>}
       <form onSubmit={onSubmit}>
         <TextInput
-          label="Bluesky Handle"
+          label="Bluesky Handle (without @)"
           value={handle}
           onChange={(e) => setHandle(e.target.value)}
           required

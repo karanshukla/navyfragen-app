@@ -76,11 +76,6 @@ export class Server {
     ); // Apply middleware first
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-
-    // Then apply the router
-    const router = createRouter(ctx);
-    app.use(router);
-    app.use((_req, res) => res.sendStatus(404));
     app.use(
       rateLimit({
         windowMs: 60 * 1000, // 1 minute
@@ -88,6 +83,11 @@ export class Server {
         message: "Too many requests, please try again later.",
       })
     );
+
+    // Then apply the router
+    const router = createRouter(ctx);
+    app.use(router);
+    app.use((_req, res) => res.sendStatus(404));
 
     // Bind our server to the port
     const server = app.listen(env.PORT);

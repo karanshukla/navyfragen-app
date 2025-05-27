@@ -11,6 +11,7 @@ import {
   Button,
   Group,
 } from "@mantine/core";
+import { z } from "zod";
 
 // Use the API URL from environment variable
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -169,8 +170,19 @@ export default function Messages() {
     setResponseText("");
   };
 
+  // Zod schema for response text (min 1, max 500 chars)
+  const responseSchema = z
+    .string()
+    .min(1, "Response cannot be empty")
+    .max(500, "Response too long (max 500 chars)");
+
   const handleSendResponse = async (msg: any) => {
-    if (!responseText.trim()) return;
+    // Validate response before sending
+    const result = responseSchema.safeParse(responseText);
+    if (!result.success) {
+      setError(result.error.errors[0].message);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
