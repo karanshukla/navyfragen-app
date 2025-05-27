@@ -13,15 +13,19 @@ import {
   Box,
 } from "@mantine/core";
 
-// Use the API URL from environment variable
+// Use the API URL from environment variable (on prod this is would be the reverse proxy URL)
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Check if user is logged in
   useEffect(() => {
-    fetch(`${API_URL}/api/session`, {
+    const token = localStorage.getItem("auth_token");
+    let url = `${API_URL}/api/session`;
+    if (token) {
+      url += `?token=${token}`;
+    }
+    fetch(`${url}/api/session`, {
       credentials: "include",
     })
       .then((res) => res.json())

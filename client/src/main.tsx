@@ -71,21 +71,21 @@ const theme = createTheme({
   headings: { fontFamily: "Inter, sans-serif" },
 });
 
-// Type for user profile
+// Probably want to move this to Zustand or React Query later
 interface UserProfile {
+  did?: string;
   displayName?: string;
   description?: string;
   avatar?: string;
 }
 
-// Navigation wrapper component for active link styling
 interface NavigationProps {
   onLinkClick?: () => void;
   isLoggedIn: boolean;
   userProfile: UserProfile | null;
 }
 
-function Navigation({ onLinkClick, isLoggedIn, userProfile }: NavigationProps) {
+function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   const location = useLocation();
 
   const handleClick = () => {
@@ -123,7 +123,6 @@ function Navigation({ onLinkClick, isLoggedIn, userProfile }: NavigationProps) {
             label="Logout"
             onClick={async () => {
               try {
-                // Remove the token from localStorage for logout
                 localStorage.removeItem("auth_token");
                 window.location.reload();
               } catch (e) {
@@ -190,7 +189,7 @@ function AppLayout() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    // Check if the user is logged in using token-based auth
+    // Check if user is logged in, may want to move this to react query/global state
     const token = localStorage.getItem("auth_token");
     let url = `${API_URL}/api/session`;
     if (token) {
@@ -226,12 +225,33 @@ function AppLayout() {
             size="sm"
           />
           <Group>
-            <Title order={3}>NavyFragen</Title>
+            <Title order={3}>Navyfragen</Title>
           </Group>
+          <Flex
+            gap="sm"
+            justify="flex-end"
+            align="flex-end"
+            style={{ flexGrow: 1 }}
+          >
+            {isLoading ? (
+              <Text>Loading...</Text>
+            ) : isLoggedIn && userProfile ? (
+              <Group gap="xs">
+                <Avatar
+                  src={userProfile.avatar || undefined}
+                  alt={userProfile.displayName || "User Avatar"}
+                />
+                <Text>{userProfile.displayName}</Text>
+              </Group>
+            ) : (
+              <Link to="/login" style={{ textDecoration: "none" }}>
+                <Text>Login</Text>
+              </Link>
+            )}
+          </Flex>
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        {/* Navigation links, visible when Navbar is open (mobile) or always visible (desktop) */}
         <Navigation
           onLinkClick={() => setOpened(false)}
           isLoggedIn={isLoggedIn}
