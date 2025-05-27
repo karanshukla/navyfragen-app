@@ -1,0 +1,32 @@
+{
+  "lexicon": 1,
+  "id": "app.navyfragen.message",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "message",
+          "createdAt",
+          "recipient"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          },
+          "recipient": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,21 +1,26 @@
-# AT Protocol "Statusphere" Example App
+## Description
 
-An example application covering:
-
-- Signin via OAuth
-- Fetch information about users (profiles)
-- Listen to the network firehose for new data
-- Publish data on the user's account using a custom schema
-
-See https://atproto.com/guides/applications for a guide through the codebase.
+Allows users to receive anonymous messages and post the answers directly to BlueSky.
 
 ## Getting Started
 
-```sh
-git clone https://github.com/bluesky-social/statusphere-example-app.git
-cd statusphere-example-app
-cp .env.template .env
-npm install
-npm run dev
-# Navigate to http://localhost:8080
-```
+You will need to install Node, Git and a compatible web browser to run the app locally. Windows users may also need to install the C++ build tools or use WSL2 to run the app.
+
+1. Clone the repository:
+   ```bash
+   git clone
+    cd navyfragen
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+4. Open your web browser and navigate to `http://localhost:8080`.
+
+## Important to note
+
+Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with ./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/*
