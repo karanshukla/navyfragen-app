@@ -83,6 +83,8 @@ export class Server {
         message: "Too many requests, please try again later.",
       })
     );
+    // Trust proxy if running behind one (common in staging/production)
+    app.set("trust proxy", 1);
 
     // Then apply the router
     const router = createRouter(ctx);
