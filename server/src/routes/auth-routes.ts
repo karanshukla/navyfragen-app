@@ -33,7 +33,15 @@ export function authRoutes(
         });
         return res.json({ redirectUrl: url.toString() });
       } catch (err) {
-        ctx.logger.error({ err }, "oauth authorize failed");
+        // Log the full error, including stack trace if present
+        ctx.logger.error(
+          {
+            err,
+            stack: err instanceof Error ? err.stack : undefined,
+            message: err instanceof Error ? err.message : String(err),
+          },
+          "oauth authorize failed: "
+        );
         const message =
           err instanceof OAuthResolverError
             ? err.message
