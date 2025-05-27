@@ -31,6 +31,7 @@
         "envalid": "^8.0.0",
         "express": "^4.19.2",
         "express-rate-limit": "^7.5.0",
+        "express-validator": "^7.2.1",
         "iron-session": "^8.0.2",
         "kysely": "^0.27.4",
         "multiformats": "^9.9.0",

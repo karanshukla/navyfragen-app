@@ -11,7 +11,6 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
-import { z } from "zod";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -23,12 +22,6 @@ export default function PublicProfile() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
-
-  // Zod schema for anonymous message (min 1, max 500 chars)
-  const messageSchema = z
-    .string()
-    .min(1, "Message cannot be empty")
-    .max(500, "Message too long (max 500 chars)");
 
   useEffect(() => {
     if (!did) return;
@@ -63,12 +56,6 @@ export default function PublicProfile() {
   }, [did]);
 
   const handleSend = async () => {
-    // Validate message before sending
-    const result = messageSchema.safeParse(message);
-    if (!result.success) {
-      setError(result.error.errors[0].message);
-      return;
-    }
     setLoading(true);
     setError(null);
     setSuccess(null);

@@ -7,7 +7,7 @@ import { Firehose } from "@atproto/sync";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
 
-import { createDb, migrateToLatest } from "#/db";
+import { createDb, migrateToLatest } from "./database/db";
 import { env } from "#/lib/env";
 import { createRouter } from "#/routes";
 import { createClient } from "#/auth/client";
@@ -15,8 +15,8 @@ import {
   createBidirectionalResolver,
   createIdResolver,
   BidirectionalResolver,
-} from "#/id-resolver";
-import type { Database } from "#/db";
+} from "./id-resolver";
+import type { Database } from "./database/db";
 import { IdResolver, MemoryCache } from "@atproto/identity";
 import { createFirehoseStream } from "./firehose";
 import { ingestFirehoseMessages } from "./ingest";
