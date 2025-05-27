@@ -219,12 +219,12 @@ export default function Messages() {
             <Center>
               <Loader size="lg" />
             </Center>
-          ) : messagesData?.messages && messagesData.messages.length > 0 ? (
+          ) : messagesData && messagesData.messages && messagesData.messages.length > 0 ? (
             <Stack gap="md">
               <Text c="dimmed" size="sm" mb="md">
                 You have {messagesData.messages.length} messages.
               </Text>
-              {messagesData.messages.map((msg) => (
+              {(messagesData.messages ?? []).map((msg: Message) => (
                 <Paper key={msg.tid} p="md" withBorder>
                   <Stack>
                     <Group justify="space-between">
