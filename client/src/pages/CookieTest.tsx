@@ -21,7 +21,7 @@ export default function CookieTest() {
     setLoading(true);
     try {
       const authToken = localStorage.getItem("auth_token");
-      let url = `${API_URL}/api/debug-cookies`;
+      let url = `${API_URL}/debug-cookies`;
       if (authToken) {
         url += `?token=${authToken}`;
       }

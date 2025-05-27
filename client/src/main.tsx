@@ -142,7 +142,7 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
                 return;
               const token = localStorage.getItem("auth_token");
               try {
-                const res = await fetch(`${API_URL}/api/delete-account`, {
+                const res = await fetch(`${API_URL}/delete-account`, {
                   method: "DELETE",
                   headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
@@ -191,7 +191,7 @@ function AppLayout() {
   useEffect(() => {
     // Check if user is logged in, may want to move this to react query/global state
     const token = localStorage.getItem("auth_token");
-    let url = `${API_URL}/api/session`;
+    let url = `${API_URL}/session`;
     if (token) {
       url += `?token=${token}`;
     }

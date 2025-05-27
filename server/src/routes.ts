@@ -37,9 +37,9 @@ export const createRouter = (ctx: AppContext) => {
   const router = express.Router();
 
   // in the frontend the API URL must include the /api prefix
-  router.use(authRoutes(ctx, handler, checkValidation));
-  router.use(messageRoutes(ctx, handler, checkValidation));
-  router.use(profileRoutes(ctx, handler, checkValidation));
+  router.use("/api", authRoutes(ctx, handler, checkValidation));
+  router.use("/api", messageRoutes(ctx, handler, checkValidation));
+  router.use("/api", profileRoutes(ctx, handler, checkValidation));
 
   return router;
 };

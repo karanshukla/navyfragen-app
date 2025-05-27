@@ -30,7 +30,7 @@ export default function PublicProfile() {
     if (!handle) return;
     setLoading(true);
     setError(null);
-    fetch(`${API_URL}/api/resolve-handle/${encodeURIComponent(handle)}`)
+    fetch(`${API_URL}/resolve-handle/${encodeURIComponent(handle)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.did) {
@@ -52,7 +52,7 @@ export default function PublicProfile() {
     setLoading(true);
     setError(null);
     // Check if user exists in app DB first
-    fetch(`${API_URL}/api/user-exists/${encodeURIComponent(did)}`)
+    fetch(`${API_URL}/user-exists/${encodeURIComponent(did)}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.exists) {
@@ -61,7 +61,7 @@ export default function PublicProfile() {
         } else {
           setUserExists(true);
           // Fetch public profile only if user exists
-          fetch(`${API_URL}/api/public-profile/${encodeURIComponent(did)}`)
+          fetch(`${API_URL}/public-profile/${encodeURIComponent(did)}`)
             .then((res) => res.json())
             .then((data) => {
               setProfile(data.profile || null);
@@ -95,7 +95,7 @@ export default function PublicProfile() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${API_URL}/api/messages/send`, {
+      const res = await fetch(`${API_URL}/messages/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipient: did, message }),

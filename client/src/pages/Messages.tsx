@@ -65,7 +65,7 @@ export default function Messages() {
         };
 
         // Add token to the URL if available
-        let url = `${API_URL}/api/session`;
+        let url = `${API_URL}/session`;
         if (storedToken) {
           url += `?token=${storedToken}`;
         }
@@ -103,7 +103,7 @@ export default function Messages() {
         setIsLoading(true);
         setError(null);
         const res = await fetch(
-          `${API_URL}/api/messages/${encodeURIComponent(did)}`
+          `${API_URL}/messages/${encodeURIComponent(did)}`
         );
         if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
         const data = await res.json();
@@ -124,7 +124,7 @@ export default function Messages() {
     setError(null);
     try {
       // Example: POST to a new endpoint to add test messages (you must implement this endpoint in your backend)
-      const res = await fetch(`${API_URL}/api/messages/example`, {
+      const res = await fetch(`${API_URL}/messages/example`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipient: session.did }),
@@ -153,7 +153,7 @@ export default function Messages() {
     setError(null);
     try {
       const token = localStorage.getItem("auth_token"); // Get token
-      const res = await fetch(`${API_URL}/api/messages/${tid}`, {
+      const res = await fetch(`${API_URL}/messages/${tid}`, {
         method: "DELETE",
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}), // Add Authorization header
@@ -184,7 +184,7 @@ export default function Messages() {
     setError(null);
     try {
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${API_URL}/api/messages/respond`, {
+      const res = await fetch(`${API_URL}/messages/respond`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

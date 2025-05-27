@@ -21,11 +21,11 @@ export default function Home() {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    let url = `${API_URL}/api/session`;
+    let url = `${API_URL}/session`;
     if (token) {
       url += `?token=${token}`;
     }
-    fetch(`${url}/api/session`, {
+    fetch(`${url}/session`, {
       credentials: "include",
     })
       .then((res) => res.json())
