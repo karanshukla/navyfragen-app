@@ -12,6 +12,7 @@ import {
   Avatar,
   Loader,
   Center,
+  useMantineColorScheme,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
@@ -57,6 +58,9 @@ export default function PublicProfile() {
     error: sendError,
   } = useSendMessage();
 
+  const { colorScheme } = useMantineColorScheme();
+  const isDark = colorScheme === "dark";
+
   // Handle message sending
   const handleSend = () => {
     if (!message.trim()) {
@@ -78,9 +82,7 @@ export default function PublicProfile() {
       { recipient: did!, message },
       {
         onSuccess: () => {
-          setSuccess(
-            "Message sent! The recipient will receive your anonymous message."
-          );
+          setSuccess("Message sent! Let's go!");
           setMessage("");
         },
         onError: (err: any) => {
@@ -171,15 +173,35 @@ export default function PublicProfile() {
 
           <Stack>
             <Textarea
-              placeholder="Type your anonymous message or question..."
+              placeholder="Type your anonymous message or question... (Press Enter to send)"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               minRows={3}
+              maxRows={8}
               maxLength={1000}
+              autosize
               disabled={sendLoading}
+              onKeyDown={(e) => {
+                if (
+                  (e.key === "Enter" &&
+                    !e.shiftKey &&
+                    !e.altKey &&
+                    !e.metaKey) ||
+                  (e.key === "Enter" && e.ctrlKey)
+                ) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              variant="default"
             />
             <Group justify="flex-end">
-              <Button onClick={handleSend} loading={sendLoading}>
+              <Button
+                onClick={handleSend}
+                loading={sendLoading}
+                variant="filled"
+                size="md"
+              >
                 Send Anonymous Message
               </Button>
             </Group>

@@ -80,12 +80,16 @@ export const messageService = {
 };
 
 // React Query hooks
-export function useMessages(did: string | null) {
+export function useMessages(
+  did: string | null,
+  options?: Parameters<typeof useQuery>[0]
+) {
   return useQuery({
     queryKey: did ? messageKeys.detail(did) : messageKeys.all,
     queryFn: () =>
       did ? messageService.getMessages(did) : Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
+    ...(options || {}),
   });
 }
 

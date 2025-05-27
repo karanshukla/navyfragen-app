@@ -47,7 +47,9 @@ export default function Messages() {
     isLoading: messagesLoading,
     error: messagesError,
     refetch: refetchMessages,
-  } = useMessages(session?.did || null);
+  } = useMessages(session?.did || null, {
+    refetchInterval: 3000, // Poll every 3 seconds for real-time updates
+  });
 
   // Get mutation functions
   const { mutate: deleteMessage, isPending: deleteLoading } =
