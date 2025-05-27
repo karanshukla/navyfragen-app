@@ -32,10 +32,8 @@ export function authRoutes(
         ctx.logger.info(
           {
             handle,
-            clientMetadata: ctx.oauthClient.clientMetadata,
             envPublicUrl: env.PUBLIC_URL,
             envClientUrl: env.CLIENT_URL,
-            envPort: env.PORT,
           },
           "Starting OAuth authorize"
         );
@@ -50,20 +48,32 @@ export function authRoutes(
         );
         return res.json({ redirectUrl: url.toString() });
       } catch (err) {
-        // Log the full error, including stack trace and env/client info
-        ctx.logger.error(
-          {
-            err,
-            stack: err instanceof Error ? err.stack : undefined,
-            message: err instanceof Error ? err.message : String(err),
-            handle,
-            clientMetadata: ctx.oauthClient.clientMetadata,
-            envPublicUrl: env.PUBLIC_URL,
-            envClientUrl: env.CLIENT_URL,
-            envPort: env.PORT,
-          },
-          "oauth authorize failed: "
-        );
+        // Basic console.error for Railway as a test
+        console.error("OAuth Authorize Failed (raw console.error):", err);
+
+        // Use Pino's dedicated error logging, simplifying other properties
+        if (err instanceof Error) {
+          ctx.logger.error(
+            {
+              err: err, // Pino's standard way to log an error object
+              handle: handle,
+              publicUrl: env.PUBLIC_URL,
+              clientUrl: env.CLIENT_URL,
+            },
+            "oauth authorize failed (Pino err):"
+          );
+        } else {
+          ctx.logger.error(
+            {
+              error_raw: String(err), // Fallback for non-Error objects
+              handle: handle,
+              publicUrl: env.PUBLIC_URL,
+              clientUrl: env.CLIENT_URL,
+            },
+            "oauth authorize failed (Pino raw string):"
+          );
+        }
+
         const message =
           err instanceof OAuthResolverError
             ? err.message

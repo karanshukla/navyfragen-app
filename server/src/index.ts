@@ -3,7 +3,6 @@ import type http from "node:http";
 import express, { type Express } from "express";
 import { pino } from "pino";
 import type { OAuthClient } from "@atproto/oauth-client-node";
-import { Firehose } from "@atproto/sync";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
 
@@ -18,13 +17,10 @@ import {
 } from "./id-resolver";
 import type { Database } from "./database/db";
 import { IdResolver, MemoryCache } from "@atproto/identity";
-import { createFirehoseStream } from "./firehose";
-import { ingestFirehoseMessages } from "./ingest";
 
 // Application state passed to the router and elsewhere
 export type AppContext = {
   db: Database;
-  ingester?: Firehose;
   logger: pino.Logger;
   oauthClient: OAuthClient;
   resolver: BidirectionalResolver;
@@ -48,20 +44,13 @@ export class Server {
     // Create the atproto utilities
     const oauthClient = await createClient(db);
     const baseIdResolver = createIdResolver();
-    //const ingester = createIngester(db, baseIdResolver);
     const resolver = createBidirectionalResolver(baseIdResolver);
-    const ctx = {
+    const ctx: AppContext = {
       db,
       logger,
       oauthClient,
       resolver,
     };
-
-    // Subscribe to events on the firehose
-    (async () => {
-      const firehose = createFirehoseStream();
-      ingestFirehoseMessages(db, firehose);
-    })();
 
     // Create our server
     const app: Express = express();
@@ -101,7 +90,6 @@ export class Server {
 
   async close() {
     this.ctx.logger.info("sigint received, shutting down");
-    //await this.ctx.ingester.destroy();
     return new Promise<void>((resolve) => {
       this.server.close(() => {
         this.ctx.logger.info("server closed");
