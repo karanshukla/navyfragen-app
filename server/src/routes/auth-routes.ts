@@ -28,17 +28,39 @@ export function authRoutes(
         return res.status(400).json({ error: "invalid handle" });
       }
       try {
+        // Additional logging for debugging in production
+        ctx.logger.info(
+          {
+            handle,
+            clientMetadata: ctx.oauthClient.clientMetadata,
+            envPublicUrl: env.PUBLIC_URL,
+            envClientUrl: env.CLIENT_URL,
+            envPort: env.PORT,
+          },
+          "Starting OAuth authorize"
+        );
         const url = await ctx.oauthClient.authorize(handle, {
           scope: "atproto transition:generic",
         });
+        ctx.logger.info(
+          {
+            redirectUrl: url.toString(),
+          },
+          "OAuth authorize succeeded"
+        );
         return res.json({ redirectUrl: url.toString() });
       } catch (err) {
-        // Log the full error, including stack trace if present
+        // Log the full error, including stack trace and env/client info
         ctx.logger.error(
           {
             err,
             stack: err instanceof Error ? err.stack : undefined,
             message: err instanceof Error ? err.message : String(err),
+            handle,
+            clientMetadata: ctx.oauthClient.clientMetadata,
+            envPublicUrl: env.PUBLIC_URL,
+            envClientUrl: env.CLIENT_URL,
+            envPort: env.PORT,
           },
           "oauth authorize failed: "
         );
