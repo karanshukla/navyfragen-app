@@ -11,45 +11,99 @@ export function profileRoutes(
 
   // Public profile for a DID
   router.get(
-    "/public-profile/:did",
-    param("did").isString().notEmpty().withMessage("DID required"),
+    "/public-profile/:did", // Changed from :handle to :did
+    param("did").isString().notEmpty().withMessage("DID required"), // Changed from handle to DID
     checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
-      const did = req.params.did;
+      const did = req.params.did; // Directly use DID from params
       if (!did) {
         return res.status(400).json({ error: "DID required" });
       }
       try {
+        // No longer need to resolve handle to DID here
         const AtpAgent = require("@atproto/api").AtpAgent;
         const agent = new AtpAgent({ service: "https://api.bsky.app" });
         const profileResponse = await agent.getProfile({ actor: did });
         if (profileResponse.success) {
-          return res.json({ profile: profileResponse.data });
+          // Attempt to resolve DID to handle for convenience, but don't fail if it doesn't resolve
+          let handle = did; // Default to DID if handle can't be resolved
+          try {
+            const resolvedHandle = await ctx.resolver.resolveDidToHandle(did);
+            if (resolvedHandle) {
+              handle = resolvedHandle;
+            }
+          } catch (resolveError) {
+            ctx.logger.warn(
+              { err: resolveError, did },
+              "Failed to resolve DID to handle for public profile, using DID as fallback"
+            );
+          }
+          return res.json({
+            profile: profileResponse.data,
+            did,
+            handle,
+          }); // Return profile, DID, and resolved handle
         } else {
           return res.status(404).json({ error: "Profile not found" });
         }
       } catch (err) {
+        ctx.logger.error({ err, did }, "Failed to fetch profile by DID"); // Log with DID
         return res.status(500).json({ error: "Failed to fetch profile" });
       }
     })
   );
 
-  // Check if a DID exists
+  // Check if a user (by DID) exists
   router.get(
-    "/user-exists/:did",
-    param("did").isString().notEmpty().withMessage("DID required"),
+    "/user-exists/:did", // Changed from :handle to :did
+    param("did").isString().notEmpty().withMessage("DID required"), // Changed from handle to DID
     checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
-      const did = req.params.did;
+      const did = req.params.did; // Directly use DID from params
       if (!did) {
         return res.status(400).json({ error: "DID required" });
       }
-      const userExists = await ctx.db
-        .selectFrom("auth_session")
-        .select("key")
-        .where("key", "=", did)
-        .executeTakeFirst();
-      return res.json({ exists: !!userExists });
+      try {
+        // No longer need to resolve handle to DID here
+        const userExists = await ctx.db
+          .selectFrom("auth_session")
+          .select("key")
+          .where("key", "=", did)
+          .executeTakeFirst();
+        return res.json({ exists: !!userExists, did }); // Return existence and the original DID
+      } catch (err) {
+        ctx.logger.error(
+          { err, did }, // Log with DID
+          "Failed to check user existence by DID"
+        );
+        return res
+          .status(500)
+          .json({ error: "Failed to check user existence" });
+      }
+    })
+  );
+
+  // Resolve a handle to a DID
+  router.get(
+    "/resolve-handle/:handle",
+    param("handle").isString().notEmpty().withMessage("Handle required"),
+    checkValidation,
+    handler(async (req: express.Request, res: express.Response) => {
+      const handle = req.params.handle;
+      if (!handle) {
+        return res.status(400).json({ error: "Handle required" });
+      }
+      try {
+        const did = await ctx.resolver.resolveHandleToDid(handle);
+        if (did) {
+          return res.json({ did });
+        } else {
+          return res.status(404).json({ error: "Handle not found" });
+        }
+      } catch (err) {
+        ctx.logger.error({ err, handle }, "Failed to resolve handle");
+        return res.status(500).json({ error: "Failed to resolve handle" });
+      }
     })
   );
 

@@ -152,10 +152,19 @@ export default function Messages() {
     setIsLoading(true);
     setError(null);
     try {
+      const token = localStorage.getItem("auth_token"); // Get token
       const res = await fetch(`${API_URL}/api/messages/${tid}`, {
         method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}), // Add Authorization header
+        },
       });
-      if (!res.ok) throw new Error("Failed to delete message");
+      if (!res.ok) {
+        const errorData = await res
+          .json()
+          .catch(() => ({ error: "Failed to delete message" }));
+        throw new Error(errorData.error || "Failed to delete message");
+      }
       setMessages((msgs) => msgs.filter((msg) => msg.tid !== tid));
     } catch (err) {
       setError("Failed to delete message");
@@ -246,25 +255,23 @@ export default function Messages() {
             Hi, {session.profile.displayName || "there"}!
           </Text>
           <Text size="sm">
-            You can share your inbox link to receive anonymous questions.
+            You can share your inbox link to receive anonymous messages.
           </Text>
-          <Text size="sm" mt="md">
-            Your inbox link:{" "}
+          <Text size="sm" mt="md" c="dimmed">
+            Your inbox link is {window.location.origin}/profile/
+            {session.profile.handle}{" "}
             <Button
               size="xs"
               variant="outline"
               color="blue"
               onClick={() => {
-                const link = `${window.location.origin}/profile/${session.did}`;
+                const link = `${window.location.origin}/profile/${session.profile.handle}`;
                 navigator.clipboard.writeText(link);
               }}
               style={{ marginLeft: 8 }}
             >
               Copy Inbox Link
             </Button>
-            <span style={{ marginLeft: 8 }}>
-              {`${window.location.origin}/profile/${session.did}`}
-            </span>
           </Text>
         </Paper>
       ) : null}

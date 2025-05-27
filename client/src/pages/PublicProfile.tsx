@@ -9,19 +9,43 @@ import {
   Button,
   Group,
   Textarea,
+  Avatar,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 export default function PublicProfile() {
-  const { did } = useParams();
+  const { handle } = useParams();
   const [profile, setProfile] = useState<any>(null);
   const [userExists, setUserExists] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Resolve DID from handle
+  const [did, setDid] = useState<string | null>(null);
+  useEffect(() => {
+    if (!handle) return;
+    setLoading(true);
+    setError(null);
+    fetch(`${API_URL}/api/resolve-handle/${encodeURIComponent(handle)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.did) {
+          setDid(data.did);
+        } else {
+          setError("Handle not found");
+          setUserExists(false);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to resolve handle");
+        setLoading(false);
+      });
+  }, [handle]);
 
   useEffect(() => {
     if (!did) return;
@@ -56,6 +80,17 @@ export default function PublicProfile() {
   }, [did]);
 
   const handleSend = async () => {
+    if (!message.trim()) {
+      setError("Message cannot be empty.");
+      return;
+    }
+    // Add confirmation dialog
+    if (
+      !window.confirm("Are you sure you want to send this anonymous message?")
+    ) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -72,6 +107,17 @@ export default function PublicProfile() {
       setError("Failed to send message");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTextareaKeyDown = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault(); // Prevent new line
+      if (message.trim()) {
+        handleSend();
+      }
     }
   };
 
@@ -93,6 +139,7 @@ export default function PublicProfile() {
     <Container>
       {profile ? (
         <Paper p="md" withBorder mb="lg">
+          <Avatar src={profile.avatar} size="xl" mb="md" />
           <Title order={2} mb="xs">
             {profile.displayName || profile.handle || did}
           </Title>
@@ -111,7 +158,8 @@ export default function PublicProfile() {
         <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type your message..."
+          onKeyDown={handleTextareaKeyDown} // Add keydown listener
+          placeholder="Type your message... (Press Enter to send)"
           minRows={3}
           disabled={loading}
         />

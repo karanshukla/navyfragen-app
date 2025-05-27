@@ -265,7 +265,7 @@ function AppLayout() {
             <Route path="/login" element={<Login />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/cookie-test" element={<CookieTest />} />
-            <Route path="/profile/:did" element={<PublicProfile />} />
+            <Route path="/profile/:handle" element={<PublicProfile />} />
           </Routes>
         </Container>
       </AppShell.Main>
