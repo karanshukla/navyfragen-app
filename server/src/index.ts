@@ -92,7 +92,7 @@ export class Server {
     app.use((_req, res) => res.sendStatus(404));
 
     // Bind our server to the port
-    const server = app.listen(env.PORT);
+    const server = app.listen(env.PORT, "::");
     await events.once(server, "listening");
     logger.info(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}`);
 
