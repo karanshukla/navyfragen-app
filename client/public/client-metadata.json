@@ -1,6 +1,6 @@
 {
   "client_name": "Navyfragen App",
-  "client_id": "https://navyfragen.appclient-metadata.json",
+  "client_id": "https://navyfragen.app/client-metadata.json",
   "client_uri": "https://navyfragen.app",
   "redirect_uris": ["https:/navyfragen.app/oauth/callback"],
   "scope": "atproto transition:generic",
