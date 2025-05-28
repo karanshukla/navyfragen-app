@@ -12,6 +12,8 @@ import {
   NavLink,
   Avatar,
   Text,
+  Menu,
+  Button,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import {
@@ -90,7 +92,6 @@ interface NavigationProps {
 
 function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   const location = useLocation();
-  const { mutate: logout } = useLogout();
 
   const handleClick = () => {
     if (onLinkClick) {
@@ -116,17 +117,6 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             to="/messages"
             active={location.pathname === "/messages"}
             onClick={handleClick}
-          />{" "}
-          <NavLink
-            label="Logout"
-            onClick={() => {
-              try {
-                logout();
-              } catch (e) {
-                console.error("Logout failed", e);
-              }
-              handleClick();
-            }}
           />{" "}
           <NavLink
             label="Delete My Data"
@@ -167,6 +157,7 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
   const { data: sessionData, isLoading } = useSession();
+  const { mutate: logout } = useLogout();
 
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const userProfile = sessionData?.profile;
@@ -190,7 +181,9 @@ function AppLayout() {
             size="sm"
           />
           <Group>
-            <Title order={3}>Navyfragen</Title>
+            <Button size="xs" variant="subtle" component={Link} to="/">
+              <Title order={3}>Navyfragen</Title>
+            </Button>
           </Group>
           <Flex
             gap="sm"
@@ -201,17 +194,51 @@ function AppLayout() {
             {isLoading ? (
               <Text>Loading...</Text>
             ) : isLoggedIn && userProfile ? (
-              <Group gap="xs">
-                <Avatar
-                  src={userProfile.avatar || undefined}
-                  alt={userProfile.displayName || "User Avatar"}
-                />
-                <Text>{userProfile.displayName}</Text>
-              </Group>
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <Button variant="outline">
+                    <Group gap="xs">
+                      <Avatar
+                        size={30}
+                        src={userProfile.avatar || undefined}
+                        alt={userProfile.displayName || "User Avatar"}
+                      />
+                      <Text>{userProfile.displayName}</Text>
+                    </Group>
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    component={Link}
+                    to={`/profile/${userProfile.handle}`}
+                    onClick={() => setOpened(false)}
+                  >
+                    View Profile
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={() => {
+                      try {
+                        logout();
+                      } catch (e) {
+                        console.error("Logout failed", e);
+                      }
+                      setOpened(false);
+                    }}
+                  >
+                    Logout
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             ) : (
-              <Link to="/login" style={{ textDecoration: "none" }}>
-                <Text>Login</Text>
-              </Link>
+              <Button
+                variant="outline"
+                size="xs"
+                component={Link}
+                to="/login"
+                onClick={() => setOpened(false)}
+              >
+                Login
+              </Button>
             )}
           </Flex>
         </Group>

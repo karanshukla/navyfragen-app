@@ -5,7 +5,10 @@ import {
   SqliteDialect,
   Migration,
   MigrationProvider,
+  PostgresDialect, // Add PostgresDialect import
 } from "kysely";
+import { Pool } from "pg"; // Add pg Pool import
+import { env } from "#/lib/env"; // Import env
 
 // Types
 
@@ -101,6 +104,15 @@ migrations["002"] = {
 // APIs
 
 export const createDb = (location: string): Database => {
+  if (env.NODE_ENV === "production" && env.POSTGRESQL_URL) {
+    return new Kysely<DatabaseSchema>({
+      dialect: new PostgresDialect({
+        pool: new Pool({
+          connectionString: env.POSTGRESQL_URL,
+        }),
+      }),
+    });
+  }
   return new Kysely<DatabaseSchema>({
     dialect: new SqliteDialect({
       database: new SqliteDb(location),

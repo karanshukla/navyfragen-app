@@ -6,6 +6,8 @@ import {
   Title,
   Notification,
   Loader,
+  Text,
+  Group,
 } from "@mantine/core";
 import { useLocation } from "react-router-dom";
 import { z } from "zod";
@@ -25,28 +27,12 @@ export default function Login() {
       setError("Login failed. Please try again.");
       setSuccess(null);
     }
-    // Check for token param (local dev workaround)
-    const token = searchParams.get("token");
-    if (token) {
-      apiClient
-        .setCookie(token)
-        .then(() => {
-          setSuccess("Session established! You are now logged in.");
-          // Remove token from URL
-          window.history.replaceState({}, document.title, location.pathname);
-          // Optionally reload or redirect
-          window.location.reload();
-        })
-        .catch((err) => {
-          setError(err.error || "Failed to set session cookie.");
-        });
-    }
   }, [location]);
   const handleSchema = z
     .string()
     .min(1, "Handle is required")
     .max(64, "Handle too long");
-  const { mutate: login, isPending, error: loginError } = useLogin();
+  const { mutate: login, isPending } = useLogin();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +73,14 @@ export default function Login() {
         <Button type="submit" mt="md" loading={isPending}>
           Log in
         </Button>
+        <Group mt="md">
+          <Text c="dimmed">
+            You will be directed to Bluesky to authenticate. The app does not
+            have access to your BlueSky credentials. Your authentication allows
+            the app to retrieve your messages and post your responses to the app
+            directly.
+          </Text>
+        </Group>
       </form>
       {error && <Notification color="red">{error}</Notification>}
     </Container>
