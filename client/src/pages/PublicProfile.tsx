@@ -22,6 +22,8 @@ import {
 } from "../api/profileService";
 import { useSendMessage } from "../api/messageService";
 
+const MAX_MESSAGE_LENGTH = 280;
+
 export default function PublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const [message, setMessage] = useState("");
@@ -58,14 +60,18 @@ export default function PublicProfile() {
     error: sendError,
   } = useSendMessage();
 
-  // Handle message sending
   const handleSend = () => {
     if (!message.trim()) {
       setError("Message cannot be empty.");
       return;
     }
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      setError(
+        `Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`
+      );
+      return;
+    }
 
-    // Add confirmation dialog
     if (
       !window.confirm("Are you sure you want to send this anonymous message?")
     ) {
@@ -169,13 +175,19 @@ export default function PublicProfile() {
           )}
 
           <Stack>
+            <Text size="sm" ta="right" c="dimmed">
+              {message.length}/{MAX_MESSAGE_LENGTH}
+            </Text>
             <Textarea
-              placeholder="Type your anonymous message or question... (Press Enter to send)"
+              placeholder={`Type your anonymous message or question... (${MAX_MESSAGE_LENGTH} chars max, Enter to send)`}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              minRows={3}
-              maxRows={8}
-              maxLength={1000}
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
+                  setMessage(e.target.value);
+                }
+              }}
+              minRows={1}
+              maxRows={3}
               autosize
               disabled={sendLoading}
               onKeyDown={(e) => {
