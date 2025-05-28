@@ -58,9 +58,6 @@ export default function PublicProfile() {
     error: sendError,
   } = useSendMessage();
 
-  const { colorScheme } = useMantineColorScheme();
-  const isDark = colorScheme === "dark";
-
   // Handle message sending
   const handleSend = () => {
     if (!message.trim()) {

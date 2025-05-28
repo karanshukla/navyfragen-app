@@ -179,7 +179,7 @@ export default function Messages() {
         </Alert>
       ) : (
         <>
-          <Paper p="md" withBorder mb="lg">
+          <Paper withBorder p="md" mb="lg">
             <Text mb="md">
               This is your anonymous inbox. Share the link below to let others
               send you anonymous questions and messages.
@@ -219,7 +219,9 @@ export default function Messages() {
             <Center>
               <Loader size="lg" />
             </Center>
-          ) : messagesData && messagesData.messages && messagesData.messages.length > 0 ? (
+          ) : messagesData &&
+            messagesData.messages &&
+            messagesData.messages.length > 0 ? (
             <Stack gap="md">
               <Text c="dimmed" size="sm" mb="md">
                 You have {messagesData.messages.length} messages.

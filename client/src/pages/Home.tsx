@@ -18,7 +18,7 @@ export default function Home() {
 
   return (
     <>
-      <Paper p="lg" radius="md" withBorder shadow="sm" mb="xl">
+      <Paper p="lg" radius="md" shadow="sm" mb="xl">
         <Title order={1} size="h2" c="deepBlue">
           Navyfragen - Anonymous questions and answers on BlueSky
         </Title>

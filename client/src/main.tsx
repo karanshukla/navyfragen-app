@@ -14,6 +14,7 @@ import {
   Text,
   Menu,
   Button,
+  useMantineColorScheme,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import {
@@ -158,6 +159,7 @@ function AppLayout() {
   const [opened, setOpened] = React.useState(false);
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
+  const { toggleColorScheme } = useMantineColorScheme();
 
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const userProfile = sessionData?.profile;
@@ -188,9 +190,12 @@ function AppLayout() {
           <Flex
             gap="sm"
             justify="flex-end"
-            align="flex-end"
+            align="center"
             style={{ flexGrow: 1 }}
           >
+            <Button size="xs" onClick={() => toggleColorScheme()}>
+              Toggle Theme
+            </Button>
             {isLoading ? (
               <Text>Loading...</Text>
             ) : isLoggedIn && userProfile ? (
@@ -232,7 +237,6 @@ function AppLayout() {
             ) : (
               <Button
                 variant="outline"
-                size="xs"
                 component={Link}
                 to="/login"
                 onClick={() => setOpened(false)}
