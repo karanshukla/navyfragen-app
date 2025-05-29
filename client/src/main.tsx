@@ -16,6 +16,7 @@ import {
   Button,
   useMantineColorScheme,
   Box,
+  Loader,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import {
@@ -193,7 +194,7 @@ function AppLayout() {
               <IconMoon />
             </Button>
             {isLoading ? (
-              <Text>Loading...</Text>
+              <Loader size="sm" />
             ) : isLoggedIn && userProfile ? (
               <Menu shadow="md" width={200}>
                 <Menu.Target>
