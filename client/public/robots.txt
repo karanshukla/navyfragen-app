@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /summary.html
+Disallow: /
