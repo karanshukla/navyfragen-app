@@ -20,16 +20,20 @@ export async function generateQuestionImage(
     return {};
   }
 
-  // Define a theme similar to the app's aesthetic
+  // Define a theme based on the new style request
   const theme = {
-    backgroundColor: "#1A1A1A", // Dark background for the overall image
-    cardBackgroundColor: "#2B2B2B", // Slightly lighter dark for the card/box - NO LONGER USED FOR CARD BG
-    navyBoxColor: "#000080", // Navy blue for the content box
-    textColor: "#E0E0E0", // Light grey/off-white text
-    fontFamily: "Noto Sans, Arial, sans-serif",
-    cardMaxWidth: "1100px", // Increased max width
-    cardPadding: "55px", // Slightly increased padding
-    borderRadius: "15px", // Slightly more rounded
+    imageBackgroundColor: "#1A1A1A", // Dark background
+    cardGradientStart: "#007bff", // Blue for gradient
+    cardGradientEnd: "#6f42c1", // Purple for gradient
+    cardPadding: "1px", // Thickness of the gradient border itself - REMAINS MINIMAL
+    cardBorderRadius: "10px", // Rounded corners for card
+    headerTextColor: "#FFFFFF",
+    messageBackgroundColor: "#FFFFFF",
+    messageTextColor: "#000000",
+    messagePadding: "25px", // Padding inside the white message box, around the text - REMAINS
+    messageBorderRadius: "8px", // Rounded corners for message box (slightly less than card)
+    footerTextColor: "#FFFFFF",
+    fontFamily: "Noto Sans, sans-serif",
   };
 
   const footerText = userBskyHandle
@@ -38,7 +42,7 @@ export async function generateQuestionImage(
 
   const html = `
     <div class="card">
-      <p class="header-text">Anonymous Question:</p>
+      <h2 class="header-text">send me anonymous messages!</h2>
       <p class="message-text">${originalMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
       <p class="footer-text">${footerText}</p>
     </div>
@@ -48,62 +52,66 @@ export async function generateQuestionImage(
     body {
       margin: 0;
       font-family: ${theme.fontFamily};
-      background-color: ${theme.backgroundColor};
+      background-color: ${theme.imageBackgroundColor}; /* Overall image background */
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 1200px; /* Viewport width */
+      width: 1200px; /* Explicitly set to viewport_width */
       height: 630px; /* Viewport height */
-      padding: 15px; /* Reduced body padding to make card appear larger */
+      padding: 50px; /* This will be the thin outer dark border */
       box-sizing: border-box;
     }
     .card {
-      background-color: ${theme.navyBoxColor};
-      border-radius: ${theme.borderRadius};
-      padding: ${theme.cardPadding};
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4); /* Enhanced shadow */
-      width: 100%; /* Card takes full width of padded body */
-      height: 100%; /* Card takes full height of padded body */
-      max-width: ${theme.cardMaxWidth};
+      background: linear-gradient(to right, ${theme.cardGradientStart}, ${theme.cardGradientEnd});
+      border-radius: ${theme.cardBorderRadius};
+      padding: ${theme.cardPadding}; /* This is the thickness of the gradient border itself */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Softer shadow */
+      width: 100%;
+      height: 100%;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      justify-content: space-between; /* Distribute space: header top, footer bottom, message middle */
+      justify-content: space-between;
+      text-align: center;
+      color: ${theme.headerTextColor};
     }
     .header-text {
-      font-size: 32px; /* Increased font size */
+      font-size: 24px; /* Smaller header to maximize message space */
       font-weight: bold;
-      color: ${theme.textColor};
-      margin-top: 0;
-      margin-bottom: 30px; /* Increased margin */
-      text-align: center;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Added text shadow */
+      color: ${theme.headerTextColor};
+      background-color: transparent;
+      padding: 5px 0 0 0; /* Minimal top padding */
+      margin: 0 0 3px 0; /* Small bottom margin to separate from message */
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
     }
     .message-text {
-      font-size: 42px; /* Increased font size */
-      color: ${theme.textColor};
-      line-height: 1.5; /* Adjusted line height */
+      font-size: 38px; /* Maintained for readability */
+      color: ${theme.messageTextColor};
+      background-color: ${theme.messageBackgroundColor};
+      padding: ${theme.messagePadding}; /* Generous padding for text inside this box */
+      border-radius: ${theme.messageBorderRadius};
+      line-height: 1.45; /* Adjusted for visual balance with padding */
       white-space: pre-wrap;
       word-wrap: break-word;
       text-align: center;
-      flex-grow: 1; /* Allows this to take up available vertical space */
+      flex-grow: 1; 
       display: flex;
       flex-direction: column;
-      justify-content: center; /* Vertically center the text block */
-      align-items: center; /* Horizontally center the text block */
-      margin-top: 25px; /* Add some margin from header */
-      margin-bottom: 25px; /* Add some margin before footer */
-      overflow: hidden; /* Prevent text from overflowing card if too long */
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.6); /* Added text shadow */
+      justify-content: center;
+      align-items: center;
+      margin: 0; /* No margin for the message box itself, relies on cardPadding */
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .footer-text {
-      font-size: 24px; /* Increased font size */
-      color: ${theme.textColor};
-      opacity: 0.8; /* Slightly more visible */
+      font-size: 16px; /* Smaller footer */
+      color: ${theme.footerTextColor};
+      opacity: 0.85; 
       text-align: center;
-      margin-top: auto; /* Pushes footer to the bottom of the card */
-      padding-top: 25px; /* Space above the footer text itself */
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Added text shadow */
+      padding: 0 0 5px 0; /* Minimal bottom padding */
+      margin: 3px 0 0 0; /* Small top margin to separate from message */
+      background-color: transparent;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
     }
   `;
 

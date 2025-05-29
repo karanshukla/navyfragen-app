@@ -24,7 +24,7 @@ import {
   useAddExampleMessages,
   Message,
 } from "../api/messageService";
-import { IconTrash } from "@tabler/icons-react";
+import { IconClipboard, IconMail, IconTrash } from "@tabler/icons-react";
 
 export default function Messages() {
   const [welcomeMessage, setWelcomeMessage] = useState<boolean>(false);
@@ -223,7 +223,9 @@ export default function Messages() {
                     withArrow
                     position="right"
                   >
-                    <Button onClick={copy}>Copy Inbox Link</Button>
+                    <Button onClick={copy}>
+                      <IconClipboard />
+                    </Button>
                   </Tooltip>
                 )}
               </CopyButton>
@@ -338,7 +340,9 @@ export default function Messages() {
                               target="_blank"
                               rel="noreferrer"
                             >
-                              {lastPostLink.link}
+                              <Button variant="outline" size="xs">
+                                {lastPostLink.link}
+                              </Button>
                             </a>
                           </Group>
                         </Alert>

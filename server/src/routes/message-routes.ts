@@ -128,15 +128,14 @@ export function messageRoutes(
       }
       // Post the response as text, including the original message and hashtag
       try {
-        const userProfile =
-          agent?.session?.handle || agent?.session?.did || "user"; // Get handle or DID
-
+        const accountDid = agent?.accountDid ?? "";
+        const handle = await ctx.resolver.resolveDidToHandle(accountDid);
         const { imageBlob, imageAltText } = await generateQuestionImage(
           original,
           HCTI_USER_ID,
           HCTI_API_KEY,
           ctx.logger,
-          userProfile.handle
+          handle
         );
 
         const postRecord: any = {
@@ -160,7 +159,6 @@ export function messageRoutes(
             };
           } catch (uploadErr) {
             ctx.logger.error(uploadErr, "Failed to upload image to Bluesky");
-            // Optionally, decide if you want to post without the image or return an error
           }
         }
 

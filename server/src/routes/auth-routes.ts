@@ -63,27 +63,46 @@ export function authRoutes(
   router.post(
     "/logout",
     handler(async (req: express.Request, res: express.Response) => {
+      const token = req.cookies?.auth_token;
+
       // Clear the auth_token cookie
       res.clearCookie("auth_token", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use 'none' in production for cross-domain cookies
+        secure: env.NODE_ENV === "production", // Corrected to use env.NODE_ENV
+        sameSite: env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
       });
 
-      // Also clear the iron session if it exists
-      const session = await getIronSession(req, res, {
+      // Also clear the iron session if it exists (if still used for other purposes)
+      const ironSession = await getIronSession(req, res, {
         cookieName: "sid",
         password: env.COOKIE_SECRET,
         cookieOptions: {
           httpOnly: true,
-          secure: true,
+          secure: true, // Assuming production or HTTPS for iron session as well
           sameSite: "none",
           path: "/",
-          maxAge: 60 * 60 * 24 * 7,
+          maxAge: 60 * 60 * 24 * 7, // Or 0 to clear immediately if that's the intent
         },
       });
-      session.destroy();
+      ironSession.destroy();
+
+      // Revoke the OAuth session via the client
+      if (token) {
+        try {
+          const did = Buffer.from(token, "base64").toString("ascii");
+          await ctx.oauthClient.revoke(did); // This will also delete it from storage
+          ctx.logger.info(
+            { did },
+            "OAuth session revoked and deleted from storage."
+          );
+        } catch (err) {
+          ctx.logger.warn(
+            { err, did: Buffer.from(token, "base64").toString("ascii") },
+            "Failed to revoke OAuth session on logout. It might have been already invalid or removed from storage."
+          );
+        }
+      }
 
       return res.status(200).json({ message: "Logged out successfully" });
     })

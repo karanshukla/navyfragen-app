@@ -13,6 +13,7 @@ import {
   Loader,
   Center,
   useMantineColorScheme,
+  Box,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
@@ -148,13 +149,13 @@ export default function PublicProfile() {
                 size="xl"
                 radius="xl"
               />
-              <div>
+              <Box style={{ flex: 1 }}>
                 <Title order={3}>{profile.displayName}</Title>
                 <Text>@{profile.handle}</Text>
                 {profile.description && (
                   <Text mt="xs">{profile.description}</Text>
                 )}
-              </div>
+              </Box>
             </Group>
           </Paper>
 
