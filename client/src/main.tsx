@@ -15,6 +15,7 @@ import {
   Menu,
   Button,
   useMantineColorScheme,
+  Box,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import {
@@ -23,7 +24,6 @@ import {
   Route,
   Link,
   useLocation,
-  Navigate,
 } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -34,9 +34,7 @@ import Login from "./pages/Login";
 import Messages from "./pages/Messages";
 import PublicProfile from "./pages/PublicProfile";
 import "@mantine/core/styles.css";
-
-// Use the API URL from environment variable
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { IconMoon } from "@tabler/icons-react";
 
 const theme = createTheme({
   colors: {
@@ -182,11 +180,9 @@ function AppLayout() {
             hiddenFrom="sm"
             size="sm"
           />
-          <Group>
-            <Button size="xs" variant="subtle" component={Link} to="/">
-              <Title order={3}>Navyfragen</Title>
-            </Button>
-          </Group>
+          <Button size="xs" variant="subtle" component={Link} to="/">
+            <Title order={3}>Navyfragen</Title>
+          </Button>
           <Flex
             gap="sm"
             justify="flex-end"
@@ -194,7 +190,7 @@ function AppLayout() {
             style={{ flexGrow: 1 }}
           >
             <Button size="xs" onClick={() => toggleColorScheme()}>
-              Toggle Theme
+              <IconMoon />
             </Button>
             {isLoading ? (
               <Text>Loading...</Text>
@@ -208,7 +204,12 @@ function AppLayout() {
                         src={userProfile.avatar || undefined}
                         alt={userProfile.displayName || "User Avatar"}
                       />
-                      <Text>{userProfile.displayName}</Text>
+                      {/* Hide display name text on xs screens */}
+                      <Box visibleFrom="sm">
+                        <Text size="sm" truncate>
+                          {userProfile.displayName}
+                        </Text>
+                      </Box>
                     </Group>
                   </Button>
                 </Menu.Target>

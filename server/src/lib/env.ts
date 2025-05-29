@@ -18,4 +18,12 @@ export const env = cleanEnv(process.env, {
     devDefault: testOnly("http://localhost:5173"),
     desc: "URL of the frontend client",
   }),
+  HCTI_USER_ID: str({
+    devDefault: testOnly(""),
+    desc: "API key for HTML to Image service",
+  }),
+  HCTI_API_KEY: str({
+    devDefault: testOnly(""),
+    desc: "API secret for HTML to Image service",
+  }),
 });

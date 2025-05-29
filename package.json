@@ -13,6 +13,7 @@
     },
     "dependencies": {
         "@types/ws": "^8.18.1",
+        "node-fetch": "^2.7.0",
         "ws": "^8.18.2"
     }
 }

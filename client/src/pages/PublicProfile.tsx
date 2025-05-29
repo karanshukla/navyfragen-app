@@ -22,7 +22,7 @@ import {
 } from "../api/profileService";
 import { useSendMessage } from "../api/messageService";
 
-const MAX_MESSAGE_LENGTH = 280;
+const MAX_MESSAGE_LENGTH = 150;
 
 export default function PublicProfile() {
   const { handle } = useParams<{ handle: string }>();

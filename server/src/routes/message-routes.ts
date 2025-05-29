@@ -1,7 +1,10 @@
 import express from "express";
-import { body, validationResult } from "express-validator";
-import { TID } from "@atproto/common";
+import { body } from "express-validator";
 import type { AppContext } from "../index";
+import { generateQuestionImage } from "../lib/image-generator"; // Import the new image generator
+
+const HCTI_API_KEY = process.env.HCTI_API_KEY; // Store in .env
+const HCTI_USER_ID = process.env.HCTI_USER_ID; // Store in .env
 
 export function messageRoutes(
   ctx: AppContext,
@@ -125,10 +128,43 @@ export function messageRoutes(
       }
       // Post the response as text, including the original message and hashtag
       try {
-        const postText = `Q: ${original}\n\nA: ${response}\n\n (posted via navyfragen.app)`;
-        const postRes = await agent.post({
-          text: postText,
-        });
+        const userProfile =
+          agent?.session?.handle || agent?.session?.did || "user"; // Get handle or DID
+
+        const { imageBlob, imageAltText } = await generateQuestionImage(
+          original,
+          HCTI_USER_ID,
+          HCTI_API_KEY,
+          ctx.logger,
+          userProfile.handle
+        );
+
+        const postRecord: any = {
+          text: response, // The user's response is the main text
+          createdAt: new Date().toISOString(),
+        };
+
+        if (imageBlob && agent) {
+          try {
+            const uploadedImage = await agent.uploadBlob(imageBlob, {
+              encoding: "image/png", // Assuming PNG, adjust if API returns different
+            });
+            postRecord.embed = {
+              $type: "app.bsky.embed.images",
+              images: [
+                {
+                  image: uploadedImage.data.blob,
+                  alt: imageAltText || "Image of the anonymous question",
+                },
+              ],
+            };
+          } catch (uploadErr) {
+            ctx.logger.error(uploadErr, "Failed to upload image to Bluesky");
+            // Optionally, decide if you want to post without the image or return an error
+          }
+        }
+
+        const postRes = await agent.post(postRecord);
         // Convert at:// URI to a proper Bluesky web link
         let webUrl = null;
         let profileName = null;
