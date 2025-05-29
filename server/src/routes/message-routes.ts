@@ -3,9 +3,6 @@ import { body } from "express-validator";
 import type { AppContext } from "../index";
 import { generateQuestionImage } from "../lib/image-generator"; // Import the new image generator
 
-const HCTI_API_KEY = process.env.HCTI_API_KEY; // Store in .env
-const HCTI_USER_ID = process.env.HCTI_USER_ID; // Store in .env
-
 export function messageRoutes(
   ctx: AppContext,
   handler: any,
@@ -126,7 +123,6 @@ export function messageRoutes(
         }
         return res.status(401).json({ error: errorMsg });
       }
-      // Post the response as text, including the original message and hashtag
       try {
         const accountDid = agent?.accountDid ?? "";
         const handle = await ctx.resolver.resolveDidToHandle(accountDid);
