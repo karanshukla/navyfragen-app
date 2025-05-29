@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import type { Logger } from "pino";
+import { env } from "#/lib/env"; // Import env for EXPORT_HTML_URL
 
 interface ImageGenerationResult {
   imageBlob?: Buffer;
@@ -8,15 +9,11 @@ interface ImageGenerationResult {
 
 export async function generateQuestionImage(
   originalMessage: string,
-  hctiUserId: string | undefined,
-  hctiApiKey: string | undefined,
   logger: Logger,
   userBskyHandle?: string
 ): Promise<ImageGenerationResult> {
-  if (!hctiUserId || !hctiApiKey || !originalMessage) {
-    logger.info(
-      "Skipping image generation due to missing HCTI credentials or original message."
-    );
+  if (!originalMessage) {
+    logger.info("Skipping image generation due to missing original message.");
     return {};
   }
 
@@ -25,15 +22,16 @@ export async function generateQuestionImage(
     imageBackgroundColor: "#1A1A1A", // Dark background
     cardGradientStart: "#007bff", // Blue for gradient
     cardGradientEnd: "#6f42c1", // Purple for gradient
-    cardPadding: "1px", // Thickness of the gradient border itself - REMAINS MINIMAL
+    cardPadding: "20px", // Thickness of the gradient border itself
     cardBorderRadius: "10px", // Rounded corners for card
     headerTextColor: "#FFFFFF",
     messageBackgroundColor: "#FFFFFF",
     messageTextColor: "#000000",
-    messagePadding: "25px", // Padding inside the white message box, around the text - REMAINS
-    messageBorderRadius: "8px", // Rounded corners for message box (slightly less than card)
+    messagePadding: "20px", // Padding inside the white message box
+    messageBorderRadius: "8px", // Rounded corners for message box
     footerTextColor: "#FFFFFF",
     fontFamily: "Noto Sans, sans-serif",
+    imageMargin: "40px", // Margin around the card, inside the image bounds - INCREASED
   };
 
   const footerText = userBskyHandle
@@ -41,127 +39,142 @@ export async function generateQuestionImage(
     : "navyfragen.app";
 
   const html = `
-    <div class="card">
-      <h2 class="header-text">send me anonymous messages!</h2>
-      <p class="message-text">${originalMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
-      <p class="footer-text">${footerText}</p>
-    </div>
-  `;
-
-  const css = `
-    body {
-      margin: 0;
-      font-family: ${theme.fontFamily};
-      background-color: ${theme.imageBackgroundColor}; /* Overall image background */
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 1200px; /* Explicitly set to viewport_width */
-      height: 630px; /* Viewport height */
-      padding: 50px; /* This will be the thin outer dark border */
-      box-sizing: border-box;
-    }
-    .card {
-      background: linear-gradient(to right, ${theme.cardGradientStart}, ${theme.cardGradientEnd});
-      border-radius: ${theme.cardBorderRadius};
-      padding: ${theme.cardPadding}; /* This is the thickness of the gradient border itself */
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Softer shadow */
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      text-align: center;
-      color: ${theme.headerTextColor};
-    }
-    .header-text {
-      font-size: 24px; /* Smaller header to maximize message space */
-      font-weight: bold;
-      color: ${theme.headerTextColor};
-      background-color: transparent;
-      padding: 5px 0 0 0; /* Minimal top padding */
-      margin: 0 0 3px 0; /* Small bottom margin to separate from message */
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    }
-    .message-text {
-      font-size: 38px; /* Maintained for readability */
-      color: ${theme.messageTextColor};
-      background-color: ${theme.messageBackgroundColor};
-      padding: ${theme.messagePadding}; /* Generous padding for text inside this box */
-      border-radius: ${theme.messageBorderRadius};
-      line-height: 1.45; /* Adjusted for visual balance with padding */
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      text-align: center;
-      flex-grow: 1; 
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      margin: 0; /* No margin for the message box itself, relies on cardPadding */
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .footer-text {
-      font-size: 16px; /* Smaller footer */
-      color: ${theme.footerTextColor};
-      opacity: 0.85; 
-      text-align: center;
-      padding: 0 0 5px 0; /* Minimal bottom padding */
-      margin: 3px 0 0 0; /* Small top margin to separate from message */
-      background-color: transparent;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    }
+    <html>
+      <head>
+        <style>
+          ${getCss(theme)}
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+      </head>
+      <body>
+        <div class="card">
+          <h2 class="header-text">send me anonymous messages!</h2>
+          <p class="message-text">${originalMessage.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")}</p>
+          <p class="footer-text">${footerText}</p>
+        </div>
+      </body>
+    </html>
   `;
 
   try {
-    const imageApiRes = await fetch("https://hcti.io/v1/image", {
+    logger.info(
+      `Attempting to generate image via monkeyphysics/html-to-image service at: ${env.EXPORT_HTML_URL}`
+    );
+    const payload = {
+      source: html,
+      format: "png",
+      options: {
+        width: 1200, // Moved to root
+        height: 630, // Moved to root
+      },
+    };
+
+    const response = await fetch(env.EXPORT_HTML_URL, {
+      // URL should be the root, e.g., http://localhost:3033/
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization:
-          "Basic " +
-          Buffer.from(`${hctiUserId}:${hctiApiKey}`).toString("base64"),
       },
-      body: JSON.stringify({
-        html,
-        css,
-        google_fonts: "Noto Sans",
-        viewport_width: 1200, // Specify viewport width
-        viewport_height: 630, // Specify viewport height
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (imageApiRes.ok) {
-      const imageResult = (await imageApiRes.json()) as { url: string };
-      const imageUrl = imageResult.url;
-      const imageDownloadRes = await fetch(imageUrl);
-
-      if (imageDownloadRes.ok) {
-        const arrayBuffer = await imageDownloadRes.arrayBuffer();
-        const imageBlob = Buffer.from(arrayBuffer);
-        const imageAltText = `Image of the anonymous question: \\"${originalMessage.substring(0, 100)}${originalMessage.length > 100 ? "..." : ""}\\"`;
-        return { imageBlob, imageAltText };
-      } else {
-        logger.error(
-          {
-            error: await imageDownloadRes.text(),
-            status: imageDownloadRes.status,
-          },
-          "Failed to download image from HCTI URL"
-        );
-        return {};
-      }
+    if (response.ok) {
+      const imageBlob = await response.buffer(); // The service returns the image directly
+      const imageAltText = `Image of the anonymous question: \"${originalMessage.substring(
+        0,
+        100
+      )}${originalMessage.length > 100 ? "..." : ""}\"`;
+      return { imageBlob, imageAltText };
     } else {
       logger.error(
-        { error: await imageApiRes.text(), status: imageApiRes.status },
-        "Failed to generate image with HCTI"
+        { error: await response.text(), status: response.status },
+        "Failed to generate image with export-html service"
       );
       return {};
     }
   } catch (imgErr) {
-    logger.error(imgErr, "Error during image generation/download process");
+    logger.error(imgErr, "Error during image generation process");
     return {};
   }
+}
+
+// Helper function to generate CSS string from theme object
+function getCss(theme: any): string {
+  return `
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: ${theme.fontFamily};
+      background-color: ${theme.imageBackgroundColor}; /* Dark background */
+      width: 1200px; /* Overall image width */
+      height: 630px; /* Overall image height */
+      padding: ${theme.imageMargin}; /* Space around the .card */
+      box-sizing: border-box; /* padding is included in width/height */
+      display: flex; /* Ensures .card can expand to fill if needed */
+      justify-content: center; /* Centers .card if it's smaller */
+      align-items: center; /* Centers .card if it's smaller */
+      overflow: hidden; /* Ensure nothing spills out */
+    }
+    .card {
+      background: linear-gradient(to right, ${theme.cardGradientStart}, ${theme.cardGradientEnd}); /* Gradient */
+      border-radius: ${theme.cardBorderRadius};
+      padding: ${theme.cardPadding}; /* This is the gradient border thickness */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      width: 100%; /* Fill the space provided by body's content box (body_size - 2*imageMargin) */
+      height: 100%; /* Fill the space provided by body's content box */
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* Vertically center content within the card */
+      align-items: center; /* Horizontally center content (like .message-text if not full width) */
+      text-align: center; /* Default text alignment for children */
+    }
+    .header-text {
+      font-size: 48px;
+      font-weight: bold;
+      color: ${theme.headerTextColor};
+      background-color: transparent;
+      padding: 20px 15px 10px 15px;
+      margin: 0 0 10px 0;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+      width: 100%; /* Take full width of .card's content area */
+    }
+    .message-text {
+      font-size: 40px;
+      color: ${theme.messageTextColor};
+      background-color: ${theme.messageBackgroundColor}; /* White box for the message */
+      padding: ${theme.messagePadding};
+      border-radius: ${theme.messageBorderRadius};
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      text-align: center;
+      flex-grow: 0; /* Don't grow beyond content unless specified by height/max-height */
+      display: flex; /* For centering text within this box */
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin: 15px auto; /* Vertical margin, auto for horizontal centering */
+      max-width: 75%; /* Max width of the white box */
+      max-height: 45%; /* Max height of the white box */
+      overflow: hidden; /* Clip content if too long */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .footer-text {
+      font-size: 28px;
+      color: ${theme.footerTextColor};
+      opacity: 0.85;
+      text-align: center;
+      padding: 10px 20px 15px 20px;
+      margin: 10px 0 0 0;
+      background-color: transparent;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+      width: 100%; /* Take full width of .card's content area */
+    }
+  `;
 }

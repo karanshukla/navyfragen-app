@@ -132,11 +132,14 @@ export function messageRoutes(
         const handle = await ctx.resolver.resolveDidToHandle(accountDid);
         const { imageBlob, imageAltText } = await generateQuestionImage(
           original,
-          HCTI_USER_ID,
-          HCTI_API_KEY,
           ctx.logger,
           handle
         );
+
+        if (!imageBlob) {
+          ctx.logger.error("Image generation failed, no imageBlob returned");
+          return res.status(500).json({ error: "Image generation failed" });
+        }
 
         const postRecord: any = {
           text: response, // The user's response is the main text
