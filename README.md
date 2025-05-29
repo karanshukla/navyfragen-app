@@ -9,7 +9,7 @@ You will need to install Node, Git and a compatible web browser to run the app l
 1. Clone the repository:
    ```bash
    git clone
-    cd navyfragen
+   cd navyfragen
    ```
 2. Install dependencies:
    ```bash
@@ -34,8 +34,8 @@ docker run --rm -p 3033:3033 monkeyphysics/html-to-image
 
 ## Important to note
 
-Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with ./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/\*
+Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with:
 
-```
-
+```bash
+./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/\*
 ```
