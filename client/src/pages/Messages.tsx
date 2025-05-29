@@ -26,6 +26,9 @@ import {
 } from "../api/messageService";
 import { IconClipboard, IconMail, IconTrash } from "@tabler/icons-react";
 
+const shortlinkurl =
+  import.meta.env.VITE_SHORTLINK_URL || "localhost:3033/profile";
+
 export default function Messages() {
   const [welcomeMessage, setWelcomeMessage] = useState<boolean>(false);
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
@@ -199,23 +202,20 @@ export default function Messages() {
         </Alert>
       ) : (
         <>
-          <Paper withBorder p="md" mb="lg">
+          <Paper withBorder p="md" mb="lg" shadow="sm">
             <Text mb="md">
-              This is your anonymous inbox. Share the link below to let others
-              send you anonymous questions and messages.
+              Share the link below to let others send you anonymous questions
+              and messages. Don't forget, your inbox link is publically
+              accessible!
             </Text>
             <Group>
               <TextInput
                 readOnly
-                value={`${window.location.origin}/profile/${
-                  session.profile?.handle || ""
-                }`}
+                value={`${shortlinkurl}/${session.profile?.handle || ""}`}
                 style={{ flexGrow: 1 }}
               />
               <CopyButton
-                value={`${window.location.origin}/profile/${
-                  session.profile?.handle || ""
-                }`}
+                value={`${shortlinkurl}/${session.profile?.handle || ""}`}
               >
                 {({ copied, copy }) => (
                   <Tooltip
@@ -289,8 +289,14 @@ export default function Messages() {
                           </Button>
                         </Group>
                       </Group>
-                      <Text>{msg.message}</Text>
-
+                      <Text
+                        style={{
+                          wordBreak: "break-word",
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {msg.message}
+                      </Text>
                       {respondingTid === msg.tid && (
                         <Stack>
                           <Textarea

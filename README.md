@@ -9,7 +9,7 @@ You will need to install Node, Git and a compatible web browser to run the app l
 1. Clone the repository:
    ```bash
    git clone
-    cd navyfragen
+   cd navyfragen
    ```
 2. Install dependencies:
    ```bash
@@ -22,10 +22,20 @@ You will need to install Node, Git and a compatible web browser to run the app l
 4. Open your web browser and navigate to `http://localhost:8080`.
 
 ## External Dependencies
+
 Image generation is handled by a separate service that can be found here: [text](https://hub.docker.com/r/monkeyphysics/html-to-image)
 
-You'll need to run it locally via Docker and update your env file to point to it (it should default to port 3033)
+You'll need to run it locally via Docker and update your env file to point to localhost:port (it should default to port 3033). Doing it through the Docker UI will not work, as it will not expose the port correctly.
+
+```bash
+docker pull monkeyphysics/html-to-image
+docker run --rm -p 3033:3033 monkeyphysics/html-to-image
+```
 
 ## Important to note
 
-Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with ./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/*
+Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with:
+
+```bash
+./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/\*
+```

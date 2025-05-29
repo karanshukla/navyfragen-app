@@ -153,7 +153,15 @@ export default function PublicProfile() {
                 <Title order={3}>{profile.displayName}</Title>
                 <Text>@{profile.handle}</Text>
                 {profile.description && (
-                  <Text mt="xs">{profile.description}</Text>
+                  <Text
+                    mt="xs"
+                    style={{
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {profile.description}
+                  </Text>
                 )}
               </Box>
             </Group>
