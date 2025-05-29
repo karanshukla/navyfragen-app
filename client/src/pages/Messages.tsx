@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // Added useRef
 import {
   Container,
   Title,
@@ -14,6 +14,7 @@ import {
   Textarea,
   CopyButton,
   Tooltip,
+  Checkbox,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -23,6 +24,7 @@ import {
   useAddExampleMessages,
   Message,
 } from "../api/messageService";
+import { IconClipboard, IconMail, IconTrash } from "@tabler/icons-react";
 
 export default function Messages() {
   const [welcomeMessage, setWelcomeMessage] = useState<boolean>(false);
@@ -33,6 +35,9 @@ export default function Messages() {
     link: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteAfterResponding, setDeleteAfterResponding] =
+    useState<boolean>(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
 
   // Get session data
   const {
@@ -67,14 +72,6 @@ export default function Messages() {
       sessionStorage.removeItem("newLogin");
     }
   }, []);
-
-  // The combined loading state
-  const isLoading =
-    sessionLoading ||
-    messagesLoading ||
-    deleteLoading ||
-    respondLoading ||
-    examplesLoading;
 
   // Add example messages for testing
   const handleAddExampleMessages = () => {
@@ -124,7 +121,23 @@ export default function Messages() {
           if (data.link) {
             setLastPostLink({ tid: msg.tid, link: data.link });
           }
-          refetchMessages();
+          if (deleteAfterResponding) {
+            setTimeout(() => {
+              deleteMessage(msg.tid, {
+                onSuccess: () => {
+                  refetchMessages(); // Refetch after successful deletion
+                },
+                onError: (err: any) => {
+                  setError(
+                    err.error || "Failed to delete message after responding."
+                  );
+                  refetchMessages(); // Refetch even if deletion fails to sync UI
+                },
+              });
+            }, 5000); // Delay deletion by 5 seconds
+          } else {
+            refetchMessages(); // Refetch if not deleting
+          }
         },
         onError: (err: any) => {
           setError(err.error || "Failed to send response");
@@ -132,6 +145,13 @@ export default function Messages() {
       }
     );
   };
+
+  // Effect to focus textarea when it becomes active
+  useEffect(() => {
+    if (respondingTid && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [respondingTid]);
 
   return (
     <Container>
@@ -179,7 +199,7 @@ export default function Messages() {
         </Alert>
       ) : (
         <>
-          <Paper p="md" withBorder mb="lg">
+          <Paper withBorder p="md" mb="lg">
             <Text mb="md">
               This is your anonymous inbox. Share the link below to let others
               send you anonymous questions and messages.
@@ -204,7 +224,7 @@ export default function Messages() {
                     position="right"
                   >
                     <Button onClick={copy}>
-                      {copied ? "Copied" : "Copy Inbox Link"}
+                      <IconClipboard />
                     </Button>
                   </Tooltip>
                 )}
@@ -219,86 +239,119 @@ export default function Messages() {
             <Center>
               <Loader size="lg" />
             </Center>
-          ) : messagesData && messagesData.messages && messagesData.messages.length > 0 ? (
-            <Stack gap="md">
-              <Text c="dimmed" size="sm" mb="md">
-                You have {messagesData.messages.length} messages.
-              </Text>
-              {(messagesData.messages ?? []).map((msg: Message) => (
-                <Paper key={msg.tid} p="md" withBorder>
-                  <Stack>
-                    <Group justify="space-between">
-                      <Text size="sm" c="dimmed">
-                        {new Date(msg.createdAt).toLocaleString()}
-                      </Text>
-                      <Group>
-                        <Button
-                          size="xs"
-                          onClick={() => handleDelete(msg.tid)}
-                          color="red"
-                          variant="outline"
-                        >
-                          Delete
-                        </Button>
-                        <Button
-                          size="xs"
-                          onClick={() => handleRespond(msg.tid)}
-                          color="blue"
-                          variant="filled"
-                        >
-                          Respond
-                        </Button>
-                      </Group>
-                    </Group>
-                    <Text>{msg.message}</Text>
-
-                    {respondingTid === msg.tid && (
-                      <Stack>
-                        <Textarea
-                          placeholder="Write your response..."
-                          value={responseText}
-                          onChange={(e) => setResponseText(e.target.value)}
-                          autosize
-                          minRows={3}
-                          maxRows={10}
-                        />
-                        <Group justify="flex-end">
+          ) : messagesData &&
+            messagesData.messages &&
+            messagesData.messages.length > 0 ? (
+            <>
+              <Stack gap="md">
+                <Text c="dimmed" size="xs" mb="md">
+                  You have {messagesData.messages.length} messages.
+                </Text>
+                <Checkbox
+                  checked={deleteAfterResponding}
+                  onChange={(event) =>
+                    setDeleteAfterResponding(event.currentTarget.checked)
+                  }
+                  label="Delete messages after responding"
+                />
+                {(messagesData.messages ?? []).map((msg: Message) => (
+                  <Paper
+                    key={msg.tid}
+                    p="md"
+                    shadow="lg"
+                    onClick={() => {
+                      if (respondingTid !== msg.tid) {
+                        handleRespond(msg.tid);
+                      } else {
+                        setRespondingTid(null); // Close if already open
+                      }
+                    }}
+                    style={{
+                      cursor: "pointer", // Always show pointer as it's always interactive
+                    }}
+                  >
+                    <Stack>
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">
+                          {new Date(msg.createdAt).toLocaleString()}
+                        </Text>
+                        <Group>
                           <Button
-                            size="sm"
-                            onClick={() => setRespondingTid(null)}
+                            size="xs"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent Paper's onClick
+                              handleDelete(msg.tid);
+                            }}
+                            color="red"
                             variant="outline"
                           >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSendResponse(msg)}
-                            loading={respondLoading}
-                          >
-                            Post Response
+                            <IconTrash size={16} />
                           </Button>
                         </Group>
-                      </Stack>
-                    )}
+                      </Group>
+                      <Text>{msg.message}</Text>
 
-                    {lastPostLink && lastPostLink.tid === msg.tid && (
-                      <Alert color="green" title="Response posted">
-                        <Group>
-                          <Text>View your response on Bluesky:</Text>
-                          <a
-                            href={lastPostLink.link}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {lastPostLink.link}
-                          </a>
-                        </Group>
-                      </Alert>
-                    )}
-                  </Stack>
-                </Paper>
-              ))}
-            </Stack>
+                      {respondingTid === msg.tid && (
+                        <Stack>
+                          <Textarea
+                            ref={textareaRef}
+                            placeholder="Write your response..."
+                            value={responseText}
+                            maxLength={280}
+                            description={`${responseText.length}/280 characters`}
+                            error={
+                              responseText.length > 280
+                                ? "Message exceeds Bluesky's character limit"
+                                : null
+                            }
+                            onChange={(e) => setResponseText(e.target.value)}
+                            onClick={(e) => e.stopPropagation()} // Prevent Paper's onClick
+                            autosize
+                            minRows={1}
+                            maxRows={1}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" && !event.shiftKey) {
+                                event.preventDefault();
+                                handleSendResponse(msg);
+                              }
+                            }}
+                          />
+                          <Group justify="flex-end">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent Paper's onClick
+                                handleSendResponse(msg);
+                              }}
+                              loading={respondLoading}
+                            >
+                              Post Response
+                            </Button>
+                          </Group>
+                        </Stack>
+                      )}
+
+                      {lastPostLink && lastPostLink.tid === msg.tid && (
+                        <Alert color="green" title="Response posted">
+                          <Group gap="xs">
+                            <Text>View your response on Bluesky:</Text>
+                            <a
+                              href={lastPostLink.link}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <Button variant="outline" size="xs">
+                                {lastPostLink.link}
+                              </Button>
+                            </a>
+                          </Group>
+                        </Alert>
+                      )}
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </>
           ) : (
             <Alert color="blue" title="No messages">
               You don't have any messages yet. Share your profile link to
