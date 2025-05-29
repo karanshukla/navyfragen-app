@@ -17,6 +17,7 @@ export type DatabaseSchema = {
   auth_session: AuthSession;
   auth_state: AuthState;
   message: Message; // Add message table
+  user_profile: UserProfile; // Add user_profile table
 };
 
 export type Status = {
@@ -42,6 +43,11 @@ export type Message = {
   message: string;
   createdAt: string;
   recipient: string; // Add recipient field for filtering
+};
+
+export type UserProfile = {
+  did: string; // User's Decentralized Identifier
+  createdAt: string; // Timestamp of when the user was first created
 };
 
 type AuthStateJson = string;
@@ -98,6 +104,19 @@ migrations["002"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.dropTable("message").execute();
+  },
+};
+
+migrations["003"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .createTable("user_profile")
+      .addColumn("did", "varchar", (col) => col.primaryKey())
+      .addColumn("createdAt", "varchar", (col) => col.notNull())
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.dropTable("user_profile").execute();
   },
 };
 

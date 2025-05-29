@@ -216,14 +216,15 @@ export function messageRoutes(
           .status(400)
           .json({ error: "Recipient and message required" });
       }
-      // Check if recipient exists in auth_session table
-      const userExists = await ctx.db
-        .selectFrom("auth_session")
-        .select("key")
-        .where("key", "=", recipient)
+      // Check if recipient exists in user_profile table
+      const userProfileExists = await ctx.db
+        .selectFrom("user_profile")
+        .select("did")
+        .where("did", "=", recipient)
         .executeTakeFirst();
-      if (!userExists) {
-        return res.status(404).json({ error: "Recipient not found" });
+
+      if (!userProfileExists) {
+        return res.status(404).json({ error: "Recipient not found (user profile does not exist)" });
       }
       const tid = `anon-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const msg = {
@@ -249,14 +250,15 @@ export function messageRoutes(
       if (!recipient) {
         return res.status(400).json({ error: "Recipient DID required" });
       }
-      // Check if recipient exists in auth_session table
-      const userExists = await ctx.db
-        .selectFrom("auth_session")
-        .select("key")
-        .where("key", "=", recipient)
+      // Check if recipient exists in user_profile table
+      const userProfileExists = await ctx.db
+        .selectFrom("user_profile")
+        .select("did")
+        .where("did", "=", recipient)
         .executeTakeFirst();
-      if (!userExists) {
-        return res.status(404).json({ error: "User not found" });
+
+      if (!userProfileExists) {
+        return res.status(404).json({ error: "User not found (user profile does not exist)" });
       }
       const messages = await ctx.db
         .selectFrom("message")
@@ -338,9 +340,10 @@ export function messageRoutes(
       if (!did) {
         return res.status(401).json({ error: "Not authenticated" });
       }
-      // Delete all messages and session for this DID
+      // Delete all messages, session, and user profile for this DID
       await ctx.db.deleteFrom("message").where("recipient", "=", did).execute();
       await ctx.db.deleteFrom("auth_session").where("key", "=", did).execute();
+      await ctx.db.deleteFrom("user_profile").where("did", "=", did).execute(); // Also delete from user_profile
       return res.json({ success: true });
     })
   );

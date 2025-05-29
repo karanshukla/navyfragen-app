@@ -226,6 +226,25 @@ export function authRoutes(
       try {
         const callbackResult = await ctx.oauthClient.callback(params);
         const did = callbackResult.session.did;
+
+        // Add user to user_profile table if they don't exist
+        try {
+          await ctx.db
+            .insertInto("user_profile")
+            .values({
+              did: did,
+              createdAt: new Date().toISOString(),
+            })
+            .onConflict((oc) => oc.column("did").doNothing()) // If user already exists, do nothing
+            .execute();
+          ctx.logger.info({ did }, "User profile entry created or confirmed.");
+        } catch (dbErr) {
+          ctx.logger.error(
+            { err: dbErr, did },
+            "Failed to create or confirm user profile entry."
+          );
+        }
+
         const token = Buffer.from(did).toString("base64");
         res.cookie("auth_token", token, {
           httpOnly: true,
