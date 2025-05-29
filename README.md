@@ -21,6 +21,11 @@ You will need to install Node, Git and a compatible web browser to run the app l
    ```
 4. Open your web browser and navigate to `http://localhost:8080`.
 
+## External Dependencies
+Image generation is handled by a separate service that can be found here: [text](https://hub.docker.com/r/monkeyphysics/html-to-image)
+
+You'll need to run it locally via Docker and update your env file to point to it (it should default to port 3033)
+
 ## Important to note
 
 Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Instead, run it directly with ./node_modules/.bin/lex gen-server ./src/lexicon ./lexicons/*
