@@ -1,0 +1,81 @@
+{
+  "bots": [
+    {
+      "name": "cloudflare-workers",
+      "headers_regex": {
+        "CF-Worker": ".*"
+      },
+      "action": "DENY"
+    },
+    {
+      "name": "well-known",
+      "path_regex": "^/.well-known/.*$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "favicon",
+      "path_regex": "^/favicon.ico$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "robots-txt",
+      "path_regex": "^/robots.txt$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "generic-browser",
+      "user_agent_regex": "Mozilla",
+      "action": "CHALLENGE"
+    },
+    {
+      "name": "client-metadata-json",
+      "path_regex": "^/client-metadata.json$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "sitemap-xml",
+      "path_regex": "^/sitemap.xml$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "service-worker",
+      "path_regex": "^/sw.js$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "webmanifest",
+      "path_regex": "^/site.webmanifest$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "chrome-icons",
+      "path_regex": "^/android-chrome-\\d+x\\d+\\.png$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "apple-touch-icon",
+      "path_regex": "^/apple-touch-icon\\.png$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "favicon-icons",
+      "path_regex": "^/favicon-\\d+x\\d+\\.png$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "summary-html",
+      "path_regex": "^/summary\\.html$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "bluesky",
+      "user_agent_regex": "bsky",
+      "action": "ALLOW"
+    },
+    {
+      "name": "cardybot",
+      "user_agent_regex": "cardyb",
+      "action": "ALLOW"
+    }
+  ]
+}
