@@ -10,6 +10,7 @@ export interface ProfileResponse {
     displayName?: string;
     description?: string;
     avatar?: string;
+    banner?: string;
   } | null;
 }
 
