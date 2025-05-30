@@ -17,7 +17,8 @@ import {
   useMantineColorScheme,
   Box,
   Loader, // Added Checkbox if not already present
-  Alert, // Added Alert for page-level notifications
+  Alert,
+  Divider, // Added Alert for page-level notifications
 } from "@mantine/core";
 import {
   BrowserRouter,
@@ -44,8 +45,10 @@ import {
   IconUser,
   IconLogout,
   IconTrash,
-  IconSettings, // Example, if needed for other items
+  IconSettings,
+  IconButterfly, // Example, if needed for other items
 } from "@tabler/icons-react";
+import { Notifications } from "@mantine/notifications";
 
 const theme = createTheme({
   colors: {
@@ -271,6 +274,16 @@ function AppLayout() {
               isLoggedIn={isLoggedIn}
               userProfile={userProfile || null}
             />
+            <Divider />
+            <Text size="xs" my="md" ta="center">
+              Questions? Feedback? Reach out on Bluesky
+            </Text>
+            <NavLink
+              label="@navyfragen.app"
+              component={Link}
+              to="https://bsky.app/profile/navyfragen.app"
+              leftSection={<IconButterfly size="1rem" stroke={1.5} />}
+            />
           </Box>
           {isLoggedIn && (
             <Box mt="auto">
@@ -351,7 +364,7 @@ function AppLayout() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="auto" theme={theme}>
-      {/* REMOVE: <Notifications ... /> */}
+      <Notifications />
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <AppLayout />

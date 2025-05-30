@@ -15,7 +15,8 @@ import {
   Box,
   Alert,
   BackgroundImage,
-  Divider, // ADDED for page-level alerts
+  Divider,
+  Anchor, // ADDED for page-level alerts
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
@@ -260,7 +261,17 @@ export default function PublicProfile() {
                       textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
                     }}
                   >
-                    @{profile.handle}
+                    <Anchor
+                      href={`https://bsky.app/profile/${profile.handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      c="white"
+                      style={{
+                        textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
+                      }}
+                    >
+                      @{profile.handle}
+                    </Anchor>
                   </Text>
                   {profile.description && (
                     <Text
