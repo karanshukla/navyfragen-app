@@ -340,8 +340,8 @@ export default function PublicProfile() {
           <Divider my="md" />
           <Text size="xs" c="dimmed">
             Your message will be sent anonymously to the user. They may post it
-            publicly on Bluesky, so please don't share any personal infomration
-            or password. Be curious, but respectful and kind!
+            publicly on Bluesky, so please don't share any personal information
+            or passwords. Be curious, but respectful and kind!
           </Text>
           <ConfirmationModal
             opened={modalOpened}
