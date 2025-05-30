@@ -62,10 +62,10 @@ export function profileRoutes(
         return res.status(400).json({ error: "DID required" });
       }
       try {
-        const userExists = await ctx.db
-          .selectFrom("auth_session")
-          .select("key")
-          .where("key", "=", did)
+        const userProfileExists = await ctx.db
+          .selectFrom("user_profile")
+          .select("did")
+          .where("did", "=", did)
           .executeTakeFirst();
         return res.json({ exists: !!userExists, did });
       } catch (err) {
