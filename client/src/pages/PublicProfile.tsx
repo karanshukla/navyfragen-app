@@ -298,11 +298,7 @@ export default function PublicProfile() {
               background: "linear-gradient(to right, #005299, #7700aa)",
             }}
           >
-            <Title
-              order={4}
-              mb="md"
-              c={colorScheme === "dark" ? "white" : "black"}
-            >
+            <Title order={4} mb="md" c="white">
               Send an anonymous message
             </Title>
 

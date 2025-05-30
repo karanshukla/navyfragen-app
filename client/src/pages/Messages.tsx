@@ -385,7 +385,9 @@ export default function Messages() {
                   label="Confirm before deleting messages"
                 />
               </Group>
-              <Grid>
+              <Grid align="flex-start">
+                {" "}
+                {/* MODIFIED: Added align="flex-start" */}
                 {(messagesData.messages ?? []).map((msg: Message) => (
                   <Grid.Col
                     span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
