@@ -1,7 +1,7 @@
 # anubis/Dockerfile
 
 # Step 1: Start FROM the official Anubis image on GHCR
-FROM ghcr.io/techarohq/anubis:latest
+FROM ghcr.io/techarohq/anubis:v1.18.0
 
 # Step 2: Define the internal container path for the policy file.
 ARG ANUBIS_POLICY_INTERNAL_PATH=/data/cfg/botPolicy.json

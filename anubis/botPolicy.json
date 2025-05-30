@@ -1,6 +1,13 @@
 {
   "bots": [
     {
+      "name": "cloudflare-workers",
+      "headers_regex": {
+        "CF-Worker": ".*"
+      },
+      "action": "DENY"
+    },
+    {
       "name": "well-known",
       "path_regex": "^/.well-known/.*$",
       "action": "ALLOW"
