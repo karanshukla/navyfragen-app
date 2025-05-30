@@ -119,30 +119,6 @@ function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             active={location.pathname === "/messages"}
             onClick={handleClick}
           />{" "}
-          <Box
-            pl="var(--mantine-spacing-xs)"
-            mt="var(--mantine-spacing-xs)"
-            mb="var(--mantine-spacing-xs)"
-          ></Box>
-          <NavLink
-            label="Delete My Data"
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  "Are you sure you want to delete your account and all data? This cannot be undone."
-                )
-              )
-                return;
-              try {
-                const { apiClient } = await import("./api/apiClient");
-                const res = await apiClient.delete("/delete-account");
-                alert("Your data has been deleted.");
-                window.location.href = "/";
-              } catch (e: any) {
-                alert(e.error || "Failed to delete data.");
-              }
-            }}
-          />
         </>
       ) : (
         <>
@@ -263,11 +239,42 @@ function AppLayout() {
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        <Navigation
-          onLinkClick={() => setOpened(false)}
-          isLoggedIn={isLoggedIn}
-          userProfile={userProfile || null}
-        />
+        <Box
+          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
+          <Box>
+            <Navigation
+              onLinkClick={() => setOpened(false)}
+              isLoggedIn={isLoggedIn}
+              userProfile={userProfile || null}
+            />
+          </Box>
+          {isLoggedIn && (
+            <Box mt="auto">
+              <NavLink
+                label="Delete My Data"
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      "Are you sure you want to delete your account and all data? This cannot be undone."
+                    )
+                  )
+                    return;
+                  try {
+                    const { apiClient } = await import("./api/apiClient");
+                    const res = await apiClient.delete("/delete-account");
+                    alert("Your data has been deleted.");
+                    window.location.href = "/";
+                  } catch (e: any) {
+                    alert(e.error || "Failed to delete data.");
+                  }
+                  setOpened(false); // Close navbar on click
+                }}
+                color="red" // Optional: style differently to indicate a destructive action
+              />
+            </Box>
+          )}
+        </Box>
       </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>
         <Container>

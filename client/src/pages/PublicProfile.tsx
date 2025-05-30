@@ -141,14 +141,7 @@ export default function PublicProfile() {
     <Container>
       {profile ? (
         <>
-          <Paper
-            p="md"
-            withBorder
-            mb="lg"
-            style={{
-              background: "linear-gradient(to right, #005299, #7700aa)",
-            }}
-          >
+          <Paper p="md" withBorder mb="lg">
             <Group>
               <Avatar
                 src={profile.avatar}

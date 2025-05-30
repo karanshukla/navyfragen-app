@@ -41,6 +41,8 @@ export default function Messages() {
   const [error, setError] = useState<string | null>(null);
   const [deleteAfterResponding, setDeleteAfterResponding] =
     useState<boolean>(false);
+  const [useGradients, setUseGradients] = useState<boolean>(true); // Added state for gradients
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true); // Added state for auto-refresh
   const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
   const [isPortrait, setIsPortrait] = useState(
     window.matchMedia("(orientation: portrait)").matches
@@ -60,7 +62,7 @@ export default function Messages() {
     error: messagesError,
     refetch: refetchMessages,
   } = useMessages(session?.did || null, {
-    refetchInterval: 3000, // Poll every 3 seconds for real-time updates
+    refetchInterval: autoRefresh ? 3000 : false, // Poll every 3 seconds for real-time updates or disable
   });
 
   // Get mutation functions
@@ -221,7 +223,7 @@ export default function Messages() {
           <Paper withBorder p="md" mb="lg" shadow="sm">
             <Text mb="md">
               Share the link below to let others send you anonymous questions
-              and messages. Don't forget, your inbox link is publically
+              and messages. Don't forget, your inbox link is publicly
               accessible!
             </Text>
             <Group>
@@ -262,14 +264,31 @@ export default function Messages() {
               <Text c="dimmed" size="xs" mb="md">
                 You have {messagesData.messages.length} messages.
               </Text>
-              <Checkbox
-                checked={deleteAfterResponding}
-                onChange={(event) =>
-                  setDeleteAfterResponding(event.currentTarget.checked)
-                }
-                label="Delete messages after responding"
-                mb="md" // Added margin bottom for spacing
-              />
+              <Group mb="md">
+                {" "}
+                {/* Group checkboxes for better layout */}
+                <Checkbox
+                  checked={deleteAfterResponding}
+                  onChange={(event) =>
+                    setDeleteAfterResponding(event.currentTarget.checked)
+                  }
+                  label="Delete messages after responding"
+                />
+                <Checkbox
+                  checked={useGradients}
+                  onChange={(event) =>
+                    setUseGradients(event.currentTarget.checked)
+                  }
+                  label="Use gradients"
+                />
+                <Checkbox
+                  checked={autoRefresh}
+                  onChange={(event) =>
+                    setAutoRefresh(event.currentTarget.checked)
+                  }
+                  label="Auto-refresh messages"
+                />
+              </Group>
               <Grid>
                 {(messagesData.messages ?? []).map((msg: Message) => (
                   <Grid.Col
@@ -289,14 +308,23 @@ export default function Messages() {
                       style={{
                         cursor: "pointer", // Always show pointer as it's always interactive
                         height: "100%", // Ensure papers in a row have same height if content differs
-                        background:
-                          "linear-gradient(to right, #005299, #7700aa)", // Dimmer blue to purple gradient
+                        background: useGradients
+                          ? "linear-gradient(to right, #005299, #7700aa)"
+                          : undefined, // Dimmer blue to purple gradient or default
                       }}
                     >
                       <Stack>
                         <Group justify="space-between">
                           <Text size="sm" c="white">
-                            {new Date(msg.createdAt).toLocaleString()}
+                            {new Date(msg.createdAt).toLocaleString(undefined, {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                              timeZoneName: "short",
+                            })}
                           </Text>
                           <Group>
                             <Button
