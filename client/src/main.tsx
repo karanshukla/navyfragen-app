@@ -89,16 +89,9 @@ interface NavigationProps {
   onLinkClick?: () => void;
   isLoggedIn: boolean;
   userProfile: UserProfile | null;
-  notificationsEnabled: boolean; // Added prop
-  onNotificationsChange: (enabled: boolean) => void; // Added prop
 }
 
-function Navigation({
-  onLinkClick,
-  isLoggedIn,
-  notificationsEnabled, // Destructure prop
-  onNotificationsChange, // Destructure prop
-}: NavigationProps) {
+function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   const location = useLocation();
 
   const handleClick = () => {
@@ -150,14 +143,6 @@ function Navigation({
               }
             }}
           />
-          <Checkbox
-            label="Enable Notifications"
-            checked={notificationsEnabled}
-            onChange={(event) => {
-              onNotificationsChange(event.currentTarget.checked);
-              // TODO: Implement actual notification enabling/disabling logic
-            }}
-          />
         </>
       ) : (
         <>
@@ -176,8 +161,7 @@ function Navigation({
 
 // App layout component
 function AppLayout() {
-  const [opened, setOpened] = React.useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false); // Added state for notifications
+  const [opened, setOpened] = React.useState(false); // Added state for notifications
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
@@ -283,8 +267,6 @@ function AppLayout() {
           onLinkClick={() => setOpened(false)}
           isLoggedIn={isLoggedIn}
           userProfile={userProfile || null}
-          notificationsEnabled={notificationsEnabled} // Pass state
-          onNotificationsChange={setNotificationsEnabled} // Pass setter
         />
       </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>
