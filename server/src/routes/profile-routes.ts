@@ -63,9 +63,9 @@ export function profileRoutes(
       }
       try {
         const userExists = await ctx.db
-          .selectFrom("auth_session")
-          .select("key")
-          .where("key", "=", did)
+          .selectFrom("user_profile")
+          .select("did")
+          .where("did", "=", did)
           .executeTakeFirst();
         return res.json({ exists: !!userExists, did });
       } catch (err) {

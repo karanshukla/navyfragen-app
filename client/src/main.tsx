@@ -161,7 +161,6 @@ interface PageAlert {
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null); // Added for page-level alerts
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
@@ -299,24 +298,6 @@ function AppLayout() {
       </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>
         <Container>
-          {/* Page-level alert */}
-          {pageAlert && (
-            <Alert
-              title={pageAlert.title}
-              color={pageAlert.color}
-              withCloseButton
-              onClose={() => setPageAlert(null)}
-              mb="lg"
-              style={{
-                position: "fixed",
-                top: "80px",
-                right: "20px",
-                zIndex: 1000,
-              }}
-            >
-              {pageAlert.message}
-            </Alert>
-          )}
           <Routes>
             {" "}
             <Route path="/" element={<Home />} />
@@ -334,24 +315,11 @@ function AppLayout() {
           try {
             const { apiClient } = await import("./api/apiClient");
             await apiClient.delete("/delete-account");
-            setPageAlert({
-              // MODIFIED
-              title: "Success",
-              message: "Your data has been deleted.",
-              color: "green",
-            });
-            // No redirect here, user sees the alert, then can navigate
-            // window.location.href = "/";
+            window.location.href = "/";
           } catch (e: any) {
-            setPageAlert({
-              // MODIFIED
-              title: "Error",
-              message: e.error || "Failed to delete data.",
-              color: "red",
-            });
+            console.error("Failed to delete account", e);
           }
-          setDeleteModalOpened(false); // Close modal
-          // setOpened(false); // Close navbar on click - this was likely a bug, setOpened is for the navbar burger
+          setDeleteModalOpened(false);
         }}
         title="Delete Account"
         message="Are you sure you want to delete your account and all data? This cannot be undone."
