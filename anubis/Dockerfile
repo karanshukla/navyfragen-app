@@ -9,7 +9,7 @@ ARG ANUBIS_POLICY_INTERNAL_PATH=/data/cfg/botPolicy.json
 # Step 3: Copy your custom policy file from your 'anubis/' directory
 # into the specified path within the image.
 # This should create /data/cfg if it doesn't exist.
-COPY botPolicy.yaml $ANUBIS_POLICY_INTERNAL_PATH
+COPY botPolicy.json $ANUBIS_POLICY_INTERNAL_PATH
 
 # Step 4: Set POLICY_FNAME
 ENV POLICY_FNAME=$ANUBIS_POLICY_INTERNAL_PATH
