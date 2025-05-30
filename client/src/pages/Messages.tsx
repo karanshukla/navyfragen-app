@@ -15,6 +15,7 @@ import {
   CopyButton,
   Tooltip,
   Checkbox,
+  Grid, // Added Grid
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -41,6 +42,9 @@ export default function Messages() {
   const [deleteAfterResponding, setDeleteAfterResponding] =
     useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
+  const [isPortrait, setIsPortrait] = useState(
+    window.matchMedia("(orientation: portrait)").matches
+  );
 
   // Get session data
   const {
@@ -156,6 +160,18 @@ export default function Messages() {
     }
   }, [respondingTid]);
 
+  // Effect to update orientation state
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(orientation: portrait)");
+    const handleChange = () => setIsPortrait(mediaQuery.matches);
+
+    // Initial check
+    handleChange();
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
   return (
     <Container>
       <Title>Messages</Title>
@@ -243,120 +259,137 @@ export default function Messages() {
             messagesData.messages &&
             messagesData.messages.length > 0 ? (
             <>
-              <Stack gap="md">
-                <Text c="dimmed" size="xs" mb="md">
-                  You have {messagesData.messages.length} messages.
-                </Text>
-                <Checkbox
-                  checked={deleteAfterResponding}
-                  onChange={(event) =>
-                    setDeleteAfterResponding(event.currentTarget.checked)
-                  }
-                  label="Delete messages after responding"
-                />
+              <Text c="dimmed" size="xs" mb="md">
+                You have {messagesData.messages.length} messages.
+              </Text>
+              <Checkbox
+                checked={deleteAfterResponding}
+                onChange={(event) =>
+                  setDeleteAfterResponding(event.currentTarget.checked)
+                }
+                label="Delete messages after responding"
+                mb="md" // Added margin bottom for spacing
+              />
+              <Grid>
                 {(messagesData.messages ?? []).map((msg: Message) => (
-                  <Paper
+                  <Grid.Col
+                    span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
                     key={msg.tid}
-                    p="md"
-                    shadow="lg"
-                    onClick={() => {
-                      if (respondingTid !== msg.tid) {
-                        handleRespond(msg.tid);
-                      } else {
-                        setRespondingTid(null); // Close if already open
-                      }
-                    }}
-                    style={{
-                      cursor: "pointer", // Always show pointer as it's always interactive
-                    }}
                   >
-                    <Stack>
-                      <Group justify="space-between">
-                        <Text size="sm" c="dimmed">
-                          {new Date(msg.createdAt).toLocaleString()}
-                        </Text>
-                        <Group>
-                          <Button
-                            size="xs"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent Paper's onClick
-                              handleDelete(msg.tid);
-                            }}
-                            color="red"
-                            variant="outline"
-                          >
-                            <IconTrash size={16} />
-                          </Button>
-                        </Group>
-                      </Group>
-                      <Text
-                        style={{
-                          wordBreak: "break-word",
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {msg.message}
-                      </Text>
-                      {respondingTid === msg.tid && (
-                        <Stack>
-                          <Textarea
-                            ref={textareaRef}
-                            placeholder="Write your response..."
-                            value={responseText}
-                            maxLength={280}
-                            description={`${responseText.length}/280 characters`}
-                            error={
-                              responseText.length > 280
-                                ? "Message exceeds Bluesky's character limit"
-                                : null
-                            }
-                            onChange={(e) => setResponseText(e.target.value)}
-                            onClick={(e) => e.stopPropagation()} // Prevent Paper's onClick
-                            autosize
-                            minRows={1}
-                            maxRows={1}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" && !event.shiftKey) {
-                                event.preventDefault();
-                                handleSendResponse(msg);
-                              }
-                            }}
-                          />
-                          <Group justify="flex-end">
+                    <Paper
+                      p="md"
+                      shadow="lg"
+                      onClick={() => {
+                        if (respondingTid !== msg.tid) {
+                          handleRespond(msg.tid);
+                        } else {
+                          setRespondingTid(null); // Close if already open
+                        }
+                      }}
+                      style={{
+                        cursor: "pointer", // Always show pointer as it's always interactive
+                        height: "100%", // Ensure papers in a row have same height if content differs
+                        background:
+                          "linear-gradient(to right, #005299, #7700aa)", // Dimmer blue to purple gradient
+                      }}
+                    >
+                      <Stack>
+                        <Group justify="space-between">
+                          <Text size="sm" c="white">
+                            {new Date(msg.createdAt).toLocaleString()}
+                          </Text>
+                          <Group>
                             <Button
-                              size="sm"
+                              size="xs"
                               onClick={(e) => {
                                 e.stopPropagation(); // Prevent Paper's onClick
-                                handleSendResponse(msg);
+                                handleDelete(msg.tid);
                               }}
-                              loading={respondLoading}
+                              color="red"
+                              variant="outline"
                             >
-                              Post Response
+                              <IconTrash size={16} />
                             </Button>
                           </Group>
-                        </Stack>
-                      )}
-
-                      {lastPostLink && lastPostLink.tid === msg.tid && (
-                        <Alert color="green" title="Response posted">
-                          <Group gap="xs">
-                            <Text>View your response on Bluesky:</Text>
-                            <a
-                              href={lastPostLink.link}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <Button variant="outline" size="xs">
-                                {lastPostLink.link}
+                        </Group>
+                        <Text
+                          c="white"
+                          style={{
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {msg.message}
+                        </Text>
+                        {respondingTid === msg.tid && (
+                          <Stack>
+                            <Textarea
+                              ref={textareaRef}
+                              placeholder="Write your response..."
+                              value={responseText}
+                              maxLength={280}
+                              description={`${responseText.length}/280 characters`}
+                              error={
+                                responseText.length > 280
+                                  ? "Message exceeds Bluesky's character limit"
+                                  : null
+                              }
+                              onChange={(e) => setResponseText(e.target.value)}
+                              onClick={(e) => e.stopPropagation()} // Prevent Paper's onClick
+                              autosize
+                              minRows={1}
+                              maxRows={2}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" && !event.shiftKey) {
+                                  event.preventDefault();
+                                  handleSendResponse(msg);
+                                }
+                              }}
+                            />
+                            <Group justify="flex-end">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent Paper's onClick
+                                  handleSendResponse(msg);
+                                }}
+                                loading={respondLoading}
+                              >
+                                Post Response
                               </Button>
-                            </a>
-                          </Group>
-                        </Alert>
-                      )}
-                    </Stack>
-                  </Paper>
+                            </Group>
+                          </Stack>
+                        )}
+
+                        {lastPostLink && lastPostLink.tid === msg.tid && (
+                          <Alert color="green" title="Response posted">
+                            <Group gap="xs">
+                              <Text c="white">
+                                View your response on Bluesky:
+                              </Text>
+                              <a
+                                href={lastPostLink.link}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="xs"
+                                  color="white"
+                                >
+                                  {" "}
+                                  {/* Added color="white" */}
+                                  {lastPostLink.link}
+                                </Button>
+                              </a>
+                            </Group>
+                          </Alert>
+                        )}
+                      </Stack>
+                    </Paper>
+                  </Grid.Col>
                 ))}
-              </Stack>
+              </Grid>
             </>
           ) : (
             <Alert color="blue" title="No messages">

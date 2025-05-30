@@ -175,6 +175,13 @@ function AppLayout() {
     >
       <AppShell.Header>
         <Group h="100%" px="md">
+          <style>
+            {`
+              .mantine-AppShell-navbar {
+                max-width: 75vw !important;
+              }
+            `}
+          </style>
           <Burger
             opened={opened}
             onClick={() => setOpened((o) => !o)}

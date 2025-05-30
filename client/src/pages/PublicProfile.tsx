@@ -141,7 +141,14 @@ export default function PublicProfile() {
     <Container>
       {profile ? (
         <>
-          <Paper p="md" withBorder mb="lg">
+          <Paper
+            p="md"
+            withBorder
+            mb="lg"
+            style={{
+              background: "linear-gradient(to right, #005299, #7700aa)",
+            }}
+          >
             <Group>
               <Avatar
                 src={profile.avatar}
@@ -150,11 +157,14 @@ export default function PublicProfile() {
                 radius="xl"
               />
               <Box style={{ flex: 1 }}>
-                <Title order={3}>{profile.displayName}</Title>
-                <Text>@{profile.handle}</Text>
+                <Title order={3} c="white">
+                  {profile.displayName}
+                </Title>
+                <Text c="white">@{profile.handle}</Text>
                 {profile.description && (
                   <Text
                     mt="xs"
+                    c="white"
                     style={{
                       wordBreak: "break-word",
                       whiteSpace: "pre-wrap",
@@ -167,63 +177,75 @@ export default function PublicProfile() {
             </Group>
           </Paper>
 
-          <Title order={4} mb="md">
-            Send an anonymous message
-          </Title>
+          <Paper
+            p="md"
+            withBorder
+            style={{
+              background: "linear-gradient(to right, #005299, #7700aa)",
+            }}
+          >
+            <Title order={4} mb="md" c="white">
+              {" "}
+              {/* Added c="white" */}
+              Send an anonymous message
+            </Title>
 
-          {error && (
-            <Alert color="red" title="Error" mb="md">
-              {error}
-            </Alert>
-          )}
+            {error && (
+              <Alert color="red" title="Error" mb="md">
+                {error}
+              </Alert>
+            )}
 
-          {success && (
-            <Alert color="green" title="Success" mb="md">
-              {success}
-            </Alert>
-          )}
+            {success && (
+              <Alert color="green" title="Success" mb="md">
+                {success}
+              </Alert>
+            )}
 
-          <Stack>
-            <Text size="sm" ta="right" c="dimmed">
-              {message.length}/{MAX_MESSAGE_LENGTH}
-            </Text>
-            <Textarea
-              placeholder={`Type your anonymous message or question... (${MAX_MESSAGE_LENGTH} chars max, Enter to send)`}
-              value={message}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
-                  setMessage(e.target.value);
-                }
-              }}
-              minRows={1}
-              maxRows={3}
-              autosize
-              disabled={sendLoading}
-              onKeyDown={(e) => {
-                if (
-                  (e.key === "Enter" &&
-                    !e.shiftKey &&
-                    !e.altKey &&
-                    !e.metaKey) ||
-                  (e.key === "Enter" && e.ctrlKey)
-                ) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              variant="default"
-            />
-            <Group justify="flex-end">
-              <Button
-                onClick={handleSend}
-                loading={sendLoading}
-                variant="filled"
-                size="md"
-              >
-                Send Anonymous Message
-              </Button>
-            </Group>
-          </Stack>
+            <Stack>
+              <Text size="sm" ta="right" c="white">
+                {" "}
+                {/* Changed c from "dimmed" to "white" */}
+                {message.length}/{MAX_MESSAGE_LENGTH}
+              </Text>
+              <Textarea
+                placeholder={`Type your anonymous message or question... (${MAX_MESSAGE_LENGTH} chars max, Enter to send)`}
+                value={message}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
+                    setMessage(e.target.value);
+                  }
+                }}
+                minRows={1}
+                maxRows={3}
+                autosize
+                disabled={sendLoading}
+                onKeyDown={(e) => {
+                  if (
+                    (e.key === "Enter" &&
+                      !e.shiftKey &&
+                      !e.altKey &&
+                      !e.metaKey) ||
+                    (e.key === "Enter" && e.ctrlKey)
+                  ) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                variant="default"
+              />
+              <Group justify="flex-end">
+                <Button
+                  onClick={handleSend}
+                  loading={sendLoading}
+                  variant="filled"
+                  size="md"
+                >
+                  Send Anonymous Message
+                </Button>
+              </Group>
+            </Stack>
+          </Paper>
         </>
       ) : (
         <Alert color="red" title="Error">
