@@ -62,7 +62,7 @@ export function profileRoutes(
         return res.status(400).json({ error: "DID required" });
       }
       try {
-        const userProfileExists = await ctx.db
+        const userExists = await ctx.db
           .selectFrom("user_profile")
           .select("did")
           .where("did", "=", did)
