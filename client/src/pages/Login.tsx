@@ -76,7 +76,7 @@ export default function Login() {
         <Group mt="md">
           <Text c="dimmed">
             You will be directed to Bluesky to authenticate. The app does not
-            have access to your BlueSky credentials. Your authentication allows
+            have access to your Bluesky credentials. Your authentication allows
             the app to retrieve your messages and post your responses to the app
             directly.
           </Text>

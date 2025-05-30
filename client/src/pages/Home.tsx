@@ -20,11 +20,11 @@ export default function Home() {
     <>
       <Paper p="lg" radius="md" shadow="sm" mb="xl">
         <Title order={1} size="h2" c="deepBlue">
-          Navyfragen - Anonymous questions and answers on BlueSky
+          Navyfragen - Anonymous questions and answers on Bluesky
         </Title>
         <Text c="dimmed" size="lg">
           Receive questions from the web and post the answers directly on
-          BlueSky.
+          Bluesky.
         </Text>
       </Paper>
 
@@ -33,7 +33,7 @@ export default function Home() {
           <List.Item>
             <Text fw={500}>Fast and free</Text>
             <Text c="dimmed">
-              No downloads required, just log in with your BlueSky credentials
+              No downloads required, just log in with your Bluesky credentials
               and share your inbox link
             </Text>
           </List.Item>

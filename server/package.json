@@ -1,7 +1,7 @@
 {
     "name": "navyfragen-server",
     "version": "1.0.0",
-    "description": "For answering anonymous questions and posting them to BlueSky",
+    "description": "For answering anonymous questions and posting them to Bluesky",
     "author": "Karan Shukla",
     "license": "MIT",
     "main": "index.ts",

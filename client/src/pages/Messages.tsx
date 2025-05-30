@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react"; // Added useRef
+import { useEffect, useState, useRef } from "react";
 import {
   Container,
   Title,
@@ -7,7 +7,7 @@ import {
   Stack,
   Loader,
   Center,
-  Alert,
+  Alert, // Kept for persistent session/messages errors AND NOW FOR PAGE NOTIFICATIONS
   Button,
   Group,
   TextInput,
@@ -15,7 +15,7 @@ import {
   CopyButton,
   Tooltip,
   Checkbox,
-  Grid, // Added Grid
+  Grid,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -25,47 +25,53 @@ import {
   useAddExampleMessages,
   Message,
 } from "../api/messageService";
-import { IconClipboard, IconMail, IconTrash } from "@tabler/icons-react";
+import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
+// REMOVE: import { notifications } from "@mantine/notifications";
+import { ConfirmationModal } from "../components/ConfirmationModal";
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:3033/profile";
 
+interface PageAlert {
+  title: string;
+  message: React.ReactNode;
+  color: "red" | "green" | "blue" | "yellow";
+}
+
 export default function Messages() {
-  const [welcomeMessage, setWelcomeMessage] = useState<boolean>(false);
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
-  const [lastPostLink, setLastPostLink] = useState<{
-    tid: string;
-    link: string;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [deleteAfterResponding, setDeleteAfterResponding] =
     useState<boolean>(false);
-  const [useGradients, setUseGradients] = useState<boolean>(true); // Added state for gradients
-  const [autoRefresh, setAutoRefresh] = useState<boolean>(true); // Added state for auto-refresh
-  const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
+  const [useGradients, setUseGradients] = useState<boolean>(true);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isPortrait, setIsPortrait] = useState(
     window.matchMedia("(orientation: portrait)").matches
   );
+  const [confirmBeforeDelete, setConfirmBeforeDelete] =
+    useState<boolean>(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState<boolean>(false);
+  const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
+    null
+  );
+  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null); // ADDED for page-level alerts
 
-  // Get session data
   const {
     data: session,
     isLoading: sessionLoading,
     error: sessionError,
   } = useSession();
 
-  // Get messages data using the session's DID
   const {
     data: messagesData,
     isLoading: messagesLoading,
     error: messagesError,
     refetch: refetchMessages,
   } = useMessages(session?.did || null, {
-    refetchInterval: autoRefresh ? 3000 : false, // Poll every 3 seconds for real-time updates or disable
+    refetchInterval: autoRefresh ? 3000 : false,
   });
 
-  // Get mutation functions
   const { mutate: deleteMessage, isPending: deleteLoading } =
     useDeleteMessage();
   const { mutate: respondToMessage, isPending: respondLoading } =
@@ -73,49 +79,101 @@ export default function Messages() {
   const { mutate: addExamples, isPending: examplesLoading } =
     useAddExampleMessages();
 
-  // Show a welcome message for newly logged-in users
   useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
-      setWelcomeMessage(true);
+      setPageAlert({
+        // MODIFIED
+        title: "Welcome back!",
+        message: "You have successfully logged in.",
+        color: "green",
+      });
       sessionStorage.removeItem("newLogin");
     }
   }, []);
 
-  // Add example messages for testing
   const handleAddExampleMessages = () => {
     if (!session?.did) return;
-    setError(null);
+    setPageAlert(null); // Clear previous alert
     addExamples(session.did, {
       onSuccess: () => {
         refetchMessages();
+        setPageAlert({
+          // MODIFIED
+          title: "Test Messages Added",
+          message: "Example messages have been added to your inbox.",
+          color: "blue",
+        });
       },
       onError: (err: any) => {
-        setError(err.error || "Failed to add example messages");
+        setPageAlert({
+          // MODIFIED
+          title: "Error Adding Examples",
+          message: err.error || "Failed to add example messages.",
+          color: "red",
+        });
       },
     });
   };
 
-  // Handle message deletion
-  const handleDelete = (tid: string) => {
-    setError(null);
+  const handleDeleteRequest = (tid: string) => {
+    if (confirmBeforeDelete) {
+      setMessageIdToDelete(tid);
+      setDeleteModalOpened(true);
+    } else {
+      performDelete(tid);
+    }
+  };
+
+  const performDelete = (tid: string, fromModal: boolean = false) => {
+    setPageAlert(null); // Clear previous alert
     deleteMessage(tid, {
+      onSuccess: () => {
+        if (respondingTid === tid) setRespondingTid(null);
+        if (fromModal) {
+          setDeleteModalOpened(false);
+          setMessageIdToDelete(null);
+        }
+        refetchMessages();
+      },
       onError: (err: any) => {
-        setError(err.error || "Failed to delete message");
+        setPageAlert({
+          // MODIFIED
+          title: "Error Deleting Message",
+          message: err.error || "Failed to delete message.",
+          color: "red",
+        });
+        if (fromModal) {
+          setDeleteModalOpened(false);
+          setMessageIdToDelete(null);
+        }
       },
     });
   };
 
-  // Handle response preparation
-  const handleRespond = (tid: string) => {
+  const handleConfirmDelete = () => {
+    if (messageIdToDelete) {
+      performDelete(messageIdToDelete, true);
+    }
+    // Modal is closed within performDelete if called fromModal
+  };
+
+  const handlePrepareResponse = (tid: string) => {
     setRespondingTid(tid);
     setResponseText("");
   };
 
-  // Handle sending a response
   const handleSendResponse = (msg: Message) => {
-    if (!responseText.trim()) return;
-    setError(null);
+    setPageAlert(null); // Clear previous alert
+    if (!responseText.trim()) {
+      setPageAlert({
+        // MODIFIED
+        title: "Empty Response",
+        message: "Response cannot be empty.",
+        color: "yellow",
+      });
+      return;
+    }
 
     respondToMessage(
       {
@@ -127,49 +185,62 @@ export default function Messages() {
       {
         onSuccess: (data) => {
           setRespondingTid(null);
+          setResponseText("");
+          let successMessage: React.ReactNode =
+            "Your response has been posted.";
           if (data.link) {
-            setLastPostLink({ tid: msg.tid, link: data.link });
+            successMessage = (
+              <>
+                Your response has been posted. View on Bluesky:{" "}
+                <a
+                  href={data.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "inherit", textDecoration: "underline" }}
+                >
+                  {data.link}
+                </a>
+              </>
+            );
           }
+          setPageAlert({
+            // MODIFIED
+            title: "Response Sent!",
+            message: successMessage,
+            color: "green",
+          });
+          // Removed separate notification for Bluesky link, incorporated into one.
+
           if (deleteAfterResponding) {
             setTimeout(() => {
-              deleteMessage(msg.tid, {
-                onSuccess: () => {
-                  refetchMessages(); // Refetch after successful deletion
-                },
-                onError: (err: any) => {
-                  setError(
-                    err.error || "Failed to delete message after responding."
-                  );
-                  refetchMessages(); // Refetch even if deletion fails to sync UI
-                },
-              });
-            }, 5000); // Delay deletion by 5 seconds
+              performDelete(msg.tid);
+            }, 1000);
           } else {
-            refetchMessages(); // Refetch if not deleting
+            refetchMessages();
           }
         },
         onError: (err: any) => {
-          setError(err.error || "Failed to send response");
+          setPageAlert({
+            // MODIFIED
+            title: "Response Error",
+            message: err.error || "Failed to send response.",
+            color: "red",
+          });
         },
       }
     );
   };
 
-  // Effect to focus textarea when it becomes active
   useEffect(() => {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
     }
   }, [respondingTid]);
 
-  // Effect to update orientation state
   useEffect(() => {
     const mediaQuery = window.matchMedia("(orientation: portrait)");
     const handleChange = () => setIsPortrait(mediaQuery.matches);
-
-    // Initial check
     handleChange();
-
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
@@ -178,20 +249,30 @@ export default function Messages() {
     <Container>
       <Title>Messages</Title>
 
-      {welcomeMessage && (
-        <Alert color="green" title="Welcome back!" mb="lg">
-          You have successfully logged in.
+      {/* Page-level alert */}
+      {pageAlert && (
+        <Alert
+          title={pageAlert.title}
+          color={pageAlert.color}
+          withCloseButton
+          onClose={() => setPageAlert(null)}
+          mb="lg"
+        >
+          {pageAlert.message}
         </Alert>
       )}
 
-      {error && (
-        <Alert color="red" title="Error" mb="lg">
-          {error}
-        </Alert>
-      )}
-
+      {/* Persistent errors for session and messages loading */}
       {sessionError && (
-        <Alert color="red" title="Session Error" mb="lg">
+        <Alert
+          color="red"
+          title="Session Error"
+          mb="lg"
+          withCloseButton
+          onClose={() => {
+            /* Allow dismissing */
+          }}
+        >
           {typeof sessionError === "object" &&
           sessionError !== null &&
           "error" in sessionError
@@ -199,9 +280,16 @@ export default function Messages() {
             : "Failed to load session data"}
         </Alert>
       )}
-
       {messagesError && (
-        <Alert color="red" title="Messages Error" mb="lg">
+        <Alert
+          color="red"
+          title="Messages Error"
+          mb="lg"
+          withCloseButton
+          onClose={() => {
+            /* Allow dismissing */
+          }}
+        >
           {typeof messagesError === "object" &&
           messagesError !== null &&
           "error" in messagesError
@@ -247,7 +335,10 @@ export default function Messages() {
                   </Tooltip>
                 )}
               </CopyButton>
-              <Button onClick={handleAddExampleMessages}>
+              <Button
+                onClick={handleAddExampleMessages}
+                loading={examplesLoading}
+              >
                 Add Test Messages
               </Button>
             </Group>
@@ -265,8 +356,6 @@ export default function Messages() {
                 You have {messagesData.messages.length} messages.
               </Text>
               <Group mb="md">
-                {" "}
-                {/* Group checkboxes for better layout */}
                 <Checkbox
                   checked={deleteAfterResponding}
                   onChange={(event) =>
@@ -288,6 +377,13 @@ export default function Messages() {
                   }
                   label="Auto-refresh messages"
                 />
+                <Checkbox
+                  checked={confirmBeforeDelete}
+                  onChange={(event) =>
+                    setConfirmBeforeDelete(event.currentTarget.checked)
+                  }
+                  label="Confirm before deleting messages"
+                />
               </Group>
               <Grid>
                 {(messagesData.messages ?? []).map((msg: Message) => (
@@ -300,17 +396,17 @@ export default function Messages() {
                       shadow="lg"
                       onClick={() => {
                         if (respondingTid !== msg.tid) {
-                          handleRespond(msg.tid);
+                          handlePrepareResponse(msg.tid);
                         } else {
-                          setRespondingTid(null); // Close if already open
+                          setRespondingTid(null);
                         }
                       }}
                       style={{
-                        cursor: "pointer", // Always show pointer as it's always interactive
-                        height: "100%", // Ensure papers in a row have same height if content differs
+                        cursor: "pointer",
+                        height: "100%",
                         background: useGradients
                           ? "linear-gradient(to right, #005299, #7700aa)"
-                          : undefined, // Dimmer blue to purple gradient or default
+                          : undefined,
                       }}
                     >
                       <Stack>
@@ -330,11 +426,16 @@ export default function Messages() {
                             <Button
                               size="xs"
                               onClick={(e) => {
-                                e.stopPropagation(); // Prevent Paper's onClick
-                                handleDelete(msg.tid);
+                                e.stopPropagation();
+                                handleDeleteRequest(msg.tid);
                               }}
                               color="red"
                               variant="outline"
+                              loading={
+                                deleteLoading &&
+                                messageIdToDelete === msg.tid &&
+                                !confirmBeforeDelete
+                              } // Show loading on button if deleting directly
                             >
                               <IconTrash size={16} />
                             </Button>
@@ -363,7 +464,7 @@ export default function Messages() {
                                   : null
                               }
                               onChange={(e) => setResponseText(e.target.value)}
-                              onClick={(e) => e.stopPropagation()} // Prevent Paper's onClick
+                              onClick={(e) => e.stopPropagation()}
                               autosize
                               minRows={1}
                               maxRows={2}
@@ -378,40 +479,16 @@ export default function Messages() {
                               <Button
                                 size="sm"
                                 onClick={(e) => {
-                                  e.stopPropagation(); // Prevent Paper's onClick
+                                  e.stopPropagation();
                                   handleSendResponse(msg);
                                 }}
                                 loading={respondLoading}
+                                variant="outline"
                               >
-                                Post Response
+                                <IconSend2 />
                               </Button>
                             </Group>
                           </Stack>
-                        )}
-
-                        {lastPostLink && lastPostLink.tid === msg.tid && (
-                          <Alert color="green" title="Response posted">
-                            <Group gap="xs">
-                              <Text c="white">
-                                View your response on Bluesky:
-                              </Text>
-                              <a
-                                href={lastPostLink.link}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <Button
-                                  variant="outline"
-                                  size="xs"
-                                  color="white"
-                                >
-                                  {" "}
-                                  {/* Added color="white" */}
-                                  {lastPostLink.link}
-                                </Button>
-                              </a>
-                            </Group>
-                          </Alert>
                         )}
                       </Stack>
                     </Paper>
@@ -427,6 +504,22 @@ export default function Messages() {
           )}
         </>
       )}
+      <ConfirmationModal
+        opened={deleteModalOpened}
+        onClose={() => {
+          if (!deleteLoading) {
+            // Prevent closing if delete is in progress via modal
+            setDeleteModalOpened(false);
+            setMessageIdToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this message? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        loading={deleteLoading && !!messageIdToDelete} // Show loading in modal during confirm delete
+      />
     </Container>
   );
 }

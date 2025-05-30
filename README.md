@@ -1,6 +1,6 @@
 ## Description
 
-Allows users to receive anonymous messages and post the answers directly to BlueSky.
+Allows users to receive anonymous messages and post the answers directly to Bluesky.
 
 ## Getting Started
 
