@@ -1,15 +1,22 @@
 # anubis/Dockerfile
 
 # Step 1: Start FROM the official Anubis image on GHCR
-FROM ghcr.io/techarohq/anubis:v1.18.0
+FROM ghcr.io/techarohq/anubis:latest
 
-# Step 2: Define the internal container path for the policy file.
+# Step 2: Define arguments for the target path and user/group IDs
 ARG ANUBIS_POLICY_INTERNAL_PATH=/data/cfg/botPolicy.json
+ARG APP_USER_ID=1000
+ARG APP_GROUP_ID=1000
 
-# Step 3: Copy your custom policy file from your 'anubis/' directory
-# into the specified path within the image.
-# This should create /data/cfg if it doesn't exist.
-COPY botPolicy.json $ANUBIS_POLICY_INTERNAL_PATH
+# Step 3: Copy your local 'botPolicy.json' to the defined path in the image.
+# This command should create /data/ and /data/cfg/ if they don't exist.
+# It also attempts to set ownership to user/group 1000.
+COPY --chown=${APP_USER_ID}:${APP_GROUP_ID} botPolicy.json $ANUBIS_POLICY_INTERNAL_PATH
 
-# Step 4: Set POLICY_FNAME
+# If COPY --chown gives errors during build, try this simpler version:
+# COPY botPolicy.json $ANUBIS_POLICY_INTERNAL_PATH
+# Then, if needed and if the base image has a shell and chmod:
+# RUN chmod 644 $ANUBIS_POLICY_INTERNAL_PATH
+
+# Step 4: Set POLICY_FNAME environment variable
 ENV POLICY_FNAME=$ANUBIS_POLICY_INTERNAL_PATH
