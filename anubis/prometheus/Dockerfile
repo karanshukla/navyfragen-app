@@ -4,7 +4,7 @@ FROM prom/prometheus:latest
 USER 0
 
 # Install gettext for envsubst
-RUN apk add --no-cache gettext
+RUN /sbin/apk add --no-cache gettext
 
 # Set working directory
 WORKDIR /prometheus
