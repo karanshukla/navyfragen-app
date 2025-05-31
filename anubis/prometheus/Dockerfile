@@ -10,7 +10,9 @@ COPY auth/web.yml /prometheus/auth/
 COPY entrypoint.sh /prometheus/entrypoint.sh
 
 # Make entrypoint script executable
+USER root
 RUN chmod +x /prometheus/entrypoint.sh
+USER nobody
 
 # Expose the Prometheus web UI port
 EXPOSE 9090
