@@ -16,6 +16,11 @@
       "action": "ALLOW"
     },
     {
+      "name": "opengraph-screenshot",
+      "path_regex": "^/navyfragen.png$",
+      "action": "ALLOW"
+    },
+    {
       "name": "service-worker",
       "path_regex": "^/sw.js$",
       "action": "ALLOW"
