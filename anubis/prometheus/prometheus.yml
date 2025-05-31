@@ -25,7 +25,7 @@ scrape_configs:
   # Railway internal service configuration
   - job_name: "anubis"
     static_configs:
-      - targets: ["${RAILWAY_SERVICE_ANUBIS_HOST}:9090"]  # Railway internal domain, ensure env var syntax is correct for envsubst
+      - targets: ["test-anubis.railway.internal:9090"]  # Railway internal domain, ensure env var syntax is correct for envsubst
 
   # Additional Railway service example
   # - job_name: "another-service"
