@@ -11,11 +11,6 @@
       "action": "ALLOW"
     },
     {
-      "name": "generic-browser",
-      "user_agent_regex": "Mozilla",
-      "action": "CHALLENGE"
-    },
-    {
       "name": "client-metadata-json",
       "path_regex": "^/client-metadata.json$",
       "action": "ALLOW"
@@ -72,7 +67,7 @@
     },
     {
       "name": "generic-browser",
-      "user_agent_regex": "Mozilla|Opera",
+      "user_agent_regex": "Mozilla",
       "action": "CHALLENGE"
     }
   ],
