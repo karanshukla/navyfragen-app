@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+  prometheus:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      - RAILWAY_SERVICE_ANUBIS_HOST=${RAILWAY_SERVICE_ANUBIS_HOST:-anubis}
+    volumes:
+      - prometheus_data:/prometheus/data
+    networks:
+      - railway_network
+
+volumes:
+  prometheus_data:
+
+networks:
+  railway_network:
+    driver: bridge

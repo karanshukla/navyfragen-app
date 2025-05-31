@@ -24,6 +24,8 @@ The Prometheus official image is based on a minimal Linux distribution that does
 
 ## Building and Running
 
+### Local Development
+
 Build the Docker image:
 
 ```bash
@@ -45,6 +47,27 @@ docker run -d --name prometheus \
   -v $(pwd)/auth/web.yml:/prometheus/auth/web.yml \
   prometheus-auth
 ```
+
+### Deploying to Railway
+
+1. First, add this Prometheus configuration as a new service in your Railway project:
+
+```bash
+railway link  # Link to your Railway project if not already linked
+railway service create prometheus  # Create a new service for Prometheus
+railway up  # Deploy the service to Railway
+```
+
+2. To connect to another Railway service (e.g., Anubis), you'll need to set up the environment variable:
+
+```bash
+# Get the internal Railway host for the Anubis service
+railway variables set RAILWAY_SERVICE_ANUBIS_HOST=$RAILWAY_PRIVATE_ANUBIS_DOMAIN
+```
+
+Railway automatically provides environment variables for connecting to other services in the same project. These variables follow the pattern `$RAILWAY_PRIVATE_<SERVICE_NAME>_DOMAIN`.
+
+3. You can verify the connection by checking the Prometheus targets page after deployment.
 
 ## Generating New Credentials
 

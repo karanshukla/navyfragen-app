@@ -22,7 +22,12 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  # Example job for monitoring the application
+  # Railway internal service configuration
   - job_name: "anubis"
     static_configs:
-      - targets: ["anubis:8080"]  # Adjust the port according to your application's metrics endpoint
+      - targets: ["$RAILWAY_SERVICE_ANUBIS_HOST:8080"]  # Railway internal domain
+
+  # Additional Railway service example
+  # - job_name: "another-service"
+  #   static_configs:
+  #     - targets: ["$RAILWAY_SERVICE_ANOTHER_SERVICE_HOST:8080"]
