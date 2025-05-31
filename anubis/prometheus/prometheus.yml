@@ -20,12 +20,12 @@ scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:8080"]
+      - targets: ["localhost:9090"] # Changed port to 9090
 
   # Railway internal service configuration
   - job_name: "anubis"
     static_configs:
-      - targets: ["$RAILWAY_SERVICE_ANUBIS_HOST:9090"]  # Railway internal domain
+      - targets: ["${RAILWAY_SERVICE_ANUBIS_HOST}:9090"]  # Railway internal domain, ensure env var syntax is correct for envsubst
 
   # Additional Railway service example
   # - job_name: "another-service"
