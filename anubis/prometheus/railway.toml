@@ -1,11 +1,11 @@
 [build]
 # Use the Docker builder
-builder = "DOCKERFILE"
+builder = "dockerfile"
 # Specify the Dockerfile path
 dockerfilePath = "Dockerfile"
 
 [deploy]
-# Configure scaling options if needed
+# Configure scaling options and health check
 healthcheckPath = "/-/healthy"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
