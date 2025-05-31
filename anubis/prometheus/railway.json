@@ -4,9 +4,5 @@
         "builder": "DOCKERFILE",
         "dockerfilePath": "anubis/prometheus/Dockerfile"
     },
-    "deploy": {
-        "healthcheckPath": "/-/healthy",
-        "restartPolicyType": "ON_FAILURE",
-        "restartPolicyMaxRetries": 10
-    }
+    "deploy": {}
 }
