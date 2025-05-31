@@ -1,22 +1,29 @@
 FROM prom/prometheus:latest
 
+USER root # Switch to root for package installation and permission changes
+
+# Install gettext for envsubst
+RUN apk add --no-cache gettext
+
 # Set working directory
 WORKDIR /prometheus
 
 # Copy configuration files
-# Use the /prometheus directory instead of /etc/prometheus since the 'nobody' user should have write access to it
+# prometheus.yml.template will be read by envsubst
+# auth/web.yml is for web UI auth
+# entrypoint.sh is our startup script
 COPY prometheus.yml /prometheus/prometheus.yml.template
 COPY auth/web.yml /prometheus/auth/
 COPY entrypoint.sh /prometheus/entrypoint.sh
 
 # Make entrypoint script executable
-USER root
 RUN chmod +x /prometheus/entrypoint.sh
-USER nobody
+
+USER nobody # Switch to nobody before setting ENTRYPOINT/CMD
 
 # Expose the Prometheus web UI port
 EXPOSE 9090
 
-# The Prometheus image already runs as the nobody user
+# ENTRYPOINT will run as the user specified by the last USER directive (nobody).
 ENTRYPOINT ["/prometheus/entrypoint.sh"]
-CMD []
+CMD [] # CMD is cleared because entrypoint.sh handles the full command
