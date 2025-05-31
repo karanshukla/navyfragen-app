@@ -1,6 +1,7 @@
 FROM prom/prometheus:latest
 
-USER root # Switch to root for package installation and permission changes
+# Switch to root for package installation and permission changes
+USER root
 
 # Install gettext for envsubst
 RUN apk add --no-cache gettext
