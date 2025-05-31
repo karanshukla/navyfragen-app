@@ -1,7 +1,7 @@
 FROM prom/prometheus:latest
 
-# Switch to root for package installation and permission changes
-USER root
+# Switch to root (UID 0) for package installation and permission changes
+USER 0
 
 # Install gettext for envsubst
 RUN apk add --no-cache gettext
@@ -20,7 +20,8 @@ COPY entrypoint.sh /prometheus/entrypoint.sh
 # Make entrypoint script executable
 RUN chmod +x /prometheus/entrypoint.sh
 
-USER nobody # Switch to nobody before setting ENTRYPOINT/CMD
+# Switch back to nobody before setting ENTRYPOINT/CMD
+USER nobody
 
 # Expose the Prometheus web UI port
 EXPOSE 9090
