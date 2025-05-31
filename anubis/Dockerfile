@@ -1,10 +1,10 @@
-# anubis/Dockerfile
+FROM ghcr.io/techarohq/anubis:main
 
-FROM ghcr.io/techarohq/anubis:latest
+ARG POLICY_PATH_IN_IMAGE=/app_config/botPolicy.json
 
-ARG ANUBIS_POLICY_INTERNAL_PATH=/data/cfg/botPolicy.json
 ARG APP_USER_ID=1000
 ARG APP_GROUP_ID=1000
 
-COPY --chown=${APP_USER_ID}:${APP_GROUP_ID} botPolicy.json $ANUBIS_POLICY_INTERNAL_PATH
-ENV POLICY_FNAME=$ANUBIS_POLICY_INTERNAL_PATH
+COPY --chown=${APP_USER_ID}:${APP_GROUP_ID} botPolicy.json $POLICY_PATH_IN_IMAGE
+
+ENV POLICY_FNAME=$POLICY_PATH_IN_IMAGE
