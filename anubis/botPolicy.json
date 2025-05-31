@@ -1,0 +1,79 @@
+{
+  "bots": [
+    {
+      "name": "favicon",
+      "path_regex": "^/favicon.ico$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "robots-txt",
+      "path_regex": "^/robots.txt$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "client-metadata-json",
+      "path_regex": "^/client-metadata.json$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "service-worker",
+      "path_regex": "^/sw.js$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "webmanifest",
+      "path_regex": "^/site.webmanifest$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "chrome-icons",
+      "path_regex": "^/android-chrome-\\d+x\\d+\\.png$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "apple-touch-icon",
+      "path_regex": "^/apple-touch-icon.png$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "summary-html",
+      "path_regex": "^/summary.html$",
+      "action": "ALLOW"
+    },
+    {
+      "name": "bluesky",
+      "user_agent_regex": "bsky",
+      "action": "ALLOW"
+    },
+    {
+      "name": "cardybot-bluesky",
+      "user_agent_regex": "cardyb",
+      "action": "ALLOW"
+    },
+    {
+      "import": "(data)/bots/_deny-pathological.yaml"
+    },
+    {
+      "import": "(data)/bots/ai-robots-txt.yaml"
+    },
+    {
+      "import": "(data)/crawlers/_allow-good.yaml"
+    },
+    {
+      "import": "(data)/bots/aggressive-brazilian-scrapers.yaml"
+    },
+    {
+      "import": "(data)/common/keep-internet-working.yaml"
+    },
+    {
+      "name": "generic-browser",
+      "user_agent_regex": "Mozilla",
+      "action": "CHALLENGE"
+    }
+  ],
+  "dnsbl": false,
+  "status_codes": {
+    "CHALLENGE": 200,
+    "DENY": 200
+  }
+}
