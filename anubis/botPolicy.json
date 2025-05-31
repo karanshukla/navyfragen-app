@@ -21,11 +21,6 @@
       "action": "ALLOW"
     },
     {
-      "name": "sitemap-xml",
-      "path_regex": "^/sitemap.xml$",
-      "action": "ALLOW"
-    },
-    {
       "name": "service-worker",
       "path_regex": "^/sw.js$",
       "action": "ALLOW"
@@ -42,17 +37,12 @@
     },
     {
       "name": "apple-touch-icon",
-      "path_regex": "^/apple-touch-icon\\.png$",
-      "action": "ALLOW"
-    },
-    {
-      "name": "favicon-icons",
-      "path_regex": "^/favicon-\\d+x\\d+\\.png$",
+      "path_regex": "^/apple-touch-icon.png$",
       "action": "ALLOW"
     },
     {
       "name": "summary-html",
-      "path_regex": "^/summary\\.html$",
+      "path_regex": "^/summary.html$",
       "action": "ALLOW"
     },
     {
@@ -61,7 +51,7 @@
       "action": "ALLOW"
     },
     {
-      "name": "cardybot",
+      "name": "cardybot-bluesky",
       "user_agent_regex": "cardyb",
       "action": "ALLOW"
     },
