@@ -16,6 +16,7 @@ import {
   Tooltip,
   Checkbox,
   Grid,
+  Anchor,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -234,6 +235,18 @@ export default function Messages() {
   useEffect(() => {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
+      const messageCardId = `message-card-${respondingTid}`;
+      const messageCardElement = document.getElementById(messageCardId);
+      if (messageCardElement) {
+        // Using a small timeout can help ensure the layout has adjusted,
+        // especially on mobile when the virtual keyboard appears.
+        setTimeout(() => {
+          messageCardElement.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest", // Scrolls the minimum amount to bring the element into view.
+          });
+        }, 150); // Adjust delay if needed, or try 0 or removing timeout
+      }
     }
   }, [respondingTid]);
 
@@ -394,6 +407,7 @@ export default function Messages() {
                     key={msg.tid}
                   >
                     <Paper
+                      id={`message-card-${msg.tid}`} // Added unique ID for scrolling
                       p="md"
                       shadow="lg"
                       onClick={() => {
