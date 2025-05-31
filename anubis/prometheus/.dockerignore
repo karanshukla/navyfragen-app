@@ -1,0 +1,17 @@
+# Ignore git directories
+
+.git
+.github
+
+# Ignore node modules
+
+node_modules
+
+# Ignore any temp files
+
+\*.tmp
+
+# Don't ignore these important files
+
+!prometheus.yml
+!auth/web.yml
