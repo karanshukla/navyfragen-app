@@ -1,26 +1,6 @@
 {
   "bots": [
     {
-      "import": "(data)/bots/_deny-pathological.yaml"
-    },
-    {
-      "import": "(data)/bots/ai-robots-txt.yaml"
-    },
-    {
-      "import": "(data)/crawlers/_allow-good.yaml"
-    },
-    {
-      "import": "(data)/bots/aggressive-brazilian-scrapers.yaml"
-    },
-    {
-      "import": "(data)/common/keep-internet-working.yaml"
-    },
-    {
-      "name": "generic-browser",
-      "user_agent_regex": "Mozilla|Opera",
-      "action": "CHALLENGE"
-    },
-    {
       "name": "favicon",
       "path_regex": "^/favicon.ico$",
       "action": "ALLOW"
@@ -84,6 +64,26 @@
       "name": "cardybot",
       "user_agent_regex": "cardyb",
       "action": "ALLOW"
+    },
+    {
+      "import": "(data)/bots/_deny-pathological.yaml"
+    },
+    {
+      "import": "(data)/bots/ai-robots-txt.yaml"
+    },
+    {
+      "import": "(data)/crawlers/_allow-good.yaml"
+    },
+    {
+      "import": "(data)/bots/aggressive-brazilian-scrapers.yaml"
+    },
+    {
+      "import": "(data)/common/keep-internet-working.yaml"
+    },
+    {
+      "name": "generic-browser",
+      "user_agent_regex": "Mozilla|Opera",
+      "action": "CHALLENGE"
     }
   ],
   "dnsbl": false,
