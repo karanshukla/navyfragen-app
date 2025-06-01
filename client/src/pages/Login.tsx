@@ -92,7 +92,7 @@ export default function Login() {
               <br />
               <br />
               Authenticating allows the app to retrieve your anonymous messages
-              and post your responses to the Bluesky directly.
+              and post your responses to Bluesky directly.
             </Text>
           </Group>
         </Grid.Col>

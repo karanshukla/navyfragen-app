@@ -20,8 +20,6 @@ export default function Home() {
     <>
       <Center>
         <Loader size="xl" mt="xl" />
-        <Skeleton height={8} mt={6} radius="xl" />
-        <Skeleton height={8} mt={6} width="70%" radius="xl" />
       </Center>
     </>
   ) : (
