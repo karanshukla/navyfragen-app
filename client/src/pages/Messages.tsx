@@ -29,6 +29,7 @@ import {
 } from "../api/messageService";
 import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
+import ShareButton from "../components/ShareButton";
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:3033/profile";
@@ -328,11 +329,21 @@ export default function Messages() {
                   </Tooltip>
                 )}
               </CopyButton>
+              {(() => {
+                const handle = session.profile?.handle || "";
+                const fullUrl = `https://${shortlinkurl}/${handle}`;
+                const sharePayload = {
+                  title: "Send me anonymous messages on Navyfragen!",
+                  text: "Send me messages!",
+                  url: fullUrl,
+                };
+                return <ShareButton shareData={sharePayload} />;
+              })()}
               <Button
                 onClick={handleAddExampleMessages}
                 loading={examplesLoading}
               >
-                Add Test Messages
+                Add Examples
               </Button>
             </Group>
           </Paper>
