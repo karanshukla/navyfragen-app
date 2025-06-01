@@ -16,13 +16,7 @@ import { useSession } from "../api/authService";
 export default function Home() {
   const { data: sessionData, isLoading } = useSession();
 
-  return isLoading ? (
-    <>
-      <Center>
-        <Loader size="xl" mt="xl" />
-      </Center>
-    </>
-  ) : (
+  return (
     <>
       <Paper p="lg" radius="md" shadow="xs" mb="xl">
         <Title order={1} size="h2" c="deepBlue">
@@ -33,7 +27,20 @@ export default function Home() {
           Bluesky.
         </Text>
       </Paper>
-      {sessionData?.profile ? (
+
+      {isLoading ? (
+        <Paper p="xl" radius="md" withBorder shadow="xs">
+          <Stack gap="lg">
+            <Skeleton height={30} width="60%" />
+            <Skeleton height={20} />
+            <Skeleton height={20} />
+            <Skeleton height={20} />
+            <Center mt="md">
+              <Skeleton height={42} width={180} radius="md" />
+            </Center>
+          </Stack>
+        </Paper>
+      ) : sessionData?.profile ? (
         <Paper p="xl" radius="md" withBorder shadow="xs">
           <Stack gap="md">
             <Center>
@@ -44,19 +51,15 @@ export default function Home() {
             </Center>
           </Stack>
           <Center mt="xl">
-            {isLoading ? (
-              <Loader size="md" />
-            ) : (
-              <Button
-                component={Link}
-                to={sessionData?.isLoggedIn ? "/messages" : "/login"}
-                size="lg"
-                radius="md"
-                color="deepBlue"
-              >
-                {sessionData?.isLoggedIn ? "View Your Messages" : "Get Started"}
-              </Button>
-            )}
+            <Button
+              component={Link}
+              to="/messages"
+              size="lg"
+              radius="md"
+              color="deepBlue"
+            >
+              View Your Messages
+            </Button>
           </Center>
         </Paper>
       ) : (
@@ -84,19 +87,15 @@ export default function Home() {
             </List.Item>
           </List>{" "}
           <Center mt="xl">
-            {isLoading ? (
-              <Loader size="md" />
-            ) : (
-              <Button
-                component={Link}
-                to={sessionData?.isLoggedIn ? "/messages" : "/login"}
-                size="lg"
-                radius="md"
-                color="deepBlue"
-              >
-                {sessionData?.isLoggedIn ? "View Your Messages" : "Get Started"}
-              </Button>
-            )}
+            <Button
+              component={Link}
+              to="/login"
+              size="lg"
+              radius="md"
+              color="deepBlue"
+            >
+              Get Started
+            </Button>
           </Center>
         </Paper>
       )}
