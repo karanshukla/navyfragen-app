@@ -16,8 +16,7 @@ import {
   Tooltip,
   Checkbox,
   Grid,
-  Box, // Ensure Box is imported if not already
-  useMantineTheme, // Import useMantineTheme
+  Anchor,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -58,7 +57,6 @@ export default function Messages() {
     null
   );
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null); // ADDED for page-level alerts
-  const theme = useMantineTheme(); // Get theme for consistent styling
 
   const {
     data: session,
@@ -263,6 +261,8 @@ export default function Messages() {
   return (
     <Container>
       <Title>Messages</Title>
+
+      {/* Page-level alert */}
       {pageAlert && (
         <Alert
           title={pageAlert.title}
@@ -274,13 +274,17 @@ export default function Messages() {
           {pageAlert.message}
         </Alert>
       )}
+
+      {/* Persistent errors for session and messages loading */}
       {sessionError && (
         <Alert
           color="red"
           title="Session Error"
           mb="lg"
           withCloseButton
-          onClose={() => {}}
+          onClose={() => {
+            /* Allow dismissing */
+          }}
         >
           {typeof sessionError === "object" &&
           sessionError !== null &&
@@ -362,7 +366,7 @@ export default function Messages() {
             messagesData.messages.length > 0 ? (
             <>
               <Text c="dimmed" size="xs" mb="md">
-                You have {messagesData.messages.length} message(s)
+                You have {messagesData.messages.length} messages.
               </Text>
               <Group mb="md">
                 <Checkbox
@@ -396,6 +400,7 @@ export default function Messages() {
               </Group>
               <Grid align="flex-start">
                 {" "}
+                {/* MODIFIED: Added align="flex-start" */}
                 {(messagesData.messages ?? []).map((msg: Message) => (
                   <Grid.Col
                     span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
@@ -417,17 +422,10 @@ export default function Messages() {
                         height: "100%",
                         background: useGradients
                           ? "linear-gradient(to right, #005299, #7700aa)"
-                          : theme.colorScheme === "dark"
-                          ? theme.colors.dark[7]
-                          : theme.colors.gray[2], // Fallback background
-                        borderRadius: theme.radius.md, // Explicit border radius for the card
-                        display: "flex", // Added for flex column layout
-                        flexDirection: "column", // Added for flex column layout
+                          : undefined,
                       }}
                     >
-                      <Stack style={{ flexGrow: 1 }}>
-                        {" "}
-                        {/* Allow Stack to grow */}
+                      <Stack>
                         <Group justify="space-between">
                           <Text size="sm" c="white">
                             {new Date(msg.createdAt).toLocaleString(undefined, {
@@ -453,70 +451,26 @@ export default function Messages() {
                                 deleteLoading &&
                                 messageIdToDelete === msg.tid &&
                                 !confirmBeforeDelete
-                              }
+                              } // Show loading on button if deleting directly
                             >
                               <IconTrash size={16} />
                             </Button>
                           </Group>
                         </Group>
-                        <Box
+                        <Text
+                          c="white"
                           style={{
-                            flexGrow: 1,
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "center",
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-wrap",
                           }}
                         >
-                          {" "}
-                          {/* Centering container for message box */}
-                          {respondingTid !== msg.tid && (
-                            <Paper
-                              p="md"
-                              shadow="sm"
-                              radius="sm"
-                              bg="white"
-                              mx="xs" // Add some horizontal margin
-                              my="sm" // Add some vertical margin
-                            >
-                              <Text
-                                c="black" // Text color black for readability on white background
-                                fw="bold"
-                                ta="center" // Center align text
-                                style={{
-                                  wordBreak: "break-word",
-                                  whiteSpace: "pre-wrap",
-                                }}
-                              >
-                                {msg.message}
-                              </Text>
-                            </Paper>
-                          )}
-                        </Box>
+                          {msg.message}
+                        </Text>
                         {respondingTid === msg.tid && (
-                          <Stack mt="sm">
-                            {" "}
-                            {/* Add margin top if responding */}
-                            {/* Display the original message again when responding, but styled differently or simpler */}
-                            <Paper
-                              p="xs"
-                              radius="sm"
-                              bg="rgba(255,255,255,0.1)"
-                              mx="xs"
-                              mb="sm"
-                            >
-                              <Text size="sm" c="white" ta="center" truncate>
-                                Replying to: "{msg.message}"
-                              </Text>
-                            </Paper>
+                          <Stack>
                             <Textarea
-                              styles={{
-                                input: {
-                                  backgroundColor: "white",
-                                  border: "none",
-                                  color: "black",
-                                },
-                              }}
                               ref={textareaRef}
+                              placeholder="Write your response..."
                               value={responseText}
                               maxLength={280}
                               description={`${responseText.length}/280 characters`}
