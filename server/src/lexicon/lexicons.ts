@@ -186,6 +186,7 @@ export const schemaDict = {
   AppNavyfragenMessage: {
     lexicon: 1,
     id: 'app.navyfragen.message',
+    description: 'Anonymous messages sent to a reccipient on Bluesky.',
     defs: {
       main: {
         type: 'record',

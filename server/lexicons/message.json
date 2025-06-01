@@ -1,6 +1,7 @@
 {
   "lexicon": 1,
   "id": "app.navyfragen.message",
+  "description": "Anonymous messages sent to a recipient on Bluesky.",
   "defs": {
     "main": {
       "type": "record",
