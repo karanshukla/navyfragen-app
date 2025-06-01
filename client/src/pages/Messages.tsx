@@ -16,6 +16,7 @@ import {
   Tooltip,
   Checkbox,
   Grid,
+  Box,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -248,8 +249,6 @@ export default function Messages() {
   return (
     <Container>
       <Title>Messages</Title>
-
-      {/* Page-level alert */}
       {pageAlert && (
         <Alert
           title={pageAlert.title}
@@ -261,17 +260,13 @@ export default function Messages() {
           {pageAlert.message}
         </Alert>
       )}
-
-      {/* Persistent errors for session and messages loading */}
       {sessionError && (
         <Alert
           color="red"
           title="Session Error"
           mb="lg"
           withCloseButton
-          onClose={() => {
-            /* Allow dismissing */
-          }}
+          onClose={() => {}}
         >
           {typeof sessionError === "object" &&
           sessionError !== null &&
@@ -353,7 +348,7 @@ export default function Messages() {
             messagesData.messages.length > 0 ? (
             <>
               <Text c="dimmed" size="xs" mb="md">
-                You have {messagesData.messages.length} messages.
+                You have {messagesData.messages.length} message(s)
               </Text>
               <Group mb="md">
                 <Checkbox
@@ -387,7 +382,6 @@ export default function Messages() {
               </Group>
               <Grid align="flex-start">
                 {" "}
-                {/* MODIFIED: Added align="flex-start" */}
                 {(messagesData.messages ?? []).map((msg: Message) => (
                   <Grid.Col
                     span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
@@ -437,26 +431,35 @@ export default function Messages() {
                                 deleteLoading &&
                                 messageIdToDelete === msg.tid &&
                                 !confirmBeforeDelete
-                              } // Show loading on button if deleting directly
+                              }
                             >
                               <IconTrash size={16} />
                             </Button>
                           </Group>
                         </Group>
-                        <Text
-                          c="white"
-                          style={{
-                            wordBreak: "break-word",
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {msg.message}
-                        </Text>
+                        <Center>
+                          <Text
+                            c="white"
+                            fw="bold"
+                            style={{
+                              wordBreak: "break-word",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {msg.message}
+                          </Text>
+                        </Center>
                         {respondingTid === msg.tid && (
                           <Stack>
                             <Textarea
+                              styles={{
+                                input: {
+                                  backgroundColor: "white",
+                                  border: "none",
+                                  color: "black",
+                                },
+                              }}
                               ref={textareaRef}
-                              placeholder="Write your response..."
                               value={responseText}
                               maxLength={280}
                               description={`${responseText.length}/280 characters`}
