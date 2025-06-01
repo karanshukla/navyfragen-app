@@ -14,10 +14,10 @@ import {
   Textarea,
   CopyButton,
   Tooltip,
-  Checkbox,
   Grid,
-  Anchor,
   Divider,
+  Box,
+  Switch,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -43,8 +43,7 @@ interface PageAlert {
 export default function Messages() {
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
-  const [deleteAfterResponding, setDeleteAfterResponding] =
-    useState<boolean>(false);
+  const [appendProfileLink, setAppendProfileLink] = useState<boolean>(false);
   const [useGradients, setUseGradients] = useState<boolean>(true);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -58,6 +57,7 @@ export default function Messages() {
     null
   );
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
+  const [characterLimit, setCharacterLimit] = useState<number>(280);
 
   const {
     data: session,
@@ -82,6 +82,14 @@ export default function Messages() {
     useAddExampleMessages();
 
   useEffect(() => {
+    setCharacterLimit(
+      appendProfileLink && session?.profile?.handle
+        ? 280 - (shortlinkurl.length + session.profile.handle.length + 3)
+        : 280
+    );
+  }, [appendProfileLink, session, shortlinkurl]);
+
+  useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
       setPageAlert({
@@ -99,11 +107,6 @@ export default function Messages() {
     addExamples(session.did, {
       onSuccess: () => {
         refetchMessages();
-        setPageAlert({
-          title: "Test Messages Added",
-          message: "Example messages have been added to your inbox.",
-          color: "blue",
-        });
       },
       onError: (err: any) => {
         setPageAlert({
@@ -170,6 +173,9 @@ export default function Messages() {
       });
       return;
     }
+    if (appendProfileLink && session?.profile?.handle) {
+      setResponseText(responseText + ` ${shortlinkurl}/${session.profile.handle}`);
+    }
 
     respondToMessage(
       {
@@ -204,13 +210,7 @@ export default function Messages() {
             message: successMessage,
             color: "green",
           });
-          if (deleteAfterResponding) {
-            setTimeout(() => {
-              performDelete(msg.tid);
-            }, 1000);
-          } else {
-            refetchMessages();
-          }
+          refetchMessages();
         },
         onError: (err: any) => {
           setPageAlert({
@@ -347,7 +347,6 @@ export default function Messages() {
               </Button>
             </Group>
           </Paper>
-
           {messagesLoading ? (
             <Center>
               <Loader size="lg" />
@@ -357,33 +356,33 @@ export default function Messages() {
             messagesData.messages.length > 0 ? (
             <>
               <Group mb="md">
-                <Checkbox
-                  checked={deleteAfterResponding}
+                <Switch
+                  checked={appendProfileLink}
                   onChange={(event) =>
-                    setDeleteAfterResponding(event.currentTarget.checked)
+                    setAppendProfileLink(event.currentTarget.checked)
                   }
-                  label="Delete messages after responding"
+                  label="Append my link automatically"
                 />
-                <Checkbox
+                <Switch
                   checked={useGradients}
                   onChange={(event) =>
                     setUseGradients(event.currentTarget.checked)
                   }
-                  label="Use gradients"
+                  label="Use gradient backgrounds"
                 />
-                <Checkbox
+                <Switch
                   checked={autoRefresh}
                   onChange={(event) =>
                     setAutoRefresh(event.currentTarget.checked)
                   }
                   label="Auto-refresh messages"
                 />
-                <Checkbox
+                <Switch
                   checked={confirmBeforeDelete}
                   onChange={(event) =>
                     setConfirmBeforeDelete(event.currentTarget.checked)
                   }
-                  label="Confirm before deleting messages"
+                  label="Confirm before deleting"
                 />
               </Group>
               <Divider mb="md" />
@@ -409,22 +408,30 @@ export default function Messages() {
                         height: "100%",
                         background: useGradients
                           ? "linear-gradient(to right, #005299, #7700aa)"
-                          : undefined,
+                          : "var(--mantine-color-deepBlue-9)",
                       }}
                     >
                       <Stack>
                         <Group justify="space-between">
-                          <Text size="sm" c="dimmed">
-                            {new Date(msg.createdAt).toLocaleString(undefined, {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: true,
-                              timeZoneName: "short",
-                            })}
-                          </Text>
+                          <Box
+                            p="xs"
+                            style={{ borderRadius: "var(--mantine-radius-sm)" }}
+                          >
+                            <Text size="xs" variant="subtle">
+                              {new Date(msg.createdAt).toLocaleString(
+                                undefined,
+                                {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                  timeZoneName: "short",
+                                }
+                              )}
+                            </Text>
+                          </Box>
                           <Group>
                             <Button
                               size="xs"
@@ -452,6 +459,8 @@ export default function Messages() {
                               wordBreak: "break-word",
                               whiteSpace: "pre-wrap",
                               textShadow: "1px 1px 1px rgba(0, 0, 0, 0.7)",
+                              fontSize: "1.3rem",
+                              textAlign: "center",
                             }}
                           >
                             {msg.message}
@@ -462,13 +471,9 @@ export default function Messages() {
                             <Textarea
                               ref={textareaRef}
                               value={responseText}
-                              maxLength={280}
-                              description={`${responseText.length}/280 characters`}
-                              error={
-                                responseText.length > 280
-                                  ? "Message exceeds Bluesky's character limit"
-                                  : null
-                              }
+                              maxLength={characterLimit}
+                              //TODO - Dynamically calculate based on setting for appending profile link and also update backend to handle the link
+                              description={`${responseText.length}/${characterLimit} characters`}
                               onChange={(e) => setResponseText(e.target.value)}
                               onClick={(e) => e.stopPropagation()}
                               autosize
@@ -482,6 +487,18 @@ export default function Messages() {
                               }}
                               inputSize="md"
                               radius="md"
+                              styles={{
+                                input: {
+                                  backgroundColor: "white",
+                                  color: "black",
+                                  border: "none",
+                                  padding: "var(--mantine-spacing-xs)",
+                                  borderRadius: "var(--mantine-radius-sm)",
+                                  fontSize: "var(--mantine-font-size-md)",
+                                  fontWeight: 500,
+                                  fontFamily: "'Comic Neue', sans-serif",
+                                },
+                              }}
                             />
                             <Group justify="flex-end">
                               <Button
@@ -491,7 +508,8 @@ export default function Messages() {
                                   handleSendResponse(msg);
                                 }}
                                 loading={respondLoading}
-                                variant="outline"
+                                variant="filled"
+                                radius="md"
                               >
                                 <IconSend2 />
                               </Button>
@@ -516,7 +534,6 @@ export default function Messages() {
         opened={deleteModalOpened}
         onClose={() => {
           if (!deleteLoading) {
-            // Prevent closing if delete is in progress via modal
             setDeleteModalOpened(false);
             setMessageIdToDelete(null);
           }
@@ -526,7 +543,7 @@ export default function Messages() {
         message="Are you sure you want to delete this message? This action cannot be undone."
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        loading={deleteLoading && !!messageIdToDelete} // Show loading in modal during confirm delete
+        loading={deleteLoading && !!messageIdToDelete}
       />
     </Container>
   );

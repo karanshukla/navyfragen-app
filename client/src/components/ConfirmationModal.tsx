@@ -8,7 +8,7 @@ interface ConfirmationModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  loading?: boolean; // Added loading prop
+  loading?: boolean;
 }
 
 export function ConfirmationModal({
@@ -19,15 +19,13 @@ export function ConfirmationModal({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
-  loading = false, // Added loading prop with default value
+  loading = false,
 }: ConfirmationModalProps) {
   return (
     <Modal opened={opened} onClose={onClose} title={title} centered>
       <Text mb="md">{message}</Text>
       <Group justify="flex-end">
         <Button variant="default" onClick={onClose} disabled={loading}>
-          {" "}
-          {/* Disable cancel if loading */}
           {cancelLabel}
         </Button>
         <Button

@@ -1,31 +1,45 @@
-import { createTheme } from "@mantine/core";
+import { createTheme, MantineColorsTuple } from "@mantine/core";
+
+const slightlyGrayerWhite: MantineColorsTuple = [
+  "#F8F9FA",
+  "#F1F3F5",
+  "#E9ECEF",
+  "#DEE2E6",
+  "#CED4DA",
+  "#ADB5BD",
+  "#868E96",
+  "#495057",
+  "#343A40",
+  "#212529",
+];
 
 const navyfragenTheme = createTheme({
   colors: {
     deepBlue: [
-      "#eef3ff",
-      "#dce4f5",
-      "#b9c7e2",
-      "#94a8d0",
-      "#748dc1",
-      "#5f7cb8",
-      "#5474b4",
-      "#44639f",
-      "#39588f",
-      "#2d4b81",
+      "#e0e8f5",
+      "#c2d1e8",
+      "#a3badb",
+      "#85a3ce",
+      "#678cc0",
+      "#4975b3",
+      "#3a68a6",
+      "#2b5b99",
+      "#1c4e8c",
+      "#0d417f",
     ],
     blue: [
-      "#eef3ff",
-      "#dee2f2",
-      "#bdc2de",
-      "#98a0ca",
-      "#7a84ba",
-      "#6672b0",
-      "#5c68ac",
-      "#4c5897",
-      "#424e88",
-      "#364379",
+      "#e2e9f7",
+      "#c5d3ef",
+      "#a8bde7",
+      "#8ba7df",
+      "#6e91d7",
+      "#517bcf",
+      "#416cb9",
+      "#315da3",
+      "#224e8d",
+      "#123f77",
     ],
+    slightlyGrayerWhite,
   },
 
   shadows: {
@@ -35,9 +49,10 @@ const navyfragenTheme = createTheme({
 
   primaryColor: "deepBlue",
   defaultRadius: "md",
-  fontFamily: "Roboto, sans-serif",
-  scale: 1.1,
-  headings: { fontFamily: "Inter, sans-serif" },
+  fontFamily: "Noto Sans, sans-serif",
+  scale: 1.05,
+  headings: { fontFamily: "Noto Sans, sans-serif" },
+  white: slightlyGrayerWhite[0], // Set the default white to our new shade
 });
 
 export default navyfragenTheme;

@@ -16,7 +16,7 @@ import {
   Alert,
   BackgroundImage,
   Divider,
-  Anchor, // ADDED for page-level alerts
+  Anchor,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
@@ -26,7 +26,7 @@ import {
 } from "../api/profileService";
 import { useSendMessage } from "../api/messageService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { IconCheck, IconSend } from "@tabler/icons-react";
+import { IconClearAll, IconSend, IconX } from "@tabler/icons-react";
 
 const MAX_MESSAGE_LENGTH = 150;
 
@@ -40,8 +40,7 @@ export default function PublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const [message, setMessage] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
-  const { colorScheme } = useMantineColorScheme();
-  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null); // ADDED for page-level alerts
+  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
 
   const {
     data: handleData,
@@ -70,10 +69,9 @@ export default function PublicProfile() {
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
 
   const handleSend = () => {
-    setPageAlert(null); // Clear previous alert
+    setPageAlert(null);
     if (!message.trim()) {
       setPageAlert({
-        // MODIFIED
         title: "Validation Error",
         message: "Message cannot be empty.",
         color: "red",
@@ -82,7 +80,6 @@ export default function PublicProfile() {
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
       setPageAlert({
-        // MODIFIED
         title: "Validation Error",
         message: `Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`,
         color: "red",
@@ -93,10 +90,9 @@ export default function PublicProfile() {
   };
 
   const handleConfirmSend = () => {
-    setPageAlert(null); // Clear previous alert
+    setPageAlert(null);
     if (!profileData?.profile?.did) {
       setPageAlert({
-        // MODIFIED
         title: "Error",
         message: "Cannot send message: User DID not found.",
         color: "red",
@@ -109,7 +105,6 @@ export default function PublicProfile() {
       {
         onSuccess: () => {
           setPageAlert({
-            // MODIFIED
             title: "Success!",
             message: "Message sent! Let's go!",
             color: "green",
@@ -119,7 +114,6 @@ export default function PublicProfile() {
         },
         onError: (err: any) => {
           setPageAlert({
-            // MODIFIED
             title: "Error",
             message:
               err.message ||
@@ -137,7 +131,6 @@ export default function PublicProfile() {
   const isLoading =
     handleLoading || userExistsLoading || profileLoading || sendLoading;
 
-  // Display error if handle resolution fails
   if (handleError) {
     return (
       <Container>
@@ -157,7 +150,6 @@ export default function PublicProfile() {
     );
   }
 
-  // Loading state
   if (isLoading) {
     return (
       <Container>
@@ -168,7 +160,6 @@ export default function PublicProfile() {
     );
   }
 
-  // If user doesn't exist in the app
   if (did && !userExists) {
     return (
       <Container>
@@ -184,7 +175,6 @@ export default function PublicProfile() {
 
   return (
     <Container>
-      {/* Page-level alert */}
       {pageAlert && (
         <Alert
           title={pageAlert.title}
@@ -210,14 +200,13 @@ export default function PublicProfile() {
               style={{
                 filter: "blur(8px)",
                 position: "absolute",
-                top: -10, // Extend a bit to avoid blurred edges
+                top: -10,
                 left: -10,
                 right: -10,
                 bottom: -10,
                 zIndex: 1,
               }}
             />
-            {/* Dark overlay */}
             <Box
               style={{
                 position: "absolute",
@@ -225,11 +214,10 @@ export default function PublicProfile() {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.5)", // Darken the image
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
                 zIndex: 2,
               }}
             />
-            {/* Content on top */}
             <Box
               style={{
                 position: "relative",
@@ -237,26 +225,88 @@ export default function PublicProfile() {
                 padding: "var(--mantine-spacing-md)",
               }}
             >
-              <Group>
-                <Avatar
-                  src={profile.avatar}
-                  alt={profile.displayName || profile.handle || "User"}
-                  size="xl"
-                  radius="xl"
-                  style={{ border: "2px solid white" }} // Added border to avatar for better visibility
-                />
-                <Box style={{ flex: 1 }}>
+              {/* Desktop Layout */}
+              <Box visibleFrom="sm">
+                <Group>
+                  <Avatar
+                    src={profile.avatar}
+                    alt={profile.displayName || profile.handle || "User"}
+                    size="xl"
+                    radius="xl"
+                    style={{ border: "2px solid white" }}
+                  />
+                  <Box style={{ flex: 1 }}>
+                    <Title
+                      order={3}
+                      c="white"
+                      style={{
+                        textShadow: "2px 2px 4px rgba(0,0,0,0.7)",
+                      }}
+                    >
+                      {profile.displayName}
+                    </Title>
+                    <Text
+                      c="white"
+                      style={{
+                        textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
+                      }}
+                    >
+                      <Anchor
+                        href={`https://bsky.app/profile/${profile.handle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        c="white"
+                        style={{
+                          textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
+                        }}
+                      >
+                        @{profile.handle}
+                      </Anchor>
+                    </Text>
+                    {profile.description && (
+                      <Text
+                        mt="xs"
+                        c="white"
+                        style={{
+                          wordBreak: "break-word",
+                          whiteSpace: "pre-wrap",
+                          textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
+                        }}
+                      >
+                        {profile.description}
+                      </Text>
+                    )}
+                  </Box>
+                </Group>
+              </Box>
+
+              {/* Mobile Layout */}
+              <Box hiddenFrom="sm">
+                <Stack align="center" gap="sm">
+                  <Avatar
+                    src={profile.avatar}
+                    alt={profile.displayName || profile.handle || "User"}
+                    size={100} // Larger avatar for mobile
+                    radius="xl"
+                    style={{
+                      border: "3px solid white",
+                      boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)", // Add shadow for depth
+                    }}
+                  />
                   <Title
-                    order={3}
+                    order={4} // Slightly smaller title order for mobile if preferred
                     c="white"
+                    ta="center"
                     style={{
                       textShadow: "2px 2px 4px rgba(0,0,0,0.7)",
+                      marginTop: "var(--mantine-spacing-xs)",
                     }}
                   >
                     {profile.displayName}
                   </Title>
                   <Text
                     c="white"
+                    ta="center"
                     style={{
                       textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
                     }}
@@ -277,6 +327,8 @@ export default function PublicProfile() {
                     <Text
                       mt="xs"
                       c="white"
+                      ta="center"
+                      size="sm"
                       style={{
                         wordBreak: "break-word",
                         whiteSpace: "pre-wrap",
@@ -286,8 +338,8 @@ export default function PublicProfile() {
                       {profile.description}
                     </Text>
                   )}
-                </Box>
-              </Group>
+                </Stack>
+              </Box>
             </Box>
           </Paper>
 
@@ -298,8 +350,14 @@ export default function PublicProfile() {
               background: "linear-gradient(to right, #005299, #7700aa)",
             }}
           >
-            <Title order={4} mb="md" c="white">
-              Send an anonymous message
+            <Title
+              order={4}
+              mb="md"
+              c="white"
+              ta="center"
+              style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.7)" }}
+            >
+              Send an anonymous message or question!
             </Title>
 
             <Stack>
@@ -307,7 +365,6 @@ export default function PublicProfile() {
                 {message.length}/{MAX_MESSAGE_LENGTH}
               </Text>
               <Textarea
-                placeholder={`Type your anonymous message or question... (${MAX_MESSAGE_LENGTH} chars max, Enter to send)`}
                 value={message}
                 onChange={(e) => {
                   if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
@@ -330,14 +387,35 @@ export default function PublicProfile() {
                     handleSend();
                   }
                 }}
-                variant="default"
+                variant="unstyled"
+                styles={{
+                  input: {
+                    backgroundColor: "white",
+                    color: "black",
+                    border: "none",
+                    padding: "var(--mantine-spacing-xs)",
+                    borderRadius: "var(--mantine-radius-sm)",
+                    fontSize: "var(--mantine-font-size-md)",
+                    fontWeight: 500,
+                    fontFamily: "'Comic Neue', sans-serif",
+                  },
+                }}
               />
               <Group justify="flex-end">
                 <Button
+                  onClick={() => setMessage("")}
+                  variant="filled"
+                  size="md"
+                  radius="md"
+                >
+                  <IconX />
+                </Button>
+                <Button
                   onClick={handleSend}
                   loading={sendLoading}
-                  variant="outline"
+                  variant="filled"
                   size="md"
+                  radius="md"
                 >
                   <IconSend />
                 </Button>

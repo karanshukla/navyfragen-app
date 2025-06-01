@@ -2,6 +2,7 @@ import express from "express";
 import { body } from "express-validator";
 import type { AppContext } from "../index";
 import { generateQuestionImage } from "../lib/image-generator"; // Import the new image generator
+import { RichText } from "@atproto/api";
 
 export function messageRoutes(
   ctx: AppContext,
@@ -10,7 +11,7 @@ export function messageRoutes(
 ) {
   const router = express.Router();
 
-  // Add example messages
+  // Add example messages for the user
   router.post(
     "/messages/example",
     body("recipient")
@@ -23,7 +24,6 @@ export function messageRoutes(
       if (!recipient) {
         return res.status(400).json({ error: "Recipient DID required" });
       }
-      // Insert a few example messages
       const now = new Date();
       const messages = [
         {
@@ -46,7 +46,6 @@ export function messageRoutes(
           .onConflict((oc) => oc.column("tid").doNothing())
           .execute();
       }
-      // Return all messages for this recipient
       const allMessages = await ctx.db
         .selectFrom("message")
         .selectAll()
@@ -137,15 +136,20 @@ export function messageRoutes(
           return res.status(500).json({ error: "Image generation failed" });
         }
 
+        // Check for any links and convert them to Bluesky links eg fragen.navy/profile
+        const rt = new RichText({ text: response });
+        await rt.detectFacets(agent);
+
         const postRecord: any = {
-          text: response, // The user's response is the main text
+          text: rt.text, // The user's response is the main text
+          facets: rt.facets || [],
           createdAt: new Date().toISOString(),
         };
 
         if (imageBlob && agent) {
           try {
             const uploadedImage = await agent.uploadBlob(imageBlob, {
-              encoding: "image/png", // Assuming PNG, adjust if API returns different
+              encoding: "image/png", // Assuming PNG, adjust if API returns something different
             });
             postRecord.embed = {
               $type: "app.bsky.embed.images",
@@ -162,7 +166,6 @@ export function messageRoutes(
         }
 
         const postRes = await agent.post(postRecord);
-        // Convert at:// URI to a proper Bluesky web link
         let webUrl = null;
         let profileName = null;
         const match = postRes.uri.match(
@@ -220,7 +223,9 @@ export function messageRoutes(
         .executeTakeFirst();
 
       if (!userProfileExists) {
-        return res.status(404).json({ error: "Recipient not found (user profile does not exist)" });
+        return res
+          .status(404)
+          .json({ error: "Recipient not found (user profile does not exist)" });
       }
       const tid = `anon-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const msg = {
@@ -254,7 +259,9 @@ export function messageRoutes(
         .executeTakeFirst();
 
       if (!userProfileExists) {
-        return res.status(404).json({ error: "User not found (user profile does not exist)" });
+        return res
+          .status(404)
+          .json({ error: "User not found (user profile does not exist)" });
       }
       const messages = await ctx.db
         .selectFrom("message")
