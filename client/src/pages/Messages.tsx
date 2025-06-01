@@ -14,9 +14,7 @@ import {
   Textarea,
   CopyButton,
   Tooltip,
-  Checkbox,
   Grid,
-  Anchor,
   Divider,
   Box,
   Switch,
@@ -59,6 +57,7 @@ export default function Messages() {
     null
   );
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
+  const [characterLimit, setCharacterLimit] = useState<number>(280);
 
   const {
     data: session,
@@ -83,6 +82,14 @@ export default function Messages() {
     useAddExampleMessages();
 
   useEffect(() => {
+    setCharacterLimit(
+      appendProfileLink && session?.profile?.handle
+        ? 280 - (shortlinkurl.length + session.profile.handle.length + 3)
+        : 280
+    );
+  }, [appendProfileLink, session, shortlinkurl]);
+
+  useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
       setPageAlert({
@@ -100,11 +107,6 @@ export default function Messages() {
     addExamples(session.did, {
       onSuccess: () => {
         refetchMessages();
-        setPageAlert({
-          title: "Test Messages Added",
-          message: "Example messages have been added to your inbox.",
-          color: "blue",
-        });
       },
       onError: (err: any) => {
         setPageAlert({
@@ -170,6 +172,9 @@ export default function Messages() {
         color: "yellow",
       });
       return;
+    }
+    if (appendProfileLink && session?.profile?.handle) {
+      setResponseText(responseText + ` ${shortlinkurl}/${session.profile.handle}`);
     }
 
     respondToMessage(
@@ -342,7 +347,6 @@ export default function Messages() {
               </Button>
             </Group>
           </Paper>
-          <Divider mb="md" />
           {messagesLoading ? (
             <Center>
               <Loader size="lg" />
@@ -364,7 +368,7 @@ export default function Messages() {
                   onChange={(event) =>
                     setUseGradients(event.currentTarget.checked)
                   }
-                  label="Use gradients"
+                  label="Use gradient backgrounds"
                 />
                 <Switch
                   checked={autoRefresh}
@@ -381,6 +385,7 @@ export default function Messages() {
                   label="Confirm before deleting"
                 />
               </Group>
+              <Divider mb="md" />
               <Grid align="flex-start">
                 {(messagesData.messages ?? []).map((msg: Message) => (
                   <Grid.Col
@@ -466,14 +471,9 @@ export default function Messages() {
                             <Textarea
                               ref={textareaRef}
                               value={responseText}
-                              maxLength={280}
+                              maxLength={characterLimit}
                               //TODO - Dynamically calculate based on setting for appending profile link and also update backend to handle the link
-                              description={`${responseText.length}/280 characters`}
-                              error={
-                                responseText.length > 280
-                                  ? "Message exceeds Bluesky's character limit"
-                                  : null
-                              }
+                              description={`${responseText.length}/${characterLimit} characters`}
                               onChange={(e) => setResponseText(e.target.value)}
                               onClick={(e) => e.stopPropagation()}
                               autosize
