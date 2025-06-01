@@ -13,8 +13,6 @@ import {
 import { useLocation } from "react-router-dom";
 import { z } from "zod";
 import { useLogin } from "../api/authService";
-import { apiClient } from "../api/apiClient";
-//refactor into two columns with the form on the left and the text on the right, add a blurb about what the app does with the bsky credentials
 
 export default function Login() {
   const [handle, setHandle] = useState("");
@@ -93,8 +91,8 @@ export default function Login() {
               password.
               <br />
               <br />
-              Authenticating allows the app to retrieve your anonymous
-              messages and post your responses to the app directly. 
+              Authenticating allows the app to retrieve your anonymous messages
+              and post your responses to the Bluesky directly.
             </Text>
           </Group>
         </Grid.Col>

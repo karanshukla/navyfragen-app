@@ -173,8 +173,10 @@ export default function Messages() {
       });
       return;
     }
+    let appendedResponseText;
     if (appendProfileLink && session?.profile?.handle) {
-      setResponseText(responseText + ` ${shortlinkurl}/${session.profile.handle}`);
+      appendedResponseText =
+        responseText + ` ${shortlinkurl}/${session.profile.handle}`;
     }
 
     respondToMessage(
@@ -182,7 +184,7 @@ export default function Messages() {
         tid: msg.tid,
         recipient: msg.recipient,
         original: msg.message,
-        response: responseText,
+        response: appendedResponseText ?? responseText,
       },
       {
         onSuccess: (data) => {
@@ -334,7 +336,7 @@ export default function Messages() {
                 const fullUrl = `https://${shortlinkurl}/${handle}`;
                 const sharePayload = {
                   title: "Send me anonymous messages on Navyfragen!",
-                  text: "Send me messages!",
+                  text: `Send ${session.profile?.displayName} anonymous messages!`,
                   url: fullUrl,
                 };
                 return <ShareButton shareData={sharePayload} />;
@@ -472,7 +474,6 @@ export default function Messages() {
                               ref={textareaRef}
                               value={responseText}
                               maxLength={characterLimit}
-                              //TODO - Dynamically calculate based on setting for appending profile link and also update backend to handle the link
                               description={`${responseText.length}/${characterLimit} characters`}
                               onChange={(e) => setResponseText(e.target.value)}
                               onClick={(e) => e.stopPropagation()}
