@@ -5,7 +5,7 @@ import { pino } from "pino";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
-import cookieParser from "cookie-parser"; // Add cookie-parser import
+import cookieParser from "cookie-parser";
 
 import { createDb, migrateToLatest } from "./database/db";
 import { env } from "#/lib/env";

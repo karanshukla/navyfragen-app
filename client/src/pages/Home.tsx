@@ -18,9 +18,11 @@ export default function Home() {
 
   return isLoading ? (
     <>
-      <Skeleton height={8} mt={6} radius="xl" />
-      <Skeleton height={8} mt={6} width="70%" radius="xl" />
-      <Loader size="xl" mt="xl" />
+      <Center>
+        <Loader size="xl" mt="xl" />
+        <Skeleton height={8} mt={6} radius="xl" />
+        <Skeleton height={8} mt={6} width="70%" radius="xl" />
+      </Center>
     </>
   ) : (
     <>
@@ -36,10 +38,12 @@ export default function Home() {
       {sessionData?.profile ? (
         <Paper p="xl" radius="md" withBorder shadow="xs">
           <Stack gap="md">
-            <Title order={2} size="h3" c="deepBlue">
-              Good to see you again,{" "}
-              {sessionData.profile.displayName || sessionData.profile.handle}!
-            </Title>
+            <Center>
+              <Title order={2} size="h3" c="deepBlue">
+                Good to see you again,{" "}
+                {sessionData.profile.displayName || sessionData.profile.handle}!
+              </Title>
+            </Center>
           </Stack>
           <Center mt="xl">
             {isLoading ? (

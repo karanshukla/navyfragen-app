@@ -1,8 +1,9 @@
 import express from "express";
 import { body } from "express-validator";
 import type { AppContext } from "../index";
-import { generateQuestionImage } from "../lib/image-generator"; // Import the new image generator
-import { RichText } from "@atproto/api";
+import { generateQuestionImage } from "../lib/image-generator";
+import { RichText, AtpAgent, PostRecord } from "@atproto/api";
+import { initializeAuthenticatedAgent } from "../auth/agent-initializer";
 
 export function messageRoutes(
   ctx: AppContext,
@@ -69,62 +70,87 @@ export function messageRoutes(
         return res.status(400).json({ error: "Missing required fields" });
       }
       // Get the session from the token (if present)
-      let token =
+      let rawTokenValue =
         req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!token && req.cookies && req.cookies.auth_token) {
-        token = req.cookies.auth_token;
+      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
+        rawTokenValue = req.cookies.auth_token;
       }
-      let did = null;
-      let agent = null;
-      let rawToken = token;
-      let sessionExists = false;
-      if (Array.isArray(rawToken)) rawToken = rawToken[0];
-      if (typeof rawToken === "object" && rawToken !== null)
-        rawToken = String(rawToken);
-      if (rawToken && typeof rawToken === "string") {
-        try {
-          did = Buffer.from(rawToken, "base64").toString("ascii");
-          // Check if session exists in DB before attempting restore
-          const dbSession = await ctx.db
-            .selectFrom("auth_session")
-            .selectAll()
-            .where("key", "=", did)
-            .executeTakeFirst();
-          if (!dbSession) {
-            sessionExists = false;
-          } else {
-            sessionExists = true;
-            let oauthSession;
-            try {
-              oauthSession = await ctx.oauthClient.restore(did);
-              if (oauthSession) {
-                const { Agent } = require("@atproto/api");
-                agent = new Agent(oauthSession);
-                try {
-                  await agent.app.bsky.actor.getProfile({ actor: did });
-                } catch (err) {
-                  agent = null;
-                }
-              }
-            } catch (restoreErr) {
-              // ignore
-            }
+      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
+      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
+        rawTokenValue = String(rawTokenValue);
+
+      let agent: AtpAgent | null = null;
+      let userSessionDid: string | null = null;
+      let sessionExistsInDb = false;
+
+      if (rawTokenValue && typeof rawTokenValue === "string") {
+        const agentInitResult = await initializeAuthenticatedAgent(
+          rawTokenValue,
+          ctx
+        );
+        if (agentInitResult) {
+          agent = agentInitResult.agent;
+          userSessionDid = agentInitResult.userSessionDid;
+          sessionExistsInDb = agentInitResult.sessionExists;
+        } else {
+          // initializeAuthenticatedAgent logs errors internally
+          // We still need to determine the correct response based on sessionExists
+          // Attempt to decode DID to check sessionExists if agentInitResult is null
+          let decodedDidForError: string | null = null;
+          try {
+            decodedDidForError = Buffer.from(rawTokenValue, "base64").toString(
+              "ascii"
+            );
+            const dbSession = await ctx.db
+              .selectFrom("auth_session")
+              .selectAll()
+              .where("key", "=", decodedDidForError)
+              .executeTakeFirst();
+            sessionExistsInDb = !!dbSession;
+          } catch (e) {
+            // ignore, sessionExistsInDb will remain false
           }
-        } catch (err) {
-          // ignore
         }
       }
-      if (!agent) {
-        let errorMsg = "Not authenticated";
-        if (did && sessionExists === false) {
+
+      // Check agent AND userSessionDid validity before proceeding
+      if (!agent || !userSessionDid) {
+        let errorMsg = "Not authenticated or agent initialization failed.";
+        if (rawTokenValue && !sessionExistsInDb) {
+          // Check rawTokenValue to ensure a token was provided
           errorMsg =
-            "Session for this user was deleted or expired. Please log in again.";
+            "Session for this user was deleted, expired, or invalid. Please log in again.";
         }
         return res.status(401).json({ error: errorMsg });
       }
+
+      // If agent is valid, proceed to use it.
+      // The agent.session property will be undefined in this setup.
+      // We need to use the sessionDid obtained from tokenInfo for operations requiring the user's DID.
       try {
-        const accountDid = agent?.accountDid ?? "";
+        const accountDid = userSessionDid!; // Use the validated userSessionDid (non-null assertion)
         const handle = await ctx.resolver.resolveDidToHandle(accountDid);
+
+        let processedResponse = response;
+        // Add http:// to localhost links if they don't have a scheme.
+        // This is because the Atproto RichText parser may not recognize 'localhost'
+        // as a domain that should automatically get a scheme prepended.
+        // The regex looks for domain-like structures (e.g., 'example.com', 'sub.example.org:3000/path')
+        // that are not already preceded by a scheme like 'http://' or 'customscheme://'.
+        processedResponse = processedResponse.replace(
+          /(?<![a-zA-Z][a-zA-Z0-9+-.]*:\/\/)\b([a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:\d+)?\S*)/gi,
+          "http://$1"
+        );
+
+        const rt = new RichText({ text: processedResponse });
+        await rt.detectFacets(agent);
+
+        const postRecord: any = {
+          text: rt.text, // The user's response is the main text
+          facets: rt.facets || [],
+          createdAt: new Date().toISOString(),
+        };
+
         const { imageBlob, imageAltText } = await generateQuestionImage(
           original,
           ctx.logger,
@@ -135,16 +161,6 @@ export function messageRoutes(
           ctx.logger.error("Image generation failed, no imageBlob returned");
           return res.status(500).json({ error: "Image generation failed" });
         }
-
-        // Check for any links and convert them to Bluesky links eg fragen.navy/profile
-        const rt = new RichText({ text: response });
-        await rt.detectFacets(agent);
-
-        const postRecord: any = {
-          text: rt.text, // The user's response is the main text
-          facets: rt.facets || [],
-          createdAt: new Date().toISOString(),
-        };
 
         if (imageBlob && agent) {
           try {

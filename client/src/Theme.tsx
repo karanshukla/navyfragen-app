@@ -1,17 +1,4 @@
-import { createTheme, MantineColorsTuple } from "@mantine/core";
-
-const slightlyGrayerWhite: MantineColorsTuple = [
-  "#F8F9FA",
-  "#F1F3F5",
-  "#E9ECEF",
-  "#DEE2E6",
-  "#CED4DA",
-  "#ADB5BD",
-  "#868E96",
-  "#495057",
-  "#343A40",
-  "#212529",
-];
+import { createTheme } from "@mantine/core";
 
 const navyfragenTheme = createTheme({
   colors: {
@@ -39,7 +26,6 @@ const navyfragenTheme = createTheme({
       "#224e8d",
       "#123f77",
     ],
-    slightlyGrayerWhite,
   },
 
   shadows: {
@@ -52,7 +38,6 @@ const navyfragenTheme = createTheme({
   fontFamily: "Noto Sans, sans-serif",
   scale: 1.05,
   headings: { fontFamily: "Noto Sans, sans-serif" },
-  white: slightlyGrayerWhite[0], // Set the default white to our new shade
 });
 
 export default navyfragenTheme;

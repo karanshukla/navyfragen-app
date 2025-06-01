@@ -286,7 +286,7 @@ export default function PublicProfile() {
                   <Avatar
                     src={profile.avatar}
                     alt={profile.displayName || profile.handle || "User"}
-                    size={100} // Larger avatar for mobile
+                    size={100}
                     radius="xl"
                     style={{
                       border: "3px solid white",
@@ -294,7 +294,7 @@ export default function PublicProfile() {
                     }}
                   />
                   <Title
-                    order={4} // Slightly smaller title order for mobile if preferred
+                    order={4}
                     c="white"
                     ta="center"
                     style={{
