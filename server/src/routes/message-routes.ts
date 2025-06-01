@@ -124,25 +124,11 @@ export function messageRoutes(
         return res.status(401).json({ error: errorMsg });
       }
 
-      // If agent is valid, proceed to use it.
-      // The agent.session property will be undefined in this setup.
-      // We need to use the sessionDid obtained from tokenInfo for operations requiring the user's DID.
       try {
         const accountDid = userSessionDid!; // Use the validated userSessionDid (non-null assertion)
         const handle = await ctx.resolver.resolveDidToHandle(accountDid);
 
-        let processedResponse = response;
-        // Add http:// to localhost links if they don't have a scheme.
-        // This is because the Atproto RichText parser may not recognize 'localhost'
-        // as a domain that should automatically get a scheme prepended.
-        // The regex looks for domain-like structures (e.g., 'example.com', 'sub.example.org:3000/path')
-        // that are not already preceded by a scheme like 'http://' or 'customscheme://'.
-        processedResponse = processedResponse.replace(
-          /(?<![a-zA-Z][a-zA-Z0-9+-.]*:\/\/)\b([a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:\d+)?\S*)/gi,
-          "http://$1"
-        );
-
-        const rt = new RichText({ text: processedResponse });
+        const rt = new RichText({ text: response });
         await rt.detectFacets(agent);
 
         const postRecord: any = {
@@ -180,7 +166,7 @@ export function messageRoutes(
             ctx.logger.error(uploadErr, "Failed to upload image to Bluesky");
           }
         }
-
+        
         const postRes = await agent.post(postRecord);
         let webUrl = null;
         let profileName = null;
@@ -207,6 +193,10 @@ export function messageRoutes(
         }
         return res.json({ success: true, uri: postRes.uri, link: webUrl });
       } catch (err) {
+        ctx.logger.error(
+          err,
+          "Error in /messages/respond endpoint while trying to post to Bluesky"
+        );
         return res.status(500).json({ error: "Failed to post to Bluesky" });
       }
     })

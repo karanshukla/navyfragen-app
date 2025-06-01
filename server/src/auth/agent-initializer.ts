@@ -1,6 +1,6 @@
 import type { AppContext } from "../index";
-import { AtpAgent } from "@atproto/api";
-import type { OAuthSession } from "@atproto/oauth-client";
+import { AtpAgent, type AtpSessionData } from "@atproto/api"; // Added AtpSessionData import
+import type { OAuthSession, TokenInfo } from "@atproto/oauth-client"; // Added TokenInfo import
 // RequestInit, Response, URL, Headers are typically available globally
 
 export async function initializeAuthenticatedAgent(
@@ -88,6 +88,12 @@ export async function initializeAuthenticatedAgent(
       ? tokenInfo.aud.slice(0, -1)
       : tokenInfo.aud;
     const userSessionDidFromToken = tokenInfo.sub;
+    // accessJwt and refreshJwt should be sourced from the OAuthSession's internal state
+    // or a method that explicitly provides them if available. The custom fetchHandler
+    // is meant to manage token injection and refresh, so direct access might not be needed
+    // for resumeSession if the fetchHandler is robust.
+    // For resumeSession, we need to provide what the AtpAgent expects.
+    // Let's assume the oauthClient itself can provide the necessary JWTs or the fetchHandler handles it.
 
     const atpAgentFetchHandler = async (
       input: string | URL | Request,
@@ -125,6 +131,11 @@ export async function initializeAuthenticatedAgent(
       const pathnameForOAuthHandler =
         requestUrl.pathname + requestUrl.search + requestUrl.hash;
 
+      // If the request has a body, Node's fetch (undici) requires the 'duplex' option.
+      if (finalInit.body) {
+        (finalInit as any).duplex = "half";
+      }
+
       return restoredOAuthSession.fetchHandler(
         pathnameForOAuthHandler,
         finalInit
@@ -135,6 +146,25 @@ export async function initializeAuthenticatedAgent(
       service: pdsUrlForAgent,
       fetch: atpAgentFetchHandler,
     });
+
+    // Attempt to resume session with available data
+    // This is the crucial part to make the agent "aware" of the session
+    // for its internal checks.
+
+    // Placeholder JWTs are acceptable here because the atpAgentFetchHandler,
+    // which uses restoredOAuthSession.fetchHandler, is responsible for the actual
+    // token management (injection and refresh).
+    const placeholderJwt = "placeholder-for-sdk-session-init";
+
+    const initialSessionData: AtpSessionData = {
+      did: userSessionDidFromToken,
+      handle: userSessionDidFromToken, // Initial placeholder, will be updated after getProfile
+      accessJwt: placeholderJwt, // Placeholder
+      refreshJwt: placeholderJwt, // Placeholder
+      active: true, // Added to satisfy AtpSessionData type
+      // email: undefined, // Optional: if you have email and AtpSessionData supports it
+    };
+    await agent.resumeSession(initialSessionData);
 
     try {
       const profile = await agent.app.bsky.actor.getProfile({
@@ -155,6 +185,23 @@ export async function initializeAuthenticatedAgent(
           userSessionDid: null,
           sessionExists: sessionExistsInDb,
         } as any;
+      }
+
+      // Update session with the fetched handle if available
+      if (agent.session) {
+        // Ensure session exists before trying to spread it
+        await agent.resumeSession({
+          ...agent.session,
+          handle: profile.data.handle || userSessionDidFromToken, // Use fetched handle or fallback
+        });
+      } else {
+        ctx.logger.warn(
+          { did: userSessionDidFromToken },
+          "Agent session was not defined before attempting to update handle after profile fetch. The handle in the agent's session might be stale."
+        );
+        // If agent.session is undefined here, it implies the first resumeSession might have had issues
+        // not caught, or the SDK behaves unexpectedly. For now, we log and proceed.
+        // The agent might still function via its custom fetch handler.
       }
 
       ctx.logger.info(
