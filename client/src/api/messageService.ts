@@ -1,9 +1,13 @@
-// Message-related types, hooks, and services
-import { useMutation, useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 import { apiClient, ApiError } from "./apiClient";
 import { queryClient } from "./queryClient";
 
-// Type definitions
+// Defined in the DB schema in /server
 export interface Message {
   tid: string;
   message: string;
@@ -82,7 +86,10 @@ export const messageService = {
 // React Query hooks
 export function useMessages(
   did: string | null,
-  options?: Omit<UseQueryOptions<MessagesResponse, ApiError>, "queryKey" | "queryFn">,
+  options?: Omit<
+    UseQueryOptions<MessagesResponse, ApiError>,
+    "queryKey" | "queryFn"
+  >
 ): UseQueryResult<MessagesResponse, ApiError> {
   return useQuery<MessagesResponse, ApiError>({
     queryKey: did ? messageKeys.detail(did) : messageKeys.all,

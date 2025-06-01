@@ -91,7 +91,7 @@ export const apiClient = {
   },
 };
 
-// Local dev: extract token from URL and store in localStorage, then clean up URL
+// Locally http cookies may not work, so we use the localStorage
 (function handleLocalDevToken() {
   const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   if (isLocal) {

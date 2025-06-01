@@ -7,7 +7,7 @@ import {
   Stack,
   Loader,
   Center,
-  Alert, // Kept for persistent session/messages errors AND NOW FOR PAGE NOTIFICATIONS
+  Alert,
   Button,
   Group,
   TextInput,
@@ -16,6 +16,8 @@ import {
   Tooltip,
   Checkbox,
   Grid,
+  Anchor,
+  Divider,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -26,8 +28,8 @@ import {
   Message,
 } from "../api/messageService";
 import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
-// REMOVE: import { notifications } from "@mantine/notifications";
 import { ConfirmationModal } from "../components/ConfirmationModal";
+import ShareButton from "../components/ShareButton";
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:3033/profile";
@@ -55,7 +57,7 @@ export default function Messages() {
   const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
     null
   );
-  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null); // ADDED for page-level alerts
+  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
 
   const {
     data: session,
@@ -83,7 +85,6 @@ export default function Messages() {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
       setPageAlert({
-        // MODIFIED
         title: "Welcome back!",
         message: "You have successfully logged in.",
         color: "green",
@@ -94,12 +95,11 @@ export default function Messages() {
 
   const handleAddExampleMessages = () => {
     if (!session?.did) return;
-    setPageAlert(null); // Clear previous alert
+    setPageAlert(null);
     addExamples(session.did, {
       onSuccess: () => {
         refetchMessages();
         setPageAlert({
-          // MODIFIED
           title: "Test Messages Added",
           message: "Example messages have been added to your inbox.",
           color: "blue",
@@ -107,7 +107,6 @@ export default function Messages() {
       },
       onError: (err: any) => {
         setPageAlert({
-          // MODIFIED
           title: "Error Adding Examples",
           message: err.error || "Failed to add example messages.",
           color: "red",
@@ -126,7 +125,7 @@ export default function Messages() {
   };
 
   const performDelete = (tid: string, fromModal: boolean = false) => {
-    setPageAlert(null); // Clear previous alert
+    setPageAlert(null);
     deleteMessage(tid, {
       onSuccess: () => {
         if (respondingTid === tid) setRespondingTid(null);
@@ -138,7 +137,6 @@ export default function Messages() {
       },
       onError: (err: any) => {
         setPageAlert({
-          // MODIFIED
           title: "Error Deleting Message",
           message: err.error || "Failed to delete message.",
           color: "red",
@@ -155,7 +153,6 @@ export default function Messages() {
     if (messageIdToDelete) {
       performDelete(messageIdToDelete, true);
     }
-    // Modal is closed within performDelete if called fromModal
   };
 
   const handlePrepareResponse = (tid: string) => {
@@ -164,10 +161,9 @@ export default function Messages() {
   };
 
   const handleSendResponse = (msg: Message) => {
-    setPageAlert(null); // Clear previous alert
+    setPageAlert(null);
     if (!responseText.trim()) {
       setPageAlert({
-        // MODIFIED
         title: "Empty Response",
         message: "Response cannot be empty.",
         color: "yellow",
@@ -204,13 +200,10 @@ export default function Messages() {
             );
           }
           setPageAlert({
-            // MODIFIED
             title: "Response Sent!",
             message: successMessage,
             color: "green",
           });
-          // Removed separate notification for Bluesky link, incorporated into one.
-
           if (deleteAfterResponding) {
             setTimeout(() => {
               performDelete(msg.tid);
@@ -221,7 +214,6 @@ export default function Messages() {
         },
         onError: (err: any) => {
           setPageAlert({
-            // MODIFIED
             title: "Response Error",
             message: err.error || "Failed to send response.",
             color: "red",
@@ -234,6 +226,16 @@ export default function Messages() {
   useEffect(() => {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
+      const messageCardId = `message-card-${respondingTid}`;
+      const messageCardElement = document.getElementById(messageCardId);
+      if (messageCardElement) {
+        setTimeout(() => {
+          messageCardElement.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+          });
+        }, 150);
+      }
     }
   }, [respondingTid]);
 
@@ -248,8 +250,6 @@ export default function Messages() {
   return (
     <Container>
       <Title>Messages</Title>
-
-      {/* Page-level alert */}
       {pageAlert && (
         <Alert
           title={pageAlert.title}
@@ -261,17 +261,13 @@ export default function Messages() {
           {pageAlert.message}
         </Alert>
       )}
-
-      {/* Persistent errors for session and messages loading */}
       {sessionError && (
         <Alert
           color="red"
           title="Session Error"
           mb="lg"
           withCloseButton
-          onClose={() => {
-            /* Allow dismissing */
-          }}
+          onClose={() => {}}
         >
           {typeof sessionError === "object" &&
           sessionError !== null &&
@@ -286,9 +282,7 @@ export default function Messages() {
           title="Messages Error"
           mb="lg"
           withCloseButton
-          onClose={() => {
-            /* Allow dismissing */
-          }}
+          onClose={() => {}}
         >
           {typeof messagesError === "object" &&
           messagesError !== null &&
@@ -335,11 +329,21 @@ export default function Messages() {
                   </Tooltip>
                 )}
               </CopyButton>
+              {(() => {
+                const handle = session.profile?.handle || "";
+                const fullUrl = `https://${shortlinkurl}/${handle}`;
+                const sharePayload = {
+                  title: "Send me anonymous messages on Navyfragen!",
+                  text: "Send me messages!",
+                  url: fullUrl,
+                };
+                return <ShareButton shareData={sharePayload} />;
+              })()}
               <Button
                 onClick={handleAddExampleMessages}
                 loading={examplesLoading}
               >
-                Add Test Messages
+                Add Examples
               </Button>
             </Group>
           </Paper>
@@ -352,9 +356,6 @@ export default function Messages() {
             messagesData.messages &&
             messagesData.messages.length > 0 ? (
             <>
-              <Text c="dimmed" size="xs" mb="md">
-                You have {messagesData.messages.length} messages.
-              </Text>
               <Group mb="md">
                 <Checkbox
                   checked={deleteAfterResponding}
@@ -385,15 +386,15 @@ export default function Messages() {
                   label="Confirm before deleting messages"
                 />
               </Group>
+              <Divider mb="md" />
               <Grid align="flex-start">
-                {" "}
-                {/* MODIFIED: Added align="flex-start" */}
                 {(messagesData.messages ?? []).map((msg: Message) => (
                   <Grid.Col
                     span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
                     key={msg.tid}
                   >
                     <Paper
+                      id={`message-card-${msg.tid}`}
                       p="md"
                       shadow="lg"
                       onClick={() => {
@@ -413,7 +414,7 @@ export default function Messages() {
                     >
                       <Stack>
                         <Group justify="space-between">
-                          <Text size="sm" c="white">
+                          <Text size="sm" c="dimmed">
                             {new Date(msg.createdAt).toLocaleString(undefined, {
                               year: "numeric",
                               month: "2-digit",
@@ -437,26 +438,29 @@ export default function Messages() {
                                 deleteLoading &&
                                 messageIdToDelete === msg.tid &&
                                 !confirmBeforeDelete
-                              } // Show loading on button if deleting directly
+                              }
                             >
                               <IconTrash size={16} />
                             </Button>
                           </Group>
                         </Group>
-                        <Text
-                          c="white"
-                          style={{
-                            wordBreak: "break-word",
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {msg.message}
-                        </Text>
+                        <Center>
+                          <Text
+                            c="white"
+                            fw="bold"
+                            style={{
+                              wordBreak: "break-word",
+                              whiteSpace: "pre-wrap",
+                              textShadow: "1px 1px 1px rgba(0, 0, 0, 0.7)",
+                            }}
+                          >
+                            {msg.message}
+                          </Text>
+                        </Center>
                         {respondingTid === msg.tid && (
                           <Stack>
                             <Textarea
                               ref={textareaRef}
-                              placeholder="Write your response..."
                               value={responseText}
                               maxLength={280}
                               description={`${responseText.length}/280 characters`}
@@ -476,6 +480,8 @@ export default function Messages() {
                                   handleSendResponse(msg);
                                 }
                               }}
+                              inputSize="md"
+                              radius="md"
                             />
                             <Group justify="flex-end">
                               <Button

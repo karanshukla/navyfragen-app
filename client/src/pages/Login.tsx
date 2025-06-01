@@ -8,18 +8,19 @@ import {
   Loader,
   Text,
   Group,
+  Grid, // Added Grid
 } from "@mantine/core";
 import { useLocation } from "react-router-dom";
 import { z } from "zod";
 import { useLogin } from "../api/authService";
 import { apiClient } from "../api/apiClient";
+//refactor into two columns with the form on the left and the text on the right, add a blurb about what the app does with the bsky credentials
 
 export default function Login() {
   const [handle, setHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const location = useLocation();
-  // Check for error or token query param (e.g. from OAuth callback redirect)
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const errorParam = searchParams.get("error");
@@ -63,26 +64,41 @@ export default function Login() {
     <Container>
       <Title>Login</Title>
       {success && <Notification color="green">{success}</Notification>}
-      <form onSubmit={onSubmit}>
-        <TextInput
-          label="Bluesky Handle (without @)"
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          required
-        />{" "}
-        <Button type="submit" mt="md" loading={isPending}>
-          Log in
-        </Button>
-        <Group mt="md">
-          <Text c="dimmed">
-            You will be directed to Bluesky to authenticate. The app does not
-            have access to your Bluesky credentials. Your authentication allows
-            the app to retrieve your messages and post your responses to the app
-            directly.
-          </Text>
-        </Group>
-      </form>
-      {error && <Notification color="red">{error}</Notification>}
+      <Grid>
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          <form onSubmit={onSubmit}>
+            <TextInput
+              label="Bluesky Handle (without @)"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              required
+            />{" "}
+            <Button type="submit" mt="md" loading={isPending}>
+              Log in
+            </Button>
+          </form>
+          {error && (
+            <Notification mt="md" color="red">
+              {error}
+            </Notification>
+          )}
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          <Group mt="md">
+            <Text c="dimmed">
+              You will be directed to Bluesky to authenticate. Please verify
+              that you see "navyfragen.app" in the login page text and
+              "bsky.social" in the login URL. The app does not have access to
+              your Bluesky password and does not require an app specific
+              password.
+              <br />
+              <br />
+              Authenticating allows the app to retrieve your anonymous
+              messages and post your responses to the app directly. 
+            </Text>
+          </Group>
+        </Grid.Col>
+      </Grid>
     </Container>
   );
 }

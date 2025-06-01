@@ -1,0 +1,33 @@
+# Global config
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"] # Changed port to 9090
+
+  # Railway internal service configuration
+  - job_name: "anubis"
+    static_configs:
+      - targets: ["test-anubis.railway.internal:9090"]  # Railway internal domain, ensure env var syntax is correct for envsubst
+
+  # Additional Railway service example
+  # - job_name: "another-service"
+  #   static_configs:
+  #     - targets: ["$RAILWAY_SERVICE_ANOTHER_SERVICE_HOST:8080"]

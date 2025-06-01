@@ -1,8 +1,11 @@
-// Profile-related types, hooks, and services
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "./apiClient";
 
-// Type definitions
+/**
+ * Represents a user profile on the client-side.
+ * This interface is based on the app.bsky.actor.getProfile lexicon.
+ * @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile}
+ */
 export interface ProfileResponse {
   profile: {
     did?: string;
