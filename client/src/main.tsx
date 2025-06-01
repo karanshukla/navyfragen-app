@@ -1,4 +1,4 @@
-import React, { useState } from "react"; // Added useState
+import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import {
   AppShell,
@@ -48,6 +48,33 @@ function AppLayout() {
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
 
+  const navbarRef = useRef<HTMLDivElement>(null);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        opened && // Only run if the menu is currently open
+        navbarRef.current &&
+        !navbarRef.current.contains(event.target as Node) &&
+        burgerRef.current &&
+        !burgerRef.current.contains(event.target as Node)
+      ) {
+        setOpened(false);
+      }
+    };
+
+    if (opened) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [opened]); // Dependency array ensures this runs when `opened` changes
+
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const userProfile = sessionData?.profile;
 
@@ -71,6 +98,7 @@ function AppLayout() {
             `}
           </style>
           <Burger
+            ref={burgerRef} // Added ref to Burger
             opened={opened}
             onClick={() => setOpened((o) => !o)}
             hiddenFrom="sm"
@@ -125,9 +153,11 @@ function AppLayout() {
                   <Menu.Item
                     onClick={() => {
                       try {
+                        document.body.style.pointerEvents = "none";
+                        document.body.style.opacity = "0.5";
                         logout();
                       } catch (e) {
-                        console.error("Logout failed", e);
+                        console.error("Logout failed, please refresh", e);
                       }
                       setOpened(false);
                     }}
@@ -150,7 +180,9 @@ function AppLayout() {
           </Flex>
         </Group>
       </AppShell.Header>
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar ref={navbarRef} p="md">
+        {" "}
+        {/* Added ref to Navbar */}
         <Box
           style={{ display: "flex", flexDirection: "column", height: "100%" }}
         >

@@ -16,7 +16,8 @@ import {
   Tooltip,
   Checkbox,
   Grid,
-  Box,
+  Box, // Ensure Box is imported if not already
+  useMantineTheme, // Import useMantineTheme
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -57,6 +58,7 @@ export default function Messages() {
     null
   );
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null); // ADDED for page-level alerts
+  const theme = useMantineTheme(); // Get theme for consistent styling
 
   const {
     data: session,
@@ -235,6 +237,18 @@ export default function Messages() {
   useEffect(() => {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
+      const messageCardId = `message-card-${respondingTid}`;
+      const messageCardElement = document.getElementById(messageCardId);
+      if (messageCardElement) {
+        // Using a small timeout can help ensure the layout has adjusted,
+        // especially on mobile when the virtual keyboard appears.
+        setTimeout(() => {
+          messageCardElement.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest", // Scrolls the minimum amount to bring the element into view.
+          });
+        }, 150); // Adjust delay if needed, or try 0 or removing timeout
+      }
     }
   }, [respondingTid]);
 
@@ -388,6 +402,7 @@ export default function Messages() {
                     key={msg.tid}
                   >
                     <Paper
+                      id={`message-card-${msg.tid}`} // Added unique ID for scrolling
                       p="md"
                       shadow="lg"
                       onClick={() => {
@@ -402,10 +417,17 @@ export default function Messages() {
                         height: "100%",
                         background: useGradients
                           ? "linear-gradient(to right, #005299, #7700aa)"
-                          : undefined,
+                          : theme.colorScheme === "dark"
+                          ? theme.colors.dark[7]
+                          : theme.colors.gray[2], // Fallback background
+                        borderRadius: theme.radius.md, // Explicit border radius for the card
+                        display: "flex", // Added for flex column layout
+                        flexDirection: "column", // Added for flex column layout
                       }}
                     >
-                      <Stack>
+                      <Stack style={{ flexGrow: 1 }}>
+                        {" "}
+                        {/* Allow Stack to grow */}
                         <Group justify="space-between">
                           <Text size="sm" c="white">
                             {new Date(msg.createdAt).toLocaleString(undefined, {
@@ -437,20 +459,55 @@ export default function Messages() {
                             </Button>
                           </Group>
                         </Group>
-                        <Center>
-                          <Text
-                            c="white"
-                            fw="bold"
-                            style={{
-                              wordBreak: "break-word",
-                              whiteSpace: "pre-wrap",
-                            }}
-                          >
-                            {msg.message}
-                          </Text>
-                        </Center>
+                        <Box
+                          style={{
+                            flexGrow: 1,
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {" "}
+                          {/* Centering container for message box */}
+                          {respondingTid !== msg.tid && (
+                            <Paper
+                              p="md"
+                              shadow="sm"
+                              radius="sm"
+                              bg="white"
+                              mx="xs" // Add some horizontal margin
+                              my="sm" // Add some vertical margin
+                            >
+                              <Text
+                                c="black" // Text color black for readability on white background
+                                fw="bold"
+                                ta="center" // Center align text
+                                style={{
+                                  wordBreak: "break-word",
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {msg.message}
+                              </Text>
+                            </Paper>
+                          )}
+                        </Box>
                         {respondingTid === msg.tid && (
-                          <Stack>
+                          <Stack mt="sm">
+                            {" "}
+                            {/* Add margin top if responding */}
+                            {/* Display the original message again when responding, but styled differently or simpler */}
+                            <Paper
+                              p="xs"
+                              radius="sm"
+                              bg="rgba(255,255,255,0.1)"
+                              mx="xs"
+                              mb="sm"
+                            >
+                              <Text size="sm" c="white" ta="center" truncate>
+                                Replying to: "{msg.message}"
+                              </Text>
+                            </Paper>
                             <Textarea
                               styles={{
                                 input: {
