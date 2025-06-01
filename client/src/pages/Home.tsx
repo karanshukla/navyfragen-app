@@ -13,12 +13,11 @@ import {
 import { useSession } from "../api/authService";
 
 export default function Home() {
-  // Use the useSession hook to get authentication status
   const { data: sessionData, isLoading } = useSession();
 
   return (
     <>
-      <Paper p="lg" radius="md" shadow="sm" mb="xl">
+      <Paper p="lg" radius="md" shadow="xs" mb="xl">
         <Title order={1} size="h2" c="deepBlue">
           Navyfragen - Anonymous questions and answers on Bluesky
         </Title>

@@ -104,7 +104,7 @@ function AppLayout() {
             hiddenFrom="sm"
             size="sm"
           />
-          <Button size="xs" variant="subtle" component={Link} to="/">
+          <Button size="xs" component={Link} to="/">
             <Title order={3}>Navyfragen</Title>
           </Button>
           <Flex
@@ -181,8 +181,6 @@ function AppLayout() {
         </Group>
       </AppShell.Header>
       <AppShell.Navbar ref={navbarRef} p="md">
-        {" "}
-        {/* Added ref to Navbar */}
         <Box
           style={{ display: "flex", flexDirection: "column", height: "100%" }}
         >
