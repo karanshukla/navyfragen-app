@@ -87,6 +87,7 @@ export function authRoutes(
     "/session",
     handler(async (req: express.Request, res: express.Response) => {
       if (!req.session?.did) {
+        ctx.logger.error("No session cookie found, user is not logged in");
         return res.json({ isLoggedIn: false, profile: null, did: null });
       }
 
@@ -101,6 +102,10 @@ export function authRoutes(
           .executeTakeFirst();
 
         if (!dbSession) {
+          ctx.logger.error(
+            { did },
+            "Session not found in database, user is not logged in"
+          );
           return res.json({ isLoggedIn: false, profile: null, did: null });
         }
 
@@ -174,6 +179,10 @@ export function authRoutes(
         req.session = {
           did: did,
         };
+        ctx.logger.info(
+          { did, session: req.session },
+          "Session set in /oauth/callback"
+        );
 
         return res.redirect(`${env.CLIENT_URL}/messages`);
       } catch (err) {

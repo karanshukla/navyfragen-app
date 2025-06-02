@@ -55,6 +55,14 @@ export class Server {
     const app: Express = express();
     app.set("trust proxy", 1);
 
+    // Enable CORS for the frontend client
+    app.use(
+      cors({
+        origin: env.CLIENT_URL,
+        credentials: true,
+      })
+    );
+
     // Enable cookies
     app.use(
       cookieSession({
@@ -63,14 +71,6 @@ export class Server {
         maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
         secure: env.isProduction,
         sameSite: "none",
-      })
-    );
-
-    // Enable CORS for the frontend client
-    app.use(
-      cors({
-        origin: env.CLIENT_URL,
-        credentials: true,
       })
     );
 
