@@ -62,7 +62,7 @@ export class Server {
         keys: [env.COOKIE_SECRET],
         maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
         secure: env.isProduction,
-        sameSite: env.isProduction ? "lax" : "none", // Use 'none' for local development
+        sameSite: "none",
       })
     );
 
