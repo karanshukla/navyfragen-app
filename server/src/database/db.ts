@@ -127,22 +127,6 @@ migrations["003"] = {
   },
 };
 
-migrations["004"] = {
-  async up(db: Kysely<unknown>) {
-    await db.schema
-      .createTable("sessions")
-      .addColumn("sid", "varchar", (col) => col.primaryKey())
-      .addColumn("sess", "text", (col) => col.notNull())
-      .addColumn("expire", "varchar", (col) => col.notNull())
-      .execute();
-  },
-  async down(db: Kysely<unknown>) {
-    await db.schema.dropTable("sessions").execute();
-  },
-};
-
-// APIs
-
 export const createDb = (location: string): Database => {
   if (env.NODE_ENV === "production" && env.POSTGRESQL_URL) {
     return new Kysely<DatabaseSchema>({
