@@ -18,6 +18,7 @@ export type DatabaseSchema = {
   auth_state: AuthState;
   message: Message; // Add message table
   user_profile: UserProfile; // Add user_profile table
+  sessions: Sessions; // Express session storage
 };
 
 export type Status = {
@@ -48,6 +49,12 @@ export type Message = {
 export type UserProfile = {
   did: string; // User's Decentralized Identifier
   createdAt: string; // Timestamp of when the user was first created
+};
+
+export type Sessions = {
+  sid: string; // Session ID
+  sess: string; // Session data (JSON)
+  expire: string; // Expiration timestamp
 };
 
 type AuthStateJson = string;
@@ -117,6 +124,20 @@ migrations["003"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.dropTable("user_profile").execute();
+  },
+};
+
+migrations["004"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .createTable("sessions")
+      .addColumn("sid", "varchar", (col) => col.primaryKey())
+      .addColumn("sess", "text", (col) => col.notNull())
+      .addColumn("expire", "varchar", (col) => col.notNull())
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.dropTable("sessions").execute();
   },
 };
 
