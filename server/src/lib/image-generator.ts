@@ -64,8 +64,8 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: 1080, // Maintained from previous reduction
-        height: 1080, // INCREASED to accommodate more text
+        width: 1050,
+        height: 700, // Overall aspect ratio of 3:2
       },
     };
 
