@@ -33,6 +33,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
 import PublicProfile from "./pages/PublicProfile";
+import OAuthCallback from "./pages/OAuthCallback";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 import "@mantine/core/styles.css";
 import { IconMoon, IconUser, IconLogout, IconTrash } from "@tabler/icons-react";
@@ -212,6 +213,7 @@ function AppLayout() {
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<PublicProfile />} />
             <Route path="/profile/:handle" element={<PublicProfile />} />
+            <Route path="/oauth_callback" element={<OAuthCallback />} />
           </Routes>
         </Container>
       </AppShell.Main>

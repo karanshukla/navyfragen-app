@@ -21,6 +21,7 @@ export type DatabaseSchema = {
   sessions: Sessions; // Express session storage
 };
 
+// Unused, to remove later
 export type Status = {
   uri: string;
   authorDid: string;
@@ -51,6 +52,7 @@ export type UserProfile = {
   createdAt: string; // Timestamp of when the user was first created
 };
 
+//Unused, to remove later
 export type Sessions = {
   sid: string; // Session ID
   sess: string; // Session data (JSON)
@@ -124,6 +126,29 @@ migrations["003"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.dropTable("user_profile").execute();
+  },
+};
+
+migrations["004"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema.dropTable("status").ifExists().execute();
+    await db.schema.dropTable("sessions").ifExists().execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema
+      .createTable("status")
+      .addColumn("uri", "varchar", (col) => col.primaryKey())
+      .addColumn("authorDid", "varchar", (col) => col.notNull())
+      .addColumn("status", "varchar", (col) => col.notNull())
+      .addColumn("createdAt", "varchar", (col) => col.notNull())
+      .addColumn("indexedAt", "varchar", (col) => col.notNull())
+      .execute();
+    await db.schema
+      .createTable("sessions")
+      .addColumn("sid", "varchar", (col) => col.primaryKey())
+      .addColumn("sess", "varchar", (col) => col.notNull())
+      .addColumn("expire", "varchar", (col) => col.notNull())
+      .execute();
   },
 };
 

@@ -26,4 +26,7 @@ export const env = cleanEnv(process.env, {
     devDefault: "https://bsky.social",
     desc: "URL of the Bluesky PDS",
   }), // Added PDS_HOST
+  OAUTH_TOKEN_SECRET: str({
+    desc: "Secret key for encrypting OAuth tokens (hex-encoded, 32 bytes for AES-256)",
+  }),
 });
