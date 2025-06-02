@@ -46,6 +46,10 @@ export const authService = {
   logout: async (): Promise<{ message: string }> => {
     return apiClient.post<{ message: string }>("/logout");
   },
+
+  sync: async (): Promise<void> => {
+    // Sync with the PDS to send data to it
+  },
 };
 
 // React Query hooks
@@ -53,10 +57,6 @@ export function useSession(): UseQueryResult<SessionResponse, ApiError> {
   return useQuery({
     queryKey: authKeys.session,
     queryFn: () => authService.getSession(),
-    staleTime: 60 * 1000, // 1 minute (shorter than default)
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
   });
 }
 
@@ -72,9 +72,6 @@ export function useLogout() {
     onSuccess: () => {
       // Invalidate the session query to force a refetch
       queryClient.invalidateQueries({ queryKey: authKeys.session });
-      if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
-        localStorage.removeItem("auth_token");
-      }
       window.location.href = "/";
     },
   });

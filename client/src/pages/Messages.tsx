@@ -58,6 +58,7 @@ export default function Messages() {
   );
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
   const [characterLimit, setCharacterLimit] = useState<number>(280);
+  const [deletingTid, setDeletingTid] = useState<string | null>(null);
 
   const {
     data: session,
@@ -129,6 +130,7 @@ export default function Messages() {
 
   const performDelete = (tid: string, fromModal: boolean = false) => {
     setPageAlert(null);
+    setDeletingTid(tid);
     deleteMessage(tid, {
       onSuccess: () => {
         if (respondingTid === tid) setRespondingTid(null);
@@ -136,6 +138,7 @@ export default function Messages() {
           setDeleteModalOpened(false);
           setMessageIdToDelete(null);
         }
+        setDeletingTid(null);
         refetchMessages();
       },
       onError: (err: any) => {
@@ -148,6 +151,7 @@ export default function Messages() {
           setDeleteModalOpened(false);
           setMessageIdToDelete(null);
         }
+        setDeletingTid(null);
       },
     });
   };
@@ -443,11 +447,7 @@ export default function Messages() {
                               }}
                               color="red"
                               variant="outline"
-                              loading={
-                                deleteLoading &&
-                                messageIdToDelete === msg.tid &&
-                                !confirmBeforeDelete
-                              }
+                              loading={deletingTid === msg.tid}
                             >
                               <IconTrash size={16} />
                             </Button>
@@ -544,7 +544,7 @@ export default function Messages() {
         message="Are you sure you want to delete this message? This action cannot be undone."
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        loading={deleteLoading && !!messageIdToDelete}
+        loading={deletingTid !== null && deletingTid === messageIdToDelete}
       />
     </Container>
   );

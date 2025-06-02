@@ -1,11 +1,11 @@
 import express from "express";
-import { body, validationResult } from "express-validator";
+import { body } from "express-validator";
 import { isValidHandle } from "@atproto/syntax";
 import { OAuthResolverError } from "@atproto/oauth-client-node";
-import { getIronSession } from "iron-session";
 import type { AppContext } from "../index";
 import { env } from "../lib/env";
-import { IncomingMessage, ServerResponse } from "http";
+import { initializeAgentFromSession } from "#/auth/session-agent";
+import type { Record as BskyProfileRecord } from "../lexicon/types/app/bsky/actor/profile";
 
 export function authRoutes(
   ctx: AppContext,
@@ -48,8 +48,6 @@ export function authRoutes(
         );
         return res.json({ redirectUrl: url.toString() });
       } catch (err) {
-        // Basic console.error for Railway as a test
-        console.error("OAuth Authorize Failed (raw console.error):", err);
         const message =
           err instanceof OAuthResolverError
             ? err.message
@@ -63,69 +61,37 @@ export function authRoutes(
   router.post(
     "/logout",
     handler(async (req: express.Request, res: express.Response) => {
-      const token = req.cookies?.auth_token;
-
-      // Clear the auth_token cookie
-      res.clearCookie("auth_token", {
-        httpOnly: true,
-        secure: env.NODE_ENV === "production", // Corrected to use env.NODE_ENV
-        sameSite: env.NODE_ENV === "production" ? "none" : "lax",
-        path: "/",
-      });
-
-      // Also clear the iron session if it exists (if still used for other purposes)
-      const ironSession = await getIronSession(req, res, {
-        cookieName: "sid",
-        password: env.COOKIE_SECRET,
-        cookieOptions: {
-          httpOnly: true,
-          secure: true, // Assuming production or HTTPS for iron session as well
-          sameSite: "none",
-          path: "/",
-          maxAge: 60 * 60 * 24 * 7, // Or 0 to clear immediately if that's the intent
-        },
-      });
-      ironSession.destroy();
-
-      // Revoke the OAuth session via the client
-      if (token) {
-        try {
-          const did = Buffer.from(token, "base64").toString("ascii");
-          await ctx.oauthClient.revoke(did); // This will also delete it from storage
-          ctx.logger.info(
-            { did },
-            "OAuth session revoked and deleted from storage."
-          );
-        } catch (err) {
-          ctx.logger.warn(
-            { err, did: Buffer.from(token, "base64").toString("ascii") },
-            "Failed to revoke OAuth session on logout. It might have been already invalid or removed from storage."
-          );
-        }
+      // Revoke the OAuth sesssion first
+      if (!req.session?.did) {
+        return res.status(400).json({ error: "Not logged in" });
       }
+      try {
+        await ctx.oauthClient.revoke(req.session.did);
+        ctx.logger.info({ did: req.session.did }, "OAuth session revoked");
+      } catch (err) {
+        ctx.logger.error(
+          { err, did: req.session.did },
+          "Failed to revoke OAuth session"
+        );
+        return res.status(500).json({ error: "Failed to log out" });
+      }
+
+      req.session = null; // Clear the cookies
 
       return res.status(200).json({ message: "Logged out successfully" });
     })
   );
 
-  // Session check
+  // Session check, we want to keep the client authenticated with ATProto
   router.get(
     "/session",
     handler(async (req: express.Request, res: express.Response) => {
-      // Check for token in cookie first, then fall back to query param or Authorization header
-      const token =
-        req.cookies?.auth_token ||
-        (req.query.token as string) ||
-        req.headers.authorization?.replace("Bearer ", "") ||
-        null;
-
-      if (!token) {
+      if (!req.session?.did) {
         return res.json({ isLoggedIn: false, profile: null, did: null });
       }
 
       try {
-        // Decode DID from token
-        const did = Buffer.from(token, "base64").toString("ascii");
+        const did = req.session?.did;
 
         // Check if session exists in DB
         const dbSession = await ctx.db
@@ -138,79 +104,39 @@ export function authRoutes(
           return res.json({ isLoggedIn: false, profile: null, did: null });
         }
 
-        // Try to restore the session using the OAuth client
-        let agent;
-        let authenticated = false;
-        try {
-          const oauthSession = await ctx.oauthClient.restore(did);
-          if (oauthSession) {
-            agent = new (require("@atproto/api").Agent)(oauthSession);
-            // Test if the session is valid by checking assertDid
-            const agentDid = agent.assertDid;
-            authenticated = true;
-          }
-        } catch (err) {
-          // Could not restore authenticated session, fall back to public profile
+        // Fetch the profile using the authenticated agent
+        const agent = await initializeAgentFromSession(req, ctx);
+        if (!agent) {
+          ctx.logger.warn(
+            { did },
+            "No agent could be initialized from session"
+          );
+          return res.json({ isLoggedIn: false, profile: null, did: null });
         }
-
-        // If authenticated, fetch profile with auth (can see private info)
-        if (authenticated && agent) {
-          try {
-            const profileResponse = await agent.com.atproto.repo.getRecord({
-              repo: did,
-              collection: "app.bsky.actor.profile",
-              rkey: "self",
-            });
-            if (
-              profileResponse?.data &&
-              require("../../lexicon/types/app/bsky/actor/profile").isRecord(
-                profileResponse.data.value
-              )
-            ) {
-              return res.json({
-                isLoggedIn: true,
-                profile: profileResponse.data.value,
-                did,
-              });
-            }
-          } catch (profileErr) {
-            // Authenticated profile fetch failed, fall back to public
-          }
+        const response = await agent.getProfile({ actor: did });
+        const data = response?.data as BskyProfileRecord;
+        if (!data) {
+          ctx.logger.error({ did }, "No profile data found for user");
+          return res.json({ isLoggedIn: false, profile: null, did: null });
         }
-
-        // If not authenticated, or profile fetch failed, fetch public profile
-        try {
-          const AtpAgent = require("@atproto/api").AtpAgent;
-          const agent = new AtpAgent({ service: "https://api.bsky.app" });
-          const profileResponse = await agent.getProfile({ actor: did });
-          if (profileResponse.success) {
-            return res.json({
-              isLoggedIn: true,
-              profile: profileResponse.data,
-              did,
-            });
-          } else {
-            return res.json({
-              isLoggedIn: true,
-              profile: null,
-              did,
-            });
-          }
-        } catch (profileErr) {
-          return res.json({
-            isLoggedIn: true,
-            profile: null,
-            did,
-          });
-        }
+        const profile: Partial<BskyProfileRecord> = {
+          did: data.did,
+          handle: data.handle,
+          displayName: data.displayName || "",
+          description: data.description || "",
+          avatar: data.avatar || undefined,
+          banner: data.banner || undefined,
+          createdAt: data.createdAt,
+        };
+        return res.json({ isLoggedIn: true, profile, did });
       } catch (err) {
-        ctx.logger.error({ err }, "Failed to process session token");
+        ctx.logger.error({ err }, "Error fetching profile");
         return res.json({ isLoggedIn: false, profile: null, did: null });
       }
     })
   );
 
-  // OAuth metadata
+  // OAuth metadata, just for compatibility
   router.get(
     "/client-metadata.json",
     handler((req: express.Request, res: express.Response) => {
@@ -245,21 +171,10 @@ export function authRoutes(
           );
         }
 
-        const token = Buffer.from(did).toString("base64");
-        res.cookie("auth_token", token, {
-          httpOnly: true,
-          secure: env.NODE_ENV === "production",
-          sameSite: env.NODE_ENV === "production" ? "none" : "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          path: "/",
-        });
-        // For local dev, also include token in redirect URL for localStorage fallback
-        if (env.NODE_ENV !== "production") {
-          return res.redirect(
-            `${env.CLIENT_URL}/messages?token=${encodeURIComponent(token)}`
-          );
-        }
-        // Production: normal redirect
+        req.session = {
+          did: did,
+        };
+
         return res.redirect(`${env.CLIENT_URL}/messages`);
       } catch (err) {
         ctx.logger.error(
@@ -274,23 +189,5 @@ export function authRoutes(
     })
   );
 
-  // Local dev: set cookie via direct API call
-  router.post(
-    "/set-cookie",
-    handler(async (req: express.Request, res: express.Response) => {
-      const token = req.body.token || req.query.token;
-      if (!token) {
-        return res.status(400).json({ error: "Missing token" });
-      }
-      res.cookie("auth_token", token, {
-        httpOnly: true,
-        secure: env.NODE_ENV === "production",
-        sameSite: env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: "/",
-      });
-      return res.json({ success: true });
-    })
-  );
   return router;
 }

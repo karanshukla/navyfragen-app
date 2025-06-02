@@ -6,7 +6,11 @@ import { SessionStore, StateStore } from "./storage";
 export const createClient = async (db: Database) => {
   const publicUrl = env.PUBLIC_URL;
   const url = publicUrl || `http://127.0.0.1:${env.PORT}`;
-  // when behind a caddy reverse proxy, dont include /api in the client metadata
+
+  // This is a particular workaround since the client can get finnicky with URLS
+  // With the caddy proxy on prod you want the /api to be appended as thats what the frontend is sending
+  // But in local dev we want to use the root URL
+
   const urlWithAPI = publicUrl ? `${url}/api` : url;
   const enc = encodeURIComponent;
   return new NodeOAuthClient({
