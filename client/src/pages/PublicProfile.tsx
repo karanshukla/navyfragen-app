@@ -11,7 +11,6 @@ import {
   Avatar,
   Loader,
   Center,
-  useMantineColorScheme,
   Box,
   Alert,
   BackgroundImage,
