@@ -94,7 +94,7 @@ function AppLayout() {
           <style>
             {`
               .mantine-AppShell-navbar {
-                max-width: 75vw !important;
+                max-width: 50vw !important;
               }
             `}
           </style>
