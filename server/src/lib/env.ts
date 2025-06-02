@@ -22,4 +22,8 @@ export const env = cleanEnv(process.env, {
     devDefault: "http://localhost:3033/", // Default for monkeyphysics/html-to-image
     desc: "URL of the monkeyphysics/html-to-image service (e.g., http://localhost:3033/)",
   }),
+  PDS_HOST: str({
+    devDefault: "https://bsky.social",
+    desc: "URL of the Bluesky PDS",
+  }), // Added PDS_HOST
 });

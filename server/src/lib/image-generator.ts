@@ -64,8 +64,8 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: 900, // Maintained from previous reduction
-        height: 700, // INCREASED to accommodate more text
+        width: 1080, // Maintained from previous reduction
+        height: 1080, // INCREASED to accommodate more text
       },
     };
 

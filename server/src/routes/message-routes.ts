@@ -2,8 +2,15 @@ import express from "express";
 import { body } from "express-validator";
 import type { AppContext } from "../index";
 import { generateQuestionImage } from "../lib/image-generator";
-import { RichText, AtpAgent, PostRecord } from "@atproto/api";
-import { initializeAuthenticatedAgent } from "../auth/agent-initializer";
+import { RichText, AtpAgent } from "@atproto/api";
+import {
+  getAuthenticatedUserAndInitializeAgent,
+  initializeAuthenticatedAgent,
+} from "../auth/agent-initializer";
+import { ids } from "../lexicon/lexicons"; // Added import for lexicon NSIDs
+import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message"; // Added import for base message record type
+
+// MessageSchemaRecord already defines: message, createdAt, recipient.
 
 export function messageRoutes(
   ctx: AppContext,
@@ -89,15 +96,13 @@ export function messageRoutes(
           ctx
         );
         if (agentInitResult) {
-          agent = agentInitResult.agent;
+          agent = agentInitResult.agent as AtpAgent;
           userSessionDid = agentInitResult.userSessionDid;
           sessionExistsInDb = agentInitResult.sessionExists;
         } else {
-          // initializeAuthenticatedAgent logs errors internally
-          // We still need to determine the correct response based on sessionExists
-          // Attempt to decode DID to check sessionExists if agentInitResult is null
           let decodedDidForError: string | null = null;
           try {
+            // TODO-Replace session validation with a more robust method (not DID)
             decodedDidForError = Buffer.from(rawTokenValue, "base64").toString(
               "ascii"
             );
@@ -166,7 +171,7 @@ export function messageRoutes(
             ctx.logger.error(uploadErr, "Failed to upload image to Bluesky");
           }
         }
-        
+
         const postRes = await agent.post(postRecord);
         let webUrl = null;
         let profileName = null;
@@ -356,6 +361,213 @@ export function messageRoutes(
       return res.json({ success: true });
     })
   );
+
+  // Endpoint to push data to the user's bsky repo
+  router.post(
+    "/messages/sync",
+    handler(async (req: express.Request, res: express.Response) => {
+      let rawTokenValue =
+        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
+      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
+        rawTokenValue = req.cookies.auth_token;
+      }
+      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
+      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
+        rawTokenValue = String(rawTokenValue);
+      if (!rawTokenValue || typeof rawTokenValue !== "string") {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const { agent, userSessionDid } =
+        await getAuthenticatedUserAndInitializeAgent(rawTokenValue, ctx);
+
+      if (!agent) {
+        return res.status(401).json({
+          error: "Authentication failed - could not initialize agent",
+        });
+      }
+
+      try {
+        // Fetch messages from the local database for the user
+        const localMessages = await ctx.db
+          .selectFrom("message")
+          .selectAll() // Selects tid, message, createdAt, recipient
+          .where("recipient", "=", userSessionDid)
+          .execute();
+
+        if (localMessages.length === 0) {
+          ctx.logger.info(
+            { did: userSessionDid },
+            "No local messages to sync to PDS."
+          );
+          return res.json({
+            success: true,
+            message: "No local messages to sync.",
+            syncedCount: 0,
+            errorCount: 0,
+            errors: [],
+          });
+        }
+
+        let syncedCount = 0;
+        let errorCount = 0;
+        const syncErrors: { tid: string; error: string }[] = [];
+
+        ctx.logger.info(
+          { did: userSessionDid, count: localMessages.length },
+          `Starting PDS sync for ${localMessages.length} messages.`
+        );
+
+        for (const dbMessage of localMessages) {
+          const rkey = dbMessage.tid; // Use tid from DB as the rkey
+          const recordToCreate: MessageSchemaRecord = {
+            $type: ids.AppNavyfragenMessage,
+            createdAt: dbMessage.createdAt,
+            message: dbMessage.message,
+            recipient: dbMessage.recipient, // This should be userSessionDid
+          };
+
+          try {
+            const createResponse = await agent.com.atproto.repo.createRecord({
+              repo: agent.assertDid, // The authenticated user's repo
+              collection: ids.AppNavyfragenMessage,
+              rkey: rkey,
+              record: recordToCreate,
+              // To prevent overwriting if a record with the same rkey somehow exists,
+              // we can use validate: false, or ensure rkeys are truly unique if created by this system.
+              // For now, createRecord will fail if the rkey exists, which is reasonable for a sync.
+            });
+            syncedCount++;
+            ctx.logger.info(
+              { did: userSessionDid, rkey, uri: createResponse.data.uri },
+              "Successfully synced message to PDS"
+            );
+          } catch (err: any) {
+            errorCount++;
+            const errorMessage =
+              err.message || "Unknown error during PDS record creation";
+            syncErrors.push({ tid: rkey, error: errorMessage });
+            ctx.logger.error(
+              { did: userSessionDid, rkey, error: err },
+              "Failed to sync message to PDS"
+            );
+          }
+        }
+
+        ctx.logger.info(
+          { did: userSessionDid, syncedCount, errorCount },
+          "PDS sync completed."
+        );
+        return res.json({
+          success: true,
+          syncedCount,
+          errorCount,
+          errors: syncErrors,
+        });
+      } catch (err: any) {
+        ctx.logger.error(
+          { did: userSessionDid, error: err },
+          "Error during /messages/sync process"
+        );
+        return res.status(500).json({
+          error: "Failed to sync messages to PDS",
+          details: err.message,
+        });
+      }
+    })
+  );
+
+  /*
+  router.get(
+    "/messages/debug/pds-records",
+    handler(async (req: express.Request, res: express.Response) => {
+      let rawTokenValue =
+        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
+      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
+        rawTokenValue = req.cookies.auth_token;
+      }
+      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
+      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
+        rawTokenValue = String(rawTokenValue);
+
+      let agent: AtpAgent | null = null;
+      let userSessionDid: string | null = null;
+      let sessionExistsInDb = false;
+
+      if (rawTokenValue && typeof rawTokenValue === "string") {
+        const agentInitResult = await initializeAuthenticatedAgent(
+          rawTokenValue,
+          ctx
+        );
+        if (agentInitResult) {
+          agent = agentInitResult.agent;
+          userSessionDid = agentInitResult.userSessionDid;
+          sessionExistsInDb = agentInitResult.sessionExists;
+        } else {
+          let decodedDidForError: string | null = null;
+          try {
+            decodedDidForError = Buffer.from(rawTokenValue, "base64").toString(
+              "ascii"
+            );
+            const dbSession = await ctx.db
+              .selectFrom("auth_session")
+              .selectAll()
+              .where("key", "=", decodedDidForError)
+              .executeTakeFirst();
+            sessionExistsInDb = !!dbSession;
+          } catch (e) {
+            // ignore, sessionExistsInDb will remain false
+          }
+        }
+      }
+
+      if (!agent || !userSessionDid) {
+        let errorMsg = "Not authenticated or agent initialization failed.";
+        if (rawTokenValue && !sessionExistsInDb) {
+          errorMsg =
+            "Session for this user was deleted, expired, or invalid. Please log in again.";
+        }
+        return res.status(401).json({ error: errorMsg });
+      }
+
+      try {
+        ctx.logger.info(
+          { did: userSessionDid },
+          "Attempting to fetch all message records from PDS for debug."
+        );
+
+        const listRecordsResponse = await agent.com.atproto.repo.listRecords({
+          repo: agent.assertDid, // The authenticated user's repo
+          collection: ids.AppNavyfragenMessage,
+          // limit: 100, // Optionally add a limit
+        });
+
+        ctx.logger.info(
+          {
+            did: userSessionDid,
+            count: listRecordsResponse.data.records.length,
+          },
+          "Successfully fetched message records from PDS."
+        );
+
+        return res.json({
+          success: true,
+          did: userSessionDid,
+          records: listRecordsResponse.data.records,
+          cursor: listRecordsResponse.data.cursor,
+        });
+      } catch (err: any) {
+        ctx.logger.error(
+          { did: userSessionDid, error: err },
+          "Error during /messages/debug/pds-records process"
+        );
+        return res.status(500).json({
+          error: "Failed to fetch records from PDS",
+          details: err.message,
+        });
+      }
+    })
+  );
+  */
 
   return router;
 }
