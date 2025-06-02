@@ -273,11 +273,5 @@ export function authRoutes(
     return did;
   }
 
-  // Minimal test endpoint to set a session cookie
-  router.get("/test-cookie", (req, res) => {
-    req.session = { did: "test-cookie" };
-    res.json({ ok: true, session: req.session });
-  });
-
   return router;
 }
