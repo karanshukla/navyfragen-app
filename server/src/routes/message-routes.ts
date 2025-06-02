@@ -2,13 +2,10 @@ import express from "express";
 import { body } from "express-validator";
 import type { AppContext } from "../index";
 import { generateQuestionImage } from "../lib/image-generator";
-import { RichText, AtpAgent } from "@atproto/api";
-import {
-  getAuthenticatedUserAndInitializeAgent,
-  initializeAuthenticatedAgent,
-} from "../auth/agent-initializer";
+import { RichText } from "@atproto/api";
 import { ids } from "../lexicon/lexicons"; // Added import for lexicon NSIDs
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message"; // Added import for base message record type
+import { initializeAgentFromSession } from "#/auth/session-agent";
 
 // MessageSchemaRecord already defines: message, createdAt, recipient.
 
@@ -28,27 +25,11 @@ export function messageRoutes(
       .withMessage("Recipient DID required"),
     checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
-      }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-      if (!rawTokenValue || typeof rawTokenValue !== "string") {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      let did = Buffer.from(rawTokenValue, "base64").toString("ascii");
-      const { recipient } = req.body;
+      const recipient = req.session?.did;
       if (!recipient) {
-        return res.status(400).json({ error: "Recipient DID required" });
+        return res.status(403).json({ error: "Recipient DID required" });
       }
-      if (recipient !== did) {
-        return res.status(403).json({
-          error: "Not authorized to add example messages for this DID",
-        });
-      }
+
       const now = new Date();
       const messages = [
         {
@@ -84,6 +65,20 @@ export function messageRoutes(
   // Respond to a message and post to Bluesky
   router.post(
     "/messages/respond",
+    body("tid").isString().notEmpty().withMessage("Message TID required"),
+    body("recipient")
+      .isString()
+      .notEmpty()
+      .withMessage("Recipient DID required"),
+    body("original")
+      .isString()
+      .notEmpty()
+      .withMessage("Original message required"),
+    body("response")
+      .isString()
+      .isLength({ min: 1, max: 500 })
+      .withMessage("Response must be 1-500 chars"),
+    checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
       const { tid, recipient, original, response } = req.body;
       if (!tid || !recipient || !response) {
@@ -93,30 +88,18 @@ export function messageRoutes(
         );
         return res.status(400).json({ error: "Missing required fields" });
       }
-      // Get the session from the token (if present)
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
+      const did = req.session?.did;
+      if (!did) {
+        ctx.logger.warn("No authenticated user session found");
+        return res.status(403).json({ error: "Not authenticated" });
       }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-      if (!rawTokenValue || typeof rawTokenValue !== "string") {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const { agent, userSessionDid } =
-        await getAuthenticatedUserAndInitializeAgent(rawTokenValue, ctx);
-
+      const agent = await initializeAgentFromSession(req, ctx);
       if (!agent) {
-        return res.status(401).json({
-          error: "Authentication failed - could not initialize agent",
-        });
+        ctx.logger.warn({ did }, "No agent could be initialized from session");
+        return res.json({ isLoggedIn: false, profile: null, did: null });
       }
-
       try {
-        const accountDid = userSessionDid!; // Use the validated userSessionDid (non-null assertion)
+        const accountDid = did;
         const handle = await ctx.resolver.resolveDidToHandle(accountDid);
 
         const rt = new RichText({ text: response });
@@ -244,35 +227,9 @@ export function messageRoutes(
   router.get(
     "/messages/:recipient",
     handler(async (req: express.Request, res: express.Response) => {
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
-      }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-      if (!rawTokenValue || typeof rawTokenValue !== "string") {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      let did: string;
-      try {
-        did = Buffer.from(rawTokenValue, "base64").toString("ascii");
-      } catch (err) {
-        ctx.logger.warn(
-          { error: err, token: rawTokenValue },
-          "Failed to decode token (DID)."
-        );
-        return null;
-      }
-      const recipient = req.params.recipient;
+      const recipient = req.session?.did;
       if (!recipient) {
-        return res.status(400).json({ error: "Recipient DID required" });
-      }
-      if (recipient !== did) {
-        return res
-          .status(403)
-          .json({ error: "Not authorized to view messages for this DID" });
+        return res.status(403).json({ error: "Not authenticated" });
       }
       // Check if recipient exists in user_profile table
       const userProfileExists = await ctx.db
@@ -304,24 +261,17 @@ export function messageRoutes(
       if (!tid) {
         return res.status(400).json({ error: "Message TID required" });
       }
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
+      const userSessionDid = req.session?.did;
+      if (!userSessionDid) {
+        return res.status(403).json({ error: "Not authenticated" });
       }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-      if (!rawTokenValue || typeof rawTokenValue !== "string") {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      const { agent, userSessionDid } =
-        await getAuthenticatedUserAndInitializeAgent(rawTokenValue, ctx);
-
+      const agent = await initializeAgentFromSession(req, ctx);
       if (!agent) {
-        return res.status(401).json({
-          error: "Authentication failed - could not initialize agent",
-        });
+        ctx.logger.warn(
+          { userSessionDid },
+          "No agent could be initialized from session"
+        );
+        return res.json({ isLoggedIn: false, profile: null, did: null });
       }
       // Find the message and check ownership
       const message = await ctx.db
@@ -366,19 +316,11 @@ export function messageRoutes(
   router.delete(
     "/delete-account",
     handler(async (req: express.Request, res: express.Response) => {
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
+      const userSessionDid = req.session?.did;
+      if (!userSessionDid) {
+        return res.status(403).json({ error: "Not authenticated" });
       }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-      if (!rawTokenValue || typeof rawTokenValue !== "string") {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      const { agent, userSessionDid } =
-        await getAuthenticatedUserAndInitializeAgent(rawTokenValue, ctx);
+      const agent = await initializeAgentFromSession(req, ctx);
 
       if (!agent || !userSessionDid) {
         return res.status(401).json({
@@ -409,19 +351,13 @@ export function messageRoutes(
   router.post(
     "/messages/sync",
     handler(async (req: express.Request, res: express.Response) => {
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
+      const userSessionDid = req.session?.did;
+
+      if (!userSessionDid) {
+        return res.status(403).json({ error: "Not authenticated" });
       }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-      if (!rawTokenValue || typeof rawTokenValue !== "string") {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      const { agent, userSessionDid } =
-        await getAuthenticatedUserAndInitializeAgent(rawTokenValue, ctx);
+      // Initialize the agent for the authenticated user session
+      const agent = await initializeAgentFromSession(req, ctx);
 
       if (!agent) {
         return res.status(401).json({

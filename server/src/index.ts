@@ -5,8 +5,6 @@ import { pino } from "pino";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import { rateLimit } from "express-rate-limit";
 import cors from "cors";
-import cookieParser from "cookie-parser";
-
 import { createDb, migrateToLatest } from "./database/db";
 import { env } from "#/lib/env";
 import { createRouter } from "#/routes";
@@ -17,6 +15,7 @@ import {
   BidirectionalResolver,
 } from "./lib/id-resolver";
 import type { Database } from "./database/db";
+import cookieSession from "cookie-session";
 
 // Application state passed to the router and elsewhere
 export type AppContext = {
@@ -54,18 +53,28 @@ export class Server {
 
     // Create our server
     const app: Express = express();
-    app.set("trust proxy", true);
+    app.set("trust proxy", 1);
+
+    // Enable cookies
+    app.use(
+      cookieSession({
+        name: "navyfragen",
+        keys: [env.COOKIE_SECRET],
+        maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+        secure: env.isProduction,
+      })
+    );
 
     // Enable CORS for the frontend client
     app.use(
       cors({
         origin: env.CLIENT_URL,
-        credentials: true, // Allow cookies to be sent
+        credentials: true,
       })
-    ); // Apply middleware first
+    );
+
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    app.use(cookieParser()); // Add cookie parser middleware
     app.use(
       rateLimit({
         windowMs: 60 * 1000, // 1 minute
@@ -73,9 +82,6 @@ export class Server {
         message: "Too many requests, please try again later.",
       })
     );
-    // Trust proxy if running behind one (common in staging/production)
-    app.set("trust proxy", 1);
-
     // Then apply the router
     const router = createRouter(ctx);
     app.use(router);
