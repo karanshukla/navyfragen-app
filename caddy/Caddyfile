@@ -2,8 +2,7 @@
 {
 	admin off # theres no need for the admin api in railway's environment
 	persist_config off # storage isn't persistent anyway
-	auto_https on # railway handles https for us, this could in some cases cause issues if left enabled
-	# runtime logs
+	auto_https off # railway handles https termination, so we don't need to
 	log {
 		format json # set runtime log format to json mode 
 	}
@@ -81,6 +80,10 @@
 
 			# sets the Host header to the header to the dynamic name and port options
 			header_up Host {upstream_hostport}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Host {host}
+			header_down Set-Cookie {>Set-Cookie}
 		}
 	}
 }
