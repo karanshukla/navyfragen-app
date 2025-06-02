@@ -1,0 +1,23 @@
+{
+    # Global options
+    admin off  # Disable the admin API for security
+}
+
+http://localhost:8000 {
+    # API routes - forward to backend server
+    handle_path /api/* {
+        uri strip_prefix /api
+        reverse_proxy host.docker.internal:8080
+    }
+    
+    # All other routes - forward to frontend
+    handle {
+        reverse_proxy host.docker.internal:5173
+    }
+    
+    encode gzip
+    log {
+        output stdout
+        format console
+    }
+}
