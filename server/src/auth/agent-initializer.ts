@@ -40,6 +40,7 @@ export async function getAuthenticatedUserAndInitializeAgent(
       errorMsg =
         "Session for this user was deleted, expired, or invalid. Please log in again.";
     }
+    
     throw new Error(errorMsg);
   }
   return {

@@ -339,11 +339,30 @@ export function messageRoutes(
       }
       // Delete the message
       await ctx.db.deleteFrom("message").where("tid", "=", tid).execute();
+
+      // Delete from the PDS
+      try {
+        await agent.com.atproto.repo.deleteRecord({
+          repo: userSessionDid,
+          collection: ids.AppNavyfragenMessage,
+          rkey: tid, // Use the TID as the rkey
+        });
+      } catch (err) {
+        ctx.logger.error(
+          { error: err, tid },
+          "Failed to delete message from PDS"
+        );
+        return res.status(500).json({
+          error:
+            "Failed to delete message from PDS, but data deleted in the DB",
+        });
+      }
+
       return res.json({ success: true });
     })
   );
 
-  // Endpoint for a user to delete their data from the DB
+  // Endpoint for a user to delete their data from the DB, need to also delete from the PDS
   router.delete(
     "/delete-account",
     handler(async (req: express.Request, res: express.Response) => {
@@ -361,11 +380,13 @@ export function messageRoutes(
       const { agent, userSessionDid } =
         await getAuthenticatedUserAndInitializeAgent(rawTokenValue, ctx);
 
-      if (!agent) {
+      if (!agent || !userSessionDid) {
         return res.status(401).json({
-          error: "Authentication failed - could not initialize agent",
+          error:
+            "Authentication failed - could not initialize agent or retrieve user DID",
         });
       }
+
       // Delete all messages, session, and user profile for this DID
       await ctx.db
         .deleteFrom("message")
@@ -378,12 +399,13 @@ export function messageRoutes(
       await ctx.db
         .deleteFrom("user_profile")
         .where("did", "=", userSessionDid)
-        .execute(); // Also delete from user_profile
+        .execute();
+
       return res.json({ success: true });
     })
   );
 
-  // Endpoint to push data to the user's bsky repo
+  // Endpoint to push data to the user's bsky repo, need to implement in the AppShell in the future
   router.post(
     "/messages/sync",
     handler(async (req: express.Request, res: express.Response) => {
@@ -467,10 +489,6 @@ export function messageRoutes(
             const errorMessage =
               err.message || "Unknown error during PDS record creation";
             syncErrors.push({ tid: rkey, error: errorMessage });
-            ctx.logger.error(
-              { did: userSessionDid, rkey, error: err },
-              "Failed to sync message to PDS"
-            );
           }
         }
 
