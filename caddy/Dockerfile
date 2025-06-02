@@ -1,7 +1,13 @@
-FROM caddy:2-alpine
+FROM caddy:latest
 
-# Copy the Caddyfile into the container
-COPY ./Caddyfile /etc/caddy/Caddyfile
+WORKDIR /app
 
-# Expose the port Caddy will listen on (defined in Caddyfile)
-EXPOSE 8000
+COPY Caddyfile ./
+
+COPY --chmod=755 entrypoint.sh ./
+
+RUN caddy fmt --overwrite Caddyfile
+
+ENTRYPOINT ["/bin/sh"]
+
+CMD ["entrypoint.sh"]
