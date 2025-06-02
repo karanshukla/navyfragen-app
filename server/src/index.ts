@@ -15,9 +15,8 @@ import {
   createBidirectionalResolver,
   createIdResolver,
   BidirectionalResolver,
-} from "./id-resolver";
+} from "./lib/id-resolver";
 import type { Database } from "./database/db";
-import { IdResolver, MemoryCache } from "@atproto/identity";
 
 // Application state passed to the router and elsewhere
 export type AppContext = {

@@ -64,8 +64,11 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: 1080, // Maintained from previous reduction
-        height: 1080, // INCREASED to accommodate more text
+        width: 1080,
+        height: 1080, // Overall aspect ratio of 3:2
+        args: {
+          fullPage: true, // Capture the full page
+        },
       },
     };
 
@@ -105,15 +108,15 @@ function getCss(theme: any, messageLength: number): string {
 
   if (messageLength <= 50) {
     // Short message
-    messageTextFontSize = "44px";
+    messageTextFontSize = "48px"; // INCREASED from 44px
     messageTextPaddingTop = "30px";
   } else if (messageLength <= 100) {
     // Medium message
-    messageTextFontSize = "40px";
+    messageTextFontSize = "44px"; // INCREASED from 40px
     messageTextPaddingTop = theme.messagePadding; // Uses the default "20px"
   } else {
     // Long message
-    messageTextFontSize = "32px";
+    messageTextFontSize = "36px"; // INCREASED from 32px
     messageTextPaddingTop = "15px"; // Slightly reduced top padding for very long messages
   }
 
@@ -131,8 +134,6 @@ function getCss(theme: any, messageLength: number): string {
     body {
       font-family: ${theme.fontFamily};
       background-color: ${theme.imageBackgroundColor}; /* Dark background */
-      width: 900px; /* Overall image width - Maintained */
-      height: 700px; /* Overall image height - INCREASED */
       padding: ${theme.imageMargin}; /* Space around the .card */
       box-sizing: border-box; /* padding is included in width/height */
       display: flex; /* Ensures .card can expand to fill if needed */
@@ -150,22 +151,22 @@ function getCss(theme: any, messageLength: number): string {
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start; /* MODIFIED: Align content to the top */
+      justify-content: space-between; /* MODIFIED: Distribute space between items */
       align-items: center; /* Horizontally center content (like .message-text if not full width) */
       text-align: center; /* Default text alignment for children */
     }
     .header-text {
-      font-size: 52px; /* INCREASED */
+      font-size: 72px; /* INCREASED from 60px */
       font-weight: bold;
       color: ${theme.headerTextColor};
       background-color: transparent;
-      padding: 20px 15px 10px 15px;
+      padding: 40px 15px 10px 15px; /* Top padding INCREASED from 20px to move it down */
       margin: 0 0 10px 0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
       width: 100%; /* Take full width of .card's content area */
     }
     .message-text {
-      font-size: ${messageTextFontSize}; /* DYNAMIC font size based on length */
+      font-size: ${messageTextFontSize};
       color: ${theme.messageTextColor};
       background-color: ${theme.messageBackgroundColor}; /* White box for the message */
       padding: ${messagePaddingCSS}; /* DYNAMIC padding based on length */
@@ -186,8 +187,7 @@ function getCss(theme: any, messageLength: number): string {
       opacity: 0.85;
       text-align: center;
       padding: 10px 20px 15px 20px;
-      margin: 10px 0 0 0; /* Original margin, top will be overridden */
-      margin-top: auto; /* ADDED: Push footer to the bottom */
+      margin: 10px 0 0 0; /* Top margin for footer */
       background-color: transparent;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
       width: 100%; /* Take full width of .card's content area */
