@@ -64,8 +64,8 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: 1050,
-        height: 700, // Overall aspect ratio of 3:2
+        width: 700
+        height: 1050, // Overall aspect ratio of 3:2
       },
     };
 
