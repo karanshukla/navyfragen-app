@@ -69,7 +69,6 @@ export class Server {
         name: "navyfragen",
         keys: [env.COOKIE_SECRET],
         maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
-        secure: env.isProduction,
         sameSite: "none",
       })
     );
