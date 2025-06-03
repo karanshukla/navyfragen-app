@@ -12,9 +12,18 @@ import {
   Skeleton,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
+import React from "react";
+import { useSyncMessages } from "../api/messageService";
 
 export default function Home() {
   const { data: sessionData, isLoading } = useSession();
+  const syncMessagesMutation = useSyncMessages();
+
+  React.useEffect(() => {
+    if (sessionData?.did) {
+      syncMessagesMutation.mutate();
+    }
+  }, [sessionData?.did]);
 
   return (
     <>

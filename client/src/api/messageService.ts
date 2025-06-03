@@ -81,6 +81,11 @@ export const messageService = {
   addExampleMessages: async (recipient: string): Promise<MessagesResponse> => {
     return apiClient.post<MessagesResponse>("/messages/example", { recipient });
   },
+
+  // Sync with user's repo
+  syncMessages: async (): Promise<MessagesResponse> => {
+    return apiClient.post<MessagesResponse>(`/messages/sync`);
+  },
 };
 
 // React Query hooks
@@ -131,5 +136,12 @@ export function useAddExampleMessages() {
       // Invalidate message queries to refresh the list
       queryClient.invalidateQueries({ queryKey: messageKeys.all });
     },
+  });
+}
+
+export function useSyncMessages() {
+  return useMutation({
+    mutationFn: () => messageService.syncMessages(),
+    onSuccess: (_data) => {},
   });
 }
