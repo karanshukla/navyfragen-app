@@ -46,10 +46,6 @@ export const authService = {
   logout: async (): Promise<{ message: string }> => {
     return apiClient.post<{ message: string }>("/logout");
   },
-
-  sync: async (): Promise<void> => {
-    // Sync with the PDS to send data to it
-  },
 };
 
 // React Query hooks
