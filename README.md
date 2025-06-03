@@ -19,7 +19,8 @@ You will need to install Node, Git and a compatible web browser to run the app l
    ```bash
    npm run dev
    ```
-4. Open your web browser and navigate to `http://localhost:8080`.
+4. Open your web browser and navigate to `http://localhost:5173`.
+5. If you're a Windows user, you might need to go to `http://127.0.0.1` in order for cookies to work.
 
 ## External Dependencies
 
