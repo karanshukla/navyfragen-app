@@ -85,8 +85,8 @@ export async function generateQuestionImage(
       const imageBlob = await response.buffer(); // The service returns the image directly
       const imageAltText = `Image of the anonymous question: \"${originalMessage.substring(
         0,
-        100
-      )}${originalMessage.length > 100 ? "..." : ""}\"`;
+        200
+      )}`;
       return { imageBlob, imageAltText };
     } else {
       logger.error(
