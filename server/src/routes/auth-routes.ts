@@ -6,6 +6,7 @@ import type { AppContext } from "../index";
 import { env } from "../lib/env";
 import { initializeAgentFromSession } from "#/auth/session-agent";
 import type { Record as BskyProfileRecord } from "../lexicon/types/app/bsky/actor/profile";
+import Cryptr from "cryptr";
 
 export function authRoutes(
   ctx: AppContext,
@@ -175,13 +176,24 @@ export function authRoutes(
             "Failed to create or confirm user profile entry."
           );
         }
-
         req.session = {
           did: did,
         };
         ctx.logger.info({ did }, "OAuth callback successful, session created");
 
-        return res.redirect(`${env.CLIENT_URL}/oauth_callback`);
+        const secret = env.OAUTH_TOKEN_SECRET;
+        if (!secret) {
+          ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
+          return res.redirect(`${env.CLIENT_URL}/login?error=server_config`);
+        }
+
+        const cryptr = new Cryptr(secret);
+        const encryptedDid = cryptr.encrypt(did);
+
+        const token = encodeURIComponent(encryptedDid);
+        return res.redirect(
+          `${env.CLIENT_URL}/oauth_callback?oauth_token=${token}`
+        );
       } catch (err) {
         ctx.logger.error(
           {
@@ -202,9 +214,16 @@ export function authRoutes(
       if (!oauth_token) {
         return res.status(400).json({ error: "Missing oauth_token" });
       }
+
+      const secret = env.OAUTH_TOKEN_SECRET;
+      if (!secret) {
+        ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
+        return res.status(500).json({ error: "Server misconfiguration" });
+      }
       try {
-        const did = oauth_token;
-        // Optionally: check if user exists in DB
+        const cryptr = new Cryptr(secret);
+        const did = cryptr.decrypt(oauth_token);
+
         const user = await ctx.db
           .selectFrom("user_profile")
           .selectAll()
