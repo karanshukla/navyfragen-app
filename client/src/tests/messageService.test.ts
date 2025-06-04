@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { apiClient } from "../api/apiClient";
 import { messageService } from "../api/messageService";
 
-// Mock dependencies
 vi.mock("../api/apiClient", () => ({
   apiClient: {
     get: vi.fn(),
@@ -17,10 +16,7 @@ vi.mock("../api/queryClient", () => ({
   },
 }));
 
-// Skip React Query hooks testing since it requires complex setup
-
 describe("messageService", () => {
-  // Mock data
   const mockDid = "did:example:123";
 
   const mockMessages = [
@@ -74,13 +70,10 @@ describe("messageService", () => {
 
   describe("getMessages", () => {
     it("should call apiClient.get with the correct endpoint and parameters", async () => {
-      // Setup mock implementation
       vi.mocked(apiClient.get).mockResolvedValueOnce(mockMessagesResponse);
 
-      // Call the service
       const result = await messageService.getMessages(mockDid);
 
-      // Verify the result
       expect(result).toEqual(mockMessagesResponse);
       expect(apiClient.get).toHaveBeenCalledWith(
         `/messages/${encodeURIComponent(mockDid)}`
@@ -88,11 +81,9 @@ describe("messageService", () => {
     });
 
     it("should handle errors", async () => {
-      // Setup mock implementation for error
       const mockError = { error: "Not found", status: 404 };
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
-      // Call the service and expect it to throw
       await expect(messageService.getMessages(mockDid)).rejects.toEqual(
         mockError
       );
@@ -101,13 +92,10 @@ describe("messageService", () => {
 
   describe("sendMessage", () => {
     it("should call apiClient.post with the correct endpoint and data", async () => {
-      // Setup mock implementation
       vi.mocked(apiClient.post).mockResolvedValueOnce(mockSendMessageResponse);
 
-      // Call the service
       const result = await messageService.sendMessage(mockSendMessageRequest);
 
-      // Verify the result
       expect(result).toEqual(mockSendMessageResponse);
       expect(apiClient.post).toHaveBeenCalledWith(
         "/messages/send",
@@ -118,14 +106,11 @@ describe("messageService", () => {
 
   describe("deleteMessage", () => {
     it("should call apiClient.delete with the correct endpoint", async () => {
-      // Setup mock implementation
       vi.mocked(apiClient.delete).mockResolvedValueOnce({ success: true });
 
-      // Call the service
       const tid = "tid1";
       const result = await messageService.deleteMessage(tid);
 
-      // Verify the result
       expect(result).toEqual({ success: true });
       expect(apiClient.delete).toHaveBeenCalledWith(`/messages/${tid}`);
     });
@@ -133,17 +118,14 @@ describe("messageService", () => {
 
   describe("respondToMessage", () => {
     it("should call apiClient.post with the correct endpoint and data", async () => {
-      // Setup mock implementation
       vi.mocked(apiClient.post).mockResolvedValueOnce(
         mockResponseMessageResponse
       );
 
-      // Call the service
       const result = await messageService.respondToMessage(
         mockResponseMessageRequest
       );
 
-      // Verify the result
       expect(result).toEqual(mockResponseMessageResponse);
       expect(apiClient.post).toHaveBeenCalledWith(
         "/messages/respond",
@@ -154,13 +136,10 @@ describe("messageService", () => {
 
   describe("addExampleMessages", () => {
     it("should call apiClient.post with the correct endpoint and data", async () => {
-      // Setup mock implementation
       vi.mocked(apiClient.post).mockResolvedValueOnce(mockMessagesResponse);
 
-      // Call the service
       const result = await messageService.addExampleMessages(mockDid);
 
-      // Verify the result
       expect(result).toEqual(mockMessagesResponse);
       expect(apiClient.post).toHaveBeenCalledWith("/messages/example", {
         recipient: mockDid,
@@ -170,13 +149,10 @@ describe("messageService", () => {
 
   describe("syncMessages", () => {
     it("should call apiClient.post with the correct endpoint", async () => {
-      // Setup mock implementation
       vi.mocked(apiClient.post).mockResolvedValueOnce(mockMessagesResponse);
 
-      // Call the service
       const result = await messageService.syncMessages();
 
-      // Verify the result
       expect(result).toEqual(mockMessagesResponse);
       expect(apiClient.post).toHaveBeenCalledWith("/messages/sync");
     });

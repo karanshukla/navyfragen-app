@@ -1,21 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { apiClient, ApiError } from "../api/apiClient";
 
-const originalFetch = global.fetch;
+const originalFetch = window.fetch;
 
 describe("apiClient", () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    window.fetch = vi.fn() as any;
   });
-
   afterEach(() => {
-    global.fetch = originalFetch;
+    window.fetch = originalFetch;
     vi.clearAllMocks();
   });
 
   describe("get", () => {
     it("should make a GET request to the correct URL", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
+      window.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ data: "test data" }),
       });
@@ -31,9 +30,8 @@ describe("apiClient", () => {
         })
       );
     });
-
     it("should throw an error when response is not ok", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
+      window.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: () => Promise.resolve({ error: "Bad Request" }),
@@ -46,9 +44,8 @@ describe("apiClient", () => {
         })
       );
     });
-
     it("should handle JSON parse errors", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
+      window.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: () => Promise.reject(new Error("Invalid JSON")),
@@ -65,7 +62,7 @@ describe("apiClient", () => {
 
   describe("post", () => {
     it("should make a POST request with correct data", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
+      window.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
@@ -89,7 +86,7 @@ describe("apiClient", () => {
 
   describe("delete", () => {
     it("should make a DELETE request with correct data", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
+      window.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
