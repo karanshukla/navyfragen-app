@@ -22,7 +22,6 @@ vi.mock("../api/queryClient", () => ({
   },
 }));
 
-// Mock window.location
 const originalLocation = window.location;
 Object.defineProperty(window, "location", {
   writable: true,

@@ -99,7 +99,7 @@ describe("profileService", () => {
 
       expect(result).toEqual(mockResolveHandleResponse);
       expect(apiClient.get).toHaveBeenCalledWith(
-        `/resolve/${encodeURIComponent(mockHandle)}`
+        `/resolve-handle/${encodeURIComponent(mockHandle)}`
       );
     });
 
