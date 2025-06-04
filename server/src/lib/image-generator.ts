@@ -50,11 +50,10 @@ export async function generateQuestionImage(
   const html = `
     <html>
       <head>
-        <meta charset="UTF-8"> {/* ADDED: Explicitly set character encoding */}
+        <meta charset="UTF-8">
         <style>
           ${getCss(theme, originalMessage.length)}
         </style>
-        {/* MODIFIED: Add Noto Color Emoji to Google Fonts import */}
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       </head>
       <body>
@@ -76,7 +75,7 @@ export async function generateQuestionImage(
       format: "png",
       options: {
         width: 1080,
-        height: 1080, // Note: Your CSS aims for content to fill, this might be better as aspect ratio target
+        height: 1080,
         args: {
           fullPage: true,
         },
@@ -92,16 +91,9 @@ export async function generateQuestionImage(
     });
 
     if (response.ok) {
-      // For node-fetch v2:
       const imageBlob = await response.buffer();
-      // For node-fetch v3+:
-      // const arrayBuffer = await response.arrayBuffer();
-      // const imageBlob = Buffer.from(arrayBuffer);
+      const imageAltText = `Image of the anonymous question: \"${originalMessage}\" - Answered on Navyfragen.app`;
 
-      const imageAltText = `Image of the anonymous question: \"${originalMessage.substring(
-        0,
-        200 // Consider if emojis affect substring length meaningfully for alt text
-      )}\" - Answered on Navyfragen.app`;
       return { imageBlob, imageAltText };
     } else {
       const errorBody = await response.text();
@@ -110,8 +102,12 @@ export async function generateQuestionImage(
         "Failed to generate image with export-html service"
       );
       // Log the HTML for debugging if the service fails
-      if (response.status >= 400 && response.status < 500) { // 4xx errors might be due to bad HTML/CSS
-        logger.debug({ htmlSent: html },"HTML content sent to image generation service (client error)");
+      if (response.status >= 400 && response.status < 500) {
+        // 4xx errors might be due to bad HTML/CSS
+        logger.debug(
+          { htmlSent: html },
+          "HTML content sent to image generation service (client error)"
+        );
       }
       return {};
     }
