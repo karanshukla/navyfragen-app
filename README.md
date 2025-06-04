@@ -26,7 +26,7 @@ You will need to install Node, Git and a compatible web browser to run the app l
 
 Image generation is handled by a separate service that can be found here: [text](https://hub.docker.com/r/monkeyphysics/html-to-image)
 
-You'll need to run it locally via Docker and update your env file to point to localhost:port (it should default to port 3033). Doing it through the Docker UI will not work, as it will not expose the port correctly.
+You'll need to run it locally via Docker and update your env file to point to localhost:port (it should default to port 3033).
 
 ```bash
 docker pull monkeyphysics/html-to-image

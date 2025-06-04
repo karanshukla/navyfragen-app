@@ -1,6 +1,7 @@
-import fetch from "node-fetch";
+import fetch from "node-fetch"; // Assuming 'node-fetch' v2 for response.buffer()
+// If using node-fetch v3+, response.arrayBuffer() then Buffer.from(await response.arrayBuffer())
 import type { Logger } from "pino";
-import { env } from "#/lib/env"; // Import env for EXPORT_HTML_URL
+import { env } from "#/lib/env";
 
 interface ImageGenerationResult {
   imageBlob?: Buffer;
@@ -17,39 +18,48 @@ export async function generateQuestionImage(
     return {};
   }
 
-  // Define a theme based on the new style request
   const theme = {
-    imageBackgroundColor: "#1A1A1A", // Dark background
-    cardGradientStart: "#007bff", // Blue for gradient
-    cardGradientEnd: "#6f42c1", // Purple for gradient
-    cardPadding: "20px", // Thickness of the gradient border itself
-    cardBorderRadius: "10px", // Rounded corners for card
+    imageBackgroundColor: "#1A1A1A",
+    cardGradientStart: "#007bff",
+    cardGradientEnd: "#6f42c1",
+    cardPadding: "20px",
+    cardBorderRadius: "10px",
     headerTextColor: "#FFFFFF",
     messageBackgroundColor: "#FFFFFF",
     messageTextColor: "#000000",
-    messagePadding: "20px", // Padding inside the white message box
-    messageBorderRadius: "8px", // Rounded corners for message box
+    messagePadding: "20px",
+    messageBorderRadius: "8px",
     footerTextColor: "#FFFFFF",
-    fontFamily: "Noto Sans, sans-serif",
-    imageMargin: "60px", // Margin around the card, inside the image bounds - INCREASED
+    // MODIFIED: Add Noto Color Emoji to the font family stack
+    fontFamily: "'Noto Sans', 'Noto Color Emoji', sans-serif",
+    imageMargin: "60px",
   };
 
   const footerText = userBskyHandle
     ? `fragen.navy/${userBskyHandle}`
     : "navyfragen.app";
 
+  // Basic HTML escaping for the message content
+  const escapedMessage = originalMessage
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
   const html = `
     <html>
       <head>
+        <meta charset="UTF-8">
         <style>
           ${getCss(theme, originalMessage.length)}
         </style>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       </head>
       <body>
         <div class="card">
           <h2 class="header-text">send me anonymous messages!</h2>
-          <p class="message-text">${originalMessage.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")}</p>
+          <p class="message-text">${escapedMessage}</p>
           <p class="footer-text">${footerText}</p>
         </div>
       </body>
@@ -58,22 +68,21 @@ export async function generateQuestionImage(
 
   try {
     logger.info(
-      `Attempting to generate image via monkeyphysics/html-to-image service at: ${env.EXPORT_HTML_URL}`
+      `Attempting to generate image via service at: ${env.EXPORT_HTML_URL}`
     );
     const payload = {
       source: html,
       format: "png",
       options: {
         width: 1080,
-        height: 1080, // Overall aspect ratio of 3:2
+        height: 1080,
         args: {
-          fullPage: true, // Capture the full page
+          fullPage: true,
         },
       },
     };
 
     const response = await fetch(env.EXPORT_HTML_URL, {
-      // URL should be the root, e.g., http://localhost:3033/
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,17 +91,24 @@ export async function generateQuestionImage(
     });
 
     if (response.ok) {
-      const imageBlob = await response.buffer(); // The service returns the image directly
-      const imageAltText = `Image of the anonymous question: \"${originalMessage.substring(
-        0,
-        100
-      )}${originalMessage.length > 100 ? "..." : ""}\"`;
+      const imageBlob = await response.buffer();
+      const imageAltText = `Image of the anonymous question: \"${originalMessage}\" - Answered on Navyfragen.app`;
+
       return { imageBlob, imageAltText };
     } else {
+      const errorBody = await response.text();
       logger.error(
-        { error: await response.text(), status: response.status },
+        { error: errorBody, status: response.status },
         "Failed to generate image with export-html service"
       );
+      // Log the HTML for debugging if the service fails
+      if (response.status >= 400 && response.status < 500) {
+        // 4xx errors might be due to bad HTML/CSS
+        logger.debug(
+          { htmlSent: html },
+          "HTML content sent to image generation service (client error)"
+        );
+      }
       return {};
     }
   } catch (imgErr) {
@@ -107,90 +123,87 @@ function getCss(theme: any, messageLength: number): string {
   let messageTextPaddingTop;
 
   if (messageLength <= 50) {
-    // Short message
-    messageTextFontSize = "48px"; // INCREASED from 44px
+    messageTextFontSize = "48px";
     messageTextPaddingTop = "30px";
   } else if (messageLength <= 100) {
-    // Medium message
-    messageTextFontSize = "44px"; // INCREASED from 40px
-    messageTextPaddingTop = theme.messagePadding; // Uses the default "20px"
+    messageTextFontSize = "44px";
+    messageTextPaddingTop = theme.messagePadding;
   } else {
-    // Long message
-    messageTextFontSize = "36px"; // INCREASED from 32px
-    messageTextPaddingTop = "15px"; // Slightly reduced top padding for very long messages
+    messageTextFontSize = "36px";
+    messageTextPaddingTop = "15px";
   }
 
-  // Construct the full padding string, keeping other sides as per theme.messagePadding
   const messagePaddingCSS = `${messageTextPaddingTop} ${theme.messagePadding} ${theme.messagePadding} ${theme.messagePadding}`;
 
+  // Ensure the font-family from the theme is used in the body or specific elements
   return `
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
+      overflow: hidden; /* Prevent scrollbars in the captured image */
     }
     body {
-      font-family: ${theme.fontFamily};
-      background-color: ${theme.imageBackgroundColor}; /* Dark background */
-      padding: ${theme.imageMargin}; /* Space around the .card */
-      box-sizing: border-box; /* padding is included in width/height */
-      display: flex; /* Ensures .card can expand to fill if needed */
-      justify-content: center; /* Centers .card if it's smaller */
-      align-items: center; /* Centers .card if it's smaller */
-      overflow: hidden; /* Ensure nothing spills out */
+      font-family: ${theme.fontFamily}; /* Ensure font stack is applied */
+      background-color: ${theme.imageBackgroundColor};
+      padding: ${theme.imageMargin};
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .card {
-      background: linear-gradient(to right, ${theme.cardGradientStart}, ${theme.cardGradientEnd}); /* Gradient */
+      background: linear-gradient(to right, ${theme.cardGradientStart}, ${theme.cardGradientEnd});
       border-radius: ${theme.cardBorderRadius};
-      padding: ${theme.cardPadding}; /* This is the gradient border thickness */
+      padding: ${theme.cardPadding};
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      width: 100%; /* Fill the space provided by body's content box (body_size - 2*imageMargin) */
-      height: 100%; /* Fill the space provided by body's content box */
+      width: 100%; /* Fill the padded area of the body */
+      height: 100%; /* Fill the padded area of the body */
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      justify-content: space-between; /* MODIFIED: Distribute space between items */
-      align-items: center; /* Horizontally center content (like .message-text if not full width) */
-      text-align: center; /* Default text alignment for children */
-    }
-    .header-text {
-      font-size: 72px; /* INCREASED from 60px */
+      justify-content: space-between;
+      align-items: center;
+      text-align: center;
+    }    
+      .header-text {
+      font-size: 72px;
       font-weight: bold;
       color: ${theme.headerTextColor};
-      background-color: transparent;
-      padding: 40px 15px 10px 15px; /* Top padding INCREASED from 20px to move it down */
+      padding: 60px 15px 10px 15px;
       margin: 0 0 10px 0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-      width: 100%; /* Take full width of .card's content area */
+      width: 100%;
     }
     .message-text {
       font-size: ${messageTextFontSize};
       color: ${theme.messageTextColor};
-      background-color: ${theme.messageBackgroundColor}; /* White box for the message */
-      padding: ${messagePaddingCSS}; /* DYNAMIC padding based on length */
+      background-color: ${theme.messageBackgroundColor};
+      padding: ${messagePaddingCSS};
       border-radius: ${theme.messageBorderRadius};
       line-height: 1.4;
       white-space: pre-wrap;
-      overflow-wrap: break-word; /* STANDARD PROPERTY for word wrapping */
+      overflow-wrap: break-word;
       text-align: center;
-      margin: 15px auto; /* Vertical margin, auto for horizontal centering */
-      max-width: 90%; /* Max width of the white box - INCREASED */
-      max-height: 65%; /* Max height of the white box - INCREASED */
-      overflow: hidden; /* Clip content if too long, but box is now larger */
+      margin: 15px auto;
+      max-width: 90%;
+      max-height: 65%; /* Be mindful of content overflow with this */
+      overflow: hidden; /* Content that overflows will be hidden */
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex; /* For vertical centering of text if line-height isn't enough */
+      align-items: center; /* Vertically center text content */
+      justify-content: center; /* Horizontally center text content */
     }
     .footer-text {
-      font-size: 32px; /* INCREASED */
+      font-size: 32px;
       color: ${theme.footerTextColor};
       opacity: 0.85;
       text-align: center;
-      padding: 10px 20px 15px 20px;
-      margin: 10px 0 0 0; /* Top margin for footer */
-      background-color: transparent;
+      padding: 10px 20px 40px 20px;
+      margin: 10px 0 0 0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-      width: 100%; /* Take full width of .card's content area */
+      width: 100%;
     }
   `;
 }

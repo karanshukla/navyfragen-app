@@ -6,7 +6,7 @@ import type { AppContext } from "../index";
 import { env } from "../lib/env";
 import { initializeAgentFromSession } from "#/auth/session-agent";
 import type { Record as BskyProfileRecord } from "../lexicon/types/app/bsky/actor/profile";
-import crypto from "crypto";
+import Cryptr from "cryptr";
 
 export function authRoutes(
   ctx: AppContext,
@@ -176,11 +176,9 @@ export function authRoutes(
             "Failed to create or confirm user profile entry."
           );
         }
-
         req.session = {
           did: did,
         };
-        // encrypt the DID and send it to the oauth_callback in React
         ctx.logger.info({ did }, "OAuth callback successful, session created");
 
         const secret = env.OAUTH_TOKEN_SECRET;
@@ -188,7 +186,9 @@ export function authRoutes(
           ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
           return res.redirect(`${env.CLIENT_URL}/login?error=server_config`);
         }
-        const encryptedDid = encryptDid(did, secret);
+
+        const cryptr = new Cryptr(secret);
+        const encryptedDid = cryptr.encrypt(did);
 
         const token = encodeURIComponent(encryptedDid);
         return res.redirect(
@@ -207,22 +207,6 @@ export function authRoutes(
     })
   );
 
-  // Encrypt the DID using AES-256-GCM
-  function encryptDid(did: string, secret: string): string {
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(
-      "aes-256-gcm",
-      Buffer.from(secret, "hex"),
-      iv
-    );
-    let encrypted = cipher.update(did, "utf8", "base64");
-    encrypted += cipher.final("base64");
-    const tag = cipher.getAuthTag();
-    // Return iv, tag, and encrypted data, all base64-encoded and joined
-    return [iv.toString("base64"), tag.toString("base64"), encrypted].join(":");
-  }
-
-  // POST /api/auth/oauth/consume
   router.post(
     "/oauth/consume",
     handler(async (req: express.Request, res: express.Response) => {
@@ -230,14 +214,16 @@ export function authRoutes(
       if (!oauth_token) {
         return res.status(400).json({ error: "Missing oauth_token" });
       }
+
       const secret = env.OAUTH_TOKEN_SECRET;
       if (!secret) {
         ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
         return res.status(500).json({ error: "Server misconfiguration" });
       }
       try {
-        const did = decryptDid(oauth_token, secret);
-        // Optionally: check if user exists in DB
+        const cryptr = new Cryptr(secret);
+        const did = cryptr.decrypt(oauth_token);
+
         const user = await ctx.db
           .selectFrom("user_profile")
           .selectAll()
@@ -255,23 +241,6 @@ export function authRoutes(
       }
     })
   );
-
-  // Decrypt the DID using AES-256-GCM
-  function decryptDid(token: string, secret: string): string {
-    const [ivB64, tagB64, encrypted] = token.split(":");
-    if (!ivB64 || !tagB64 || !encrypted) throw new Error("Malformed token");
-    const iv = Buffer.from(ivB64, "base64");
-    const tag = Buffer.from(tagB64, "base64");
-    const decipher = crypto.createDecipheriv(
-      "aes-256-gcm",
-      Buffer.from(secret, "hex"),
-      iv
-    );
-    decipher.setAuthTag(tag);
-    let did = decipher.update(encrypted, "base64", "utf8");
-    did += decipher.final("utf8");
-    return did;
-  }
 
   return router;
 }

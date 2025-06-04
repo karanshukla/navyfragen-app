@@ -1,0 +1,27 @@
+name: Client Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  client-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
+          cache-dependency-path: "client/package.json"
+
+      - name: Install client dependencies
+        run: cd client && npm ci
+
+      - name: Run client tests
+        run: cd client && npm run test
