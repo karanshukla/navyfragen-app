@@ -166,12 +166,12 @@ function getCss(theme: any, messageLength: number): string {
       justify-content: space-between;
       align-items: center;
       text-align: center;
-    }
-    .header-text {
+    }    
+      .header-text {
       font-size: 72px;
       font-weight: bold;
       color: ${theme.headerTextColor};
-      padding: 40px 15px 10px 15px;
+      padding: 60px 15px 10px 15px;
       margin: 0 0 10px 0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
       width: 100%;
@@ -200,7 +200,7 @@ function getCss(theme: any, messageLength: number): string {
       color: ${theme.footerTextColor};
       opacity: 0.85;
       text-align: center;
-      padding: 10px 20px 15px 20px;
+      padding: 10px 20px 40px 20px;
       margin: 10px 0 0 0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
       width: 100%;
