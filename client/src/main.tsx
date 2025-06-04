@@ -16,15 +16,9 @@ import {
   useMantineColorScheme,
   Box,
   Loader,
-  Divider,
+  Paper,
 } from "@mantine/core";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { queryClient } from "./api/queryClient";
@@ -207,13 +201,29 @@ function AppLayout() {
       <AppShell.Main pt={70}>
         <Container>
           <Routes>
-            {" "}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/profile" element={<PublicProfile />} />
             <Route path="/profile/:handle" element={<PublicProfile />} />
             <Route path="/oauth_callback" element={<OAuthCallback />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  <Container>
+                    <Paper p="xl" radius="md" withBorder shadow="xs">
+                      <Title order={2} c="red">
+                        404 - Not Found
+                      </Title>
+                      <Text c="dimmed" mt="md">
+                        The requested resource was not found.
+                      </Text>
+                    </Paper>
+                  </Container>
+                </>
+              }
+            />
           </Routes>
         </Container>
       </AppShell.Main>
