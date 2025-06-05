@@ -63,7 +63,7 @@ export class Server {
       })
     );
 
-    // Enable cookies
+    // Enable cookie-session
     app.use(
       cookieSession({
         name: "navyfragen",
@@ -81,10 +81,17 @@ export class Server {
         message: "Too many requests, please try again later.",
       })
     );
-    // Then apply the router
+
     const router = createRouter(ctx);
     app.use(router);
-    app.use((_req, res) => res.sendStatus(404));
+
+    app.use((_req, res) => {
+      res.status(404).json({
+        error: "Not Found",
+        message: "The requested resource does not exist",
+        status: 404,
+      });
+    });
 
     // Bind our server to the port
     const server = app.listen(env.PORT, "::");
