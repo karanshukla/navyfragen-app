@@ -321,6 +321,7 @@ export function messageRoutes(
       if (!userSessionDid) {
         return res.status(403).json({ error: "Not authenticated" });
       }
+
       const agent = await initializeAgentFromSession(req, ctx);
 
       if (!agent || !userSessionDid) {
@@ -343,6 +344,32 @@ export function messageRoutes(
         .deleteFrom("user_profile")
         .where("did", "=", userSessionDid)
         .execute();
+      await ctx.db
+        .deleteFrom("user_settings")
+        .where("did", "=", userSessionDid)
+        .execute();
+
+      //delete from PDS
+      try {
+        await agent.com.atproto.repo.deleteRecord({
+          repo: userSessionDid,
+          collection: ids.AppNavyfragenMessage,
+          rkey: "",
+        });
+        ctx.logger.info(
+          { did: userSessionDid },
+          "Successfully deleted all messages from PDS"
+        );
+      } catch (err) {
+        ctx.logger.error(
+          { error: err, did: userSessionDid },
+          "Failed to delete messages from PDS"
+        );
+        return res.status(500).json({
+          error:
+            "Failed to delete messages from PDS, but data deleted in the DB",
+        });
+      }
 
       return res.json({ success: true });
     })
@@ -462,99 +489,6 @@ export function messageRoutes(
       }
     })
   );
-
-  /*
-  router.get(
-    "/messages/debug/pds-records",
-    handler(async (req: express.Request, res: express.Response) => {
-      let rawTokenValue =
-        req.headers.authorization?.replace("Bearer ", "") || req.query.token;
-      if (!rawTokenValue && req.cookies && req.cookies.auth_token) {
-        rawTokenValue = req.cookies.auth_token;
-      }
-      if (Array.isArray(rawTokenValue)) rawTokenValue = rawTokenValue[0];
-      if (typeof rawTokenValue === "object" && rawTokenValue !== null)
-        rawTokenValue = String(rawTokenValue);
-
-      let agent: AtpAgent | null = null;
-      let userSessionDid: string | null = null;
-      let sessionExistsInDb = false;
-
-      if (rawTokenValue && typeof rawTokenValue === "string") {
-        const agentInitResult = await initializeAuthenticatedAgent(
-          rawTokenValue,
-          ctx
-        );
-        if (agentInitResult) {
-          agent = agentInitResult.agent;
-          userSessionDid = agentInitResult.userSessionDid;
-          sessionExistsInDb = agentInitResult.sessionExists;
-        } else {
-          let decodedDidForError: string | null = null;
-          try {
-            decodedDidForError = Buffer.from(rawTokenValue, "base64").toString(
-              "ascii"
-            );
-            const dbSession = await ctx.db
-              .selectFrom("auth_session")
-              .selectAll()
-              .where("key", "=", decodedDidForError)
-              .executeTakeFirst();
-            sessionExistsInDb = !!dbSession;
-          } catch (e) {
-            // ignore, sessionExistsInDb will remain false
-          }
-        }
-      }
-
-      if (!agent || !userSessionDid) {
-        let errorMsg = "Not authenticated or agent initialization failed.";
-        if (rawTokenValue && !sessionExistsInDb) {
-          errorMsg =
-            "Session for this user was deleted, expired, or invalid. Please log in again.";
-        }
-        return res.status(401).json({ error: errorMsg });
-      }
-
-      try {
-        ctx.logger.info(
-          { did: userSessionDid },
-          "Attempting to fetch all message records from PDS for debug."
-        );
-
-        const listRecordsResponse = await agent.com.atproto.repo.listRecords({
-          repo: agent.assertDid, // The authenticated user's repo
-          collection: ids.AppNavyfragenMessage,
-          // limit: 100, // Optionally add a limit
-        });
-
-        ctx.logger.info(
-          {
-            did: userSessionDid,
-            count: listRecordsResponse.data.records.length,
-          },
-          "Successfully fetched message records from PDS."
-        );
-
-        return res.json({
-          success: true,
-          did: userSessionDid,
-          records: listRecordsResponse.data.records,
-          cursor: listRecordsResponse.data.cursor,
-        });
-      } catch (err: any) {
-        ctx.logger.error(
-          { did: userSessionDid, error: err },
-          "Error during /messages/debug/pds-records process"
-        );
-        return res.status(500).json({
-          error: "Failed to fetch records from PDS",
-          details: err.message,
-        });
-      }
-    })
-  );
-  */
 
   return router;
 }

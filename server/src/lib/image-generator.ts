@@ -30,7 +30,6 @@ export async function generateQuestionImage(
     messagePadding: "20px",
     messageBorderRadius: "8px",
     footerTextColor: "#FFFFFF",
-    // MODIFIED: Add Noto Color Emoji to the font family stack
     fontFamily: "'Noto Sans', 'Noto Color Emoji', sans-serif",
     imageMargin: "60px",
   };
@@ -101,14 +100,15 @@ export async function generateQuestionImage(
         { error: errorBody, status: response.status },
         "Failed to generate image with export-html service"
       );
+
       // Log the HTML for debugging if the service fails
       if (response.status >= 400 && response.status < 500) {
-        // 4xx errors might be due to bad HTML/CSS
         logger.debug(
           { htmlSent: html },
           "HTML content sent to image generation service (client error)"
         );
       }
+
       return {};
     }
   } catch (imgErr) {
@@ -119,7 +119,8 @@ export async function generateQuestionImage(
 
 // Helper function to generate CSS string from theme object
 function getCss(theme: any, messageLength: number): string {
-  const scale = 0.8; // Scale factor for px values
+  // Scale factor for 25% of original size
+  const scale = 0.8;
 
   // Helper to scale px values in a string (e.g., "48px")
   const px = (value: string) => {
@@ -184,7 +185,7 @@ function getCss(theme: any, messageLength: number): string {
       font-size: ${px("72px")};
       font-weight: bold;
       color: ${theme.headerTextColor};
-      padding: ${px("60px")} ${px("15px")} ${px("10px")} ${px("15px")};
+      padding: ${px("40px")} ${px("15px")} ${px("10px")} ${px("15px")};
       margin: 0 0 ${px("10px")} 0;
       text-shadow: ${px("1px")} ${px("1px")} ${px("2px")} rgba(0,0,0,0.2);
       width: 100%;

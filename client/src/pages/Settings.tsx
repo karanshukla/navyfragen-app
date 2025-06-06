@@ -97,29 +97,61 @@ export default function Settings() {
             <Grid.Col span={12}>
               <Title order={1}>Settings</Title>
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }}>
-              <Paper shadow="sm" p="lg" radius="md" withBorder>
-                <Title order={3}>Install Application</Title>
-                <Text mt="sm" c="dimmed">
-                  Install the app for faster access. Works with almost any
-                  device you own, including tablets and laptops. Uninstall the
-                  app anytime.
-                </Text>
-                <Divider my="md" />
-                <Button onClick={handleInstallClick} mt="md" fullWidth>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
+              <Paper
+                shadow="sm"
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ flexGrow: 1 }}>
+                  <Title order={3}>Install Application</Title>
+                  <Text mt="sm" c="dimmed">
+                    Install the app for faster access. Works with almost any
+                    device you own, including tablets and laptops. Uninstall the
+                    app anytime. On iOS or Android, it will be added to your
+                    home screen and run with the same browser.
+                  </Text>
+                  <Divider my="md" />
+                </div>
+                <Button onClick={handleInstallClick} mt="auto" fullWidth>
                   Install Navyfragen
                 </Button>
               </Paper>
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }}>
-              <Paper shadow="sm" p="lg" radius="md" withBorder>
-                <Title order={3}>PDS Sync</Title>
-                <Text mt="sm" c="dimmed">
-                  By default, Navyfragen syncs your anonymous messages with your
-                  Bluesky PDS (Personal Data Server). Disable this if you wish
-                  to keep your data on Navyfragen's servers.
-                </Text>{" "}
-                <Divider my="md" />{" "}
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
+              <Paper
+                shadow="sm"
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ flexGrow: 1 }}>
+                  <Title order={3}>PDS Sync</Title>
+                  <Text mt="sm" c="dimmed">
+                    By default, Navyfragen syncs your anonymous messages with
+                    your Bluesky PDS (Personal Data Server). Disable this if you
+                    wish to keep your data on Navyfragen's servers. Will not
+                    change your ability to post to Bluesky directly.
+                  </Text>{" "}
+                  <Divider my="md" />{" "}
+                </div>
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
@@ -136,7 +168,12 @@ export default function Settings() {
                     </Button>
                   </div>
                 ) : (
-                  <div style={{ opacity: updateSettings.isPending ? 0.6 : 1 }}>
+                  <div
+                    style={{
+                      opacity: updateSettings.isPending ? 0.6 : 1,
+                      marginTop: "auto",
+                    }}
+                  >
                     <Switch
                       label="Enable PDS Sync"
                       checked={Boolean(userSettings?.pdsSyncEnabled)} // Ensures 0 is false, 1 is true
@@ -152,19 +189,36 @@ export default function Settings() {
                 )}
               </Paper>
             </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }}>
-              <Paper shadow="sm" p="lg" radius="md" withBorder>
-                <Title order={3}>Delete my Data</Title>
-                <Text mt="sm" c="dimmed">
-                  Permanently remove all your data from the Navyfragen servers,
-                  and Bluesky PDS. This also disables your inbox. You can always
-                  log back in to reregister automatically.
-                </Text>
-                <Divider my="md" />
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
+              <Paper
+                shadow="sm"
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ flexGrow: 1 }}>
+                  <Title order={3}>Delete my Data</Title>
+                  <Text mt="sm" c="dimmed">
+                    Permanently remove all your data from the Navyfragen
+                    servers, and Bluesky PDS. This also disables your inbox so
+                    you will no longer receive messages. You can always log back
+                    in to reregister automatically.
+                  </Text>
+                  <Divider my="md" />
+                </div>
                 <Button
                   color="red"
                   fullWidth
                   onClick={() => setDeleteModalOpened(true)}
+                  mt="auto"
                 >
                   Delete my Data
                 </Button>
