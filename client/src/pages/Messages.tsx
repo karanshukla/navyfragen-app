@@ -30,6 +30,7 @@ import {
 import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
+import { useLocalStorage } from "@mantine/hooks";
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:3033/profile";
@@ -43,15 +44,33 @@ interface PageAlert {
 export default function Messages() {
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
-  const [appendProfileLink, setAppendProfileLink] = useState<boolean>(false);
-  const [useGradients, setUseGradients] = useState<boolean>(true);
-  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+
+  // Local storage settings
+  const [appendProfileLink, setAppendProfileLink] = useLocalStorage({
+    key: "appendProfileLink",
+    defaultValue: false,
+    getInitialValueInEffect: true,
+  });
+  const [useGradients, setUseGradients] = useLocalStorage({
+    key: "useGradients",
+    defaultValue: true,
+    getInitialValueInEffect: true,
+  });
+  const [autoRefresh, setAutoRefresh] = useState({
+    key: "autoRefresh",
+    defaultValue: true,
+    getInitialValueInEffect: true,
+  });
+  const [confirmBeforeDelete, setConfirmBeforeDelete] = useLocalStorage({
+    key: "confirmBeforeDelete",
+    defaultValue: false,
+    getInitialValueInEffect: true,
+  });
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isPortrait, setIsPortrait] = useState(
     window.matchMedia("(orientation: portrait)").matches
   );
-  const [confirmBeforeDelete, setConfirmBeforeDelete] =
-    useState<boolean>(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState<boolean>(false);
   const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
     null

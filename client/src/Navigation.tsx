@@ -3,6 +3,7 @@ import {
   IconMessage,
   IconLogin,
   IconButterfly,
+  IconSettings,
 } from "@tabler/icons-react";
 import { useLocation, Link } from "react-router-dom";
 import { Divider, NavLink, Text } from "@mantine/core";
@@ -50,7 +51,16 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
               active={location.pathname === "/messages"}
               onClick={handleClick}
               leftSection={<IconMessage size="1rem" stroke={1.5} />}
-            />{" "}
+            />
+            <Divider />
+            <NavLink
+              label="Settings"
+              component={Link}
+              to="/settings"
+              active={location.pathname === "/settings"}
+              onClick={handleClick}
+              leftSection={<IconSettings size="1rem" stroke={1.5} />}
+            />
           </>
         ) : (
           <>
