@@ -1,5 +1,5 @@
 import fetch from "node-fetch"; // Assuming 'node-fetch' v2 for response.buffer()
-// If using node-fetch v3+, response.arrayBuffer() then Buffer.from(await response.arrayBuffer())
+// If using node-fetch v3+, use response.arrayBuffer() then Buffer.from(await response.arrayBuffer())
 import type { Logger } from "pino";
 import { env } from "#/lib/env";
 
@@ -119,15 +119,36 @@ export async function generateQuestionImage(
 
 // Helper function to generate CSS string from theme object
 function getCss(theme: any, messageLength: number): string {
-  let messageTextFontSize;
+  // Scale factor for 25% of original size
+  const scale = 0.8;
 
+  // Helper to scale px values in a string (e.g., "48px")
+  const px = (value: string) => {
+    const num = parseFloat(value);
+    return isNaN(num) ? value : `${num * scale}px`;
+  };
+
+  // Scale theme values
+  const cardPadding = px(theme.cardPadding);
+  const cardBorderRadius = px(theme.cardBorderRadius);
+  const messagePadding = px(theme.messagePadding);
+  const messageBorderRadius = px(theme.messageBorderRadius);
+  const imageMargin = px(theme.imageMargin);
+
+  // Dynamic font size and padding for message text
+  let messageTextFontSize;
+  let messageTextPaddingTop;
   if (messageLength <= 50) {
-    messageTextFontSize = "48px";
+    messageTextFontSize = px("48px");
+    messageTextPaddingTop = px("30px");
   } else if (messageLength <= 100) {
-    messageTextFontSize = "44px";
+    messageTextFontSize = px("44px");
+    messageTextPaddingTop = messagePadding;
   } else {
-    messageTextFontSize = "36px";
+    messageTextFontSize = px("36px");
+    messageTextPaddingTop = px("15px");
   }
+  const messagePaddingCSS = `${messageTextPaddingTop} ${messagePadding} ${messagePadding} ${messagePadding}`;
 
   // Ensure the font-family from the theme is used in the body or specific elements
   return `
@@ -139,9 +160,9 @@ function getCss(theme: any, messageLength: number): string {
       overflow: hidden;
     }
     body {
-      font-family: ${theme.fontFamily}; 
+      font-family: ${theme.fontFamily};
       background-color: ${theme.imageBackgroundColor};
-      padding: ${theme.imageMargin};
+      padding: ${imageMargin};
       box-sizing: border-box;
       display: flex;
       justify-content: center;
@@ -149,54 +170,54 @@ function getCss(theme: any, messageLength: number): string {
     }
     .card {
       background: linear-gradient(to right, ${theme.cardGradientStart}, ${theme.cardGradientEnd});
-      border-radius: ${theme.cardBorderRadius};
-      padding: ${theme.cardPadding};
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      width: 100%; 
-      height: 100%; 
+      border-radius: ${cardBorderRadius};
+      padding: ${cardPadding};
+      box-shadow: 0 ${2 * scale}px ${4 * scale}px rgba(0,0,0,0.2);
+      width: 100%;
+      height: 100%;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
       text-align: center;
-    }    
-      .header-text {
-      font-size: 72px;
+    }
+    .header-text {
+      font-size: ${px("72px")};
       font-weight: bold;
       color: ${theme.headerTextColor};
-      padding: 40px 15px 10px 15px;
-      margin: 0 0 10px 0;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+      padding: ${px("40px")} ${px("15px")} ${px("10px")} ${px("15px")};
+      margin: 0 0 ${px("10px")} 0;
+      text-shadow: ${px("1px")} ${px("1px")} ${px("2px")} rgba(0,0,0,0.2);
       width: 100%;
     }
     .message-text {
       font-size: ${messageTextFontSize};
       color: ${theme.messageTextColor};
       background-color: ${theme.messageBackgroundColor};
-      padding: ${theme.messagePadding};
-      border-radius: ${theme.messageBorderRadius};
+      padding: ${messagePaddingCSS};
+      border-radius: ${messageBorderRadius};
       line-height: 1.4;
       white-space: pre-wrap;
       overflow-wrap: break-word;
       text-align: center;
-      margin: 15px auto;
+      margin: ${px("15px")} auto;
       max-width: 90%;
       max-height: 65%;
-      overflow: hidden; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      display: flex; 
+      overflow: hidden;
+      box-shadow: 0 ${px("1px")} ${px("3px")} rgba(0,0,0,0.1);
+      display: flex;
       align-items: center;
       justify-content: center;
     }
     .footer-text {
-      font-size: 32px;
+      font-size: ${px("32px")};
       color: ${theme.footerTextColor};
       opacity: 0.85;
       text-align: center;
-      padding: 10px 20px 40px 20px;
-      margin: 10px 0 0 0;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+      padding: ${px("10px")} ${px("20px")} ${px("40px")} ${px("20px")};
+      margin: ${px("10px")} 0 0 0;
+      text-shadow: ${px("1px")} ${px("1px")} ${px("2px")} rgba(0,0,0,0.2);
       width: 100%;
     }
   `;
