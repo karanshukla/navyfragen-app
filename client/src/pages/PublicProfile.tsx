@@ -197,7 +197,7 @@ export default function PublicProfile() {
             <BackgroundImage
               src={profile.banner || ""}
               style={{
-                filter: "blur(8px)",
+                filter: "blur(8px) brightness(0.7)",
                 position: "absolute",
                 top: -10,
                 left: -10,
