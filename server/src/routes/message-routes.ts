@@ -313,7 +313,7 @@ export function messageRoutes(
     })
   );
 
-  // Endpoint for a user to delete their data from the DB, need to also delete from the PDS
+  // Endpoint for a user to delete their data from the DB
   router.delete(
     "/delete-account",
     handler(async (req: express.Request, res: express.Response) => {
@@ -328,6 +328,45 @@ export function messageRoutes(
         return res.status(401).json({
           error:
             "Authentication failed - could not initialize agent or retrieve user DID",
+        });
+      }
+
+      // Delete from PDS
+      try {
+        // Message IDs
+        const rkeys = await ctx.db
+          .selectFrom("message")
+          .select(["tid"])
+          .where("recipient", "=", userSessionDid)
+          .execute();
+
+        if (rkeys.length === 0) {
+          ctx.logger.info(
+            { did: userSessionDid },
+            "No messages found for deletion in PDS"
+          );
+        }
+
+        for (const rkey of rkeys) {
+          await agent.com.atproto.repo.deleteRecord({
+            repo: userSessionDid,
+            collection: ids.AppNavyfragenMessage,
+            rkey: rkey.tid, // Use the TID as the rkey
+          });
+        }
+
+        ctx.logger.info(
+          { did: userSessionDid },
+          "Successfully deleted all messages from PDS"
+        );
+      } catch (err) {
+        ctx.logger.error(
+          { error: err, did: userSessionDid },
+          "Failed to delete messages from PDS"
+        );
+        return res.status(500).json({
+          error:
+            "Failed to delete messages from PDS, but data deleted in the DB",
         });
       }
 
@@ -349,27 +388,8 @@ export function messageRoutes(
         .where("did", "=", userSessionDid)
         .execute();
 
-      //delete from PDS
-      try {
-        await agent.com.atproto.repo.deleteRecord({
-          repo: userSessionDid,
-          collection: ids.AppNavyfragenMessage,
-          rkey: "",
-        });
-        ctx.logger.info(
-          { did: userSessionDid },
-          "Successfully deleted all messages from PDS"
-        );
-      } catch (err) {
-        ctx.logger.error(
-          { error: err, did: userSessionDid },
-          "Failed to delete messages from PDS"
-        );
-        return res.status(500).json({
-          error:
-            "Failed to delete messages from PDS, but data deleted in the DB",
-        });
-      }
+      //invalidate session
+      req.session = null; // Clear the session
 
       return res.json({ success: true });
     })
