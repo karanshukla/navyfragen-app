@@ -14,7 +14,9 @@
         "lexgen": "lex gen-server ./src/lexicon ./lexicons/*",
         "clean": "rimraf dist coverage",
         "lint": "eslint . --ext .ts",
-        "lint:fix": "eslint . --ext .ts --fix"
+        "lint:fix": "eslint . --ext .ts --fix",
+        "test": "tsx --test",
+        "test:watch": "tsx --test --watch"
     },
     "dependencies": {
         "@atproto/api": "^0.13.4",

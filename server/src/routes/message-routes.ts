@@ -6,6 +6,7 @@ import { RichText } from "@atproto/api";
 import { ids } from "../lexicon/lexicons"; // Added import for lexicon NSIDs
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message"; // Added import for base message record type
 import { initializeAgentFromSession } from "#/auth/session-agent";
+import { UserSettings } from "#/database/db";
 
 // MessageSchemaRecord already defines: message, createdAt, recipient.
 
@@ -356,6 +357,17 @@ export function messageRoutes(
       if (!userSessionDid) {
         return res.status(403).json({ error: "Not authenticated" });
       }
+
+      //stopgap for now
+      const userSettings = await ctx.db
+        .selectFrom("user_settings")
+        .selectAll()
+        .where("did", "=", userSessionDid)
+        .executeTakeFirst();
+      if (!userSettings || !userSettings?.pdsSyncEnabled) {
+        return res.status(200);
+      }
+
       // Initialize the agent for the authenticated user session
       const agent = await initializeAgentFromSession(req, ctx);
 

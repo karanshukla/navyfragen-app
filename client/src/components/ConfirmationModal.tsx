@@ -32,9 +32,8 @@ export function ConfirmationModal({
           color="blue"
           onClick={() => {
             onConfirm();
-            // onClose(); // Removed: Let the caller handle closing after onConfirm completes
           }}
-          loading={loading} // Pass loading to Mantine Button
+          loading={loading}
         >
           {confirmLabel}
         </Button>
