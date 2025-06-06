@@ -21,7 +21,6 @@ export function profileRoutes(
         return res.status(400).json({ error: "DID required" });
       }
       try {
-        const AtpAgent = require("@atproto/api").AtpAgent;
         const agent = new AtpAgent({ service: "https://api.bsky.app" });
         const profileResponse = await agent.getProfile({ actor: did });
         if (profileResponse.success) {

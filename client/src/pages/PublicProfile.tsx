@@ -25,7 +25,8 @@ import {
 } from "../api/profileService";
 import { useSendMessage } from "../api/messageService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { IconClearAll, IconSend, IconX } from "@tabler/icons-react";
+import { IconSend, IconX } from "@tabler/icons-react";
+import { parseRichText } from "../utils/parseRichText";
 
 const MAX_MESSAGE_LENGTH = 150;
 
@@ -197,7 +198,7 @@ export default function PublicProfile() {
             <BackgroundImage
               src={profile.banner || ""}
               style={{
-                filter: "blur(8px) brightness(0.7)",
+                filter: "blur(8px) brightness(0.5)",
                 position: "absolute",
                 top: -10,
                 left: -10,
@@ -272,7 +273,7 @@ export default function PublicProfile() {
                           textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
                         }}
                       >
-                        {profile.description}
+                        {parseRichText(profile.description)}
                       </Text>
                     )}
                   </Box>
@@ -334,7 +335,7 @@ export default function PublicProfile() {
                         textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
                       }}
                     >
-                      {profile.description}
+                      {parseRichText(profile.description)}
                     </Text>
                   )}
                 </Stack>
