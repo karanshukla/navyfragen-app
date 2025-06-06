@@ -165,7 +165,7 @@ migrations["005"] = {
       .createTable("user_settings")
       .addColumn("did", "varchar", (col) => col.primaryKey())
       .addColumn("pdsSyncEnabled", "boolean", (col) =>
-        col.notNull().defaultTo(1)
+        col.notNull().defaultTo(true)
       )
       .addColumn("createdAt", "varchar", (col) => col.notNull())
       .execute();

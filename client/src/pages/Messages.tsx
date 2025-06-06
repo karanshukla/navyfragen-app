@@ -56,7 +56,7 @@ export default function Messages() {
     defaultValue: true,
     getInitialValueInEffect: true,
   });
-  const [autoRefresh, setAutoRefresh] = useState({
+  const [autoRefresh, setAutoRefresh] = useLocalStorage({
     key: "autoRefresh",
     defaultValue: true,
     getInitialValueInEffect: true,
