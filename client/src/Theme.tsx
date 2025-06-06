@@ -35,9 +35,9 @@ const navyfragenTheme = createTheme({
 
   primaryColor: "deepBlue",
   defaultRadius: "md",
-  fontFamily: "Noto Sans, sans-serif",
+  fontFamily: "Noto Sans, 'Noto Color Emoji', sans-serif",
   scale: 1.05,
-  headings: { fontFamily: "Noto Sans, sans-serif" },
+  headings: { fontFamily: "Noto Sans, 'Noto Color Emoji', sans-serif" },
 });
 
 export default navyfragenTheme;
