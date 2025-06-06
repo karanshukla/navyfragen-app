@@ -8,7 +8,6 @@ import {
   Title,
   Container,
   Flex,
-  NavLink,
   Avatar,
   Text,
   Menu,
@@ -26,9 +25,9 @@ import { useSession, useLogout } from "./api/authService";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
+import Settings from "./pages/Settings";
 import PublicProfile from "./pages/PublicProfile";
 import OAuthCallback from "./pages/OAuthCallback";
-import { ConfirmationModal } from "./components/ConfirmationModal";
 import "@mantine/core/styles.css";
 import { IconMoon, IconUser, IconLogout, IconTrash } from "@tabler/icons-react";
 import { Notifications } from "@mantine/notifications";
@@ -38,7 +37,6 @@ import { Navigation } from "./Navigation";
 // App layout component
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
@@ -88,12 +86,12 @@ function AppLayout() {
           <style>
             {`
               .mantine-AppShell-navbar {
-                max-width: 50vw !important;
+                max-width: 60vw !important;
               }
             `}
           </style>
           <Burger
-            ref={burgerRef} // Added ref to Burger
+            ref={burgerRef}
             opened={opened}
             onClick={() => setOpened((o) => !o)}
             hiddenFrom="sm"
@@ -186,16 +184,6 @@ function AppLayout() {
               userProfile={userProfile || null}
             />
           </Box>
-          {isLoggedIn && (
-            <Box mt="auto">
-              <NavLink
-                label="Delete My Data"
-                onClick={() => setDeleteModalOpened(true)}
-                color="red"
-                leftSection={<IconTrash size="1rem" stroke={1.5} />}
-              />
-            </Box>
-          )}
         </Box>
       </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>
@@ -207,6 +195,7 @@ function AppLayout() {
             <Route path="/profile" element={<PublicProfile />} />
             <Route path="/profile/:handle" element={<PublicProfile />} />
             <Route path="/oauth_callback" element={<OAuthCallback />} />
+            <Route path="/settings" element={<Settings />} />
             <Route
               path="*"
               element={
@@ -227,23 +216,6 @@ function AppLayout() {
           </Routes>
         </Container>
       </AppShell.Main>
-      <ConfirmationModal
-        opened={deleteModalOpened}
-        onClose={() => setDeleteModalOpened(false)}
-        onConfirm={async () => {
-          try {
-            const { apiClient } = await import("./api/apiClient");
-            await apiClient.delete("/delete-account");
-            window.location.href = "/";
-          } catch (e: any) {
-            console.error("Failed to delete account", e);
-          }
-          setDeleteModalOpened(false);
-        }}
-        title="Delete Account"
-        message="Are you sure you want to delete your account and all data? This cannot be undone."
-        confirmLabel="Delete"
-      />
     </AppShell>
   );
 }

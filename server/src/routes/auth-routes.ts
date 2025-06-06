@@ -88,6 +88,7 @@ export function authRoutes(
     "/session",
     handler(async (req: express.Request, res: express.Response) => {
       if (!req.session?.did) {
+        req.session = null;
         ctx.logger.error("No session cookie found, user is not logged in");
         return res.json({ isLoggedIn: false, profile: null, did: null });
       }
@@ -113,6 +114,7 @@ export function authRoutes(
         // Fetch the profile using the authenticated agent
         const agent = await initializeAgentFromSession(req, ctx);
         if (!agent) {
+          req.session = null;
           ctx.logger.warn(
             { did },
             "No agent could be initialized from session"
@@ -122,6 +124,7 @@ export function authRoutes(
         const response = await agent.getProfile({ actor: did });
         const data = response?.data as BskyProfileRecord;
         if (!data) {
+          req.session = null;
           ctx.logger.error({ did }, "No profile data found for user");
           return res.json({ isLoggedIn: false, profile: null, did: null });
         }
@@ -136,6 +139,7 @@ export function authRoutes(
         };
         return res.json({ isLoggedIn: true, profile, did });
       } catch (err) {
+        req.session = null;
         ctx.logger.error({ err }, "Error fetching profile");
         return res.json({ isLoggedIn: false, profile: null, did: null });
       }

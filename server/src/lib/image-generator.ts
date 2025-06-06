@@ -73,8 +73,8 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: 1080,
-        height: 1080,
+        width: 810,
+        height: 810,
         args: {
           fullPage: true,
         },

@@ -5,10 +5,10 @@ import {
   SqliteDialect,
   Migration,
   MigrationProvider,
-  PostgresDialect, // Add PostgresDialect import
+  PostgresDialect,
 } from "kysely";
-import { Pool } from "pg"; // Add pg Pool import
-import { env } from "#/lib/env"; // Import env
+import { Pool } from "pg";
+import { env } from "#/lib/env";
 
 // Types
 
@@ -18,7 +18,8 @@ export type DatabaseSchema = {
   auth_state: AuthState;
   message: Message; // Add message table
   user_profile: UserProfile; // Add user_profile table
-  sessions: Sessions; // Express session storage
+  sessions: Sessions; // NOT USED, to remove later
+  user_settings: UserSettings; // Add user_settings table
 };
 
 // Unused, to remove later
@@ -50,6 +51,12 @@ export type Message = {
 export type UserProfile = {
   did: string; // User's Decentralized Identifier
   createdAt: string; // Timestamp of when the user was first created
+};
+
+export type UserSettings = {
+  did: string; // User's Decentralized Identifier
+  pdsSyncEnabled: number; // Whether PDS sync is enabled (1=true, 0=false for SQLite compatibility)
+  createdAt: string; // Timestamp of when the user settings were first created
 };
 
 //Unused, to remove later
@@ -149,6 +156,32 @@ migrations["004"] = {
       .addColumn("sess", "varchar", (col) => col.notNull())
       .addColumn("expire", "varchar", (col) => col.notNull())
       .execute();
+  },
+};
+
+migrations["005"] = {
+  async up(db: Kysely<any>) {
+    await db.schema
+      .createTable("user_settings")
+      .addColumn("did", "varchar", (col) => col.primaryKey())
+      .addColumn("pdsSyncEnabled", "boolean", (col) =>
+        col.notNull().defaultTo(1)
+      )
+      .addColumn("createdAt", "varchar", (col) => col.notNull())
+      .execute();
+
+    await db
+      .insertInto("user_settings")
+      .columns(["did", "createdAt"])
+      .expression((eb) =>
+        eb
+          .selectFrom("user_profile")
+          .select(["user_profile.did", "user_profile.createdAt"])
+      )
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.dropTable("user_settings").ifExists().execute();
   },
 };
 

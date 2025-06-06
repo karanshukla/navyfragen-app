@@ -33,7 +33,7 @@ export default function OAuthCallback() {
   if (loading) {
     return (
       <Container>
-        <Center style={{ minHeight: "200px" }}>
+        <Center>
           <Title order={3} mb="md">
             Completing OAuth Login...
           </Title>
