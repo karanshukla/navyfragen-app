@@ -30,7 +30,6 @@ export async function generateQuestionImage(
     messagePadding: "20px",
     messageBorderRadius: "8px",
     footerTextColor: "#FFFFFF",
-    // MODIFIED: Add Noto Color Emoji to the font family stack
     fontFamily: "'Noto Sans', 'Noto Color Emoji', sans-serif",
     imageMargin: "60px",
   };
@@ -101,14 +100,15 @@ export async function generateQuestionImage(
         { error: errorBody, status: response.status },
         "Failed to generate image with export-html service"
       );
+
       // Log the HTML for debugging if the service fails
       if (response.status >= 400 && response.status < 500) {
-        // 4xx errors might be due to bad HTML/CSS
         logger.debug(
           { htmlSent: html },
           "HTML content sent to image generation service (client error)"
         );
       }
+
       return {};
     }
   } catch (imgErr) {
@@ -120,20 +120,14 @@ export async function generateQuestionImage(
 // Helper function to generate CSS string from theme object
 function getCss(theme: any, messageLength: number): string {
   let messageTextFontSize;
-  let messageTextPaddingTop;
 
   if (messageLength <= 50) {
     messageTextFontSize = "48px";
-    messageTextPaddingTop = "30px";
   } else if (messageLength <= 100) {
     messageTextFontSize = "44px";
-    messageTextPaddingTop = theme.messagePadding;
   } else {
     messageTextFontSize = "36px";
-    messageTextPaddingTop = "15px";
   }
-
-  const messagePaddingCSS = `${messageTextPaddingTop} ${theme.messagePadding} ${theme.messagePadding} ${theme.messagePadding}`;
 
   // Ensure the font-family from the theme is used in the body or specific elements
   return `
@@ -142,10 +136,10 @@ function getCss(theme: any, messageLength: number): string {
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden; /* Prevent scrollbars in the captured image */
+      overflow: hidden;
     }
     body {
-      font-family: ${theme.fontFamily}; /* Ensure font stack is applied */
+      font-family: ${theme.fontFamily}; 
       background-color: ${theme.imageBackgroundColor};
       padding: ${theme.imageMargin};
       box-sizing: border-box;
@@ -158,8 +152,8 @@ function getCss(theme: any, messageLength: number): string {
       border-radius: ${theme.cardBorderRadius};
       padding: ${theme.cardPadding};
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      width: 100%; /* Fill the padded area of the body */
-      height: 100%; /* Fill the padded area of the body */
+      width: 100%; 
+      height: 100%; 
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -171,7 +165,7 @@ function getCss(theme: any, messageLength: number): string {
       font-size: 72px;
       font-weight: bold;
       color: ${theme.headerTextColor};
-      padding: 60px 15px 10px 15px;
+      padding: 40px 15px 10px 15px;
       margin: 0 0 10px 0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
       width: 100%;
@@ -180,7 +174,7 @@ function getCss(theme: any, messageLength: number): string {
       font-size: ${messageTextFontSize};
       color: ${theme.messageTextColor};
       background-color: ${theme.messageBackgroundColor};
-      padding: ${messagePaddingCSS};
+      padding: ${theme.messagePadding};
       border-radius: ${theme.messageBorderRadius};
       line-height: 1.4;
       white-space: pre-wrap;
@@ -188,12 +182,12 @@ function getCss(theme: any, messageLength: number): string {
       text-align: center;
       margin: 15px auto;
       max-width: 90%;
-      max-height: 65%; /* Be mindful of content overflow with this */
-      overflow: hidden; /* Content that overflows will be hidden */
+      max-height: 65%;
+      overflow: hidden; 
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      display: flex; /* For vertical centering of text if line-height isn't enough */
-      align-items: center; /* Vertically center text content */
-      justify-content: center; /* Horizontally center text content */
+      display: flex; 
+      align-items: center;
+      justify-content: center;
     }
     .footer-text {
       font-size: 32px;
