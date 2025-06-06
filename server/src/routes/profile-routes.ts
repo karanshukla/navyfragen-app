@@ -1,6 +1,7 @@
 import express from "express";
-import { param, validationResult } from "express-validator";
+import { param } from "express-validator";
 import type { AppContext } from "../index";
+import { AtpAgent } from "@atproto/api";
 
 export function profileRoutes(
   ctx: AppContext,
@@ -20,7 +21,6 @@ export function profileRoutes(
         return res.status(400).json({ error: "DID required" });
       }
       try {
-        const AtpAgent = require("@atproto/api").AtpAgent;
         const agent = new AtpAgent({ service: "https://api.bsky.app" });
         const profileResponse = await agent.getProfile({ actor: did });
         if (profileResponse.success) {
@@ -46,7 +46,7 @@ export function profileRoutes(
           return res.status(404).json({ error: "Profile not found" });
         }
       } catch (err) {
-        ctx.logger.error({ err, did }, "Failed to fetch profile by DID"); // Log with DID
+        ctx.logger.error({ err, did }, "Failed to fetch profile by DID");
         return res.status(500).json({ error: "Failed to fetch profile" });
       }
     })

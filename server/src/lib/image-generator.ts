@@ -1,5 +1,5 @@
 import fetch from "node-fetch"; // Assuming 'node-fetch' v2 for response.buffer()
-// If using node-fetch v3+, response.arrayBuffer() then Buffer.from(await response.arrayBuffer())
+// If using node-fetch v3+, use response.arrayBuffer() then Buffer.from(await response.arrayBuffer())
 import type { Logger } from "pino";
 import { env } from "#/lib/env";
 
@@ -150,6 +150,7 @@ function getCss(theme: any, messageLength: number): string {
   }
   const messagePaddingCSS = `${messageTextPaddingTop} ${messagePadding} ${messagePadding} ${messagePadding}`;
 
+  // Ensure the font-family from the theme is used in the body or specific elements
   return `
     html, body {
       margin: 0;
