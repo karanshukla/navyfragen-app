@@ -6,7 +6,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { useLocation, Link } from "react-router-dom";
-import { Divider, NavLink, Text } from "@mantine/core";
+import { Divider, NavLink, Text, Box } from "@mantine/core";
 
 interface UserProfile {
   did?: string;
@@ -31,9 +31,10 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   };
 
   return (
-    <>
-      <>
+    <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <Box style={{ flexGrow: 1 }}>
         <NavLink
+          my="xs"
           label="Home"
           component={Link}
           to="/"
@@ -45,6 +46,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
           <>
             {" "}
             <NavLink
+              my="xs"
               label="Messages"
               component={Link}
               to="/messages"
@@ -54,6 +56,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             />
             <Divider />
             <NavLink
+              my="xs"
               label="Settings"
               component={Link}
               to="/settings"
@@ -65,6 +68,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
         ) : (
           <>
             <NavLink
+              my="xs"
               label="Login"
               component={Link}
               to="/login"
@@ -74,17 +78,19 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             />
           </>
         )}
-      </>
-      <Divider />
-      <Text size="xs" my="md" ta="center">
-        Questions? Feedback? Reach out on Bluesky
-      </Text>
-      <NavLink
-        label="@navyfragen.app"
-        component={Link}
-        to="https://bsky.app/profile/navyfragen.app"
-        leftSection={<IconButterfly size="1rem" stroke={1.5} />}
-      />
-    </>
+      </Box>
+      <Box>
+        <Divider />
+        <Text size="xs" my="md" ta="center">
+          Questions? Feedback? Reach out on Bluesky
+        </Text>
+        <NavLink
+          label="@navyfragen.app"
+          component={Link}
+          to="https://bsky.app/profile/navyfragen.app"
+          leftSection={<IconButterfly size="1rem" stroke={1.5} />}
+        />
+      </Box>
+    </Box>
   );
 }

@@ -79,9 +79,11 @@ export function messageRoutes(
       .isString()
       .isLength({ min: 1, max: 500 })
       .withMessage("Response must be 1-500 chars"),
+    body("includeQuestionAsImage").isBoolean().optional(),
     checkValidation,
     handler(async (req: express.Request, res: express.Response) => {
-      const { tid, recipient, original, response } = req.body;
+      const { tid, recipient, original, response, includeQuestionAsImage } =
+        req.body;
       if (!tid || !recipient || !response) {
         ctx.logger.warn(
           { tid, recipient, response },
@@ -112,34 +114,45 @@ export function messageRoutes(
           createdAt: new Date().toISOString(),
         };
 
-        const { imageBlob, imageAltText } = await generateQuestionImage(
-          original,
-          ctx.logger,
-          handle
-        );
+        if (includeQuestionAsImage) {
+          const { imageBlob, imageAltText } = await generateQuestionImage(
+            original,
+            ctx.logger,
+            handle
+          );
 
-        if (!imageBlob) {
-          ctx.logger.error("Image generation failed, no imageBlob returned");
-          return res.status(500).json({ error: "Image generation failed" });
-        }
-
-        if (imageBlob && agent) {
-          try {
-            const uploadedImage = await agent.uploadBlob(imageBlob, {
-              encoding: "image/png", // Assuming PNG, adjust if API returns something different
-            });
-            postRecord.embed = {
-              $type: "app.bsky.embed.images",
-              images: [
-                {
-                  image: uploadedImage.data.blob,
-                  alt: imageAltText || "Image of the anonymous question",
-                },
-              ],
-            };
-          } catch (uploadErr) {
-            ctx.logger.error(uploadErr, "Failed to upload image to Bluesky");
+          if (!imageBlob) {
+            ctx.logger.error("Image generation failed, no imageBlob returned");
+            return res.status(500).json({ error: "Image generation failed" });
           }
+
+          if (agent) {
+            try {
+              const uploadedImage = await agent.uploadBlob(imageBlob, {
+                encoding: "image/png", // Assuming PNG, adjust if API returns something different
+              });
+              postRecord.embed = {
+                $type: "app.bsky.embed.images",
+                images: [
+                  {
+                    image: uploadedImage.data.blob,
+                    alt: imageAltText || "Image of the anonymous question",
+                  },
+                ],
+              };
+            } catch (uploadErr) {
+              ctx.logger.error(uploadErr, "Failed to upload image to Bluesky");
+              return res.status(500).json({
+                error: "Failed to upload image, try a text only response",
+              });
+            }
+          }
+        } else {
+          const combinedText = `${response}\n\nAnon asked via 🔷💬📩: "${original}"`;
+          const richTextWithQuestion = new RichText({ text: combinedText });
+          await richTextWithQuestion.detectFacets(agent);
+          postRecord.text = richTextWithQuestion.text;
+          postRecord.facets = richTextWithQuestion.facets || [];
         }
 
         const postRes = await agent.post(postRecord);
@@ -374,10 +387,6 @@ export function messageRoutes(
       await ctx.db
         .deleteFrom("message")
         .where("recipient", "=", userSessionDid)
-        .execute();
-      await ctx.db
-        .deleteFrom("auth_session")
-        .where("key", "=", userSessionDid)
         .execute();
       await ctx.db
         .deleteFrom("user_profile")

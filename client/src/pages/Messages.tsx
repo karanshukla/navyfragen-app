@@ -33,7 +33,10 @@ import ShareButton from "../components/ShareButton";
 import { useLocalStorage } from "@mantine/hooks";
 
 const shortlinkurl =
-  import.meta.env.VITE_SHORTLINK_URL || "localhost:3033/profile";
+  import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
+
+const MAX_BSKY_POST_LENGTH = 280;
+const GENERAL_BUFFER = 3; // In case formatting changes in the BE or other stuff
 
 interface PageAlert {
   title: string;
@@ -56,8 +59,8 @@ export default function Messages() {
     defaultValue: true,
     getInitialValueInEffect: true,
   });
-  const [autoRefresh, setAutoRefresh] = useLocalStorage({
-    key: "autoRefresh",
+  const [includeQuestionAsImage, setIncludeQuestionAsImage] = useLocalStorage({
+    key: "includeQuestionAsImage",
     defaultValue: true,
     getInitialValueInEffect: true,
   });
@@ -91,7 +94,9 @@ export default function Messages() {
     error: messagesError,
     refetch: refetchMessages,
   } = useMessages(session?.did || null, {
-    refetchInterval: autoRefresh ? 3000 : false,
+    refetchInterval: 10000, //10 seconds
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const { mutate: deleteMessage, isPending: deleteLoading } =
@@ -102,12 +107,41 @@ export default function Messages() {
     useAddExampleMessages();
 
   useEffect(() => {
-    setCharacterLimit(
-      appendProfileLink && session?.profile?.handle
-        ? 280 - (shortlinkurl.length + session.profile.handle.length + 3)
-        : 280
-    );
-  }, [appendProfileLink, session, shortlinkurl]);
+    let maxLengthForResponse = MAX_BSKY_POST_LENGTH - GENERAL_BUFFER;
+
+    if (appendProfileLink && session?.profile?.handle) {
+      const profileLinkFull = ` ${shortlinkurl}/${session.profile.handle}`;
+      maxLengthForResponse -= profileLinkFull.length;
+    }
+
+    if (!includeQuestionAsImage) {
+      if (respondingTid && messagesData?.messages) {
+        const currentMessage = messagesData.messages.find(
+          (m) => m.tid === respondingTid
+        );
+        if (currentMessage) {
+          const originalMessageText = currentMessage.message;
+          // This should align with the backend formatting for accuracy
+          const formattingPrefix = " \\n\\nAnon asked via 💙📩❓: *";
+          const formattingSuffix = "*";
+          const questionPartOverhead =
+            formattingPrefix.length +
+            originalMessageText.length +
+            formattingSuffix.length;
+          maxLengthForResponse -= questionPartOverhead;
+        }
+      }
+    }
+
+    setCharacterLimit(Math.max(0, maxLengthForResponse));
+  }, [
+    appendProfileLink,
+    session?.profile?.handle,
+    shortlinkurl,
+    includeQuestionAsImage,
+    respondingTid,
+    messagesData,
+  ]);
 
   useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
@@ -208,6 +242,7 @@ export default function Messages() {
         recipient: msg.recipient,
         original: msg.message,
         response: appendedResponseText ?? responseText,
+        includeQuestionAsImage: includeQuestionAsImage,
       },
       {
         onSuccess: (data) => {
@@ -396,11 +431,11 @@ export default function Messages() {
                   label="Use gradient backgrounds"
                 />
                 <Switch
-                  checked={autoRefresh}
+                  checked={includeQuestionAsImage}
                   onChange={(event) =>
-                    setAutoRefresh(event.currentTarget.checked)
+                    setIncludeQuestionAsImage(event.currentTarget.checked)
                   }
-                  label="Auto-refresh messages"
+                  label="Include question as an image"
                 />
                 <Switch
                   checked={confirmBeforeDelete}
