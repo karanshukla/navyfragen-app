@@ -177,13 +177,11 @@ function AppLayout() {
         <Box
           style={{ display: "flex", flexDirection: "column", height: "100%" }}
         >
-          <Box>
-            <Navigation
-              onLinkClick={() => setOpened(false)}
-              isLoggedIn={isLoggedIn}
-              userProfile={userProfile || null}
-            />
-          </Box>
+          <Navigation
+            onLinkClick={() => setOpened(false)}
+            isLoggedIn={isLoggedIn}
+            userProfile={userProfile || null}
+          />
         </Box>
       </AppShell.Navbar>{" "}
       <AppShell.Main pt={70}>

@@ -52,6 +52,7 @@ describe("messageService", () => {
     recipient: mockDid,
     original: "Original message",
     response: "Response message",
+    includeQuestionAsImage: true, // Added new parameter
   };
 
   const mockResponseMessageResponse = {
@@ -117,19 +118,39 @@ describe("messageService", () => {
   });
 
   describe("respondToMessage", () => {
-    it("should call apiClient.post with the correct endpoint and data", async () => {
+    it("should call apiClient.post with the correct endpoint and data when includeQuestionAsImage is true", async () => {
       vi.mocked(apiClient.post).mockResolvedValueOnce(
         mockResponseMessageResponse
       );
 
-      const result = await messageService.respondToMessage(
-        mockResponseMessageRequest
-      );
+      const requestWithImage = {
+        ...mockResponseMessageRequest,
+        includeQuestionAsImage: true,
+      };
+      const result = await messageService.respondToMessage(requestWithImage);
 
       expect(result).toEqual(mockResponseMessageResponse);
       expect(apiClient.post).toHaveBeenCalledWith(
         "/messages/respond",
-        mockResponseMessageRequest
+        requestWithImage
+      );
+    });
+
+    it("should call apiClient.post with the correct endpoint and data when includeQuestionAsImage is false", async () => {
+      vi.mocked(apiClient.post).mockResolvedValueOnce(
+        mockResponseMessageResponse
+      );
+
+      const requestWithoutImage = {
+        ...mockResponseMessageRequest,
+        includeQuestionAsImage: false,
+      };
+      const result = await messageService.respondToMessage(requestWithoutImage);
+
+      expect(result).toEqual(mockResponseMessageResponse);
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/messages/respond",
+        requestWithoutImage
       );
     });
   });

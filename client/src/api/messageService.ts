@@ -29,6 +29,7 @@ export interface ResponseMessageRequest {
   recipient: string;
   original: string;
   response: string;
+  includeQuestionAsImage?: boolean;
 }
 
 export interface ResponseMessageResponse {
