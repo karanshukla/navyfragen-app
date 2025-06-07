@@ -35,6 +35,9 @@ import { useLocalStorage } from "@mantine/hooks";
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
+const MAX_BSKY_POST_LENGTH = 280;
+const GENERAL_BUFFER = 3; // In case formatting changes in the BE or other stuff
+
 interface PageAlert {
   title: string;
   message: React.ReactNode;
@@ -91,7 +94,7 @@ export default function Messages() {
     error: messagesError,
     refetch: refetchMessages,
   } = useMessages(session?.did || null, {
-    refetchInterval: 30000, //30 seconds
+    refetchInterval: 10000, //10 seconds
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -104,9 +107,6 @@ export default function Messages() {
     useAddExampleMessages();
 
   useEffect(() => {
-    const MAX_BSKY_POST_LENGTH = 280;
-    const GENERAL_BUFFER = 3; // In case formatting changes in the BE
-
     let maxLengthForResponse = MAX_BSKY_POST_LENGTH - GENERAL_BUFFER;
 
     if (appendProfileLink && session?.profile?.handle) {
