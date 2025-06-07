@@ -105,7 +105,7 @@ export default function Messages() {
 
   useEffect(() => {
     const MAX_BSKY_POST_LENGTH = 280;
-    const GENERAL_BUFFER = 5; // In case formatting changes in the BE
+    const GENERAL_BUFFER = 3; // In case formatting changes in the BE
 
     let maxLengthForResponse = MAX_BSKY_POST_LENGTH - GENERAL_BUFFER;
 
@@ -121,9 +121,8 @@ export default function Messages() {
         );
         if (currentMessage) {
           const originalMessageText = currentMessage.message;
-          // Backend format: `${response}\\n\\n💙📩❓: *${original}*`
-          // Overhead is for: "\\n\\n💙📩❓: *" (prefix) + originalMessageText + "*" (suffix)
-          const formattingPrefix = "\\n\\n💙📩❓: *";
+          // This should align with the backend formatting for accuracy
+          const formattingPrefix = " \\n\\nAnon asked via 💙📩❓: *";
           const formattingSuffix = "*";
           const questionPartOverhead =
             formattingPrefix.length +
