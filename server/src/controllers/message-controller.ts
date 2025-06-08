@@ -1,5 +1,5 @@
 import express from "express";
-import { body, param } from "express-validator";
+import { body } from "express-validator";
 import { MessageService } from "../services/message-service";
 import { Logger } from "pino";
 import { initializeAgentFromSession } from "#/auth/session-agent";
