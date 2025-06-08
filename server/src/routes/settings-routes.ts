@@ -1,7 +1,7 @@
 import express from "express";
 import type { AppContext } from "../index";
-import { SettingsController } from "../controllers/settingsController";
-import { SettingsService } from "../services/settingsService";
+import { SettingsController } from "../controllers/settings-controller";
+import { SettingsService } from "../services/settings-service";
 
 export function settingsRoutes(
   ctx: AppContext,

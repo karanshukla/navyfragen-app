@@ -1,12 +1,6 @@
 import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
-import { SettingsService, UserSettings } from "../services/settingsService";
-import {
-  SelectQueryBuilder,
-  InsertQueryBuilder,
-  UpdateQueryBuilder,
-  Kysely,
-} from "kysely";
+import { SettingsService, UserSettings } from "../services/settings-service";
 
 interface MockDB {
   user_settings: UserSettings;

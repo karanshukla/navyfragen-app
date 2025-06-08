@@ -1,6 +1,6 @@
 import express from "express";
 import { body } from "express-validator";
-import { SettingsService } from "../services/settingsService";
+import { SettingsService } from "../services/settings-service";
 import { Logger } from "pino";
 
 export class SettingsController {
