@@ -20,7 +20,7 @@ describe("ProfileService", () => {
     where() {
       return this;
     },
-    executeTakeFirst: async () => undefined,
+    executeTakeFirst: async () => undefined as any, // Will be overridden in tests
   };
 
   const mockDb = {
