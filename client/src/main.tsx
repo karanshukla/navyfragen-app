@@ -181,7 +181,6 @@ function AppLayout() {
           <Navigation
             onLinkClick={() => setOpened(false)}
             isLoggedIn={isLoggedIn}
-            userProfile={userProfile || null}
           />
         </Box>
       </AppShell.Navbar>{" "}
