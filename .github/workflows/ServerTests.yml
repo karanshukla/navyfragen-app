@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  client-tests:
+  server-tests:
     runs-on: ubuntu-latest
 
     steps:
