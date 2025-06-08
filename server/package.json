@@ -15,8 +15,8 @@
         "clean": "rimraf dist coverage",
         "lint": "eslint . --ext .ts",
         "lint:fix": "eslint . --ext .ts --fix",
-        "test": "node --import tsx --test src/**/*.test.ts",
-        "test:watch": "node --import tsx --watch --test src/**/*.test.ts"
+        "test": "node --import ./src/tests/test-bootstrap.ts --import tsx --test src/**/*.test.ts",
+        "test:watch": "node --import ./src/tests/test-bootstrap.ts --import tsx --watch --test src/**/*.test.ts"
     },
     "dependencies": {
         "@atproto/api": "^0.13.4",
