@@ -164,7 +164,6 @@ export default function Settings() {
                 ) : (
                   <div
                     style={{
-                      opacity: updateSettings.isPending ? 0.6 : 1,
                       marginTop: "auto",
                     }}
                   >
@@ -177,8 +176,21 @@ export default function Settings() {
                         });
                       }}
                       disabled={updateSettings.isPending}
+                      styles={{
+                        label: {
+                          // Prevent label style changes when disabled
+                          opacity: 1,
+                          color: "inherit", // Inherit color to avoid theme-specific issues
+                        },
+                        // Ensure the switch track and thumb also don't overly change appearance if that contributes
+                        track: {
+                          opacity: updateSettings.isPending ? 0.7 : 1,
+                        },
+                        thumb: {
+                          opacity: updateSettings.isPending ? 0.7 : 1,
+                        },
+                      }}
                     />
-                    {updateSettings.isPending && <Loader size="xs" ml="sm" />}
                   </div>
                 )}
               </Paper>
