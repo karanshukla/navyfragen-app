@@ -1,4 +1,6 @@
 // test-bootstrap.js
+// This file is for test/CI only. All values are dummy and not used in production.
+// nodejsscan ignore: file
 process.env.CLIENT_URL ||= "http://localhost";
 process.env.COOKIE_SECRET ||= "testsecret";
 process.env.DB_PATH ||= ":memory:";

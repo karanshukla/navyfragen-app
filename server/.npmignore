@@ -1,2 +1,0 @@
-# Ignore test bootstrap JS file for npm publish and scanners
-src/tests/test-bootstrap.js
