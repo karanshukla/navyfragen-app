@@ -222,3 +222,7 @@ function getCss(theme: any, messageLength: number): string {
     }
   `;
 }
+
+export const imageGenerator = {
+  generateQuestionImage,
+};
