@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Container,
   Title,
@@ -17,9 +17,9 @@ import { ConfirmationModal } from "../components/ConfirmationModal";
 import { apiClient, ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
+import { useInstallPrompt } from "../components/InstallPromptContext";
 
 export default function Settings() {
-  const [installPrompt, setInstallPrompt] = useState<any | null>(null);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
@@ -36,33 +36,16 @@ export default function Settings() {
   } = useUserSettings();
   const updateSettings = useUpdateUserSettings({
     onSuccess: () => {
-      console.log("Settings updated successfully.");
-      // No UI success notification will be shown
+      // Add some UI if there are other settings aside from just PDS sync
     },
     onError: (error: ApiError) => {
-      console.error("Failed to update settings:", error);
       setUpdateError(
         error.error || "Failed to update settings. Please try again."
       );
       setTimeout(() => setUpdateError(null), 5000);
     },
   });
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
-    };
-  }, []);
+  const { installPrompt, setInstallPrompt } = useInstallPrompt();
 
   const handleInstallClick = async () => {
     if (!installPrompt) {
@@ -70,7 +53,10 @@ export default function Settings() {
     }
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
-    setInstallPrompt(null);
+    if (outcome === "accepted") {
+      setInstallPrompt(null);
+    }
+    // If outcome is "dismissed", keep the prompt so the user can try again
   };
 
   return (
@@ -122,7 +108,15 @@ export default function Settings() {
                   </Text>
                   <Divider my="md" />
                 </div>
-                <Button onClick={handleInstallClick} mt="auto" fullWidth>
+                <Button
+                  onClick={handleInstallClick}
+                  mt="auto"
+                  fullWidth
+                  disabled={!installPrompt}
+                  title={
+                    !installPrompt ? "Refresh the page to enable install" : ""
+                  }
+                >
                   Install Navyfragen
                 </Button>
               </Paper>
@@ -170,7 +164,6 @@ export default function Settings() {
                 ) : (
                   <div
                     style={{
-                      opacity: updateSettings.isPending ? 0.6 : 1,
                       marginTop: "auto",
                     }}
                   >
@@ -183,8 +176,21 @@ export default function Settings() {
                         });
                       }}
                       disabled={updateSettings.isPending}
+                      styles={{
+                        label: {
+                          // Prevent label style changes when disabled
+                          opacity: 1,
+                          color: "inherit", // Inherit color to avoid theme-specific issues
+                        },
+                        // Ensure the switch track and thumb also don't overly change appearance if that contributes
+                        track: {
+                          opacity: updateSettings.isPending ? 0.7 : 1,
+                        },
+                        thumb: {
+                          opacity: updateSettings.isPending ? 0.7 : 1,
+                        },
+                      }}
                     />
-                    {updateSettings.isPending && <Loader size="xs" ml="sm" />}
                   </div>
                 )}
               </Paper>

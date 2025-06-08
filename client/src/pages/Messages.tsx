@@ -47,6 +47,8 @@ interface PageAlert {
 export default function Messages() {
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number>(-1);
+  const messageCardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Local storage settings
   const [appendProfileLink, setAppendProfileLink] = useLocalStorage({
@@ -218,6 +220,13 @@ export default function Messages() {
   const handlePrepareResponse = (tid: string) => {
     setRespondingTid(tid);
     setResponseText("");
+    // Ensure the card that is being responded to gets focus for a11y
+    const messageIndex = messagesData?.messages.findIndex(
+      (msg) => msg.tid === tid
+    );
+    if (messageIndex !== undefined && messageIndex !== -1) {
+      setFocusedCardIndex(messageIndex);
+    }
   };
 
   const handleSendResponse = (msg: Message) => {
@@ -306,6 +315,62 @@ export default function Messages() {
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  useEffect(() => {
+    // Initialize or update messageCardRefs when messagesData changes
+    if (messagesData?.messages) {
+      messageCardRefs.current = messagesData.messages.map(() => null);
+    }
+  }, [messagesData]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const targetNodeName = (event.target as HTMLElement)?.nodeName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(targetNodeName)) {
+        return;
+      }
+
+      if (event.altKey || event.metaKey) {
+        if (event.key.toUpperCase() === "R") {
+          event.preventDefault();
+          if (messagesData?.messages && messagesData.messages.length > 0) {
+            const newIndex =
+              focusedCardIndex === -1
+                ? 0
+                : (focusedCardIndex + 1) % messagesData.messages.length;
+            setFocusedCardIndex(newIndex);
+            messageCardRefs.current[newIndex]?.focus();
+          }
+        }
+      }
+
+      // Navigate between cards with arrow keys when a card is focused
+      if (
+        focusedCardIndex !== -1 &&
+        (event.key === "ArrowDown" || event.key === "ArrowUp")
+      ) {
+        event.preventDefault();
+        if (messagesData?.messages && messagesData.messages.length > 0) {
+          let newIndex = focusedCardIndex;
+          if (event.key === "ArrowDown") {
+            newIndex = (focusedCardIndex + 1) % messagesData.messages.length;
+          }
+          if (event.key === "ArrowUp") {
+            newIndex =
+              (focusedCardIndex - 1 + messagesData.messages.length) %
+              messagesData.messages.length;
+          }
+          setFocusedCardIndex(newIndex);
+          messageCardRefs.current[newIndex]?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [focusedCardIndex, messagesData, setFocusedCardIndex]);
 
   return (
     <Container>
@@ -447,134 +512,164 @@ export default function Messages() {
               </Group>
               <Divider mb="md" />
               <Grid align="flex-start">
-                {(messagesData.messages ?? []).map((msg: Message) => (
-                  <Grid.Col
-                    span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
-                    key={msg.tid}
-                  >
-                    <Paper
-                      id={`message-card-${msg.tid}`}
-                      p="md"
-                      shadow="lg"
-                      onClick={() => {
-                        if (respondingTid !== msg.tid) {
-                          handlePrepareResponse(msg.tid);
-                        } else {
-                          setRespondingTid(null);
-                        }
-                      }}
-                      style={{
-                        cursor: "pointer",
-                        height: "100%",
-                        background: useGradients
-                          ? "linear-gradient(to right, #005299, #7700aa)"
-                          : "var(--mantine-color-deepBlue-9)",
-                      }}
+                {(messagesData.messages ?? []).map(
+                  (msg: Message, index: number) => (
+                    <Grid.Col
+                      span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
+                      key={msg.tid}
                     >
-                      <Stack>
-                        <Group justify="space-between">
-                          <Box
-                            p="xs"
-                            style={{ borderRadius: "var(--mantine-radius-sm)" }}
-                          >
-                            <Text size="xs" variant="subtle">
-                              {new Date(msg.createdAt).toLocaleString(
-                                undefined,
-                                {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: false,
-                                  timeZoneName: "short",
-                                }
-                              )}
-                            </Text>
-                          </Box>
-                          <Group>
-                            <Button
-                              size="xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRequest(msg.tid);
+                      <Paper
+                        id={`message-card-${msg.tid}`}
+                        ref={(el) => {
+                          messageCardRefs.current[index] = el;
+                        }}
+                        tabIndex={0}
+                        p="md"
+                        shadow="lg"
+                        onClick={() => {
+                          if (respondingTid !== msg.tid) {
+                            handlePrepareResponse(msg.tid);
+                          } else {
+                            setRespondingTid(null);
+                          }
+                        }}
+                        onFocus={() => setFocusedCardIndex(index)} // Keep track of focused card
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            if (respondingTid !== msg.tid) {
+                              handlePrepareResponse(msg.tid);
+                            } else {
+                              setRespondingTid(null);
+                            }
+                          }
+                        }}
+                        style={{
+                          cursor: "pointer",
+                          height: "100%",
+                          background: useGradients
+                            ? "linear-gradient(to right, #005299, #7700aa)"
+                            : "var(--mantine-color-deepBlue-9)",
+                          outline:
+                            focusedCardIndex === index
+                              ? "2px solid var(--mantine-color-blue-5)"
+                              : "none",
+                        }}
+                      >
+                        <Stack>
+                          <Group justify="space-between">
+                            <Box
+                              p="xs"
+                              style={{
+                                borderRadius: "var(--mantine-radius-sm)",
                               }}
-                              color="red"
-                              variant="outline"
-                              loading={deletingTid === msg.tid}
                             >
-                              <IconTrash size={16} />
-                            </Button>
-                          </Group>
-                        </Group>
-                        <Center>
-                          <Text
-                            c="white"
-                            fw="bold"
-                            style={{
-                              wordBreak: "break-word",
-                              whiteSpace: "pre-wrap",
-                              textShadow: "1px 1px 1px rgba(0, 0, 0, 0.7)",
-                              fontSize: "1.3rem",
-                              textAlign: "center",
-                            }}
-                          >
-                            {msg.message}
-                          </Text>
-                        </Center>
-                        {respondingTid === msg.tid && (
-                          <Stack>
-                            <Textarea
-                              ref={textareaRef}
-                              value={responseText}
-                              maxLength={characterLimit}
-                              description={`${responseText.length}/${characterLimit} characters`}
-                              onChange={(e) => setResponseText(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              autosize
-                              minRows={1}
-                              maxRows={2}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" && !event.shiftKey) {
-                                  event.preventDefault();
-                                  handleSendResponse(msg);
-                                }
-                              }}
-                              inputSize="md"
-                              radius="md"
-                              styles={{
-                                input: {
-                                  backgroundColor: "white",
-                                  color: "black",
-                                  border: "none",
-                                  padding: "var(--mantine-spacing-xs)",
-                                  borderRadius: "var(--mantine-radius-sm)",
-                                  fontSize: "var(--mantine-font-size-md)",
-                                  fontWeight: 500,
-                                  fontFamily: "'Comic Neue', sans-serif",
-                                },
-                              }}
-                            />
-                            <Group justify="flex-end">
+                              <Text size="xs" c="white">
+                                {" "}
+                                {/* Changed c="white" and removed variant="subtle" */}
+                                {new Date(msg.createdAt).toLocaleString(
+                                  undefined,
+                                  {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                    timeZoneName: "short",
+                                  }
+                                )}
+                              </Text>
+                            </Box>
+                            <Group>
                               <Button
-                                size="sm"
+                                size="xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleSendResponse(msg);
+                                  handleDeleteRequest(msg.tid);
                                 }}
-                                loading={respondLoading}
-                                variant="filled"
-                                radius="md"
+                                color="red"
+                                variant="outline"
+                                loading={deletingTid === msg.tid}
                               >
-                                <IconSend2 />
+                                <IconTrash size={16} />
                               </Button>
                             </Group>
-                          </Stack>
-                        )}
-                      </Stack>
-                    </Paper>
-                  </Grid.Col>
-                ))}
+                          </Group>
+                          <Center>
+                            <Text
+                              c="white"
+                              fw="bold"
+                              style={{
+                                wordBreak: "break-word",
+                                whiteSpace: "pre-wrap",
+                                textShadow: "1px 1px 1px rgba(0, 0, 0, 0.7)",
+                                fontSize: "1.3rem",
+                                textAlign: "center",
+                              }}
+                            >
+                              {msg.message}
+                            </Text>
+                          </Center>
+                          {respondingTid === msg.tid && (
+                            <Stack>
+                              <Textarea
+                                ref={textareaRef}
+                                value={responseText}
+                                maxLength={characterLimit}
+                                description={`${responseText.length}/${characterLimit} characters`}
+                                onChange={(e) =>
+                                  setResponseText(e.target.value)
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                autosize
+                                minRows={1}
+                                maxRows={2}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key === "Enter" &&
+                                    !event.shiftKey
+                                  ) {
+                                    event.preventDefault();
+                                    handleSendResponse(msg);
+                                  }
+                                }}
+                                inputSize="md"
+                                radius="md"
+                                styles={{
+                                  input: {
+                                    backgroundColor: "white",
+                                    color: "black",
+                                    border: "none",
+                                    padding: "var(--mantine-spacing-xs)",
+                                    borderRadius: "var(--mantine-radius-sm)",
+                                    fontSize: "var(--mantine-font-size-md)",
+                                    fontWeight: 500,
+                                    fontFamily: "'Comic Neue', sans-serif",
+                                  },
+                                }}
+                              />
+                              <Group justify="flex-end">
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSendResponse(msg);
+                                  }}
+                                  loading={respondLoading}
+                                  variant="filled"
+                                  radius="md"
+                                >
+                                  <IconSend2 />
+                                </Button>
+                              </Group>
+                            </Stack>
+                          )}
+                        </Stack>
+                      </Paper>
+                    </Grid.Col>
+                  )
+                )}
               </Grid>
             </>
           ) : (

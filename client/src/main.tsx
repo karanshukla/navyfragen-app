@@ -33,6 +33,7 @@ import { IconMoon, IconUser, IconLogout, IconTrash } from "@tabler/icons-react";
 import { Notifications } from "@mantine/notifications";
 import navyfragenTheme from "./Theme";
 import { Navigation } from "./Navigation";
+import { InstallPromptProvider } from "./components/InstallPromptContext";
 
 // App layout component
 function AppLayout() {
@@ -180,7 +181,6 @@ function AppLayout() {
           <Navigation
             onLinkClick={() => setOpened(false)}
             isLoggedIn={isLoggedIn}
-            userProfile={userProfile || null}
           />
         </Box>
       </AppShell.Navbar>{" "}
@@ -224,8 +224,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <Notifications />
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <AppLayout />
-          <ReactQueryDevtools initialIsOpen={false} />
+          <InstallPromptProvider>
+            <AppLayout />
+            <ReactQueryDevtools initialIsOpen={false} />
+          </InstallPromptProvider>
         </QueryClientProvider>
       </BrowserRouter>
     </MantineProvider>
