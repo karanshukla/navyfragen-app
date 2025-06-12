@@ -30,7 +30,8 @@ export async function generateQuestionImage(
     messagePadding: "20px",
     messageBorderRadius: "8px",
     footerTextColor: "#FFFFFF",
-    fontFamily: "'Noto Sans', 'Noto Color Emoji', sans-serif",
+    fontFamily:
+      "'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Noto Sans Ethiopic', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Color Emoji', sans-serif", // Expanded font list
     imageMargin: "60px",
   };
 
@@ -53,7 +54,7 @@ export async function generateQuestionImage(
         <style>
           ${getCss(theme, originalMessage.length)}
         </style>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       </head>
       <body>
         <div class="card">
