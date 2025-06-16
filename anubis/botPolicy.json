@@ -51,13 +51,8 @@
       "action": "ALLOW"
     },
     {
-      "name": "bluesky",
-      "user_agent_regex": "bsky",
-      "action": "ALLOW"
-    },
-    {
       "name": "cardybot-bluesky",
-      "user_agent_regex": "cardyb",
+      "user_agent_regex": "Bluesky Cardyb",
       "action": "ALLOW"
     },
     {

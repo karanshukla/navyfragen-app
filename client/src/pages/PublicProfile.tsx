@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Container,
   Title,
@@ -41,6 +41,7 @@ export default function PublicProfile() {
   const [message, setMessage] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     data: handleData,
@@ -130,6 +131,28 @@ export default function PublicProfile() {
   // Combined loading state
   const isLoading =
     handleLoading || userExistsLoading || profileLoading || sendLoading;
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (textareaRef.current) {
+        textareaRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    };
+
+    const textareaElement = textareaRef.current;
+    if (textareaElement) {
+      textareaElement.addEventListener("focus", handleFocus);
+    }
+
+    return () => {
+      if (textareaElement) {
+        textareaElement.removeEventListener("focus", handleFocus);
+      }
+    };
+  }, []);
 
   if (handleError) {
     return (
@@ -349,6 +372,7 @@ export default function PublicProfile() {
             style={{
               background: "linear-gradient(to right, #005299, #7700aa)",
             }}
+            onClick={() => textareaRef.current?.focus()}
           >
             <Title
               order={4}
@@ -365,6 +389,7 @@ export default function PublicProfile() {
                 {message.length}/{MAX_MESSAGE_LENGTH}
               </Text>
               <Textarea
+                ref={textareaRef}
                 value={message}
                 onChange={(e) => {
                   if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
