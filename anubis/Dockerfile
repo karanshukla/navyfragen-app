@@ -1,4 +1,4 @@
-FROM ghcr.io/techarohq/anubis:latest
+FROM ghcr.io/techarohq/anubis:main
 
 ARG POLICY_PATH_IN_IMAGE=/app_config/botPolicy.json
 
