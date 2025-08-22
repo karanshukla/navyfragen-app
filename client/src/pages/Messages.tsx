@@ -626,6 +626,7 @@ export default function Messages() {
                                 minRows={1}
                                 maxRows={2}
                                 onKeyDown={(event) => {
+                                  event.stopPropagation();
                                   if (
                                     event.key === "Enter" &&
                                     !event.shiftKey
