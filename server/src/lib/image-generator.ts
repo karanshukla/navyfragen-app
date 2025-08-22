@@ -74,14 +74,13 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: 568,
-        height: 568,
+        width: originalMessage.length <= 50 ? 450 : 568,
+        height: originalMessage.length <= 50 ? 450 : 568,
         args: {
           fullPage: true,
         },
       },
     };
-
     const response = await fetch(env.EXPORT_HTML_URL, {
       method: "POST",
       headers: {
@@ -120,8 +119,7 @@ export async function generateQuestionImage(
 
 // Helper function to generate CSS string from theme object
 function getCss(theme: any, messageLength: number): string {
-  // Scale factor for 25% of original size
-  const scale = 0.8;
+  const scale = 0.5;
 
   // Helper to scale px values in a string (e.g., "48px")
   const px = (value: string) => {
@@ -149,9 +147,9 @@ function getCss(theme: any, messageLength: number): string {
     messageTextFontSize = px("36px");
     messageTextPaddingTop = px("15px");
   }
+
   const messagePaddingCSS = `${messageTextPaddingTop} ${messagePadding} ${messagePadding} ${messagePadding}`;
 
-  // Ensure the font-family from the theme is used in the body or specific elements
   return `
     html, body {
       margin: 0;
