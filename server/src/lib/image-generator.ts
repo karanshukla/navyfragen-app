@@ -41,7 +41,7 @@ export async function generateQuestionImage(
         <style>
           ${getCss(theme, originalMessage.length)}
         </style>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
       </head>
       <body>
         <div class="card">
@@ -61,8 +61,8 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: originalMessage.length <= 50 ? 450 : 568,
-        height: originalMessage.length <= 50 ? 450 : 568,
+        width: theme.cardWidth ? parseFloat(theme.cardWidth) : (originalMessage.length <= 50 ? 450 : 568),
+        height: theme.cardHeight ? parseFloat(theme.cardHeight) : (originalMessage.length <= 50 ? 450 : 568),
         args: {
           fullPage: true,
         },

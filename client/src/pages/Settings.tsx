@@ -172,7 +172,7 @@ export default function Settings() {
                     <Switch
                       label="Enable PDS Sync"
                       checked={Boolean(userSettings?.pdsSyncEnabled)} // Ensures 0 is false, 1 is true
-                                            onChange={(event) => {
+                      onChange={(event) => {
                         updateSettings.mutate({
                           pdsSyncEnabled: event.currentTarget.checked,
                           imageTheme: userSettings?.imageTheme || "default", // Ensure imageTheme is always sent
@@ -245,17 +245,18 @@ export default function Settings() {
                     }}
                   >
                     <Select
-                      label="Choose your theme"
                       data={Object.entries(themes).map(([value, label]) => ({
                         value,
                         label,
                       }))}
                       value={userSettings?.imageTheme || "default"}
-                                            onChange={(value) => {
+                      onChange={(value) => {
                         if (value) {
                           updateSettings.mutate({
                             imageTheme: value,
-                            pdsSyncEnabled: Boolean(userSettings?.pdsSyncEnabled), // Ensure pdsSyncEnabled is always sent
+                            pdsSyncEnabled: Boolean(
+                              userSettings?.pdsSyncEnabled
+                            ), // Ensure pdsSyncEnabled is always sent
                           });
                         }
                       }}

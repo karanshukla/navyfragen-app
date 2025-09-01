@@ -13,6 +13,23 @@ export interface Theme {
   footerTextColor: string;
   fontFamily: string;
   imageMargin: string;
+  // New layout properties
+  cardWidth?: string; // e.g., "450px"
+  cardHeight?: string; // e.g., "450px"
+  headerFontSize?: string; // e.g., "72px"
+  messageFontSize?: string; // e.g., "48px"
+  footerFontSize?: string; // e.g., "32px"
+  messageLineHeight?: string; // e.g., "1.4"
+  messageMaxWidth?: string; // e.g., "90%"
+  cardBoxShadow?: string; // e.g., "0 2px 4px rgba(0,0,0,0.2)"
+  cardBorder?: string; // e.g., "1px solid #ccc"
+  messageTextAlign?: "left" | "center" | "right"; // e.g., "center"
+  headerPadding?: string; // e.g., "40px 15px 10px 15px"
+  footerPadding?: string; // e.g., "10px 20px 40px 20px"
+  messageMarginAuto?: boolean; // e.g., true for "margin: auto"
+  messageDisplay?: string; // e.g., "flex"
+  messageAlignItems?: string; // e.g., "center"
+  messageJustifyContent?: string; // e.g., "center"
 }
 
 export const themes: { [key: string]: Theme } = {
