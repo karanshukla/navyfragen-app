@@ -158,6 +158,7 @@ function generateCompressedHtml(
     <html>
       <head>
         <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
         <style>
           html, body {
             margin: 0;
@@ -166,7 +167,10 @@ function generateCompressedHtml(
             height: 100%;
             overflow: hidden;
             background-color: #f8f9fa;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Noto Sans Ethiopic', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Color Emoji', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
           }
           body {
             padding: 15px;
@@ -240,6 +244,7 @@ function generateTwitterHtml(
     <html>
       <head>
         <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
         <style>
           html, body {
             margin: 0;
@@ -248,7 +253,10 @@ function generateTwitterHtml(
             height: 100%;
             overflow: hidden;
             background-color: #f5f8fa;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Noto Sans Ethiopic', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Color Emoji', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
           }
           body {
             padding: 20px;
@@ -270,7 +278,7 @@ function generateTwitterHtml(
           .tweet-header {
             display: flex;
             align-items: flex-start;
-            padding: 12px 16px 0 16px;
+            padding: 12px 16px 8px 16px;
           }
           .avatar {
             width: 48px;
@@ -282,7 +290,7 @@ function generateTwitterHtml(
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 20px;
+            font-size: 18px;
             margin-right: 12px;
             flex-shrink: 0;
             border: 2px solid #ffffff;
@@ -295,7 +303,7 @@ function generateTwitterHtml(
           .user-info {
             display: flex;
             align-items: baseline;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
           }
           .display-name {
             font-weight: 700;
@@ -323,22 +331,22 @@ function generateTwitterHtml(
             font-weight: 600;
             padding: 2px 6px;
             border-radius: 10px;
-            margin: 4px 0 8px 0;
+            margin: 2px 0 10px 0;
             display: inline-block;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
           .tweet-content {
-            font-size: 23px;
+            font-size: 20px;
             color: #14171a;
-            line-height: 28px;
-            margin: 8px 0 0 0;
+            line-height: 24px;
+            margin: 0 0 12px 0;
             word-wrap: break-word;
             font-weight: 400;
           }
           .tweet-footer {
-            padding: 12px 16px 16px 76px;
-            border-top: none;
+            padding: 8px 16px 12px 16px;
+            border-top: 1px solid #f7f9fa;
           }
           .website-link {
             font-size: 13px;
@@ -417,6 +425,9 @@ function getDefaultCss(theme: any, messageLength: number): string {
       width: 100%;
       height: 100%;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
     }
     body {
       font-family: ${theme.fontFamily};
