@@ -16,6 +16,7 @@ describe("settingsService", () => {
   const mockUserSettings: UserSettings = {
     did: mockDid,
     pdsSyncEnabled: 1,
+    imageTheme: "default",
     createdAt: "2025-06-07T12:00:00.000Z",
   };
 
@@ -79,6 +80,27 @@ describe("settingsService", () => {
       await expect(
         settingsService.updateUserSettings(mockUpdatedSettings)
       ).rejects.toEqual(mockError);
+    });
+
+    it("should update imageTheme", async () => {
+      const newImageTheme = "ocean-breeze";
+      vi.mocked(apiClient.post).mockResolvedValueOnce({
+        ...mockUserSettings,
+        imageTheme: newImageTheme,
+      });
+
+      const result = await settingsService.updateUserSettings({
+        imageTheme: newImageTheme,
+      });
+
+      expect(result).toEqual({
+        ...mockUserSettings,
+        imageTheme: newImageTheme,
+      });
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/settings",
+        { imageTheme: newImageTheme }
+      );
     });
   });
 });

@@ -1,3 +1,4 @@
+import { themes, Theme } from "#/lib/themes";
 import fetch from "node-fetch"; // Assuming 'node-fetch' v2 for response.buffer()
 // If using node-fetch v3+, use response.arrayBuffer() then Buffer.from(await response.arrayBuffer())
 import type { Logger } from "pino";
@@ -11,29 +12,15 @@ interface ImageGenerationResult {
 export async function generateQuestionImage(
   originalMessage: string,
   logger: Logger,
-  userBskyHandle?: string
+  userBskyHandle?: string,
+  themeName: string = "default"
 ): Promise<ImageGenerationResult> {
   if (!originalMessage) {
     logger.info("Skipping image generation due to missing original message.");
     return {};
   }
 
-  const theme = {
-    imageBackgroundColor: "#1A1A1A",
-    cardGradientStart: "#007bff",
-    cardGradientEnd: "#6f42c1",
-    cardPadding: "20px",
-    cardBorderRadius: "10px",
-    headerTextColor: "#FFFFFF",
-    messageBackgroundColor: "#FFFFFF",
-    messageTextColor: "#000000",
-    messagePadding: "20px",
-    messageBorderRadius: "8px",
-    footerTextColor: "#FFFFFF",
-    fontFamily:
-      "'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Noto Sans Ethiopic', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Color Emoji', sans-serif", // Expanded font list
-    imageMargin: "60px",
-  };
+  const theme = themes[themeName] || themes.default;
 
   const footerText = userBskyHandle
     ? `fragen.navy/${userBskyHandle}`

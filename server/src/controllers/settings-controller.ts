@@ -45,10 +45,15 @@ export class SettingsController {
   /**
    * Validate request for updating settings
    */
-  validateUpdateSettings = [
+    validateUpdateSettings = [
     body("pdsSyncEnabled")
       .isBoolean()
       .withMessage("pdsSyncEnabled must be a boolean value"),
+    body("imageTheme")
+      .isString()
+      .withMessage("imageTheme must be a string")
+      .notEmpty()
+      .withMessage("imageTheme cannot be empty"),
   ];
   /**
    * Update the user's settings
@@ -65,9 +70,11 @@ export class SettingsController {
 
     try {
       const pdsSyncEnabled = req.body.pdsSyncEnabled === true;
+      const imageTheme = req.body.imageTheme;
       const updatedSettings = await this.settingsService.updateSettings(
         userSessionDid,
-        pdsSyncEnabled
+        pdsSyncEnabled,
+        imageTheme
       );
 
       return res.json(updatedSettings);

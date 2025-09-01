@@ -6,6 +6,7 @@ import { queryClient } from "./queryClient";
 export interface UserSettings {
   did: string;
   pdsSyncEnabled: number | boolean; // Server returns number (1/0), but we use as boolean
+  imageTheme: string;
   createdAt: string;
 }
 

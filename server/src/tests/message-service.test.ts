@@ -89,7 +89,23 @@ describe("MessageService", () => {
     mockDeleteBuilder = makeDeleteBuilder();
     lastInsertValues = undefined;
     mockDb = {
-      selectFrom: mock.fn(() => mockSelectBuilder),
+      selectFrom: mock.fn((table: string) => {
+        if (table === "user_settings") {
+          return {
+            selectAll: mock.fn(() => ({
+              where: mock.fn(() => ({
+                executeTakeFirst: mock.fn(async () => ({
+                  did: "did:example:user",
+                  pdsSyncEnabled: 1,
+                  imageTheme: "ocean-breeze", // Mock a specific theme
+                  createdAt: new Date().toISOString(),
+                })),
+              })),
+            })),
+          };
+        }
+        return mockSelectBuilder;
+      }),
       insertInto: mock.fn(() => mockInsertBuilder),
       deleteFrom: mock.fn(() => mockDeleteBuilder),
     };
@@ -217,7 +233,7 @@ describe("MessageService", () => {
     );
     const result = await messageService.respondToMessage(
       "tid",
-      "did",
+      "did:example:user", // Use the DID that matches the mocked user_settings
       "rec",
       "orig",
       "resp",
@@ -228,6 +244,7 @@ describe("MessageService", () => {
     assert.ok(result.uri);
     assert.strictEqual(generateQuestionImageMock.mock.calls.length, 1);
     assert.strictEqual(mockAgent.uploadBlob.mock.calls.length, 1);
+    assert.deepStrictEqual(generateQuestionImageMock.mock.calls[0].arguments[3], "ocean-breeze"); // Assert themeName
   });
 
   test("respondToMessage with text", async () => {

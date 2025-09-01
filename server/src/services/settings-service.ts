@@ -4,6 +4,7 @@ import { Logger } from "pino";
 export interface UserSettings {
   did: string;
   pdsSyncEnabled: number;
+  imageTheme: string;
   createdAt: string;
 }
 
@@ -30,6 +31,7 @@ export class SettingsService {
     const defaultSettings: UserSettings = {
       did: userDid,
       pdsSyncEnabled: 1, // Default to enabled (SQLite uses 1/0 for booleans)
+      imageTheme: "default",
       createdAt: new Date().toISOString(),
     };
 
@@ -51,7 +53,8 @@ export class SettingsService {
 
   async updateSettings(
     userDid: string,
-    pdsSyncEnabled: boolean
+    pdsSyncEnabled: boolean,
+    imageTheme: string
   ): Promise<UserSettings | undefined> {
     // Convert boolean to 1/0 for SQLite compatibility
     const syncEnabled = pdsSyncEnabled ? 1 : 0;
@@ -65,6 +68,7 @@ export class SettingsService {
           .values({
             did: userDid,
             pdsSyncEnabled: syncEnabled,
+            imageTheme: imageTheme,
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -73,6 +77,7 @@ export class SettingsService {
           .updateTable("user_settings")
           .set({
             pdsSyncEnabled: syncEnabled,
+            imageTheme: imageTheme,
           })
           .where("did", "=", userDid)
           .execute();
