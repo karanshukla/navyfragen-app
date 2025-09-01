@@ -56,6 +56,7 @@ export type UserProfile = {
 export type UserSettings = {
   did: string; // User's Decentralized Identifier
   pdsSyncEnabled: number; // Whether PDS sync is enabled (1=true, 0=false for SQLite compatibility)
+  imageTheme: string; // The user's selected image theme
   createdAt: string; // Timestamp of when the user settings were first created
 };
 
@@ -182,6 +183,20 @@ migrations["005"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.dropTable("user_settings").ifExists().execute();
+  },
+};
+
+migrations["006"] = {
+  async up(db: Kysely<any>) {
+    await db.schema
+      .alterTable("user_settings")
+      .addColumn("imageTheme", "varchar", (col) =>
+        col.notNull().defaultTo("default")
+      )
+      .execute();
+  },
+  async down(db: Kysely<any>) {
+    await db.schema.alterTable("user_settings").dropColumn("imageTheme").execute();
   },
 };
 

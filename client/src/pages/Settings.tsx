@@ -11,6 +11,7 @@ import {
   Alert,
   Loader,
   Notification,
+  Select,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
@@ -18,6 +19,7 @@ import { apiClient, ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
 import { useInstallPrompt } from "../components/InstallPromptContext";
+import { themes } from "../lib/themes";
 
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -149,18 +151,20 @@ export default function Settings() {
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
-                  <div>
-                    <Text c="red" size="sm" mb="xs">
-                      Failed to load settings
-                    </Text>
+                  <Alert
+                    color="red"
+                    title="Failed to load settings"
+                    withCloseButton={false}
+                  >
                     <Button
                       size="xs"
                       onClick={() => refetchSettings()}
                       variant="light"
+                      mt="xs"
                     >
                       Retry
                     </Button>
-                  </div>
+                  </Alert>
                 ) : (
                   <div
                     style={{
@@ -169,20 +173,19 @@ export default function Settings() {
                   >
                     <Switch
                       label="Enable PDS Sync"
-                      checked={Boolean(userSettings?.pdsSyncEnabled)} // Ensures 0 is false, 1 is true
+                      checked={Boolean(userSettings?.pdsSyncEnabled)}
                       onChange={(event) => {
                         updateSettings.mutate({
                           pdsSyncEnabled: event.currentTarget.checked,
+                          imageTheme: userSettings?.imageTheme || "default",
                         });
                       }}
                       disabled={updateSettings.isPending}
                       styles={{
                         label: {
-                          // Prevent label style changes when disabled
                           opacity: 1,
-                          color: "inherit", // Inherit color to avoid theme-specific issues
+                          color: "inherit",
                         },
-                        // Ensure the switch track and thumb also don't overly change appearance if that contributes
                         track: {
                           opacity: updateSettings.isPending ? 0.7 : 1,
                         },
@@ -190,6 +193,76 @@ export default function Settings() {
                           opacity: updateSettings.isPending ? 0.7 : 1,
                         },
                       }}
+                    />
+                  </div>
+                )}
+              </Paper>
+            </Grid.Col>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
+              <Paper
+                shadow="sm"
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ flexGrow: 1 }}>
+                  <Title order={3}>Image Theme</Title>
+                  <Text mt="sm" c="dimmed">
+                    Select a theme for the generated question images. By
+                    default, Navyfragen will use a blue gradient similar to the
+                    NGL Application. Note that this setting is not retroactive,
+                    and will only apply to future responses.
+                  </Text>{" "}
+                  <Divider my="md" />{" "}
+                </div>
+                {settingsLoading ? (
+                  <Loader size="sm" />
+                ) : settingsError ? (
+                  <Alert
+                    color="red"
+                    title="Failed to load settings"
+                    withCloseButton={false}
+                  >
+                    <Button
+                      size="xs"
+                      onClick={() => refetchSettings()}
+                      variant="light"
+                      mt="xs"
+                    >
+                      Retry
+                    </Button>
+                  </Alert>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: "auto",
+                    }}
+                  >
+                    <Select
+                      data={Object.entries(themes).map(([value, label]) => ({
+                        value,
+                        label,
+                      }))}
+                      value={userSettings?.imageTheme || "default"}
+                      onChange={(value) => {
+                        if (value) {
+                          updateSettings.mutate({
+                            imageTheme: value,
+                            pdsSyncEnabled: Boolean(
+                              userSettings?.pdsSyncEnabled
+                            ), // Ensure pdsSyncEnabled is always sent
+                          });
+                        }
+                      }}
+                      disabled={updateSettings.isPending}
                     />
                   </div>
                 )}

@@ -215,11 +215,20 @@ export class MessageService {
       };
 
       if (includeQuestionAsImage) {
+        const userSettings = await this.db
+          .selectFrom("user_settings")
+          .selectAll()
+          .where("did", "=", did)
+          .executeTakeFirst();
+
+        const imageTheme = userSettings?.imageTheme ?? "default";
+
         const { imageBlob, imageAltText } =
           await imageGenerator.generateQuestionImage(
             original,
             this.logger,
-            handle
+            handle,
+            imageTheme
           );
 
         if (!imageBlob) {
