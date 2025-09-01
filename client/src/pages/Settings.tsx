@@ -151,18 +151,20 @@ export default function Settings() {
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
-                  <div>
-                    <Text c="red" size="sm" mb="xs">
-                      Failed to load settings
-                    </Text>
+                  <Alert
+                    color="red"
+                    title="Failed to load settings"
+                    withCloseButton={false}
+                  >
                     <Button
                       size="xs"
                       onClick={() => refetchSettings()}
                       variant="light"
+                      mt="xs"
                     >
                       Retry
                     </Button>
-                  </div>
+                  </Alert>
                 ) : (
                   <div
                     style={{
@@ -171,21 +173,19 @@ export default function Settings() {
                   >
                     <Switch
                       label="Enable PDS Sync"
-                      checked={Boolean(userSettings?.pdsSyncEnabled)} // Ensures 0 is false, 1 is true
+                      checked={Boolean(userSettings?.pdsSyncEnabled)}
                       onChange={(event) => {
                         updateSettings.mutate({
                           pdsSyncEnabled: event.currentTarget.checked,
-                          imageTheme: userSettings?.imageTheme || "default", // Ensure imageTheme is always sent
+                          imageTheme: userSettings?.imageTheme || "default",
                         });
                       }}
                       disabled={updateSettings.isPending}
                       styles={{
                         label: {
-                          // Prevent label style changes when disabled
                           opacity: 1,
-                          color: "inherit", // Inherit color to avoid theme-specific issues
+                          color: "inherit",
                         },
-                        // Ensure the switch track and thumb also don't overly change appearance if that contributes
                         track: {
                           opacity: updateSettings.isPending ? 0.7 : 1,
                         },
@@ -226,18 +226,20 @@ export default function Settings() {
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
-                  <div>
-                    <Text c="red" size="sm" mb="xs">
-                      Failed to load settings
-                    </Text>
+                  <Alert
+                    color="red"
+                    title="Failed to load settings"
+                    withCloseButton={false}
+                  >
                     <Button
                       size="xs"
                       onClick={() => refetchSettings()}
                       variant="light"
+                      mt="xs"
                     >
                       Retry
                     </Button>
-                  </div>
+                  </Alert>
                 ) : (
                   <div
                     style={{

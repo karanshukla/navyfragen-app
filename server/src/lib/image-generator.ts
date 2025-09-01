@@ -34,24 +34,13 @@ export async function generateQuestionImage(
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-  const html = `
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          ${getCss(theme, originalMessage.length)}
-        </style>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-      </head>
-      <body>
-        <div class="card">
-          <h2 class="header-text">send me anonymous messages!</h2>
-          <p class="message-text">${escapedMessage}</p>
-          <p class="footer-text">${footerText}</p>
-        </div>
-      </body>
-    </html>
-  `;
+  // Generate theme-specific HTML and dimensions
+  const { html, width, height } = generateThemeSpecificHtml(
+    themeName,
+    escapedMessage,
+    footerText,
+    originalMessage.length
+  );
 
   try {
     logger.info(
@@ -61,8 +50,8 @@ export async function generateQuestionImage(
       source: html,
       format: "png",
       options: {
-        width: theme.cardWidth ? parseFloat(theme.cardWidth) : (originalMessage.length <= 50 ? 450 : 568),
-        height: theme.cardHeight ? parseFloat(theme.cardHeight) : (originalMessage.length <= 50 ? 450 : 568),
+        width,
+        height,
         args: {
           fullPage: true,
         },
@@ -104,8 +93,292 @@ export async function generateQuestionImage(
   }
 }
 
-// Helper function to generate CSS string from theme object
-function getCss(theme: any, messageLength: number): string {
+// Generate theme-specific HTML layouts
+function generateThemeSpecificHtml(
+  themeName: string,
+  escapedMessage: string,
+  footerText: string,
+  messageLength: number
+): { html: string; width: number; height: number } {
+  switch (themeName) {
+    case "compressed":
+      return generateCompressedHtml(escapedMessage, footerText, messageLength);
+    case "twitter":
+      return generateTwitterHtml(escapedMessage, footerText, messageLength);
+    default:
+      return generateDefaultHtml(escapedMessage, footerText, messageLength);
+  }
+}
+
+// Default theme: Rich, colorful design
+function generateDefaultHtml(
+  escapedMessage: string,
+  footerText: string,
+  messageLength: number
+): { html: string; width: number; height: number } {
+  const theme = themes.default;
+  const width = messageLength <= 50 ? 450 : 568;
+  const height = messageLength <= 50 ? 450 : 568;
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          ${getDefaultCss(theme, messageLength)}
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Sans+Ethiopic:wght@400;700&family=Noto+Sans+Georgian:wght@400;700&family=Noto+Sans+Armenian&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+      </head>
+      <body>
+        <div class="card">
+          <h2 class="header-text">send me anonymous messages!</h2>
+          <p class="message-text">${escapedMessage}</p>
+          <p class="footer-text">${footerText}</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return { html, width, height };
+}
+
+// Compressed theme: Minimal, compact design
+function generateCompressedHtml(
+  escapedMessage: string,
+  footerText: string,
+  messageLength: number
+): { html: string; width: number; height: number } {
+  const width = 350;
+  const height = Math.max(
+    200,
+    Math.min(300, 150 + Math.ceil(messageLength / 40) * 20)
+  );
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          }
+          body {
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .card {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            width: 100%;
+            max-width: 320px;
+            box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          .header {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            text-align: center;
+          }
+          .message {
+            font-size: 14px;
+            color: #212529;
+            line-height: 1.3;
+            text-align: center;
+            margin: 8px 0;
+            word-wrap: break-word;
+          }
+          .footer {
+            font-size: 10px;
+            color: #868e96;
+            text-align: center;
+            margin-top: 8px;
+            opacity: 0.8;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">Anonymous Question via Navyfragen</div>
+          <div class="message">${escapedMessage}</div>
+          <div class="footer">${footerText}</div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return { html, width, height };
+}
+
+// Twitter theme: Classic Twitter design (peak era)
+function generateTwitterHtml(
+  escapedMessage: string,
+  footerText: string,
+  messageLength: number
+): { html: string; width: number; height: number } {
+  const width = 590; // Classic Twitter width
+  const height = Math.max(
+    280,
+    Math.min(450, 240 + Math.ceil(messageLength / 60) * 30)
+  );
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f5f8fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          }
+          body {
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .tweet-container {
+            background: #ffffff;
+            border: 1px solid #e1e8ed;
+            border-radius: 0;
+            padding: 0;
+            width: 100%;
+            max-width: 550px;
+            box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+          }
+          .tweet-header {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 16px 0 16px;
+          }
+          .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1da1f2, #0084b4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            border: 2px solid #ffffff;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.25);
+          }
+          .tweet-main {
+            flex: 1;
+            min-width: 0;
+          }
+          .user-info {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 2px;
+          }
+          .display-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #14171a;
+            margin-right: 4px;
+          }
+          .username {
+            font-size: 14px;
+            color: #657786;
+          }
+          .timestamp {
+            font-size: 14px;
+            color: #657786;
+            margin-left: 4px;
+          }
+          .timestamp::before {
+            content: "·";
+            margin-right: 4px;
+          }
+          .question-badge {
+            background: #e8f4f8;
+            color: #1da1f2;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin: 4px 0 8px 0;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .tweet-content {
+            font-size: 23px;
+            color: #14171a;
+            line-height: 28px;
+            margin: 8px 0 0 0;
+            word-wrap: break-word;
+            font-weight: 400;
+          }
+          .tweet-footer {
+            padding: 12px 16px 16px 76px;
+            border-top: none;
+          }
+          .website-link {
+            font-size: 13px;
+            color: #1da1f2;
+            text-decoration: none;
+            font-weight: 400;
+            display: inline-block;
+          }
+          .website-link:hover {
+            text-decoration: underline;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="tweet-container">
+          <div class="tweet-header">
+            <div class="avatar">NF</div>
+            <div class="tweet-main">
+              <div class="user-info">
+                <span class="display-name">Anonymous User</span>
+                <span class="username">@anonymous</span>
+                <span class="timestamp">now</span>
+              </div>
+              <div class="question-badge">Anonymous Question</div>
+              <div class="tweet-content">${escapedMessage}</div>
+            </div>
+          </div>
+          <div class="tweet-footer">
+            <a href="#" class="website-link">${footerText}</a>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return { html, width, height };
+}
+
+// Helper function to generate CSS string for default theme
+function getDefaultCss(theme: any, messageLength: number): string {
   const scale = 0.5;
 
   // Helper to scale px values in a string (e.g., "48px")
