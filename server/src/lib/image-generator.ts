@@ -117,8 +117,9 @@ function generateDefaultHtml(
   messageLength: number
 ): { html: string; width: number; height: number } {
   const theme = themes.default;
-  const width = messageLength <= 50 ? 450 : 568;
-  const height = messageLength <= 50 ? 450 : 568;
+  // Use consistent 1:1 (square) aspect ratio for social media compatibility
+  const width = 500;
+  const height = 500;
 
   const html = `
     <html>
@@ -148,10 +149,11 @@ function generateCompressedHtml(
   footerText: string,
   messageLength: number
 ): { html: string; width: number; height: number } {
-  const width = 350;
+  // Much smaller, truly compressed size but accounting for up to 150 characters
+  const width = 320;
   const height = Math.max(
-    200,
-    Math.min(300, 150 + Math.ceil(messageLength / 40) * 20)
+    160,
+    Math.min(240, 120 + Math.ceil(messageLength / 25) * 12)
   );
 
   const html = `
@@ -173,45 +175,57 @@ function generateCompressedHtml(
             text-rendering: optimizeLegibility;
           }
           body {
-            padding: 15px;
+            padding: 8px;
             box-sizing: border-box;
             display: flex;
             justify-content: center;
             align-items: center;
+            height: 100vh;
+            width: 100vw;
           }
           .card {
             background: #ffffff;
             border: 1px solid #e9ecef;
-            border-radius: 6px;
-            padding: 15px;
+            border-radius: 4px;
+            padding: 12px;
             width: 100%;
-            max-width: 320px;
+            height: 100%;
             box-sizing: border-box;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
           }
           .header {
             font-size: 12px;
             font-weight: 600;
             color: #6c757d;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             margin-bottom: 8px;
             text-align: center;
+            flex-shrink: 0;
           }
           .message {
-            font-size: 14px;
+            font-size: 16px;
             color: #212529;
             line-height: 1.3;
             text-align: center;
-            margin: 8px 0;
+            margin: 0;
             word-wrap: break-word;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
           }
           .footer {
-            font-size: 10px;
+            font-size: 11px;
             color: #868e96;
             text-align: center;
             margin-top: 8px;
             opacity: 0.8;
+            flex-shrink: 0;
           }
         </style>
       </head>
@@ -234,11 +248,11 @@ function generateTwitterHtml(
   footerText: string,
   messageLength: number
 ): { html: string; width: number; height: number } {
-  const width = 590; // Classic Twitter width
-  const height = Math.max(
-    280,
-    Math.min(450, 240 + Math.ceil(messageLength / 60) * 30)
-  );
+  // Much tighter height calculation to minimize whitespace
+  const width = 560;
+  const baseHeight = 200;
+  const additionalHeight = Math.ceil(messageLength / 80) * 15; // Much less aggressive scaling
+  const height = Math.max(200, Math.min(280, baseHeight + additionalHeight));
 
   const html = `
     <html>
@@ -259,26 +273,30 @@ function generateTwitterHtml(
             text-rendering: optimizeLegibility;
           }
           body {
-            padding: 20px;
+            padding: 8px;
             box-sizing: border-box;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            align-items: flex-start;
+            height: 100vh;
+            width: 100vw;
           }
           .tweet-container {
             background: #ffffff;
             border: 1px solid #e1e8ed;
-            border-radius: 0;
+            border-radius: 12px;
             padding: 0;
             width: 100%;
-            max-width: 550px;
             box-sizing: border-box;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            min-height: fit-content;
           }
           .tweet-header {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             padding: 12px 16px 8px 16px;
+            flex-shrink: 0;
           }
           .avatar {
             width: 48px;
@@ -293,8 +311,6 @@ function generateTwitterHtml(
             font-size: 18px;
             margin-right: 12px;
             flex-shrink: 0;
-            border: 2px solid #ffffff;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.25);
           }
           .tweet-main {
             flex: 1;
@@ -302,51 +318,50 @@ function generateTwitterHtml(
           }
           .user-info {
             display: flex;
-            align-items: baseline;
-            margin-bottom: 4px;
+            align-items: center;
+            margin-bottom: 2px;
           }
           .display-name {
             font-weight: 700;
-            font-size: 14px;
+            font-size: 15px;
             color: #14171a;
             margin-right: 4px;
           }
           .username {
-            font-size: 14px;
+            font-size: 15px;
             color: #657786;
           }
-          .timestamp {
-            font-size: 14px;
-            color: #657786;
-            margin-left: 4px;
-          }
-          .timestamp::before {
-            content: "·";
-            margin-right: 4px;
+          .tweet-body {
+            padding: 2px 16px 0 16px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
           }
           .question-badge {
             background: #e8f4f8;
             color: #1da1f2;
             font-size: 11px;
             font-weight: 600;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin: 2px 0 10px 0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 0 0 8px 0;
             display: inline-block;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
+            align-self: flex-start;
           }
           .tweet-content {
-            font-size: 20px;
+            font-size: 23px;
             color: #14171a;
-            line-height: 24px;
+            line-height: 28px;
             margin: 0 0 12px 0;
             word-wrap: break-word;
             font-weight: 400;
+            text-align: left;
           }
           .tweet-footer {
-            padding: 8px 16px 12px 16px;
-            border-top: 1px solid #f7f9fa;
+            padding: 4px 16px 12px 16px;
+            flex-shrink: 0;
           }
           .website-link {
             font-size: 13px;
@@ -366,13 +381,14 @@ function generateTwitterHtml(
             <div class="avatar">NF</div>
             <div class="tweet-main">
               <div class="user-info">
-                <span class="display-name">Anonymous User</span>
-                <span class="username">@anonymous</span>
-                <span class="timestamp">now</span>
+                <span class="display-name">NavyFragen</span>
+                <span class="username">@navyfragen</span>
               </div>
-              <div class="question-badge">Anonymous Question</div>
-              <div class="tweet-content">${escapedMessage}</div>
             </div>
+          </div>
+          <div class="tweet-body">
+            <div class="question-badge">Anonymous Question</div>
+            <div class="tweet-content">${escapedMessage}</div>
           </div>
           <div class="tweet-footer">
             <a href="#" class="website-link">${footerText}</a>
