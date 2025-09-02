@@ -273,11 +273,10 @@ function generateTwitterHtml(
             text-rendering: optimizeLegibility;
           }
           body {
-            padding: 0;
+            padding: 8px;
             box-sizing: border-box;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             height: 100vh;
             width: 100vw;
           }
@@ -287,21 +286,21 @@ function generateTwitterHtml(
             border-radius: 12px;
             padding: 0;
             width: 100%;
-            height: 100%;
             box-sizing: border-box;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
+            min-height: fit-content;
           }
           .tweet-header {
             display: flex;
             align-items: center;
-            padding: 12px 14px 6px 14px;
+            padding: 12px 16px 8px 16px;
             flex-shrink: 0;
           }
           .avatar {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background: linear-gradient(135deg, #1da1f2, #0084b4);
             display: flex;
@@ -309,8 +308,8 @@ function generateTwitterHtml(
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 16px;
-            margin-right: 10px;
+            font-size: 18px;
+            margin-right: 12px;
             flex-shrink: 0;
           }
           .tweet-main {
@@ -320,20 +319,20 @@ function generateTwitterHtml(
           .user-info {
             display: flex;
             align-items: center;
-            margin-bottom: 0;
+            margin-bottom: 2px;
           }
           .display-name {
             font-weight: 700;
-            font-size: 13px;
+            font-size: 15px;
             color: #14171a;
-            margin-right: 6px;
+            margin-right: 4px;
           }
           .username {
-            font-size: 13px;
+            font-size: 15px;
             color: #657786;
           }
           .tweet-body {
-            padding: 8px 14px 0 14px;
+            padding: 2px 16px 0 16px;
             display: flex;
             flex-direction: column;
             min-height: 0;
@@ -341,9 +340,9 @@ function generateTwitterHtml(
           .question-badge {
             background: #e8f4f8;
             color: #1da1f2;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 600;
-            padding: 3px 8px;
+            padding: 2px 8px;
             border-radius: 12px;
             margin: 0 0 8px 0;
             display: inline-block;
@@ -352,17 +351,16 @@ function generateTwitterHtml(
             align-self: flex-start;
           }
           .tweet-content {
-            font-size: 20px;
+            font-size: 23px;
             color: #14171a;
-            line-height: 24px;
+            line-height: 28px;
             margin: 0 0 12px 0;
             word-wrap: break-word;
             font-weight: 400;
             text-align: left;
           }
           .tweet-footer {
-            padding: 6px 14px 10px 14px;
-            border-top: 1px solid #f7f9fa;
+            padding: 4px 16px 12px 16px;
             flex-shrink: 0;
           }
           .website-link {
