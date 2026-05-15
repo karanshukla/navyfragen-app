@@ -27,3 +27,7 @@ dist-ssr
 
 # Funny DB
 *.sqlite
+
+#claude
+.claude
+settings.local.json
