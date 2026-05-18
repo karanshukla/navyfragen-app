@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import {
   AppShell,
@@ -13,6 +13,7 @@ import {
   Menu,
   Button,
   useMantineColorScheme,
+  useComputedColorScheme,
   Box,
   Loader,
   Paper,
@@ -29,7 +30,8 @@ import Settings from "./pages/Settings";
 import PublicProfile from "./pages/PublicProfile";
 import OAuthCallback from "./pages/OAuthCallback";
 import "@mantine/core/styles.css";
-import { IconMoon, IconUser, IconLogout, IconTrash } from "@tabler/icons-react";
+import "./index.css";
+import { IconMoon, IconSun, IconUser, IconLogout } from "@tabler/icons-react";
 import { Notifications } from "@mantine/notifications";
 import navyfragenTheme from "./Theme";
 import { Navigation } from "./Navigation";
@@ -41,6 +43,7 @@ function AppLayout() {
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
+  const computedColorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
 
   const navbarRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
@@ -84,13 +87,6 @@ function AppLayout() {
     >
       <AppShell.Header>
         <Group h="100%" px="md">
-          <style>
-            {`
-              .mantine-AppShell-navbar {
-                max-width: 60vw !important;
-              }
-            `}
-          </style>
           <Burger
             ref={burgerRef}
             opened={opened}
@@ -111,8 +107,9 @@ function AppLayout() {
               size="xs"
               variant="outline"
               onClick={() => toggleColorScheme()}
+              aria-label="Toggle color scheme"
             >
-              <IconMoon />
+              {computedColorScheme === "dark" ? <IconSun /> : <IconMoon />}
             </Button>
             {isLoading ? (
               <Loader size="sm" />
@@ -163,7 +160,6 @@ function AppLayout() {
               </Menu>
             ) : (
               <Button
-                variant="solid"
                 component={Link}
                 to="/login"
                 onClick={() => setOpened(false)}
@@ -175,15 +171,11 @@ function AppLayout() {
         </Group>
       </AppShell.Header>
       <AppShell.Navbar ref={navbarRef} p="md">
-        <Box
-          style={{ display: "flex", flexDirection: "column", height: "100%" }}
-        >
-          <Navigation
-            onLinkClick={() => setOpened(false)}
-            isLoggedIn={isLoggedIn}
-          />
-        </Box>
-      </AppShell.Navbar>{" "}
+        <Navigation
+          onLinkClick={() => setOpened(false)}
+          isLoggedIn={isLoggedIn}
+        />
+      </AppShell.Navbar>
       <AppShell.Main pt={70}>
         <Container>
           <Routes>
@@ -197,18 +189,16 @@ function AppLayout() {
             <Route
               path="*"
               element={
-                <>
-                  <Container>
-                    <Paper p="xl" radius="md" withBorder shadow="xs">
-                      <Title order={2} c="red">
-                        404 - Not Found
-                      </Title>
-                      <Text c="dimmed" mt="md">
-                        The requested resource was not found.
-                      </Text>
-                    </Paper>
-                  </Container>
-                </>
+                <Container>
+                  <Paper p="xl" radius="md" withBorder shadow="xs">
+                    <Title order={2} c="red">
+                      404 - Not Found
+                    </Title>
+                    <Text c="dimmed" mt="md">
+                      The requested resource was not found.
+                    </Text>
+                  </Paper>
+                </Container>
               }
             />
           </Routes>

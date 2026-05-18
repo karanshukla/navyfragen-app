@@ -10,10 +10,22 @@ export interface UserSettings {
   createdAt: string;
 }
 
+export interface UserStats {
+  messageCount: number;
+  memberSince: string | null;
+}
+
+export interface PdsInfo {
+  pdsUrl: string | null;
+  recordCount: number;
+}
+
 // Query keys
 export const settingsKeys = {
   all: ["settings"] as const,
   user: () => [...settingsKeys.all, "user"] as const,
+  stats: () => [...settingsKeys.all, "stats"] as const,
+  pdsInfo: () => [...settingsKeys.all, "pds-info"] as const,
 };
 
 // API Services
@@ -31,6 +43,16 @@ export const settingsService = {
       "/settings",
       settings
     );
+  },
+
+  // Get account stats (message count, member since)
+  getStats: async (): Promise<UserStats> => {
+    return apiClient.get<UserStats>("/stats");
+  },
+
+  // Get PDS URL and navyfragen record count
+  getPdsInfo: async (): Promise<PdsInfo> => {
+    return apiClient.get<PdsInfo>("/pds-info");
   },
 };
 
@@ -51,6 +73,24 @@ export function useUserSettings() {
       // Otherwise retry up to 3 times
       return failureCount < 3;
     },
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useUserStats() {
+  return useQuery<UserStats, ApiError>({
+    queryKey: settingsKeys.stats(),
+    queryFn: () => settingsService.getStats(),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function usePdsInfo() {
+  return useQuery<PdsInfo, ApiError>({
+    queryKey: settingsKeys.pdsInfo(),
+    queryFn: () => settingsService.getPdsInfo(),
+    retry: false,
     refetchOnWindowFocus: false,
   });
 }

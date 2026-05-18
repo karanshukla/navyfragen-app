@@ -5,18 +5,23 @@ import {
   IconButterfly,
   IconSettings,
 } from "@tabler/icons-react";
-import { useLocation, Link, useNavigate } from "react-router-dom"; // Added useNavigate
-import { Divider, NavLink, Text, Box } from "@mantine/core";
-import { useEffect } from "react"; // Added useEffect
+import { useLocation, Link, useNavigate } from "react-router-dom";
+import { Divider, NavLink, Text, Box, Loader, Avatar, Group, Anchor } from "@mantine/core";
+import { useEffect, useState } from "react";
+import { useFriends } from "./api/profileService";
 
 interface NavigationProps {
   onLinkClick?: () => void;
   isLoggedIn: boolean;
 }
 
+const FRIENDS_PAGE_SIZE = 10;
+
 export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   const location = useLocation();
-  const navigate = useNavigate(); // Added for keyboard navigation
+  const navigate = useNavigate();
+  const { data: friendsData, isLoading: friendsLoading } = useFriends(isLoggedIn);
+  const [friendsVisible, setFriendsVisible] = useState(FRIENDS_PAGE_SIZE);
 
   const handleClick = () => {
     if (onLinkClick) {
@@ -96,10 +101,9 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
           active={location.pathname === "/"}
           onClick={handleClick}
           leftSection={<IconHome size="1rem" stroke={1.5} />}
-        />{" "}
+        />
         {isLoggedIn ? (
           <>
-            {" "}
             <NavLink
               my="xs"
               label="Messages"
@@ -133,6 +137,95 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             />
           </>
         )}
+        <Box mt="md">
+          <Divider mb="md" />
+          <Text size="xs" fw={600} c="dimmed" mb="xs" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+            How it works
+          </Text>
+          {isLoggedIn ? (
+            <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
+              Share your profile link and anyone can send you an anonymous
+              question. Read incoming questions in your Messages inbox, then
+              reply to post your answer directly to your Bluesky feed.
+            </Text>
+          ) : (
+            <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
+              Log in with your Bluesky account to get a personal profile link.
+              Share it anywhere and people can send you anonymous questions.
+              You read and reply to them here, and your answers post straight
+              to Bluesky.
+            </Text>
+          )}
+        </Box>
+        {isLoggedIn && (
+          <Box mt="md">
+            <Divider mb="md" />
+            <Text size="xs" fw={600} c="dimmed" mb="xs" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+              Friends on Navyfragen
+            </Text>
+            {friendsLoading ? (
+              <Loader size="xs" />
+            ) : friendsData?.friends && friendsData.friends.length > 0 ? (
+              <Box>
+                <Box
+                  style={{
+                    maxHeight: friendsVisible > FRIENDS_PAGE_SIZE ? 280 : undefined,
+                    overflowY: friendsVisible > FRIENDS_PAGE_SIZE ? "auto" : "visible",
+                    overflowX: "hidden",
+                  }}
+                >
+                  {friendsData.friends.slice(0, friendsVisible).map((friend) => (
+                    <NavLink
+                      key={friend.did}
+                      label={
+                        <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
+                          <Avatar size={20} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
+                          <Box style={{ flex: 1, minWidth: 0 }}>
+                            <Text size="xs" truncate>
+                              {friend.displayName || friend.handle}
+                            </Text>
+                            <Text size="xs" c="dimmed" truncate>
+                              @{friend.handle}
+                            </Text>
+                          </Box>
+                        </Group>
+                      }
+                      component={Link}
+                      to={`/profile/${friend.handle}`}
+                      onClick={handleClick}
+                      py={4}
+                    />
+                  ))}
+                </Box>
+                {friendsData.friends.length > friendsVisible && (
+                  <Anchor
+                    size="xs"
+                    c="dimmed"
+                    mt={4}
+                    style={{ display: "block", cursor: "pointer" }}
+                    onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
+                  >
+                    +{friendsData.friends.length - friendsVisible} more — load more
+                  </Anchor>
+                )}
+                {friendsVisible > FRIENDS_PAGE_SIZE && (
+                  <Anchor
+                    size="xs"
+                    c="dimmed"
+                    style={{ display: "block", cursor: "pointer" }}
+                    onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
+                  >
+                    Show less
+                  </Anchor>
+                )}
+              </Box>
+            ) : !friendsLoading ? (
+              <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
+                None of the people you follow on Bluesky are on Navyfragen yet.
+              </Text>
+            ) : null}
+          </Box>
+        )}
       </Box>
       <Box>
         <Box mt="md" mb="md" visibleFrom="sm">
@@ -157,9 +250,11 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
         </Text>
         <NavLink
           label="@navyfragen.app"
-          component={Link}
-          to="https://bsky.app/profile/navyfragen.app"
-          onClick={handleClick} // Added onClick to close navbar on mobile
+          component="a"
+          href="https://bsky.app/profile/navyfragen.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleClick}
           leftSection={<IconButterfly size="1rem" stroke={1.5} />}
         />
       </Box>

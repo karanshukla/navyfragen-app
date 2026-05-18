@@ -2,11 +2,14 @@ import express from "express";
 import { param } from "express-validator";
 import { ProfileService } from "../services/profile-service";
 import { Logger } from "pino";
+import { initializeAgentFromSession } from "#/auth/session-agent";
+import type { AppContext } from "../index";
 
 export class ProfileController {
   constructor(
     private profileService: ProfileService,
-    private logger: Logger
+    private logger: Logger,
+    private ctx: AppContext
   ) {}
 
   /**
@@ -61,6 +64,32 @@ export class ProfileController {
   };
 
   /**
+   * Get the logged-in user's Bluesky follows who are also on Navyfragen
+   */
+  getFriends = async (
+    req: express.Request,
+    res: express.Response
+  ): Promise<express.Response> => {
+    const userDid = req.session?.did;
+    if (!userDid) {
+      return res.status(403).json({ error: "Not authenticated" });
+    }
+
+    const agent = await initializeAgentFromSession(req, this.ctx);
+    if (!agent) {
+      return res.status(401).json({ error: "Session expired" });
+    }
+
+    try {
+      const friends = await this.profileService.getFriendsOnApp(userDid, agent);
+      return res.json({ friends });
+    } catch (err) {
+      this.logger.error({ err, did: userDid }, "Failed to fetch friends on app");
+      return res.status(500).json({ error: "Failed to fetch friends" });
+    }
+  };
+
+  /**
    * Validation for handle resolution
    */
   validateResolveHandle = [
@@ -83,6 +112,7 @@ export class ProfileController {
       if (err.message === "Handle not found") {
         return res.status(404).json({ error: "Handle not found" });
       }
+      this.logger.error({ err, handle }, "Failed to resolve handle");
       return res.status(500).json({ error: "Failed to resolve handle" });
     }
   };

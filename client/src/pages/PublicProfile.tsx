@@ -6,6 +6,7 @@ import {
   Paper,
   Stack,
   Button,
+  ActionIcon,
   Group,
   Textarea,
   Avatar,
@@ -155,6 +156,25 @@ export default function PublicProfile() {
   }, []);
 
   if (handleError) {
+    const is404 =
+      typeof handleError === "object" &&
+      handleError !== null &&
+      (handleError as any).status === 404;
+    if (is404) {
+      return (
+        <Container>
+          <Paper p="md" withBorder>
+            <Text c="yellow" fw={700}>
+              No Bluesky account found
+            </Text>
+            <Text>
+              <strong>@{handle}</strong> doesn't exist on Bluesky. Check the
+              handle and try again.
+            </Text>
+          </Paper>
+        </Container>
+      );
+    }
     return (
       <Container>
         <Paper p="md" withBorder>
@@ -188,9 +208,12 @@ export default function PublicProfile() {
       <Container>
         <Paper p="md" withBorder>
           <Text c="yellow" fw={700}>
-            User not found
+            Not on Navyfragen
           </Text>
-          <Text>This user hasn't set up their Navyfragen inbox yet.</Text>
+          <Text>
+            <strong>@{handle}</strong> has a Bluesky account but hasn't set up
+            their Navyfragen inbox yet.
+          </Text>
         </Paper>
       </Container>
     );
@@ -213,15 +236,15 @@ export default function PublicProfile() {
       {profile ? (
         <>
           <Paper
-            p="md"
-            withBorder
+            radius="lg"
             mb="lg"
+            shadow="md"
             style={{ position: "relative", overflow: "hidden" }}
           >
             <BackgroundImage
               src={profile.banner || ""}
               style={{
-                filter: "blur(8px) brightness(0.5)",
+                filter: "blur(8px) brightness(0.4)",
                 position: "absolute",
                 top: -10,
                 left: -10,
@@ -237,7 +260,9 @@ export default function PublicProfile() {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                background: profile.banner
+                  ? "rgba(0,0,0,0.35)"
+                  : "linear-gradient(135deg, #1a5fb4 0%, #6e2fa0 100%)",
                 zIndex: 2,
               }}
             />
@@ -245,55 +270,39 @@ export default function PublicProfile() {
               style={{
                 position: "relative",
                 zIndex: 3,
-                padding: "var(--mantine-spacing-md)",
+                padding: "var(--mantine-spacing-lg)",
               }}
             >
               {/* Desktop Layout */}
               <Box visibleFrom="sm">
-                <Group>
+                <Group align="center">
                   <Avatar
                     src={profile.avatar}
                     alt={profile.displayName || profile.handle || "User"}
                     size="xl"
                     radius="xl"
-                    style={{ border: "2px solid white" }}
+                    style={{ border: "2px solid rgba(255,255,255,0.8)" }}
                   />
                   <Box style={{ flex: 1 }}>
-                    <Title
-                      order={3}
-                      c="white"
-                      style={{
-                        textShadow: "2px 2px 4px rgba(0,0,0,0.7)",
-                      }}
-                    >
+                    <Title order={3} c="white">
                       {profile.displayName}
                     </Title>
-                    <Text
-                      c="white"
-                      style={{
-                        textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
-                      }}
+                    <Anchor
+                      href={`https://bsky.app/profile/${profile.handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "rgba(255,255,255,0.7)", fontSize: "var(--mantine-font-size-sm)" }}
                     >
-                      <Anchor
-                        href={`https://bsky.app/profile/${profile.handle}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        c="white"
-                        style={{
-                          textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
-                        }}
-                      >
-                        @{profile.handle}
-                      </Anchor>
-                    </Text>
+                      @{profile.handle}
+                    </Anchor>
                     {profile.description && (
                       <Text
                         mt="xs"
-                        c="white"
+                        size="sm"
                         style={{
+                          color: "rgba(255,255,255,0.85)",
                           wordBreak: "break-word",
                           whiteSpace: "pre-wrap",
-                          textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
                         }}
                       >
                         {parseRichText(profile.description)}
@@ -309,53 +318,30 @@ export default function PublicProfile() {
                   <Avatar
                     src={profile.avatar}
                     alt={profile.displayName || profile.handle || "User"}
-                    size={100}
+                    size={90}
                     radius="xl"
-                    style={{
-                      border: "3px solid white",
-                      boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)", // Add shadow for depth
-                    }}
+                    style={{ border: "2px solid rgba(255,255,255,0.8)" }}
                   />
-                  <Title
-                    order={4}
-                    c="white"
-                    ta="center"
-                    style={{
-                      textShadow: "2px 2px 4px rgba(0,0,0,0.7)",
-                      marginTop: "var(--mantine-spacing-xs)",
-                    }}
-                  >
+                  <Title order={4} c="white" ta="center">
                     {profile.displayName}
                   </Title>
-                  <Text
-                    c="white"
+                  <Anchor
+                    href={`https://bsky.app/profile/${profile.handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     ta="center"
-                    style={{
-                      textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
-                    }}
+                    style={{ color: "rgba(255,255,255,0.7)", fontSize: "var(--mantine-font-size-sm)" }}
                   >
-                    <Anchor
-                      href={`https://bsky.app/profile/${profile.handle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      c="white"
-                      style={{
-                        textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
-                      }}
-                    >
-                      @{profile.handle}
-                    </Anchor>
-                  </Text>
+                    @{profile.handle}
+                  </Anchor>
                   {profile.description && (
                     <Text
-                      mt="xs"
-                      c="white"
-                      ta="center"
                       size="sm"
+                      ta="center"
                       style={{
+                        color: "rgba(255,255,255,0.85)",
                         wordBreak: "break-word",
                         whiteSpace: "pre-wrap",
-                        textShadow: "1px 1px 3px rgba(0,0,0,0.7)",
                       }}
                     >
                       {parseRichText(profile.description)}
@@ -367,27 +353,21 @@ export default function PublicProfile() {
           </Paper>
 
           <Paper
-            p="md"
-            withBorder
-            style={{
-              background: "linear-gradient(to right, #005299, #7700aa)",
-            }}
+            p="lg"
+            radius="lg"
+            shadow="md"
             onClick={() => textareaRef.current?.focus()}
+            style={{
+              background: "linear-gradient(135deg, #1a5fb4 0%, #6e2fa0 100%)",
+              border: "2px solid rgba(255,255,255,0.08)",
+              cursor: "text",
+            }}
           >
-            <Title
-              order={4}
-              mb="md"
-              c="white"
-              ta="center"
-              style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.7)" }}
-            >
+            <Title order={4} mb="md" c="white" ta="center">
               Send an anonymous message or question!
             </Title>
 
-            <Stack>
-              <Text size="sm" ta="right" c="white">
-                {message.length}/{MAX_MESSAGE_LENGTH}
-              </Text>
+            <Stack gap="xs">
               <Textarea
                 ref={textareaRef}
                 value={message}
@@ -396,10 +376,12 @@ export default function PublicProfile() {
                     setMessage(e.target.value);
                   }
                 }}
-                minRows={1}
-                maxRows={3}
+                minRows={2}
+                maxRows={4}
                 autosize
                 disabled={sendLoading}
+                placeholder="Ask something…"
+                description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
                 onKeyDown={(e) => {
                   if (
                     (e.key === "Enter" &&
@@ -412,37 +394,39 @@ export default function PublicProfile() {
                     handleSend();
                   }
                 }}
-                variant="unstyled"
+                radius="md"
                 styles={{
                   input: {
-                    backgroundColor: "white",
-                    color: "black",
+                    backgroundColor: "rgba(255,255,255,0.95)",
+                    color: "#1a1a2e",
                     border: "none",
-                    padding: "var(--mantine-spacing-xs)",
-                    borderRadius: "var(--mantine-radius-sm)",
-                    fontSize: "var(--mantine-font-size-md)",
-                    fontWeight: 500,
-                    fontFamily: "'Comic Neue', sans-serif",
+                  },
+                  description: {
+                    color: "rgba(255,255,255,0.5)",
+                    textAlign: "right",
                   },
                 }}
               />
-              <Group justify="flex-end">
-                <Button
-                  onClick={() => setMessage("")}
-                  variant="filled"
-                  size="md"
+              <Group justify="flex-end" gap="xs">
+                <ActionIcon
+                  onClick={(e) => { e.stopPropagation(); setMessage(""); }}
+                  variant="subtle"
+                  color="white"
+                  size="lg"
                   radius="md"
+                  aria-label="Clear message"
                 >
-                  <IconX />
-                </Button>
+                  <IconX size={18} />
+                </ActionIcon>
                 <Button
-                  onClick={handleSend}
+                  onClick={(e) => { e.stopPropagation(); handleSend(); }}
                   loading={sendLoading}
-                  variant="filled"
-                  size="md"
+                  variant="white"
+                  color="dark"
                   radius="md"
+                  leftSection={<IconSend size={16} />}
                 >
-                  <IconSend />
+                  Send
                 </Button>
               </Group>
             </Stack>

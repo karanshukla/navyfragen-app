@@ -1,5 +1,7 @@
 import type { Database } from "../database/db";
 import { Logger } from "pino";
+import { Agent } from "@atproto/api";
+import type { IdResolver } from "@atproto/identity";
 
 export interface UserSettings {
   did: string;
@@ -49,6 +51,68 @@ export class SettingsService {
       );
       throw new Error("Failed to create default user settings");
     }
+  }
+
+  async getStats(userDid: string): Promise<{
+    messageCount: number;
+    memberSince: string | null;
+  }> {
+    try {
+      const countResult = await this.db
+        .selectFrom("message")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("recipient", "=", userDid)
+        .executeTakeFirst();
+
+      const profile = await this.db
+        .selectFrom("user_profile")
+        .select("createdAt")
+        .where("did", "=", userDid)
+        .executeTakeFirst();
+
+      return {
+        messageCount: Number(countResult?.count ?? 0),
+        memberSince: profile?.createdAt ?? null,
+      };
+    } catch (err) {
+      this.logger.error({ err, did: userDid }, "Failed to fetch user stats");
+      throw new Error("Failed to fetch user stats");
+    }
+  }
+
+  async getPdsInfo(
+    userDid: string,
+    agent: Agent,
+    idResolver: IdResolver
+  ): Promise<{ pdsUrl: string | null; recordCount: number }> {
+    let pdsUrl: string | null = null;
+    try {
+      const atprotoData = await idResolver.did.resolveAtprotoData(userDid);
+      pdsUrl = atprotoData?.pds ?? null;
+    } catch (err) {
+      this.logger.warn({ err, did: userDid }, "Failed to resolve PDS URL from DID document");
+    }
+
+    let recordCount = 0;
+    try {
+      let cursor: string | undefined;
+      for (let page = 0; page < 10; page++) {
+        const res = await agent.com.atproto.repo.listRecords({
+          repo: userDid,
+          collection: "app.navyfragen.message",
+          limit: 100,
+          cursor,
+        });
+        if (!res.success) break;
+        recordCount += res.data.records.length;
+        cursor = res.data.cursor;
+        if (!cursor) break;
+      }
+    } catch (err) {
+      this.logger.warn({ err, did: userDid }, "Failed to count PDS records");
+    }
+
+    return { pdsUrl, recordCount };
   }
 
   async updateSettings(

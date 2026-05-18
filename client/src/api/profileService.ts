@@ -26,6 +26,17 @@ export interface ResolveHandleResponse {
   did: string;
 }
 
+export interface Friend {
+  did: string;
+  handle: string;
+  displayName?: string;
+  avatar?: string;
+}
+
+export interface FriendsResponse {
+  friends: Friend[];
+}
+
 // Query keys
 export const profileKeys = {
   all: ["profiles"] as const,
@@ -33,10 +44,16 @@ export const profileKeys = {
   detail: (did: string) => [...profileKeys.all, did] as const,
   resolveHandle: (handle: string) =>
     [...profileKeys.all, "resolve", handle] as const,
+  friends: () => [...profileKeys.all, "friends"] as const,
 };
 
 // API Services
 export const profileService = {
+  // Get follows who are on Navyfragen
+  getFriends: (): Promise<FriendsResponse> =>
+    apiClient.get<FriendsResponse>("/friends"),
+
+
   // Get public profile by DID
   getPublicProfile: (did: string): Promise<ProfileResponse> => {
     return apiClient.get<ProfileResponse>(
@@ -77,6 +94,19 @@ export function useUserExists(did: string | null) {
     queryFn: () =>
       did ? profileService.userExists(did) : Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
+  });
+}
+
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+export function useFriends(enabled: boolean) {
+  return useQuery({
+    queryKey: profileKeys.friends(),
+    queryFn: () => profileService.getFriends(),
+    enabled,
+    staleTime: ONE_DAY,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 }
 

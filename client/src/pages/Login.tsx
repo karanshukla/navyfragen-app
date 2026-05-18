@@ -60,8 +60,12 @@ export default function Login() {
 
   return (
     <Container>
-      <Title>Login</Title>
-      {success && <Notification color="green">{success}</Notification>}
+      <Title mb="md">Login</Title>
+      {success && (
+        <Notification color="green" title="Success" withCloseButton mb="md">
+          {success}
+        </Notification>
+      )}
       <Grid>
         <Grid.Col span={{ base: 12, md: 6 }}>
           <form onSubmit={onSubmit}>

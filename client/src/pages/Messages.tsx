@@ -9,6 +9,7 @@ import {
   Center,
   Alert,
   Button,
+  ActionIcon,
   Group,
   TextInput,
   Textarea,
@@ -16,8 +17,8 @@ import {
   Tooltip,
   Grid,
   Divider,
-  Box,
   Switch,
+  Select,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -27,6 +28,9 @@ import {
   useAddExampleMessages,
   Message,
 } from "../api/messageService";
+import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
+import { ApiError } from "../api/apiClient";
+import { themes } from "../lib/themes";
 import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
@@ -74,11 +78,11 @@ export default function Messages() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isPortrait, setIsPortrait] = useState(
-    window.matchMedia("(orientation: portrait)").matches
+    window.matchMedia("(orientation: portrait)").matches,
   );
   const [deleteModalOpened, setDeleteModalOpened] = useState<boolean>(false);
   const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
-    null
+    null,
   );
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
   const [characterLimit, setCharacterLimit] = useState<number>(280);
@@ -108,6 +112,17 @@ export default function Messages() {
   const { mutate: addExamples, isPending: examplesLoading } =
     useAddExampleMessages();
 
+  const { data: userSettings, isLoading: settingsLoading } = useUserSettings();
+  const updateSettings = useUpdateUserSettings({
+    onError: (error: ApiError) => {
+      setPageAlert({
+        title: "Error updating theme",
+        message: error.error || "Failed to update image theme.",
+        color: "red",
+      });
+    },
+  });
+
   useEffect(() => {
     let maxLengthForResponse = MAX_BSKY_POST_LENGTH - GENERAL_BUFFER;
 
@@ -119,7 +134,7 @@ export default function Messages() {
     if (!includeQuestionAsImage) {
       if (respondingTid && messagesData?.messages) {
         const currentMessage = messagesData.messages.find(
-          (m) => m.tid === respondingTid
+          (m) => m.tid === respondingTid,
         );
         if (currentMessage) {
           const originalMessageText = currentMessage.message;
@@ -222,7 +237,7 @@ export default function Messages() {
     setResponseText("");
     // Ensure the card that is being responded to gets focus for a11y
     const messageIndex = messagesData?.messages.findIndex(
-      (msg) => msg.tid === tid
+      (msg) => msg.tid === tid,
     );
     if (messageIndex !== undefined && messageIndex !== -1) {
       setFocusedCardIndex(messageIndex);
@@ -288,7 +303,7 @@ export default function Messages() {
             color: "red",
           });
         },
-      }
+      },
     );
   };
 
@@ -374,7 +389,7 @@ export default function Messages() {
 
   return (
     <Container>
-      <Title>Messages</Title>
+      <Title mb="md">Messages</Title>
       {pageAlert && (
         <Alert
           title={pageAlert.title}
@@ -480,36 +495,59 @@ export default function Messages() {
             messagesData.messages &&
             messagesData.messages.length > 0 ? (
             <>
-              <Group mb="md">
-                <Switch
-                  checked={appendProfileLink}
-                  onChange={(event) =>
-                    setAppendProfileLink(event.currentTarget.checked)
-                  }
-                  label="Append my link automatically"
-                />
-                <Switch
-                  checked={useGradients}
-                  onChange={(event) =>
-                    setUseGradients(event.currentTarget.checked)
-                  }
-                  label="Use gradient backgrounds"
-                />
-                <Switch
-                  checked={includeQuestionAsImage}
-                  onChange={(event) =>
-                    setIncludeQuestionAsImage(event.currentTarget.checked)
-                  }
-                  label="Include question as an image"
-                />
-                <Switch
-                  checked={confirmBeforeDelete}
-                  onChange={(event) =>
-                    setConfirmBeforeDelete(event.currentTarget.checked)
-                  }
-                  label="Confirm before deleting"
-                />
-              </Group>
+              <Stack gap="xs" mb="md">
+                <Group>
+                  <Switch
+                    checked={appendProfileLink}
+                    onChange={(event) =>
+                      setAppendProfileLink(event.currentTarget.checked)
+                    }
+                    label="Append my inbox link automatically to the BlueSky post (will reduce your available character budget)"
+                  />
+                  <Switch
+                    checked={useGradients}
+                    onChange={(event) =>
+                      setUseGradients(event.currentTarget.checked)
+                    }
+                    label="Use gradient backgrounds (turn off for better contrast, turn on to take screenshots)"
+                  />
+                  <Switch
+                    checked={includeQuestionAsImage}
+                    onChange={(event) =>
+                      setIncludeQuestionAsImage(event.currentTarget.checked)
+                    }
+                    label="Include question as an image (includes automatic alt text generation too)"
+                  />
+                  <Switch
+                    checked={confirmBeforeDelete}
+                    onChange={(event) =>
+                      setConfirmBeforeDelete(event.currentTarget.checked)
+                    }
+                    label="Confirm before deleting messages (leave off if you want to bulk delete messages)"
+                  />
+                </Group>
+                <Group>
+                  <Select
+                    label="Image theme"
+                    data={Object.entries(themes).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
+                    value={userSettings?.imageTheme || "default"}
+                    onChange={(value) => {
+                      if (value) {
+                        updateSettings.mutate({
+                          imageTheme: value,
+                          pdsSyncEnabled: Boolean(userSettings?.pdsSyncEnabled),
+                        });
+                      }
+                    }}
+                    disabled={settingsLoading || updateSettings.isPending}
+                    size="sm"
+                    w={160}
+                  />
+                </Group>
+              </Stack>
               <Divider mb="md" />
               <Grid align="flex-start">
                 {(messagesData.messages ?? []).map(
@@ -525,7 +563,8 @@ export default function Messages() {
                         }}
                         tabIndex={0}
                         p="md"
-                        shadow="lg"
+                        radius="lg"
+                        shadow="md"
                         onClick={() => {
                           if (respondingTid !== msg.tid) {
                             handlePrepareResponse(msg.tid);
@@ -533,7 +572,7 @@ export default function Messages() {
                             setRespondingTid(null);
                           }
                         }}
-                        onFocus={() => setFocusedCardIndex(index)} // Keep track of focused card
+                        onFocus={() => setFocusedCardIndex(index)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
@@ -548,71 +587,68 @@ export default function Messages() {
                           cursor: "pointer",
                           height: "100%",
                           background: useGradients
-                            ? "linear-gradient(to right, #005299, #7700aa)"
+                            ? "linear-gradient(135deg, #1a5fb4 0%, #6e2fa0 100%)"
                             : "var(--mantine-color-deepBlue-9)",
-                          outline:
+                          border:
                             focusedCardIndex === index
-                              ? "2px solid var(--mantine-color-blue-5)"
-                              : "none",
+                              ? "2px solid rgba(255,255,255,0.6)"
+                              : "2px solid rgba(255,255,255,0.08)",
+                          transition: "border-color 0.15s ease",
                         }}
                       >
-                        <Stack>
-                          <Group justify="space-between">
-                            <Box
-                              p="xs"
-                              style={{
-                                borderRadius: "var(--mantine-radius-sm)",
-                              }}
+                        <Stack gap="sm">
+                          <Group justify="space-between" align="center">
+                            <Text
+                              size="xs"
+                              style={{ color: "rgba(255,255,255,0.55)" }}
                             >
-                              <Text size="xs" c="white">
-                                {" "}
-                                {/* Changed c="white" and removed variant="subtle" */}
-                                {new Date(msg.createdAt).toLocaleString(
-                                  undefined,
-                                  {
-                                    year: "numeric",
-                                    month: "2-digit",
-                                    day: "2-digit",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    hour12: false,
-                                    timeZoneName: "short",
-                                  }
-                                )}
-                              </Text>
-                            </Box>
-                            <Group>
-                              <Button
-                                size="xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteRequest(msg.tid);
-                                }}
-                                color="red"
-                                variant="outline"
-                                loading={deletingTid === msg.tid}
-                              >
-                                <IconTrash size={16} />
-                              </Button>
-                            </Group>
+                              {new Date(msg.createdAt).toLocaleString(
+                                undefined,
+                                {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                  timeZoneName: "short",
+                                },
+                              )}
+                            </Text>
+                            <ActionIcon
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRequest(msg.tid);
+                              }}
+                              color="red"
+                              variant="subtle"
+                              loading={deletingTid === msg.tid}
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
                           </Group>
-                          <Center>
+                          <Center py="xs">
                             <Text
                               c="white"
-                              fw="bold"
+                              fw={500}
+                              size="lg"
                               style={{
                                 wordBreak: "break-word",
                                 whiteSpace: "pre-wrap",
-                                textShadow: "1px 1px 1px rgba(0, 0, 0, 0.7)",
-                                fontSize: "1.3rem",
                                 textAlign: "center",
+                                lineHeight: 1.5,
                               }}
                             >
                               {msg.message}
                             </Text>
                           </Center>
                           {respondingTid === msg.tid && (
-                            <Stack>
+                            <Stack gap="xs">
+                              <Divider
+                                color="rgba(255,255,255,0.15)"
+                                my={2}
+                              />
                               <Textarea
                                 ref={textareaRef}
                                 value={responseText}
@@ -623,8 +659,8 @@ export default function Messages() {
                                 }
                                 onClick={(e) => e.stopPropagation()}
                                 autosize
-                                minRows={1}
-                                maxRows={2}
+                                minRows={2}
+                                maxRows={4}
                                 onKeyDown={(event) => {
                                   event.stopPropagation();
                                   if (
@@ -635,18 +671,17 @@ export default function Messages() {
                                     handleSendResponse(msg);
                                   }
                                 }}
-                                inputSize="md"
+                                size="sm"
                                 radius="md"
+                                placeholder="Write your reply…"
                                 styles={{
                                   input: {
-                                    backgroundColor: "white",
-                                    color: "black",
+                                    backgroundColor: "rgba(255,255,255,0.95)",
+                                    color: "#1a1a2e",
                                     border: "none",
-                                    padding: "var(--mantine-spacing-xs)",
-                                    borderRadius: "var(--mantine-radius-sm)",
-                                    fontSize: "var(--mantine-font-size-md)",
-                                    fontWeight: 500,
-                                    fontFamily: "'Comic Neue', sans-serif",
+                                  },
+                                  description: {
+                                    color: "rgba(255,255,255,0.5)",
                                   },
                                 }}
                               />
@@ -658,10 +693,12 @@ export default function Messages() {
                                     handleSendResponse(msg);
                                   }}
                                   loading={respondLoading}
-                                  variant="filled"
+                                  variant="white"
+                                  color="dark"
                                   radius="md"
+                                  leftSection={<IconSend2 size={16} />}
                                 >
-                                  <IconSend2 />
+                                  Reply
                                 </Button>
                               </Group>
                             </Stack>
@@ -669,7 +706,7 @@ export default function Messages() {
                         </Stack>
                       </Paper>
                     </Grid.Col>
-                  )
+                  ),
                 )}
               </Grid>
             </>

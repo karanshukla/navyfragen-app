@@ -14,6 +14,9 @@ export const createClient = async (db: Database) => {
   const urlWithAPI = publicUrl ? `${url}/api` : url;
   const enc = encodeURIComponent;
   return new NodeOAuthClient({
+    // Windows DNS often fails to resolve TXT records for custom handles (e.g. fragen.navy).
+    // Fallback to public resolvers so local dev works the same as prod.
+    fallbackNameservers: ["8.8.8.8", "1.1.1.1"],
     clientMetadata: {
       client_name: "Navyfragen App",
       client_id: publicUrl

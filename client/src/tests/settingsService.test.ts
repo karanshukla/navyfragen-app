@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { apiClient } from "../api/apiClient";
-import { settingsService, UserSettings } from "../api/settingsService";
+import { settingsService, UserSettings, UserStats } from "../api/settingsService";
 
 vi.mock("../api/apiClient", () => ({
   apiClient: {
@@ -101,6 +101,37 @@ describe("settingsService", () => {
         "/settings",
         { imageTheme: newImageTheme }
       );
+    });
+  });
+
+  describe("getStats", () => {
+    it("should call apiClient.get with the correct endpoint", async () => {
+      const mockStats: UserStats = {
+        messageCount: 42,
+        memberSince: "2025-01-01T00:00:00.000Z",
+      };
+      vi.mocked(apiClient.get).mockResolvedValueOnce(mockStats);
+
+      const result = await settingsService.getStats();
+
+      expect(result).toEqual(mockStats);
+      expect(apiClient.get).toHaveBeenCalledWith("/stats");
+    });
+
+    it("should return 0 message count when user has no messages", async () => {
+      const mockStats: UserStats = { messageCount: 0, memberSince: null };
+      vi.mocked(apiClient.get).mockResolvedValueOnce(mockStats);
+
+      const result = await settingsService.getStats();
+
+      expect(result).toEqual({ messageCount: 0, memberSince: null });
+    });
+
+    it("should handle authentication errors", async () => {
+      const mockError = { error: "Not authenticated", status: 403 };
+      vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
+
+      await expect(settingsService.getStats()).rejects.toEqual(mockError);
     });
   });
 });

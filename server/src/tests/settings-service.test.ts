@@ -17,6 +17,9 @@ describe("SettingsService", () => {
     selectAll() {
       return this;
     },
+    select() {
+      return this;
+    },
     where() {
       return this;
     },
@@ -224,6 +227,51 @@ describe("SettingsService", () => {
 
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
       assert.strictEqual(mockLogger.error.mock.calls.length, 2);
+    });
+  });
+
+  describe("getStats", () => {
+    it("should return message count and member since date", async () => {
+      executeTakeFirstQueue.push({ count: 42 } as any);
+      executeTakeFirstQueue.push({ createdAt: "2025-01-01T00:00:00.000Z" } as any);
+
+      const result = await settingsService.getStats("user123");
+
+      assert.strictEqual(result.messageCount, 42);
+      assert.strictEqual(result.memberSince, "2025-01-01T00:00:00.000Z");
+      assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
+    });
+
+    it("should return 0 message count when there are no messages", async () => {
+      executeTakeFirstQueue.push(undefined); // no count row
+      executeTakeFirstQueue.push({ createdAt: "2025-01-01T00:00:00.000Z" } as any);
+
+      const result = await settingsService.getStats("user123");
+
+      assert.strictEqual(result.messageCount, 0);
+      assert.strictEqual(result.memberSince, "2025-01-01T00:00:00.000Z");
+    });
+
+    it("should return null memberSince when user is not in user_profile", async () => {
+      executeTakeFirstQueue.push({ count: 5 } as any);
+      executeTakeFirstQueue.push(undefined); // no profile row
+
+      const result = await settingsService.getStats("user123");
+
+      assert.strictEqual(result.messageCount, 5);
+      assert.strictEqual(result.memberSince, null);
+    });
+
+    it("should throw when the database query fails", async () => {
+      mockSelectBuilder.executeTakeFirst = async () => {
+        throw new Error("Database query failed");
+      };
+
+      await assert.rejects(
+        async () => await settingsService.getStats("user123"),
+        { message: "Failed to fetch user stats" }
+      );
+      assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
   });
 });
