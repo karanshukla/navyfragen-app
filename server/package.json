@@ -46,6 +46,7 @@
         "node-fetch": "^2.7.0",
         "pg": "^8.16.0",
         "pino": "^9.3.2",
+        "sharp": "^0.34.5",
         "uhtml": "^4.5.9"
     },
     "devDependencies": {
@@ -56,6 +57,7 @@
         "@types/node-fetch": "^2.6.12",
         "@types/pg": "^8.15.2",
         "@types/serve-static": "^1.15.7",
+        "@types/sharp": "^0.31.1",
         "@typescript-eslint/eslint-plugin": "^8.32.1",
         "@typescript-eslint/parser": "^8.32.1",
         "eslint": "^9.27.0",

@@ -2,6 +2,14 @@
 
 Allows users to receive anonymous messages and post the answers directly to Bluesky.
 
+## Monorepo Structure
+
+npm workspaces with two packages:
+- `client/` — React + Vite SPA (Mantine UI, React Query, React Router)
+- `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
+
+Root-level `npm run dev` runs both concurrently.
+
 ## Getting Started
 
 You will need to install Node, Git and a compatible web browser to run the app locally. Windows users may also need to install the C++ build tools or use WSL2 to run the app.
@@ -15,11 +23,12 @@ You will need to install Node, Git and a compatible web browser to run the app l
    ```bash
    npm install
    ```
-3. Start the development server:
+3. Copy `server/.env.template` to `server/.env` and fill in the required values. The one required secret with no default is `OAUTH_TOKEN_SECRET` (a 32-byte hex string for AES-256).
+4. Start the development server:
    ```bash
    npm run dev
    ```
-4. Open your web browser and navigate to `http://localhost:5173`. (If you're a Windows user, you might need to go to `http://127.0.0.1` in order for cookies to work, more on this in the /server README)
+5. Open your web browser and navigate to `http://localhost:5173`. (If you're a Windows user, you might need to go to `http://127.0.0.1` in order for cookies to work, more on this in the /server README)
 
 ## External Dependencies
 
@@ -31,6 +40,8 @@ You'll need to run it locally via Docker and update your env file to point to lo
 docker pull monkeyphysics/html-to-image
 docker run --rm -p 3033:3033 monkeyphysics/html-to-image
 ```
+
+Three image themes are available when responding to a message: `default` (NGL-style purple gradient), `compressed` (dark compact card), and `twitter` (X/Twitter post card). Users can set their preferred theme in settings, and it's stored per-user in the database.
 
 Anubis acts as a WAF to protect the publically available pages from DDoS or spam. It is optional, but highly recommended. In order to run it, you will also need to add a Caddy Reverse Proxy (a sample is provided in /caddy) and associate the frontend/backend appropriately. Point the frontend to Anubis, and then have Anubis redirect to the frontend Vite service. 
 

@@ -12,12 +12,15 @@ export function settingsRoutes(
   const settingsService = new SettingsService(ctx.db, ctx.logger);
   const settingsController = new SettingsController(
     settingsService,
-    ctx.logger
+    ctx.logger,
+    ctx
   );
 
   const router = express.Router();
   // Define routes
   router.get("/settings", handler(settingsController.getSettings));
+  router.get("/stats", handler(settingsController.getStats));
+  router.get("/pds-info", handler(settingsController.getPdsInfo));
 
   router.post(
     "/settings",

@@ -1,4 +1,4 @@
-import { AtpAgent } from "@atproto/api";
+import { AtpAgent, Agent } from "@atproto/api";
 import { Kysely } from "kysely";
 import { Logger } from "pino";
 
@@ -83,16 +83,53 @@ export class ProfileService {
    * @param handle The user's handle
    * @returns The resolved DID
    */
-  async resolveHandleToDid(handle: string): Promise<string> {
-    try {
-      const did = await this.resolver.resolveHandleToDid(handle);
-      if (!did) {
-        throw new Error("Handle not found");
+  async getFriendsOnApp(
+    userDid: string,
+    agent: Agent
+  ): Promise<{ did: string; handle: string; displayName?: string; avatar?: string }[]> {
+    const followed: { did: string; handle: string; displayName?: string; avatar?: string }[] = [];
+    let cursor: string | undefined;
+
+    for (let page = 0; page < 5; page++) {
+      const res = await agent.app.bsky.graph.getFollows({
+        actor: userDid,
+        limit: 100,
+        cursor,
+      });
+      if (!res.success) break;
+
+      for (const f of res.data.follows) {
+        followed.push({ did: f.did, handle: f.handle, displayName: f.displayName, avatar: f.avatar });
       }
-      return did;
+
+      cursor = res.data.cursor;
+      if (!cursor) break;
+    }
+
+    if (followed.length === 0) return [];
+
+    const dids = followed.map((f) => f.did);
+    const appUsers = await this.db
+      .selectFrom("user_profile")
+      .select("did")
+      .where("did", "in", dids)
+      .execute();
+
+    const appUserDids = new Set(appUsers.map((u) => u.did));
+    return followed.filter((f) => appUserDids.has(f.did));
+  }
+
+  async resolveHandleToDid(handle: string): Promise<string> {
+    let did: string | undefined;
+    try {
+      did = await this.resolver.resolveHandleToDid(handle);
     } catch (err) {
-      this.logger.error({ err, handle }, "Failed to resolve handle");
+      this.logger.error({ err, handle }, "Error during handle resolution");
       throw new Error("Failed to resolve handle");
     }
+    if (!did) {
+      throw new Error("Handle not found");
+    }
+    return did;
   }
 }

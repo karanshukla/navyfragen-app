@@ -10,7 +10,7 @@ export function profileRoutes(
 ) {
   // Initialize service and controller
   const profileService = new ProfileService(ctx.db, ctx.resolver, ctx.logger);
-  const profileController = new ProfileController(profileService, ctx.logger);
+  const profileController = new ProfileController(profileService, ctx.logger, ctx);
 
   const router = express.Router();
 
@@ -28,6 +28,8 @@ export function profileRoutes(
     checkValidation,
     handler(profileController.checkUserExists)
   );
+
+  router.get("/friends", handler(profileController.getFriends));
 
   router.get(
     "/resolve-handle/:handle",

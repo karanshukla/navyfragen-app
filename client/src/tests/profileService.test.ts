@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { apiClient } from "../api/apiClient";
-import { profileService } from "../api/profileService";
+import { profileService, FriendsResponse } from "../api/profileService";
 
 vi.mock("../api/apiClient", () => ({
   apiClient: {
@@ -110,6 +110,59 @@ describe("profileService", () => {
       await expect(profileService.resolveHandle(mockHandle)).rejects.toEqual(
         mockError
       );
+    });
+  });
+
+  describe("getFriends", () => {
+    const mockFriendsResponse: FriendsResponse = {
+      friends: [
+        {
+          did: "did:example:1",
+          handle: "friend1.bsky.app",
+          displayName: "Friend One",
+          avatar: "https://cdn.bsky.app/1.jpg",
+        },
+        {
+          did: "did:example:2",
+          handle: "friend2.bsky.app",
+          displayName: undefined,
+          avatar: undefined,
+        },
+      ],
+    };
+
+    it("should call apiClient.get with the correct endpoint", async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce(mockFriendsResponse);
+
+      const result = await profileService.getFriends();
+
+      expect(result).toEqual(mockFriendsResponse);
+      expect(apiClient.get).toHaveBeenCalledWith("/friends");
+    });
+
+    it("should return empty friends array when user has no friends on app", async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ friends: [] });
+
+      const result = await profileService.getFriends();
+
+      expect(result).toEqual({ friends: [] });
+      expect(apiClient.get).toHaveBeenCalledWith("/friends");
+    });
+
+    it("should return avatar URLs for friends that have them", async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce(mockFriendsResponse);
+
+      const result = await profileService.getFriends();
+
+      expect(result.friends[0].avatar).toBe("https://cdn.bsky.app/1.jpg");
+      expect(result.friends[1].avatar).toBeUndefined();
+    });
+
+    it("should handle authentication errors", async () => {
+      const mockError = { error: "Not authenticated", status: 403 };
+      vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
+
+      await expect(profileService.getFriends()).rejects.toEqual(mockError);
     });
   });
 });

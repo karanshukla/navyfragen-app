@@ -6,6 +6,7 @@ const DAY = HOUR * 24;
 export function createIdResolver() {
   return new IdResolver({
     didCache: new MemoryCache(HOUR, DAY),
+    backupNameservers: ["8.8.8.8", "1.1.1.1"],
   });
 }
 

@@ -14,6 +14,7 @@ import {
   createIdResolver,
   BidirectionalResolver,
 } from "./lib/id-resolver";
+import type { IdResolver } from "@atproto/identity";
 import type { Database } from "./database/db";
 import cookieSession from "cookie-session";
 
@@ -23,6 +24,7 @@ export type AppContext = {
   logger: pino.Logger;
   oauthClient: OAuthClient;
   resolver: BidirectionalResolver;
+  idResolver: IdResolver;
 };
 
 export class Server {
@@ -49,6 +51,7 @@ export class Server {
       logger,
       oauthClient,
       resolver,
+      idResolver: baseIdResolver,
     };
 
     // Create our server

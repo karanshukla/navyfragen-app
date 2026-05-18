@@ -223,7 +223,7 @@ export class MessageService {
 
         const imageTheme = userSettings?.imageTheme ?? "default";
 
-        const { imageBlob, imageAltText } =
+        const { imageBlob, imageAltText, width, height } =
           await imageGenerator.generateQuestionImage(
             original,
             this.logger,
@@ -240,14 +240,16 @@ export class MessageService {
           const uploadedImage = await agent.uploadBlob(imageBlob, {
             encoding: "image/png",
           });
+          const imageEmbed: any = {
+            image: uploadedImage.data.blob,
+            alt: imageAltText || "Image of the anonymous question",
+          };
+          if (width && height) {
+            imageEmbed.aspectRatio = { width, height };
+          }
           postRecord.embed = {
             $type: "app.bsky.embed.images",
-            images: [
-              {
-                image: uploadedImage.data.blob,
-                alt: imageAltText || "Image of the anonymous question",
-              },
-            ],
+            images: [imageEmbed],
           };
         } catch (uploadErr) {
           this.logger.error(uploadErr, "Failed to upload image to Bluesky");

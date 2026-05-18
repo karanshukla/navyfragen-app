@@ -1,0 +1,4 @@
+/* Constrain the mobile navbar to 60% of the viewport width */
+.mantine-AppShell-navbar {
+  max-width: 60vw !important;
+}

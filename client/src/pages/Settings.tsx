@@ -12,12 +12,20 @@ import {
   Loader,
   Notification,
   Select,
+  Box,
+  Group,
+  Stack,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { apiClient, ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
-import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
+import {
+  useUserSettings,
+  useUpdateUserSettings,
+  useUserStats,
+  usePdsInfo,
+} from "../api/settingsService";
 import { useInstallPrompt } from "../components/InstallPromptContext";
 import { themes } from "../lib/themes";
 
@@ -42,11 +50,13 @@ export default function Settings() {
     },
     onError: (error: ApiError) => {
       setUpdateError(
-        error.error || "Failed to update settings. Please try again."
+        error.error || "Failed to update settings. Please try again.",
       );
       setTimeout(() => setUpdateError(null), 5000);
     },
   });
+  const { data: userStats, isLoading: statsLoading } = useUserStats();
+  const { data: pdsInfo, isLoading: pdsLoading } = usePdsInfo();
   const { installPrompt, setInstallPrompt } = useInstallPrompt();
 
   const handleInstallClick = async () => {
@@ -85,6 +95,65 @@ export default function Settings() {
             <Grid.Col span={12}>
               <Title order={1}>Settings</Title>
             </Grid.Col>
+            <Grid.Col span={12}>
+              <Paper shadow="sm" p="lg" radius="md" withBorder>
+                <Title order={3} mb="md">
+                  Account Overview
+                </Title>
+                <Divider mb="md" />
+                {statsLoading || pdsLoading ? (
+                  <Loader size="sm" />
+                ) : (
+                  <>
+                    <Group gap="xl">
+                      <Stack gap={2}>
+                        <Text size="xl" fw={700}>
+                          {userStats?.messageCount ?? "—"}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Messages in inbox
+                        </Text>
+                      </Stack>
+                      <Stack gap={2}>
+                        <Text size="xl" fw={700}>
+                          {pdsInfo?.recordCount ?? "—"}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Answers on PDS
+                        </Text>
+                      </Stack>
+                      <Stack gap={2}>
+                        <Text size="xl" fw={700}>
+                          {userStats?.memberSince
+                            ? new Date(userStats.memberSince).toLocaleDateString(
+                                undefined,
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )
+                            : "—"}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Active since
+                        </Text>
+                      </Stack>
+                      <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+                        <Text size="lg" fw={700} ff="monospace" truncate>
+                          {pdsInfo?.pdsUrl
+                            ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "")
+                            : "—"}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          PDS
+                        </Text>
+                      </Stack>
+                    </Group>
+                  </>
+                )}
+              </Paper>
+            </Grid.Col>
             <Grid.Col
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
@@ -100,7 +169,7 @@ export default function Settings() {
                   flexDirection: "column",
                 }}
               >
-                <div style={{ flexGrow: 1 }}>
+                <Box style={{ flexGrow: 1 }}>
                   <Title order={3}>Install Application</Title>
                   <Text mt="sm" c="dimmed">
                     Install the app for faster access. Works with almost any
@@ -109,7 +178,7 @@ export default function Settings() {
                     home screen and run with the same browser.
                   </Text>
                   <Divider my="md" />
-                </div>
+                </Box>
                 <Button
                   onClick={handleInstallClick}
                   mt="auto"
@@ -138,16 +207,16 @@ export default function Settings() {
                   flexDirection: "column",
                 }}
               >
-                <div style={{ flexGrow: 1 }}>
+                <Box style={{ flexGrow: 1 }}>
                   <Title order={3}>PDS Sync</Title>
                   <Text mt="sm" c="dimmed">
                     By default, Navyfragen syncs your anonymous messages with
                     your Bluesky PDS (Personal Data Server). Disable this if you
                     wish to keep your data on Navyfragen's servers. Will not
                     change your ability to post to Bluesky directly.
-                  </Text>{" "}
-                  <Divider my="md" />{" "}
-                </div>
+                  </Text>
+                  <Divider my="md" />
+                </Box>
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
@@ -166,11 +235,7 @@ export default function Settings() {
                     </Button>
                   </Alert>
                 ) : (
-                  <div
-                    style={{
-                      marginTop: "auto",
-                    }}
-                  >
+                  <Box mt="auto">
                     <Switch
                       label="Enable PDS Sync"
                       checked={Boolean(userSettings?.pdsSyncEnabled)}
@@ -194,7 +259,7 @@ export default function Settings() {
                         },
                       }}
                     />
-                  </div>
+                  </Box>
                 )}
               </Paper>
             </Grid.Col>
@@ -213,16 +278,16 @@ export default function Settings() {
                   flexDirection: "column",
                 }}
               >
-                <div style={{ flexGrow: 1 }}>
+                <Box style={{ flexGrow: 1 }}>
                   <Title order={3}>Image Theme</Title>
                   <Text mt="sm" c="dimmed">
                     Select a theme for the generated question images. By
                     default, Navyfragen will use a blue gradient similar to the
                     NGL Application. Note that this setting is not retroactive,
                     and will only apply to future responses.
-                  </Text>{" "}
-                  <Divider my="md" />{" "}
-                </div>
+                  </Text>
+                  <Divider my="md" />
+                </Box>
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
@@ -241,11 +306,7 @@ export default function Settings() {
                     </Button>
                   </Alert>
                 ) : (
-                  <div
-                    style={{
-                      marginTop: "auto",
-                    }}
-                  >
+                  <Box mt="auto">
                     <Select
                       data={Object.entries(themes).map(([value, label]) => ({
                         value,
@@ -257,14 +318,14 @@ export default function Settings() {
                           updateSettings.mutate({
                             imageTheme: value,
                             pdsSyncEnabled: Boolean(
-                              userSettings?.pdsSyncEnabled
+                              userSettings?.pdsSyncEnabled,
                             ), // Ensure pdsSyncEnabled is always sent
                           });
                         }
                       }}
                       disabled={updateSettings.isPending}
                     />
-                  </div>
+                  </Box>
                 )}
               </Paper>
             </Grid.Col>
@@ -283,7 +344,7 @@ export default function Settings() {
                   flexDirection: "column",
                 }}
               >
-                <div style={{ flexGrow: 1 }}>
+                <Box style={{ flexGrow: 1 }}>
                   <Title order={3}>Delete my Data</Title>
                   <Text mt="sm" c="dimmed">
                     Permanently remove all your data from the Navyfragen
@@ -292,7 +353,7 @@ export default function Settings() {
                     in to reregister automatically.
                   </Text>
                   <Divider my="md" />
-                </div>
+                </Box>
                 <Button
                   color="red"
                   fullWidth
