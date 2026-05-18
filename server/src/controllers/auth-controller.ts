@@ -17,7 +17,16 @@ export class AuthController {
     }
     try {
       this.ctx.logger.info(
-        { handle, envPublicUrl: env.PUBLIC_URL, envClientUrl: env.CLIENT_URL },
+        {
+          handle,
+          envPublicUrl: env.PUBLIC_URL,
+          envClientUrl: env.CLIENT_URL,
+          envPort: env.PORT,
+          envNodeEnv: env.NODE_ENV,
+          // Show exactly what URLs were derived so misconfig is obvious
+          derivedClientId: this.ctx.oauthClient.clientMetadata.client_id,
+          derivedRedirectUris: this.ctx.oauthClient.clientMetadata.redirect_uris,
+        },
         "Starting OAuth authorize"
       );
       const redirectUrl = await this.service.getOAuthRedirectUrl(handle);
