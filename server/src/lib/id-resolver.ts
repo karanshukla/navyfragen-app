@@ -27,7 +27,7 @@ export function createBidirectionalResolver(resolver: IdResolver) {
           return did;
         }
         const resolvedHandleFromDoc = await resolver.handle.resolve(
-          didDoc.handle
+          didDoc.handle,
         );
         if (resolvedHandleFromDoc === did) {
           return didDoc.handle;
@@ -39,11 +39,11 @@ export function createBidirectionalResolver(resolver: IdResolver) {
     },
 
     async resolveDidsToHandles(
-      dids: string[]
+      dids: string[],
     ): Promise<Record<string, string>> {
       const didHandleMap: Record<string, string> = {};
       const results = await Promise.allSettled(
-        dids.map((did) => this.resolveDidToHandle(did))
+        dids.map((did) => this.resolveDidToHandle(did)),
       );
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {

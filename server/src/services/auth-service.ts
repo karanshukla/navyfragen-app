@@ -13,55 +13,14 @@ export class AuthService {
     if (typeof handle !== "string" || !isValidHandle(handle)) {
       throw new Error("invalid handle");
     }
-
-    // Log the exact client metadata so env misconfiguration is immediately visible
-    const meta = this.ctx.oauthClient.clientMetadata;
-    this.ctx.logger.info(
-      {
-        handle,
-        clientId: meta.client_id,
-        redirectUris: meta.redirect_uris,
-        clientUri: meta.client_uri,
-      },
-      "[oauth] authorize start — client metadata"
-    );
-
     try {
-      const start = Date.now();
-      const timeoutMs = 15_000;
-      const url = await Promise.race([
-        this.ctx.oauthClient.authorize(handle, {
-          scope: "atproto transition:generic",
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`authorize timed out after ${timeoutMs}ms`)), timeoutMs)
-        ),
-      ]);
-      this.ctx.logger.info(
-        { handle, durationMs: Date.now() - start, url: url.toString() },
-        "[oauth] oauthClient.authorize completed"
-      );
+      const url = await this.ctx.oauthClient.authorize(handle, {
+        scope: "atproto transition:generic",
+      });
       return url.toString();
     } catch (err: any) {
-      // FetchResponseError carries a `response` with the URL that returned unexpected content
-      const responseUrl = err?.response?.url ?? err?.cause?.response?.url ?? null;
-      const responseStatus = err?.response?.status ?? err?.cause?.response?.status ?? null;
-      const responseContentType =
-        err?.response?.headers?.get?.("content-type") ??
-        err?.cause?.response?.headers?.get?.("content-type") ??
-        null;
-
       this.ctx.logger.error(
-        {
-          handle,
-          errMessage: err?.message,
-          errName: err?.name,
-          // Which URL returned HTML instead of JSON
-          responseUrl,
-          responseStatus,
-          responseContentType,
-          stack: err?.stack,
-        },
+        { handle, err: err?.message, stack: err?.stack },
         "[oauth] oauthClient.authorize threw"
       );
       if (err instanceof OAuthResolverError) throw new Error(err.message);
