@@ -79,6 +79,7 @@ describe("SettingsService", () => {
       const mockUserSettings: UserSettings = {
         did: "user123",
         pdsSyncEnabled: 1,
+        imageTheme: "default",
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       mockSelectBuilder.executeTakeFirst = async () => mockUserSettings;
@@ -167,17 +168,19 @@ describe("SettingsService", () => {
       executeTakeFirstQueue.push({
         did: "user123",
         pdsSyncEnabled: 1,
+        imageTheme: "default",
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
 
       // Act
-      const result = await settingsService.updateSettings("user123", true);
+      const result = await settingsService.updateSettings("user123", true, "default");
 
       // Assert
       assert.deepStrictEqual(result, {
         did: "user123",
         pdsSyncEnabled: 1,
+        imageTheme: "default",
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
@@ -190,22 +193,25 @@ describe("SettingsService", () => {
       executeTakeFirstQueue.push({
         did: "user123",
         pdsSyncEnabled: 1,
+        imageTheme: "default",
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       executeTakeFirstQueue.push({
         did: "user123",
         pdsSyncEnabled: 0,
+        imageTheme: "compressed",
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockUpdateBuilder.execute as any) = async () => ({});
 
       // Act
-      const result = await settingsService.updateSettings("user123", false);
+      const result = await settingsService.updateSettings("user123", false, "compressed");
 
       // Assert
       assert.deepStrictEqual(result, {
         did: "user123",
         pdsSyncEnabled: 0,
+        imageTheme: "compressed",
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
@@ -221,7 +227,7 @@ describe("SettingsService", () => {
 
       // Act & Assert
       await assert.rejects(
-        async () => await settingsService.updateSettings("user123", true),
+        async () => await settingsService.updateSettings("user123", true, "default"),
         { message: "Failed to update user settings" }
       );
 

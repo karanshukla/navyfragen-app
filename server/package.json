@@ -19,14 +19,14 @@
         "test:watch": "node --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts"
     },
     "dependencies": {
-        "@atproto/api": "^0.13.4",
-        "@atproto/common": "^0.4.11",
-        "@atproto/identity": "^0.4.0",
-        "@atproto/lexicon": "^0.4.2",
-        "@atproto/oauth-client-node": "^0.2.2",
-        "@atproto/sync": "^0.1.4",
-        "@atproto/syntax": "^0.3.4",
-        "@atproto/xrpc-server": "^0.7.9",
+        "@atproto/api": "^0.19.19",
+        "@atproto/common": "^0.5.16",
+        "@atproto/identity": "^0.4.12",
+        "@atproto/lexicon": "^0.6.2",
+        "@atproto/oauth-client-node": "^0.3.17",
+        "@atproto/sync": "^0.2.4",
+        "@atproto/syntax": "^0.5.4",
+        "@atproto/xrpc-server": "^0.10.22",
         "@types/cookie-parser": "^1.4.8",
         "@types/cookie-session": "^2.0.49",
         "@types/cryptr": "^4.0.3",
@@ -50,7 +50,7 @@
         "uhtml": "^4.5.9"
     },
     "devDependencies": {
-        "@atproto/lex-cli": "^0.4.1",
+        "@atproto/lex-cli": "^0.9.9",
         "@types/better-sqlite3": "^7.6.11",
         "@types/cors": "^2.8.18",
         "@types/express": "^4.17.21",

@@ -244,7 +244,7 @@ describe("MessageService", () => {
     assert.ok(result.uri);
     assert.strictEqual(generateQuestionImageMock.mock.calls.length, 1);
     assert.strictEqual(mockAgent.uploadBlob.mock.calls.length, 1);
-    assert.deepStrictEqual(generateQuestionImageMock.mock.calls[0].arguments[3], "ocean-breeze"); // Assert themeName
+    assert.deepStrictEqual((generateQuestionImageMock.mock.calls[0].arguments as any[])[3], "ocean-breeze");
   });
 
   test("respondToMessage with text", async () => {

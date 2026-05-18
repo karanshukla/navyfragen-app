@@ -113,7 +113,7 @@ type ConfigOf<Auth, Handler, ReqCtx> =
       rateLimit?: HandlerRateLimitOpts<ReqCtx> | HandlerRateLimitOpts<ReqCtx>[]
       handler: Handler
     }
-type ExtractAuth<AV extends AuthVerifier | StreamAuthVerifier> = Extract<
+type ExtractAuth<AV extends AuthVerifier<any, any> | StreamAuthVerifier<any, any>> = Extract<
   Awaited<ReturnType<AV>>,
   { credentials: unknown }
 >

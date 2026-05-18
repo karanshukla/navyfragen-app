@@ -3,7 +3,7 @@ import { OAuthResolverError } from "@atproto/oauth-client-node";
 import { env } from "../lib/env";
 import { initializeAgentFromSession } from "../auth/session-agent";
 import type { AppContext } from "../index";
-import type { Record as BskyProfileRecord } from "../lexicon/types/app/bsky/actor/profile";
+import type { AppBskyActorDefs } from "@atproto/api";
 import Cryptr from "cryptr";
 
 export class AuthService {
@@ -14,11 +14,27 @@ export class AuthService {
       throw new Error("invalid handle");
     }
     try {
-      const url = await this.ctx.oauthClient.authorize(handle, {
-        scope: "atproto transition:generic",
-      });
+      this.ctx.logger.info({ handle }, "[oauth] calling oauthClient.authorize");
+      const start = Date.now();
+      const timeoutMs = 15_000;
+      const url = await Promise.race([
+        this.ctx.oauthClient.authorize(handle, {
+          scope: "atproto transition:generic",
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`authorize timed out after ${timeoutMs}ms`)), timeoutMs)
+        ),
+      ]);
+      this.ctx.logger.info(
+        { handle, durationMs: Date.now() - start, url: url.toString() },
+        "[oauth] oauthClient.authorize completed"
+      );
       return url.toString();
-    } catch (err) {
+    } catch (err: any) {
+      this.ctx.logger.error(
+        { handle, err: err?.message, stack: err?.stack },
+        "[oauth] oauthClient.authorize threw"
+      );
       if (err instanceof OAuthResolverError) throw new Error(err.message);
       throw new Error("couldn't initiate login");
     }
@@ -38,7 +54,7 @@ export class AuthService {
     const agent = await initializeAgentFromSession(req, this.ctx);
     if (!agent) return null;
     const response = await agent.getProfile({ actor: did });
-    const data = response?.data as BskyProfileRecord;
+    const data = response?.data as AppBskyActorDefs.ProfileViewDetailed;
     if (!data) return null;
     return {
       did: data.did,

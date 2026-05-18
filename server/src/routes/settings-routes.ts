@@ -29,7 +29,5 @@ export function settingsRoutes(
     handler(settingsController.updateSettings)
   );
 
-  router.get("/themes", handler(settingsController.getThemes));
-
   return router;
 }
