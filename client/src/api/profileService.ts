@@ -107,13 +107,38 @@ export function useUserExists(did: string | null) {
 }
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
+const FRIENDS_CACHE_KEY = "navyfragen_friends_cache";
+
+function getCachedFriends(): { data: FriendsResponse; timestamp: number } | null {
+  try {
+    const raw = localStorage.getItem(FRIENDS_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 export function useFriends(enabled: boolean) {
+  const cached = getCachedFriends();
   return useQuery({
     queryKey: profileKeys.friends(),
-    queryFn: () => profileService.getFriends(),
+    queryFn: async () => {
+      const data = await profileService.getFriends();
+      try {
+        localStorage.setItem(
+          FRIENDS_CACHE_KEY,
+          JSON.stringify({ data, timestamp: Date.now() })
+        );
+      } catch {
+        // localStorage unavailable (private browsing quota, etc.)
+      }
+      return data;
+    },
     enabled,
     staleTime: ONE_DAY,
+    initialData: cached?.data ?? undefined,
+    initialDataUpdatedAt: cached?.timestamp ?? undefined,
     refetchOnWindowFocus: false,
     retry: false,
   });

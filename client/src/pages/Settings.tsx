@@ -347,7 +347,7 @@ export default function Settings() {
                   <Text mt="sm" c="dimmed">
                     Browse anonymous questions and answers posted by everyone on
                     Navyfragen worldwide. This feed may contain content intended
-                    for adults — view at your own discretion.
+                    for adults. View at your own discretion.
                   </Text>
                   <Divider my="md" />
                 </Box>
