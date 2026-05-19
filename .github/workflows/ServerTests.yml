@@ -41,13 +41,24 @@ jobs:
             const fs = require('fs');
             const output = fs.readFileSync('/tmp/server-test-output.txt', 'utf8');
 
-            const coverageMatch = output.match(/# coverage\n[\s\S]*/);
-            if (!coverageMatch) {
+            // Locate the coverage section — anchored to line start, case-insensitive
+            const coverageIdx = output.search(/^# coverage$/im);
+            if (coverageIdx === -1) {
               console.log('No coverage data found in output');
+              console.log('--- last 800 chars ---');
+              console.log(output.slice(-800));
               return;
             }
 
-            const coverageText = coverageMatch[0].trim();
+            // Strip the TAP "# " prefix from every line for readable display
+            const coverageText = output
+              .slice(coverageIdx)
+              .trim()
+              .split('\n')
+              .map(line => line.startsWith('# ') ? line.slice(2) : line.startsWith('#') ? line.slice(1) : line)
+              .join('\n')
+              .trim();
+
             const marker = '<!-- server-coverage-comment -->';
             const body = `${marker}\n### Server Test Coverage\n\n\`\`\`\n${coverageText}\n\`\`\``;
 

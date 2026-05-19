@@ -17,7 +17,7 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
     "test:watch": "node --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts",
-    "test:coverage": "node --import ./src/tests/test-bootstrap.js --import tsx --test --experimental-test-coverage src/**/*.test.ts"
+    "test:coverage": "node --import ./src/tests/test-bootstrap.js --import tsx --test --test-coverage src/**/*.test.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.19.19",

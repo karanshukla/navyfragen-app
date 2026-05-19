@@ -29,10 +29,8 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
     }
   };
 
-  // Keyboard shortcuts effect
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check if the event target is an input, textarea, or select to avoid conflicts
       const targetNodeName = (event.target as HTMLElement)?.nodeName;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(targetNodeName)) {
         return;
@@ -61,7 +59,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
           event.preventDefault();
           navigate(targetPath);
           if (onLinkClick) {
-            onLinkClick(); // Close mobile navbar if open
+            onLinkClick();
           }
         }
       }
@@ -73,7 +71,6 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
     };
   }, [isLoggedIn, navigate, onLinkClick]);
 
-  // Helper component for shortcut hints
   const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
     <Box
       visibleFrom="sm"
@@ -91,8 +88,10 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   );
 
   return (
-    <Box style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      <Box style={{ flexGrow: 1 }}>
+    <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+
+      {/* Fixed top: nav links, how it works, friends header */}
+      <Box style={{ flexShrink: 0 }}>
         <NavLink
           my="xs"
           label="Home"
@@ -125,17 +124,15 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             />
           </>
         ) : (
-          <>
-            <NavLink
-              my="xs"
-              label="Login"
-              component={Link}
-              to="/login"
-              active={location.pathname === "/login"}
-              onClick={handleClick}
-              leftSection={<IconLogin size="1rem" stroke={1.5} />}
-            />
-          </>
+          <NavLink
+            my="xs"
+            label="Login"
+            component={Link}
+            to="/login"
+            active={location.pathname === "/login"}
+            onClick={handleClick}
+            leftSection={<IconLogin size="1rem" stroke={1.5} />}
+          />
         )}
         <Box mt="md">
           <Divider mb="md" />
@@ -163,77 +160,88 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             <Text size="xs" fw={600} c="dimmed" mb="xs" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
               Friends on Navyfragen
             </Text>
-            {friendsLoading ? (
-              <Stack gap={6}>
-                {[0, 1, 2].map((i) => (
-                  <Group key={i} gap="xs" px={4} py={4}>
-                    <Skeleton circle height={20} width={20} style={{ flexShrink: 0 }} />
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Skeleton height={10} mb={4} radius="sm" />
-                      <Skeleton height={8} width="60%" radius="sm" />
-                    </Box>
-                  </Group>
-                ))}
-              </Stack>
-            ) : friendsData?.friends && friendsData.friends.length > 0 ? (
-              <Box style={{ overflowX: "hidden" }}>
-                {friendsData.friends.slice(0, friendsVisible).map((friend) => (
-                  <NavLink
-                    key={friend.did}
-                    label={
-                      <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                        <Avatar size={20} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
-                        <Box style={{ flex: 1, minWidth: 0 }}>
-                          <Text size="xs" truncate>
-                            {friend.displayName || friend.handle}
-                          </Text>
-                          <Text size="xs" c="dimmed" truncate>
-                            @{friend.handle}
-                          </Text>
-                        </Box>
-                      </Group>
-                    }
-                    component={Link}
-                    to={`/profile/${friend.handle}`}
-                    onClick={handleClick}
-                    py={4}
-                  />
-                ))}
-                {friendsData.friends.length > friendsVisible && (
-                  <Anchor
-                    size="xs"
-                    c="blue"
-                    fw={500}
-                    mt={4}
-                    style={{ display: "block", cursor: "pointer" }}
-                    onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
-                  >
-                    ↓ Load {friendsData.friends.length - friendsVisible} more
-                  </Anchor>
-                )}
-                {friendsVisible > FRIENDS_PAGE_SIZE && (
-                  <Anchor
-                    size="xs"
-                    c="blue"
-                    fw={500}
-                    mt={4}
-                    style={{ display: "block", cursor: "pointer" }}
-                    onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
-                  >
-                    ↑ Show less
-                  </Anchor>
-                )}
-              </Box>
-            ) : !friendsLoading ? (
-              <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
-                None of the people you follow on Bluesky are on Navyfragen yet.
-              </Text>
-            ) : null}
           </Box>
         )}
       </Box>
-      <Box>
-        <Divider visibleFrom="sm" mt="md" />
+
+      {/* Scrollable friends list */}
+      {isLoggedIn && (
+        <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          {friendsLoading ? (
+            <Stack gap={6}>
+              {[0, 1, 2].map((i) => (
+                <Group key={i} gap="xs" px={4} py={4}>
+                  <Skeleton circle height={20} width={20} style={{ flexShrink: 0 }} />
+                  <Box style={{ flex: 1, minWidth: 0 }}>
+                    <Skeleton height={10} mb={4} radius="sm" />
+                    <Skeleton height={8} width="60%" radius="sm" />
+                  </Box>
+                </Group>
+              ))}
+            </Stack>
+          ) : friendsData?.friends && friendsData.friends.length > 0 ? (
+            <Box style={{ overflowX: "hidden" }} pb="xs">
+              {friendsData.friends.slice(0, friendsVisible).map((friend) => (
+                <NavLink
+                  key={friend.did}
+                  label={
+                    <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
+                      <Avatar size={20} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Text size="xs" truncate>
+                          {friend.displayName || friend.handle}
+                        </Text>
+                        <Text size="xs" c="dimmed" truncate>
+                          @{friend.handle}
+                        </Text>
+                      </Box>
+                    </Group>
+                  }
+                  component={Link}
+                  to={`/profile/${friend.handle}`}
+                  onClick={handleClick}
+                  py={4}
+                />
+              ))}
+              {friendsData.friends.length > friendsVisible && (
+                <Anchor
+                  size="xs"
+                  c="blue"
+                  fw={500}
+                  mt={4}
+                  style={{ display: "block", cursor: "pointer" }}
+                  onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
+                >
+                  ↓ Load {friendsData.friends.length - friendsVisible} more
+                </Anchor>
+              )}
+              {friendsVisible > FRIENDS_PAGE_SIZE && (
+                <Anchor
+                  size="xs"
+                  c="blue"
+                  fw={500}
+                  mt={4}
+                  style={{ display: "block", cursor: "pointer" }}
+                  onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
+                >
+                  ↑ Show less
+                </Anchor>
+              )}
+            </Box>
+          ) : !friendsLoading ? (
+            <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
+              None of the people you follow on Bluesky are on Navyfragen yet.
+            </Text>
+          ) : null}
+        </Box>
+      )}
+
+      {/* Spacer when logged out keeps the bottom section pinned */}
+      {!isLoggedIn && <Box style={{ flex: 1 }} />}
+
+      {/* Fixed bottom: keyboard shortcuts, Bluesky link */}
+      <Box style={{ flexShrink: 0 }}>
+        <Divider visibleFrom="sm" mt="xl" />
         <Box mt="md" mb="md" visibleFrom="sm">
           <Text size="sm" c="dimmed" mb="xs">
             Keyboard Shortcuts:
