@@ -10,14 +10,26 @@ import {
   Box,
   Loader,
   Skeleton,
+  SimpleGrid,
+  Group,
+  Anchor,
 } from "@mantine/core";
+import { IconButterfly } from "@tabler/icons-react";
 import { useSession } from "../api/authService";
 import React from "react";
 import { useSyncMessages } from "../api/messageService";
 
+const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
+  <Box style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+    <Text size="xs">{label}</Text>
+    <Text size="xs" c="dimmed">{hint.replace("Alt", "Alt/Cmd")}</Text>
+  </Box>
+);
+
 export default function Home() {
   const { data: sessionData, isLoading } = useSession();
   const syncMessagesMutation = useSyncMessages();
+  const isLoggedIn = !!sessionData?.isLoggedIn;
 
   React.useEffect(() => {
     if (sessionData?.did) {
@@ -108,6 +120,45 @@ export default function Home() {
           </Center>
         </Paper>
       )}
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mt="xl">
+        <Paper p="lg" radius="md" withBorder shadow="xs">
+          <Text size="sm" fw={600} c="dimmed" mb="sm" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+            Keyboard Shortcuts
+          </Text>
+          <Stack gap={6}>
+            <ShortcutHint label="Home" hint="Alt+H" />
+            {isLoggedIn ? (
+              <>
+                <ShortcutHint label="Messages" hint="Alt+M" />
+                <ShortcutHint label="Settings" hint="Alt+S" />
+                <ShortcutHint label="Focus/Cycle Cards" hint="Alt+R" />
+                <ShortcutHint label="Navigate Cards" hint="↑/↓" />
+              </>
+            ) : (
+              <ShortcutHint label="Login" hint="Alt+L" />
+            )}
+          </Stack>
+        </Paper>
+
+        <Paper p="lg" radius="md" withBorder shadow="xs">
+          <Text size="sm" fw={600} c="dimmed" mb="sm" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+            Questions? Feedback?
+          </Text>
+          <Text size="sm" mb="md">Reach out to us on Bluesky</Text>
+          <Anchor
+            href="https://bsky.app/profile/navyfragen.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            size="sm"
+          >
+            <Group gap="xs">
+              <IconButterfly size="1rem" stroke={1.5} />
+              @navyfragen.app
+            </Group>
+          </Anchor>
+        </Paper>
+      </SimpleGrid>
     </>
   );
 }

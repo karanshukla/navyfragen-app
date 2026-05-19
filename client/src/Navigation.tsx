@@ -2,11 +2,10 @@ import {
   IconHome,
   IconMessage,
   IconLogin,
-  IconButterfly,
   IconSettings,
 } from "@tabler/icons-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group, Anchor } from "@mantine/core";
+import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group, Button } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { useFriends } from "./api/profileService";
 
@@ -70,22 +69,6 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isLoggedIn, navigate, onLinkClick]);
-
-  const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
-    <Box
-      visibleFrom="sm"
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        width: "100%",
-      }}
-    >
-      <Text size="xs">{label}</Text>
-      <Text size="xs" c="dimmed">
-        {hint.replace("Alt", "Alt/Cmd")}
-      </Text>
-    </Box>
-  );
 
   return (
     <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -195,65 +178,33 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
       {/* Spacer when logged out keeps the bottom section pinned */}
       {!isLoggedIn && <Box style={{ flex: 1 }} />}
 
-      {/* Fixed bottom: load more/show less, keyboard shortcuts, Bluesky link */}
+      {/* Fixed bottom: load more/show less */}
       <Box style={{ flexShrink: 0 }}>
         {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
-          <Box pt={4} pb="xs">
+          <Box pt="xs" pb="xs">
             {friendsData.friends.length > friendsVisible && (
-              <Anchor
+              <Button
+                variant="subtle"
                 size="xs"
-                c="blue"
-                fw={500}
-                style={{ display: "block", cursor: "pointer" }}
+                fullWidth
                 onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
               >
                 ↓ Load {friendsData.friends.length - friendsVisible} more
-              </Anchor>
+              </Button>
             )}
             {friendsVisible > FRIENDS_PAGE_SIZE && (
-              <Anchor
+              <Button
+                variant="subtle"
                 size="xs"
-                c="blue"
-                fw={500}
+                fullWidth
                 mt={friendsData.friends.length > friendsVisible ? 4 : 0}
-                style={{ display: "block", cursor: "pointer" }}
                 onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
               >
                 ↑ Show less
-              </Anchor>
+              </Button>
             )}
           </Box>
         )}
-        <Divider visibleFrom="sm" mt="md" />
-        <Box mt="md" mb="md" visibleFrom="sm">
-          <Text size="sm" c="dimmed" mb="xs">
-            Keyboard Shortcuts:
-          </Text>
-          <ShortcutHint label="Home" hint="Alt+H" />
-          {isLoggedIn ? (
-            <>
-              <ShortcutHint label="Messages" hint="Alt+M" />
-              <ShortcutHint label="Settings" hint="Alt+S" />
-              <ShortcutHint label="Focus/Cycle Cards" hint="Alt+R" />
-              <ShortcutHint label="Navigate Cards" hint="↑/↓" />
-            </>
-          ) : (
-            <ShortcutHint label="Login" hint="Alt+L" />
-          )}
-        </Box>
-        <Divider />
-        <Text size="xs" my="md" ta="center">
-          Questions? Feedback? Reach out on Bluesky
-        </Text>
-        <NavLink
-          label="@navyfragen.app"
-          component="a"
-          href="https://bsky.app/profile/navyfragen.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={handleClick}
-          leftSection={<IconButterfly size="1rem" stroke={1.5} />}
-        />
       </Box>
     </Box>
   );
