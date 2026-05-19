@@ -170,7 +170,7 @@ function AppLayout() {
           </Flex>
         </Group>
       </AppShell.Header>
-      <AppShell.Navbar ref={navbarRef} p="md">
+      <AppShell.Navbar ref={navbarRef} p="md" style={{ overflowY: "auto" }}>
         <Navigation
           onLinkClick={() => setOpened(false)}
           isLoggedIn={isLoggedIn}

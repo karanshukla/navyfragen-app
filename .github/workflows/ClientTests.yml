@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   client-tests:
@@ -26,5 +27,20 @@ jobs:
       - name: Install client dependencies
         run: cd client && npm ci
 
-      - name: Run client tests
-        run: cd client && npm run test
+      - name: Run client tests with coverage
+        run: cd client && npm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-coverage-report
+          path: client/coverage/
+          retention-days: 14
+
+      - name: Report coverage on PR
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: client

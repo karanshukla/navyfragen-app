@@ -6,7 +6,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { Divider, NavLink, Text, Box, Loader, Avatar, Group, Anchor } from "@mantine/core";
+import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group, Anchor } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { useFriends } from "./api/profileService";
 
@@ -91,7 +91,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   );
 
   return (
-    <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <Box style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
       <Box style={{ flexGrow: 1 }}>
         <NavLink
           my="xs"
@@ -164,39 +164,41 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
               Friends on Navyfragen
             </Text>
             {friendsLoading ? (
-              <Loader size="xs" />
+              <Stack gap={6}>
+                {[0, 1, 2].map((i) => (
+                  <Group key={i} gap="xs" px={4} py={4}>
+                    <Skeleton circle height={20} width={20} style={{ flexShrink: 0 }} />
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Skeleton height={10} mb={4} radius="sm" />
+                      <Skeleton height={8} width="60%" radius="sm" />
+                    </Box>
+                  </Group>
+                ))}
+              </Stack>
             ) : friendsData?.friends && friendsData.friends.length > 0 ? (
-              <Box>
-                <Box
-                  style={{
-                    maxHeight: friendsVisible > FRIENDS_PAGE_SIZE ? 280 : undefined,
-                    overflowY: friendsVisible > FRIENDS_PAGE_SIZE ? "auto" : "visible",
-                    overflowX: "hidden",
-                  }}
-                >
-                  {friendsData.friends.slice(0, friendsVisible).map((friend) => (
-                    <NavLink
-                      key={friend.did}
-                      label={
-                        <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                          <Avatar size={20} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
-                          <Box style={{ flex: 1, minWidth: 0 }}>
-                            <Text size="xs" truncate>
-                              {friend.displayName || friend.handle}
-                            </Text>
-                            <Text size="xs" c="dimmed" truncate>
-                              @{friend.handle}
-                            </Text>
-                          </Box>
-                        </Group>
-                      }
-                      component={Link}
-                      to={`/profile/${friend.handle}`}
-                      onClick={handleClick}
-                      py={4}
-                    />
-                  ))}
-                </Box>
+              <Box style={{ overflowX: "hidden" }}>
+                {friendsData.friends.slice(0, friendsVisible).map((friend) => (
+                  <NavLink
+                    key={friend.did}
+                    label={
+                      <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
+                        <Avatar size={20} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <Text size="xs" truncate>
+                            {friend.displayName || friend.handle}
+                          </Text>
+                          <Text size="xs" c="dimmed" truncate>
+                            @{friend.handle}
+                          </Text>
+                        </Box>
+                      </Group>
+                    }
+                    component={Link}
+                    to={`/profile/${friend.handle}`}
+                    onClick={handleClick}
+                    py={4}
+                  />
+                ))}
                 {friendsData.friends.length > friendsVisible && (
                   <Anchor
                     size="xs"
