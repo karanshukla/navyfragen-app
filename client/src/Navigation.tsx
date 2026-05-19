@@ -202,22 +202,25 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
                 {friendsData.friends.length > friendsVisible && (
                   <Anchor
                     size="xs"
-                    c="dimmed"
+                    c="blue"
+                    fw={500}
                     mt={4}
                     style={{ display: "block", cursor: "pointer" }}
                     onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
                   >
-                    +{friendsData.friends.length - friendsVisible} more — load more
+                    ↓ Load {friendsData.friends.length - friendsVisible} more
                   </Anchor>
                 )}
                 {friendsVisible > FRIENDS_PAGE_SIZE && (
                   <Anchor
                     size="xs"
-                    c="dimmed"
+                    c="blue"
+                    fw={500}
+                    mt={4}
                     style={{ display: "block", cursor: "pointer" }}
                     onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
                   >
-                    Show less
+                    ↑ Show less
                   </Anchor>
                 )}
               </Box>
@@ -230,6 +233,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
         )}
       </Box>
       <Box>
+        <Divider visibleFrom="sm" mt="md" />
         <Box mt="md" mb="md" visibleFrom="sm">
           <Text size="sm" c="dimmed" mb="xs">
             Keyboard Shortcuts:

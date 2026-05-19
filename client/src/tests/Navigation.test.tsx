@@ -65,7 +65,7 @@ describe("Navigation — friends list", () => {
     renderNav();
     expect(screen.getByText("@friend0.bsky.social")).toBeInTheDocument();
     expect(screen.queryByText("@friend10.bsky.social")).toBeNull();
-    expect(screen.getByText(/\+5 more/i)).toBeInTheDocument();
+    expect(screen.getByText(/load 5 more/i)).toBeInTheDocument();
     expect(screen.queryByText(/show less/i)).toBeNull();
   });
 
@@ -73,19 +73,19 @@ describe("Navigation — friends list", () => {
     mockUseFriends.mockReturnValue({ data: { friends: makeFriends(15) }, isLoading: false } as any);
     renderNav();
 
-    fireEvent.click(screen.getByText(/load more/i));
+    fireEvent.click(screen.getByText(/load \d+ more/i));
 
     expect(screen.getByText("@friend10.bsky.social")).toBeInTheDocument();
     expect(screen.getByText("@friend14.bsky.social")).toBeInTheDocument();
     expect(screen.getByText(/show less/i)).toBeInTheDocument();
-    expect(screen.queryByText(/load more/i)).toBeNull();
+    expect(screen.queryByText(/load \d+ more/i)).toBeNull();
   });
 
   it("collapses back to 10 friends after clicking show less", () => {
     mockUseFriends.mockReturnValue({ data: { friends: makeFriends(15) }, isLoading: false } as any);
     renderNav();
 
-    fireEvent.click(screen.getByText(/load more/i));
+    fireEvent.click(screen.getByText(/load \d+ more/i));
     expect(screen.getByText("@friend10.bsky.social")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(/show less/i));
@@ -93,22 +93,22 @@ describe("Navigation — friends list", () => {
     expect(screen.queryByText("@friend10.bsky.social")).toBeNull();
     expect(screen.getByText("@friend0.bsky.social")).toBeInTheDocument();
     expect(screen.queryByText(/show less/i)).toBeNull();
-    expect(screen.getByText(/\+5 more/i)).toBeInTheDocument();
+    expect(screen.getByText(/load 5 more/i)).toBeInTheDocument();
   });
 
   it("load more increments by page size and updates remaining count", () => {
     mockUseFriends.mockReturnValue({ data: { friends: makeFriends(25) }, isLoading: false } as any);
     renderNav();
 
-    expect(screen.getByText(/\+15 more/i)).toBeInTheDocument();
+    expect(screen.getByText(/load 15 more/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/load more/i));
+    fireEvent.click(screen.getByText(/load \d+ more/i));
     expect(screen.getByText("@friend10.bsky.social")).toBeInTheDocument();
-    expect(screen.getByText(/\+5 more/i)).toBeInTheDocument();
+    expect(screen.getByText(/load 5 more/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/load more/i));
+    fireEvent.click(screen.getByText(/load \d+ more/i));
     expect(screen.getByText("@friend24.bsky.social")).toBeInTheDocument();
-    expect(screen.queryByText(/load more/i)).toBeNull();
+    expect(screen.queryByText(/load \d+ more/i)).toBeNull();
   });
 
   it("shows display name when available, falls back to handle as primary label", () => {
