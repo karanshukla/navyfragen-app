@@ -134,26 +134,6 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             leftSection={<IconLogin size="1rem" stroke={1.5} />}
           />
         )}
-        <Box mt="md">
-          <Divider mb="md" />
-          <Text size="xs" fw={600} c="dimmed" mb="xs" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
-            How it works
-          </Text>
-          {isLoggedIn ? (
-            <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
-              Share your profile link and anyone can send you an anonymous
-              question. Read incoming questions in your Messages inbox, then
-              reply to post your answer directly to your Bluesky feed.
-            </Text>
-          ) : (
-            <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
-              Log in with your Bluesky account to get a personal profile link.
-              Share it anywhere and people can send you anonymous questions.
-              You read and reply to them here, and your answers post straight
-              to Bluesky.
-            </Text>
-          )}
-        </Box>
         {isLoggedIn && (
           <Box mt="md">
             <Divider mb="md" />
