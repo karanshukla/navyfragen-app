@@ -5,7 +5,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group, Anchor } from "@mantine/core";
+import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group, Button } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { useFriends } from "./api/profileService";
 
@@ -183,27 +183,25 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
         {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
           <Box pt="xs" pb="xs">
             {friendsData.friends.length > friendsVisible && (
-              <Anchor
-                size="sm"
-                c="blue"
-                fw={500}
-                style={{ display: "block", cursor: "pointer" }}
+              <Button
+                variant="subtle"
+                size="xs"
+                fullWidth
                 onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
               >
                 ↓ Load {friendsData.friends.length - friendsVisible} more
-              </Anchor>
+              </Button>
             )}
             {friendsVisible > FRIENDS_PAGE_SIZE && (
-              <Anchor
-                size="sm"
-                c="blue"
-                fw={500}
-                mt={friendsData.friends.length > friendsVisible ? 6 : 0}
-                style={{ display: "block", cursor: "pointer" }}
+              <Button
+                variant="subtle"
+                size="xs"
+                fullWidth
+                mt={friendsData.friends.length > friendsVisible ? 4 : 0}
                 onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
               >
                 ↑ Show less
-              </Anchor>
+              </Button>
             )}
           </Box>
         )}
