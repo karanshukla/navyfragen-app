@@ -616,7 +616,7 @@ export default function Messages() {
                               )}
                             </Text>
                             <ActionIcon
-                              size="sm"
+                              size="lg"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteRequest(msg.tid);
@@ -625,7 +625,7 @@ export default function Messages() {
                               variant="subtle"
                               loading={deletingTid === msg.tid}
                             >
-                              <IconTrash size={14} />
+                              <IconTrash size={20} />
                             </ActionIcon>
                           </Group>
                           <Center py="xs">
