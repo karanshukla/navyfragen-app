@@ -164,7 +164,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
         )}
       </Box>
 
-      {/* Scrollable friends list */}
+      {/* Scrollable friends list — rows only */}
       {isLoggedIn && (
         <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {friendsLoading ? (
@@ -180,7 +180,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
               ))}
             </Stack>
           ) : friendsData?.friends && friendsData.friends.length > 0 ? (
-            <Box style={{ overflowX: "hidden" }} pb="xs">
+            <Box style={{ overflowX: "hidden" }}>
               {friendsData.friends.slice(0, friendsVisible).map((friend) => (
                 <NavLink
                   key={friend.did}
@@ -203,36 +203,41 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
                   py={4}
                 />
               ))}
-              {friendsData.friends.length > friendsVisible && (
-                <Anchor
-                  size="xs"
-                  c="blue"
-                  fw={500}
-                  mt={4}
-                  style={{ display: "block", cursor: "pointer" }}
-                  onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
-                >
-                  ↓ Load {friendsData.friends.length - friendsVisible} more
-                </Anchor>
-              )}
-              {friendsVisible > FRIENDS_PAGE_SIZE && (
-                <Anchor
-                  size="xs"
-                  c="blue"
-                  fw={500}
-                  mt={4}
-                  style={{ display: "block", cursor: "pointer" }}
-                  onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
-                >
-                  ↑ Show less
-                </Anchor>
-              )}
             </Box>
           ) : !friendsLoading ? (
             <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
               None of the people you follow on Bluesky are on Navyfragen yet.
             </Text>
           ) : null}
+        </Box>
+      )}
+
+      {/* Load more / Show less — fixed strip below the scroll area */}
+      {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
+        <Box style={{ flexShrink: 0 }} pt={4}>
+          {friendsData.friends.length > friendsVisible && (
+            <Anchor
+              size="xs"
+              c="blue"
+              fw={500}
+              style={{ display: "block", cursor: "pointer" }}
+              onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
+            >
+              ↓ Load {friendsData.friends.length - friendsVisible} more
+            </Anchor>
+          )}
+          {friendsVisible > FRIENDS_PAGE_SIZE && (
+            <Anchor
+              size="xs"
+              c="blue"
+              fw={500}
+              mt={friendsData.friends.length > friendsVisible ? 4 : 0}
+              style={{ display: "block", cursor: "pointer" }}
+              onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
+            >
+              ↑ Show less
+            </Anchor>
+          )}
         </Box>
       )}
 
