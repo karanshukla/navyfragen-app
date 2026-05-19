@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   client-tests:
@@ -36,3 +37,10 @@ jobs:
           name: client-coverage-report
           path: client/coverage/
           retention-days: 14
+
+      - name: Report coverage on PR
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: client

@@ -1,0 +1,88 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import Login from "../../pages/Login";
+import * as authService from "../../api/authService";
+import { renderWithProviders } from "../testUtils";
+
+vi.mock("../../api/authService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/authService")>();
+  return { ...actual, useLogin: vi.fn() };
+});
+
+const mockUseLogin = vi.mocked(authService.useLogin);
+
+describe("Login page", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders handle input and submit button", () => {
+    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<Login />);
+    expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /log in/i })).toBeInTheDocument();
+  });
+
+  it("shows error notification when URL contains ?error=oauth_failed", () => {
+    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<Login />, { route: "/login?error=oauth_failed" });
+    expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+  });
+
+  it("shows validation error when submitting an empty handle", async () => {
+    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<Login />);
+    // Submit the form directly to bypass browser's native required-field validation
+    const form = screen.getByLabelText(/bluesky handle/i).closest("form")!;
+    fireEvent.submit(form);
+    await waitFor(() => {
+      expect(screen.getByText(/handle is required/i)).toBeInTheDocument();
+    });
+  });
+
+  it("calls login mutation with the typed handle", async () => {
+    const mockMutate = vi.fn();
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+      target: { value: "karan.bsky.social" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        { handle: "karan.bsky.social" },
+        expect.any(Object)
+      );
+    });
+  });
+
+  it("shows API error message returned from the mutation", async () => {
+    let capturedCallbacks: any;
+    const mockMutate = vi.fn((_data, callbacks) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+      target: { value: "karan.bsky.social" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    act(() => {
+      capturedCallbacks.onError({ error: "Handle not found on Bluesky" });
+    });
+
+    expect(screen.getByText(/handle not found on bluesky/i)).toBeInTheDocument();
+  });
+
+  it("shows loading state on the button while mutation is pending", () => {
+    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
+    renderWithProviders(<Login />);
+    const button = screen.getByRole("button", { name: /log in/i });
+    expect(button).toBeDisabled();
+  });
+});

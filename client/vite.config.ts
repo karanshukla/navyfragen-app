@@ -11,7 +11,7 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, "**/*.e2e.test.ts"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "lcov", "html"],
+      reporter: ["text", "lcov", "html", "json-summary"],
       reportsDirectory: "./coverage",
       include: ["src/**"],
       exclude: [
