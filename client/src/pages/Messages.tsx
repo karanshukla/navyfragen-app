@@ -625,7 +625,7 @@ export default function Messages() {
                               variant="subtle"
                               loading={deletingTid === msg.tid}
                             >
-                              <IconTrash size={20} />
+                              <IconTrash size={16} />
                             </ActionIcon>
                           </Group>
                           <Center py="xs">
@@ -645,10 +645,7 @@ export default function Messages() {
                           </Center>
                           {respondingTid === msg.tid && (
                             <Stack gap="xs">
-                              <Divider
-                                color="rgba(255,255,255,0.15)"
-                                my={2}
-                              />
+                              <Divider color="rgba(255,255,255,0.15)" my={2} />
                               <Textarea
                                 ref={textareaRef}
                                 value={responseText}
