@@ -181,10 +181,10 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
       {/* Fixed bottom: load more/show less */}
       <Box style={{ flexShrink: 0 }}>
         {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
-          <Box pt={4} pb="xs">
+          <Box pt="xs" pb="xs">
             {friendsData.friends.length > friendsVisible && (
               <Anchor
-                size="xs"
+                size="sm"
                 c="blue"
                 fw={500}
                 style={{ display: "block", cursor: "pointer" }}
@@ -195,10 +195,10 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
             )}
             {friendsVisible > FRIENDS_PAGE_SIZE && (
               <Anchor
-                size="xs"
+                size="sm"
                 c="blue"
                 fw={500}
-                mt={friendsData.friends.length > friendsVisible ? 4 : 0}
+                mt={friendsData.friends.length > friendsVisible ? 6 : 0}
                 style={{ display: "block", cursor: "pointer" }}
                 onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
               >

@@ -29,7 +29,7 @@ describe("Home page", () => {
   it("shows skeleton while session is loading", () => {
     mockUseSession.mockReturnValue({ data: undefined, isLoading: true } as any);
     renderWithProviders(<Home />);
-    expect(screen.getByText(/navyfragen/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /navyfragen/i })).toBeInTheDocument();
     expect(screen.queryByText(/get started/i)).toBeNull();
     expect(screen.queryByText(/view your messages/i)).toBeNull();
   });
