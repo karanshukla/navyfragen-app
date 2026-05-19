@@ -7,6 +7,7 @@ import {
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group, Button } from "@mantine/core";
 import { useEffect, useState } from "react";
+import { useMediaQuery } from "@mantine/hooks";
 import { useFriends } from "./api/profileService";
 
 interface NavigationProps {
@@ -14,13 +15,19 @@ interface NavigationProps {
   isLoggedIn: boolean;
 }
 
-const FRIENDS_PAGE_SIZE = 10;
+const FRIENDS_PAGE_SIZE_SM = 8;
+const FRIENDS_PAGE_SIZE_MD = 12;
+const FRIENDS_PAGE_SIZE_LG = 16;
 
 export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMd = useMediaQuery("(min-width: 62em)");
+  const isLg = useMediaQuery("(min-width: 75em)");
+  const friendsPageSize = isLg ? FRIENDS_PAGE_SIZE_LG : isMd ? FRIENDS_PAGE_SIZE_MD : FRIENDS_PAGE_SIZE_SM;
+  const avatarSize = isLg ? 26 : isMd ? 22 : 20;
   const { data: friendsData, isLoading: friendsLoading } = useFriends(isLoggedIn);
-  const [friendsVisible, setFriendsVisible] = useState(FRIENDS_PAGE_SIZE);
+  const [friendsVisible, setFriendsVisible] = useState(FRIENDS_PAGE_SIZE_MD);
 
   const handleClick = () => {
     if (onLinkClick) {
@@ -149,7 +156,7 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
                   key={friend.did}
                   label={
                     <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                      <Avatar size={20} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
+                      <Avatar size={avatarSize} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Text size="xs" truncate>
                           {friend.displayName || friend.handle}
@@ -180,25 +187,25 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
 
       {/* Fixed bottom: load more/show less */}
       <Box style={{ flexShrink: 0 }}>
-        {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
+        {isLoggedIn && friendsData?.friends && friendsData.friends.length > friendsPageSize && (
           <Box pt="xs" pb="xs">
             {friendsData.friends.length > friendsVisible && (
               <Button
                 variant="subtle"
                 size="xs"
                 fullWidth
-                onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
+                onClick={() => setFriendsVisible((v) => v + friendsPageSize)}
               >
-                ↓ Load {friendsData.friends.length - friendsVisible} more
+                ↓ Load {Math.min(friendsPageSize, friendsData.friends.length - friendsVisible)} more
               </Button>
             )}
-            {friendsVisible > FRIENDS_PAGE_SIZE && (
+            {friendsVisible > friendsPageSize && (
               <Button
                 variant="subtle"
                 size="xs"
                 fullWidth
                 mt={friendsData.friends.length > friendsVisible ? 4 : 0}
-                onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
+                onClick={() => setFriendsVisible(friendsPageSize)}
               >
                 ↑ Show less
               </Button>
