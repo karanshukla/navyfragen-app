@@ -119,6 +119,17 @@ export class ProfileService {
     return followed.filter((f) => appUserDids.has(f.did));
   }
 
+  async checkFollowsBot(agent: Agent, botDid: string): Promise<boolean> {
+    try {
+      const res = await agent.getProfile({ actor: botDid });
+      if (!res.success) return false;
+      return !!res.data.viewer?.following;
+    } catch (err) {
+      this.logger.error({ err, botDid }, "Failed to check bot follow status");
+      return false;
+    }
+  }
+
   async resolveHandleToDid(handle: string): Promise<string> {
     let did: string | undefined;
     try {

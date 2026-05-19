@@ -31,6 +31,8 @@ export function profileRoutes(
 
   router.get("/friends", handler(profileController.getFriends));
 
+  router.get("/check-bot-follow", handler(profileController.checkBotFollow));
+
   router.get(
     "/resolve-handle/:handle",
     profileController.validateResolveHandle,
