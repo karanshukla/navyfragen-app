@@ -212,41 +212,39 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
         </Box>
       )}
 
-      {/* Load more / Show less — fixed strip below the scroll area */}
-      {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
-        <Box style={{ flexShrink: 0 }} pt={4}>
-          {friendsData.friends.length > friendsVisible && (
-            <Anchor
-              size="xs"
-              c="blue"
-              fw={500}
-              style={{ display: "block", cursor: "pointer" }}
-              onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
-            >
-              ↓ Load {friendsData.friends.length - friendsVisible} more
-            </Anchor>
-          )}
-          {friendsVisible > FRIENDS_PAGE_SIZE && (
-            <Anchor
-              size="xs"
-              c="blue"
-              fw={500}
-              mt={friendsData.friends.length > friendsVisible ? 4 : 0}
-              style={{ display: "block", cursor: "pointer" }}
-              onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
-            >
-              ↑ Show less
-            </Anchor>
-          )}
-        </Box>
-      )}
-
       {/* Spacer when logged out keeps the bottom section pinned */}
       {!isLoggedIn && <Box style={{ flex: 1 }} />}
 
-      {/* Fixed bottom: keyboard shortcuts, Bluesky link */}
+      {/* Fixed bottom: load more/show less, keyboard shortcuts, Bluesky link */}
       <Box style={{ flexShrink: 0 }}>
-        <Divider visibleFrom="sm" mt="xl" />
+        {isLoggedIn && friendsData?.friends && friendsData.friends.length > FRIENDS_PAGE_SIZE && (
+          <Box pt={4} pb="xs">
+            {friendsData.friends.length > friendsVisible && (
+              <Anchor
+                size="xs"
+                c="blue"
+                fw={500}
+                style={{ display: "block", cursor: "pointer" }}
+                onClick={() => setFriendsVisible((v) => v + FRIENDS_PAGE_SIZE)}
+              >
+                ↓ Load {friendsData.friends.length - friendsVisible} more
+              </Anchor>
+            )}
+            {friendsVisible > FRIENDS_PAGE_SIZE && (
+              <Anchor
+                size="xs"
+                c="blue"
+                fw={500}
+                mt={friendsData.friends.length > friendsVisible ? 4 : 0}
+                style={{ display: "block", cursor: "pointer" }}
+                onClick={() => setFriendsVisible(FRIENDS_PAGE_SIZE)}
+              >
+                ↑ Show less
+              </Anchor>
+            )}
+          </Box>
+        )}
+        <Divider visibleFrom="sm" mt="md" />
         <Box mt="md" mb="md" visibleFrom="sm">
           <Text size="sm" c="dimmed" mb="xs">
             Keyboard Shortcuts:
