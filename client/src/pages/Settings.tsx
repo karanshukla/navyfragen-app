@@ -3,17 +3,18 @@ import {
   Container,
   Title,
   Grid,
+  SimpleGrid,
   Paper,
   Text,
   Button,
   Switch,
   Divider,
   Alert,
+  Skeleton,
   Loader,
   Notification,
   Select,
   Box,
-  Group,
   Stack,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
@@ -102,55 +103,48 @@ export default function Settings() {
                 </Title>
                 <Divider mb="md" />
                 {statsLoading || pdsLoading ? (
-                  <Loader size="sm" />
+                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl">
+                    {[0, 1, 2, 3].map((i) => (
+                      <Stack key={i} gap={4}>
+                        <Skeleton height={28} width="60%" radius="sm" />
+                        <Skeleton height={12} width="80%" radius="sm" />
+                      </Stack>
+                    ))}
+                  </SimpleGrid>
                 ) : (
-                  <>
-                    <Group gap="xl">
-                      <Stack gap={2}>
-                        <Text size="xl" fw={700}>
-                          {userStats?.messageCount ?? "—"}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Messages in inbox
-                        </Text>
-                      </Stack>
-                      <Stack gap={2}>
-                        <Text size="xl" fw={700}>
-                          {pdsInfo?.recordCount ?? "—"}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Answers on PDS
-                        </Text>
-                      </Stack>
-                      <Stack gap={2}>
-                        <Text size="xl" fw={700}>
-                          {userStats?.memberSince
-                            ? new Date(userStats.memberSince).toLocaleDateString(
-                                undefined,
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )
-                            : "—"}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Active since
-                        </Text>
-                      </Stack>
-                      <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-                        <Text size="lg" fw={700} ff="monospace" truncate>
-                          {pdsInfo?.pdsUrl
-                            ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "")
-                            : "—"}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          PDS
-                        </Text>
-                      </Stack>
-                    </Group>
-                  </>
+                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl">
+                    <Stack gap={2}>
+                      <Text size="xl" fw={700}>
+                        {userStats?.messageCount ?? "—"}
+                      </Text>
+                      <Text size="xs" c="dimmed">Messages in inbox</Text>
+                    </Stack>
+                    <Stack gap={2}>
+                      <Text size="xl" fw={700}>
+                        {pdsInfo?.recordCount ?? "—"}
+                      </Text>
+                      <Text size="xs" c="dimmed">Answers on PDS</Text>
+                    </Stack>
+                    <Stack gap={2}>
+                      <Text size="xl" fw={700}>
+                        {userStats?.memberSince
+                          ? new Date(userStats.memberSince).toLocaleDateString(
+                              undefined,
+                              { year: "numeric", month: "short", day: "numeric" },
+                            )
+                          : "—"}
+                      </Text>
+                      <Text size="xs" c="dimmed">Active since</Text>
+                    </Stack>
+                    <Stack gap={2} style={{ minWidth: 0 }}>
+                      <Text size="lg" fw={700} ff="monospace" truncate>
+                        {pdsInfo?.pdsUrl
+                          ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "")
+                          : "—"}
+                      </Text>
+                      <Text size="xs" c="dimmed">PDS</Text>
+                    </Stack>
+                  </SimpleGrid>
                 )}
               </Paper>
             </Grid.Col>

@@ -22,10 +22,6 @@ export const env = cleanEnv(process.env, {
     devDefault: "http://localhost:3033/", // Default for monkeyphysics/html-to-image
     desc: "URL of the monkeyphysics/html-to-image service (e.g., http://localhost:3033/)",
   }),
-  PDS_HOST: str({
-    devDefault: "https://bsky.social",
-    desc: "URL of the Bluesky PDS",
-  }), // Added PDS_HOST
   OAUTH_TOKEN_SECRET: str({
     desc: "Secret key for encrypting OAuth tokens (hex-encoded, 32 bytes for AES-256)",
   }),

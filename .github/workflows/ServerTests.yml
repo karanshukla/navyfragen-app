@@ -26,5 +26,5 @@ jobs:
       - name: Install server dependencies
         run: cd server && npm ci
 
-      - name: Run server tests
-        run: cd server && npm run test
+      - name: Run server tests with coverage
+        run: cd server && npm run test:coverage
