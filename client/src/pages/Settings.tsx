@@ -29,6 +29,7 @@ import {
 } from "../api/settingsService";
 import { useInstallPrompt } from "../components/InstallPromptContext";
 import { themes } from "../lib/themes";
+import { useBotFollow } from "../api/profileService";
 
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -59,6 +60,9 @@ export default function Settings() {
   const { data: userStats, isLoading: statsLoading } = useUserStats();
   const { data: pdsInfo, isLoading: pdsLoading } = usePdsInfo();
   const { installPrompt, setInstallPrompt } = useInstallPrompt();
+  const { data: botFollowData, isLoading: botFollowLoading } = useBotFollow(
+    Boolean(session?.isLoggedIn)
+  );
 
   const handleInstallClick = async () => {
     if (!installPrompt) {
@@ -320,6 +324,88 @@ export default function Settings() {
                       disabled={updateSettings.isPending}
                     />
                   </Box>
+                )}
+              </Paper>
+            </Grid.Col>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
+              <Paper
+                shadow="sm"
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Box style={{ flexGrow: 1 }}>
+                  <Title order={3}>Navyfragen Feed</Title>
+                  <Text mt="sm" c="dimmed">
+                    Browse anonymous questions and answers posted by everyone on
+                    Navyfragen worldwide. This feed may contain content intended
+                    for adults — view at your own discretion.
+                  </Text>
+                  <Divider my="md" />
+                </Box>
+                <Button
+                  component="a"
+                  href="https://bsky.app/profile/navyfragen.app/feed/navyfragen"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  fullWidth
+                  mt="auto"
+                  variant="outline"
+                >
+                  Open Feed on Bluesky
+                </Button>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
+              <Paper
+                shadow="sm"
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Box style={{ flexGrow: 1 }}>
+                  <Title order={3}>Daily Notifications</Title>
+                  <Text mt="sm" c="dimmed">
+                    Follow the Navyfragen notification bot on Bluesky to receive
+                    a daily alert when you have new messages in your inbox.
+                  </Text>
+                  <Divider my="md" />
+                </Box>
+                {botFollowLoading ? (
+                  <Skeleton height={36} radius="sm" mt="auto" />
+                ) : botFollowData?.following ? (
+                  <Alert color="green" title="Notifications enabled" mt="auto">
+                    You are following the notification bot and will receive daily
+                    alerts for new messages.
+                  </Alert>
+                ) : (
+                  <Button
+                    component="a"
+                    href="https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    fullWidth
+                    mt="auto"
+                    variant="outline"
+                  >
+                    Follow Notification Bot
+                  </Button>
                 )}
               </Paper>
             </Grid.Col>

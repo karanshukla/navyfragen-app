@@ -37,6 +37,10 @@ export interface FriendsResponse {
   friends: Friend[];
 }
 
+export interface BotFollowResponse {
+  following: boolean;
+}
+
 // Query keys
 export const profileKeys = {
   all: ["profiles"] as const,
@@ -45,6 +49,7 @@ export const profileKeys = {
   resolveHandle: (handle: string) =>
     [...profileKeys.all, "resolve", handle] as const,
   friends: () => [...profileKeys.all, "friends"] as const,
+  botFollow: () => [...profileKeys.all, "bot-follow"] as const,
 };
 
 // API Services
@@ -67,6 +72,10 @@ export const profileService = {
       `/user-exists/${encodeURIComponent(did)}`
     );
   },
+
+  // Check if the logged-in user follows the notification bot
+  checkBotFollow: (): Promise<BotFollowResponse> =>
+    apiClient.get<BotFollowResponse>("/check-bot-follow"),
 
   // Resolve handle to DID
   resolveHandle: (handle: string): Promise<ResolveHandleResponse> => {
@@ -106,6 +115,16 @@ export function useFriends(enabled: boolean) {
     enabled,
     staleTime: ONE_DAY,
     refetchOnWindowFocus: false,
+    retry: false,
+  });
+}
+
+export function useBotFollow(enabled: boolean) {
+  return useQuery({
+    queryKey: profileKeys.botFollow(),
+    queryFn: () => profileService.checkBotFollow(),
+    enabled,
+    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 }

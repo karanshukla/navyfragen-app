@@ -5,6 +5,8 @@ import { Logger } from "pino";
 import { initializeAgentFromSession } from "#/auth/session-agent";
 import type { AppContext } from "../index";
 
+const BOT_DID = "did:plc:3d4awubjiftylwrhhyp5vl7i";
+
 export class ProfileController {
   constructor(
     private profileService: ProfileService,
@@ -86,6 +88,32 @@ export class ProfileController {
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to fetch friends on app");
       return res.status(500).json({ error: "Failed to fetch friends" });
+    }
+  };
+
+  /**
+   * Check if the logged-in user follows the notification bot
+   */
+  checkBotFollow = async (
+    req: express.Request,
+    res: express.Response
+  ): Promise<express.Response> => {
+    const userDid = req.session?.did;
+    if (!userDid) {
+      return res.status(403).json({ error: "Not authenticated" });
+    }
+
+    const agent = await initializeAgentFromSession(req, this.ctx);
+    if (!agent) {
+      return res.status(401).json({ error: "Session expired" });
+    }
+
+    try {
+      const following = await this.profileService.checkFollowsBot(agent, BOT_DID);
+      return res.json({ following });
+    } catch (err) {
+      this.logger.error({ err, did: userDid }, "Failed to check bot follow status");
+      return res.status(500).json({ error: "Failed to check bot follow status" });
     }
   };
 
