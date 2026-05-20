@@ -848,6 +848,7 @@ export default function Messages() {
                       }}
                     >
                       <Text
+                        component="span"
                         style={{
                           fontFamily: "Inter",
                           fontWeight: 700,
@@ -856,7 +857,7 @@ export default function Messages() {
                       >
                         Posting preferences
                       </Text>
-                      <Text ff="monospace" size="xs" c="dimmed">
+                      <Text component="span" ff="monospace" size="xs" c="dimmed">
                         {
                           [
                             appendProfileLink,
@@ -958,6 +959,7 @@ export default function Messages() {
                       }}
                     >
                       <Text
+                        component="span"
                         style={{
                           fontFamily: "Inter",
                           fontWeight: 700,
