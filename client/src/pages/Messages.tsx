@@ -18,7 +18,7 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
-import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { useEffect, useState, useRef } from "react";
 
 import { ApiError } from "../api/apiClient";
@@ -324,6 +324,8 @@ export default function Messages() {
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
   const [focusedCardIndex, setFocusedCardIndex] = useState<number>(-1);
+  const [postingPrefsOpen, setPostingPrefsOpen] = useState(true);
+  const [imageThemeOpen, setImageThemeOpen] = useState(true);
   const messageCardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const computedColorScheme = useComputedColorScheme("light", {
     getInitialValueInEffect: true,
@@ -833,7 +835,7 @@ export default function Messages() {
                         : "#F2EBFF",
                   }}
                 >
-                  <details open>
+                  <details open={postingPrefsOpen} onToggle={(e) => setPostingPrefsOpen((e.currentTarget as HTMLDetailsElement).open)}>
                     <summary
                       style={{
                         listStyle: "none",
@@ -845,6 +847,7 @@ export default function Messages() {
                         fontFamily: "Inter",
                         fontWeight: 700,
                         fontSize: 15,
+                        userSelect: "none",
                       }}
                     >
                       <Text
@@ -857,17 +860,27 @@ export default function Messages() {
                       >
                         Posting preferences
                       </Text>
-                      <Text component="span" ff="monospace" size="xs" c="dimmed">
-                        {
-                          [
-                            appendProfileLink,
-                            useGradients,
-                            includeQuestionAsImage,
-                            confirmBeforeDelete,
-                          ].filter(Boolean).length
-                        }{" "}
-                        of 4 on
-                      </Text>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Text component="span" ff="monospace" size="xs" c="dimmed">
+                          {
+                            [
+                              appendProfileLink,
+                              useGradients,
+                              includeQuestionAsImage,
+                              confirmBeforeDelete,
+                            ].filter(Boolean).length
+                          }{" "}
+                          of 4 on
+                        </Text>
+                        <IconChevronDown
+                          size={16}
+                          style={{
+                            transition: "transform 200ms ease",
+                            transform: postingPrefsOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            color: "var(--mantine-color-dimmed)",
+                          }}
+                        />
+                      </span>
                     </summary>
                     <Box
                       px="md"
@@ -944,7 +957,7 @@ export default function Messages() {
                         : "#F2EBFF",
                   }}
                 >
-                  <details open>
+                  <details open={imageThemeOpen} onToggle={(e) => setImageThemeOpen((e.currentTarget as HTMLDetailsElement).open)}>
                     <summary
                       style={{
                         listStyle: "none",
@@ -956,6 +969,7 @@ export default function Messages() {
                         fontFamily: "Inter",
                         fontWeight: 700,
                         fontSize: 15,
+                        userSelect: "none",
                       }}
                     >
                       <Text
@@ -968,6 +982,14 @@ export default function Messages() {
                       >
                         Image theme &amp; shortcuts
                       </Text>
+                      <IconChevronDown
+                        size={16}
+                        style={{
+                          transition: "transform 200ms ease",
+                          transform: imageThemeOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          color: "var(--mantine-color-dimmed)",
+                        }}
+                      />
                     </summary>
                     <Box
                       px="md"
