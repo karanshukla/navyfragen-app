@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import { apiClient } from "../api/apiClient";
 import { profileService, FriendsResponse } from "../api/profileService";
 

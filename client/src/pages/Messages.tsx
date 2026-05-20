@@ -1,4 +1,3 @@
-import { useEffect, useState, useRef } from "react";
 import {
   Title,
   Text,
@@ -18,6 +17,11 @@ import {
   SimpleGrid,
   useComputedColorScheme,
 } from "@mantine/core";
+import { useLocalStorage } from "@mantine/hooks";
+import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
+import { useEffect, useState, useRef } from "react";
+
+import { ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import {
   useMessages,
@@ -27,13 +31,12 @@ import {
   Message,
 } from "../api/messageService";
 import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
-import { ApiError } from "../api/apiClient";
-import { themes } from "../lib/themes";
-import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
-import { useLocalStorage } from "@mantine/hooks";
 import { WinkMark } from "../components/WinkMark";
+import { themes } from "../lib/themes";
+
+
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
@@ -1033,9 +1036,11 @@ export default function Messages() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          isExpanded
-                            ? setRespondingTid(null)
-                            : handlePrepareResponse(msg.tid);
+                          if (isExpanded) {
+                            setRespondingTid(null);
+                          } else {
+                            handlePrepareResponse(msg.tid);
+                          }
                         }
                       }}
                       style={{
@@ -1052,9 +1057,11 @@ export default function Messages() {
                         cursor: "pointer",
                       }}
                       onClick={() => {
-                        isExpanded
-                          ? setRespondingTid(null)
-                          : handlePrepareResponse(msg.tid);
+                        if (isExpanded) {
+                          setRespondingTid(null);
+                        } else {
+                          handlePrepareResponse(msg.tid);
+                        }
                       }}
                     >
                       <Stack gap="sm">
@@ -1231,7 +1238,7 @@ export default function Messages() {
             </>
           ) : (
             <Alert color="royal" title="No messages">
-              You don't have any messages yet. Share your profile link to
+              You don&apos;t have any messages yet. Share your profile link to
               receive anonymous questions.
             </Alert>
           )}

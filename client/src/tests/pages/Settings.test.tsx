@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import Settings from "../../pages/Settings";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as authService from "../../api/authService";
-import * as settingsService from "../../api/settingsService";
 import * as profileService from "../../api/profileService";
+import * as settingsService from "../../api/settingsService";
 import * as installPromptContext from "../../components/InstallPromptContext";
+import Settings from "../../pages/Settings";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {

@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import OAuthCallback from "../../pages/OAuthCallback";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as apiClientModule from "../../api/apiClient";
+import OAuthCallback from "../../pages/OAuthCallback";
 import { renderWithProviders } from "../testUtils";
 
 const mockNavigate = vi.fn();

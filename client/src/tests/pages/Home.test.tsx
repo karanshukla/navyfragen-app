@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
-import Home from "../../pages/Home";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
+import Home from "../../pages/Home";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {

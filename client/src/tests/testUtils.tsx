@@ -1,8 +1,8 @@
-import { render, type RenderOptions } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
-import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, type RenderOptions } from "@testing-library/react";
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 
 interface Options extends Omit<RenderOptions, "wrapper"> {
   route?: string;

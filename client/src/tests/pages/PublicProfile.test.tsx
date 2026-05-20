@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import PublicProfile from "../../pages/PublicProfile";
-import * as profileService from "../../api/profileService";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as messageService from "../../api/messageService";
+import * as profileService from "../../api/profileService";
+import PublicProfile from "../../pages/PublicProfile";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("react-router-dom", async (importOriginal) => {
