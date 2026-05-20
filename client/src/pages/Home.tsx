@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import {
   Button,
   List,
@@ -13,8 +12,10 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { IconBrandGithub } from "@tabler/icons-react";
-import { useSession } from "../api/authService";
 import React from "react";
+import { Link } from "react-router-dom";
+
+import { useSession } from "../api/authService";
 import { useSyncMessages } from "../api/messageService";
 import { WinkMark } from "../components/WinkMark";
 

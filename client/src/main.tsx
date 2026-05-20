@@ -1,44 +1,46 @@
-import React, { useEffect, useRef } from "react";
-import ReactDOM from "react-dom/client";
 import {
+  ActionIcon,
   AppShell,
+  Avatar,
+  Box,
   Burger,
-  MantineProvider,
-  Group,
+  Button,
   Container,
   Flex,
-  Avatar,
-  Text,
-  Menu,
-  Button,
-  ActionIcon,
-  useMantineColorScheme,
-  useComputedColorScheme,
-  Box,
+  Group,
   Loader,
+  MantineProvider,
+  Menu,
   Paper,
+  Text,
   Title,
+  useComputedColorScheme,
+  useMantineColorScheme,
 } from "@mantine/core";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { Notifications } from "@mantine/notifications";
+import { IconLogout, IconMoon, IconSun, IconUser } from "@tabler/icons-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { queryClient } from "./api/queryClient";
+import React, { useEffect, useRef } from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+
 import { useSession, useLogout } from "./api/authService";
+import { queryClient } from "./api/queryClient";
+import { InstallPromptProvider } from "./components/InstallPromptContext";
+import { WinkMark } from "./components/WinkMark";
+import { Wordmark } from "./components/Wordmark";
+import { Navigation } from "./Navigation";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
-import Settings from "./pages/Settings";
-import PublicProfile from "./pages/PublicProfile";
 import OAuthCallback from "./pages/OAuthCallback";
+import PublicProfile from "./pages/PublicProfile";
+import Settings from "./pages/Settings";
+import navyfragenTheme from "./Theme";
+
 import "@mantine/core/styles.css";
 import "./index.css";
-import { IconMoon, IconSun, IconUser, IconLogout } from "@tabler/icons-react";
-import { Notifications } from "@mantine/notifications";
-import navyfragenTheme from "./Theme";
-import { Navigation } from "./Navigation";
-import { InstallPromptProvider } from "./components/InstallPromptContext";
-import { Wordmark } from "./components/Wordmark";
-import { WinkMark } from "./components/WinkMark";
 
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);

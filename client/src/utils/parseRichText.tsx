@@ -1,5 +1,5 @@
-import React from "react";
 import { tokenize } from "@atcute/bluesky-richtext-parser";
+import React from "react";
 
 const WHITESPACE_REGEX = /^\s+|\s+$| +(?=\n)|\n(?=(?: *\n){2}) */g;
 const TRIM_HOST_RE = /^www\./;
@@ -104,7 +104,7 @@ export const parseRichText = (text: string): React.ReactNode => {
         /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
       let lastIndex = 0;
       let match;
-      let text = segment.text;
+      const text = segment.text;
       let keyOffset = 0;
       while ((match = domainRegex.exec(text)) !== null) {
         const matchText = match[0];

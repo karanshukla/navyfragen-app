@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from "react";
 import {
   Container,
   Text,
@@ -9,22 +8,23 @@ import {
   Group,
   Textarea,
   Avatar,
-  Loader,
-  Center,
   Box,
   Alert,
+  Skeleton,
   useComputedColorScheme,
 } from "@mantine/core";
+import { IconSend, IconX, IconWorld, IconLock } from "@tabler/icons-react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
+
+import { useSendMessage } from "../api/messageService";
 import {
   useResolveHandle,
   usePublicProfile,
 } from "../api/profileService";
-import { useSendMessage } from "../api/messageService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { IconSend, IconX, IconWorld, IconLock } from "@tabler/icons-react";
-import { parseRichText } from "../utils/parseRichText";
 import { WinkMark } from "../components/WinkMark";
+import { parseRichText } from "../utils/parseRichText";
 
 const MAX_MESSAGE_LENGTH = 150;
 
@@ -120,7 +120,7 @@ export default function PublicProfile() {
     );
   };
 
-  const isLoading = handleLoading || profileLoading || sendLoading;
+  const isLoading = handleLoading || profileLoading;
 
   useEffect(() => {
     const handleFocus = () => {
@@ -157,7 +157,7 @@ export default function PublicProfile() {
               No Bluesky account found
             </Text>
             <Text>
-              <strong>@{handle}</strong> doesn't exist on Bluesky. Check the
+              <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check the
               handle and try again.
             </Text>
           </Paper>
@@ -185,9 +185,49 @@ export default function PublicProfile() {
   if (isLoading) {
     return (
       <Container>
-        <Center style={{ minHeight: "200px" }}>
-          <Loader />
-        </Center>
+        {/* URL breadcrumb pill skeleton */}
+        <Skeleton height={28} width={180} radius={999} mb="sm" />
+
+        {/* Profile card skeleton */}
+        <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
+          {/* Banner */}
+          <Skeleton height={160} radius={0} />
+          <Box style={{ padding: "0 24px 18px", position: "relative" }}>
+            {/* Avatar overlapping banner */}
+            <Skeleton
+              circle
+              height={84}
+              width={84}
+              style={{ position: "absolute", top: -42, left: 16, border: "4px solid var(--mantine-color-body)" }}
+            />
+            <Group justify="space-between" align="flex-start" pt={52}>
+              <Box>
+                <Skeleton height={28} width={180} mb={6} />
+                <Skeleton height={14} width={120} />
+              </Box>
+              <Skeleton height={28} width={130} radius={999} />
+            </Group>
+            <Skeleton height={14} mt="sm" />
+            <Skeleton height={14} mt={6} width="75%" />
+          </Box>
+        </Paper>
+
+        {/* Ask card skeleton */}
+        <Paper
+          style={{
+            borderRadius: 18,
+            padding: 28,
+            background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
+            border: "2px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <Skeleton height={26} width="70%" mx="auto" mb="lg" />
+          <Skeleton height={80} radius="md" mb="xs" />
+          <Group justify="flex-end" gap="xs">
+            <Skeleton height={36} width={36} radius="md" />
+            <Skeleton height={36} width={90} radius={999} />
+          </Group>
+        </Paper>
       </Container>
     );
   }
@@ -200,7 +240,7 @@ export default function PublicProfile() {
             Not on Navyfragen
           </Text>
           <Text>
-            <strong>@{handle}</strong> has a Bluesky account but hasn't set up
+            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up
             their Navyfragen inbox yet.
           </Text>
         </Paper>
@@ -509,7 +549,7 @@ export default function PublicProfile() {
             />
             <Text size="xs" c="dimmed">
               Your message will be sent anonymously to the user. They may post
-              it publicly on Bluesky, so please don't share any personal
+              it publicly on Bluesky, so please don&apos;t share any personal
               information or passwords. Be curious, but respectful and kind!
             </Text>
           </Group>

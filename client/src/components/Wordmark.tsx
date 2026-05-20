@@ -1,4 +1,5 @@
 import { Text } from "@mantine/core";
+
 import { WinkMark } from "./WinkMark";
 
 interface WordmarkProps {

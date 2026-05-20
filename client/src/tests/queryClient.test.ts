@@ -1,13 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
-import { queryClient } from "../api/queryClient";
 import { QueryClient } from "@tanstack/react-query";
+import { describe, it, expect, vi } from "vitest";
+
+import { queryClient } from "../api/queryClient";
 
 describe("queryClient", () => {
   it("should be an instance of QueryClient", () => {
     expect(queryClient).toBeInstanceOf(QueryClient);
   });
   it("should have the correct default options", () => {
-    // @ts-ignore - Accessing private property for testing
     const defaultOptions = queryClient.getDefaultOptions();
 
     expect(defaultOptions.queries).toEqual({

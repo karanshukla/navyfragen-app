@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Title,
   Grid,
@@ -16,18 +15,20 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { ConfirmationModal } from "../components/ConfirmationModal";
+import { useState } from "react";
+
 import { apiClient, ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
+import { useBotFollow } from "../api/profileService";
 import {
   useUserSettings,
   useUpdateUserSettings,
   useUserStats,
   usePdsInfo,
 } from "../api/settingsService";
+import { ConfirmationModal } from "../components/ConfirmationModal";
 import { useInstallPrompt } from "../components/InstallPromptContext";
 import { themes } from "../lib/themes";
-import { useBotFollow } from "../api/profileService";
 
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -299,7 +300,7 @@ export default function Settings() {
                 <Text c="dimmed" style={cardBodyStyle}>
                   By default, Navyfragen syncs your anonymous messages with your
                   Bluesky PDS (Personal Data Server). Disable this if you wish
-                  to keep your data on Navyfragen's servers. Will not change
+                  to keep your data on Navyfragen&apos;s servers. Will not change
                   your ability to post to Bluesky directly.
                 </Text>
                 {settingsLoading ? (

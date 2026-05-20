@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor, act } from "@testing-library/react";
-import Login from "../../pages/Login";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as authService from "../../api/authService";
+import Login from "../../pages/Login";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {

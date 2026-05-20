@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
-import { Navigation } from "../Navigation";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as profileService from "../api/profileService";
 import * as settingsService from "../api/settingsService";
+import { Navigation } from "../Navigation";
+
 import { renderWithProviders } from "./testUtils";
 
 vi.mock("../api/profileService", async (importOriginal) => {

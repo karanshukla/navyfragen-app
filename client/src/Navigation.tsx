@@ -1,12 +1,4 @@
 import {
-  IconHome,
-  IconMessage,
-  IconLogin,
-  IconSettings,
-  IconUser,
-} from "@tabler/icons-react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
-import {
   NavLink,
   Text,
   Box,
@@ -17,7 +9,16 @@ import {
   Button,
   CopyButton,
 } from "@mantine/core";
+import {
+  IconHome,
+  IconMessage,
+  IconLogin,
+  IconSettings,
+  IconUser,
+} from "@tabler/icons-react";
 import { useEffect } from "react";
+import { useLocation, Link, useNavigate } from "react-router-dom";
+
 import { useFriends } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
 import { WinkMark } from "./components/WinkMark";
