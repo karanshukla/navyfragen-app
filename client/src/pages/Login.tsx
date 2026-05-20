@@ -99,6 +99,9 @@ export default function Login() {
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
               required
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               styles={{
                 label: { color: "rgba(253,248,255,0.8)", fontWeight: 600 },
                 input: {
