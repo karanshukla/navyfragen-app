@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import {
-  Container,
   Title,
   Text,
   Paper,
@@ -11,14 +10,13 @@ import {
   Button,
   ActionIcon,
   Group,
-  TextInput,
   Textarea,
   CopyButton,
   Tooltip,
-  Grid,
   Divider,
   Switch,
-  Select,
+  Box,
+  SimpleGrid,
 } from "@mantine/core";
 import { useSession } from "../api/authService";
 import {
@@ -35,17 +33,136 @@ import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
 import { useLocalStorage } from "@mantine/hooks";
+import { WinkMark } from "../components/WinkMark";
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
 const MAX_BSKY_POST_LENGTH = 280;
-const GENERAL_BUFFER = 3; // In case formatting changes in the BE or other stuff
+const GENERAL_BUFFER = 3;
 
 interface PageAlert {
   title: string;
   message: React.ReactNode;
   color: "red" | "green" | "blue" | "yellow";
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(dateStr).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** SVG circular character-count progress ring */
+function CharRing({ count, limit }: { count: number; limit: number }) {
+  const r = 9;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(count / limit, 1);
+  const danger = count > limit * 0.9;
+  const color = danger ? "#FACC15" : "#3B5BFF";
+  return (
+    <svg width={22} height={22} viewBox="0 0 22 22" style={{ flexShrink: 0 }}>
+      <circle cx={11} cy={11} r={r} fill="none" stroke="rgba(253,248,255,0.15)" strokeWidth={2.5} />
+      <circle
+        cx={11} cy={11} r={r} fill="none"
+        stroke={color} strokeWidth={2.5}
+        strokeDasharray={circ}
+        strokeDashoffset={circ - pct * circ}
+        transform="rotate(-90 11 11)"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Visual image theme picker card */
+function ThemeCard({
+  value,
+  label,
+  selected,
+  onClick,
+}: {
+  value: string;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  function PreviewContent() {
+    if (value === "default") {
+      return (
+        <div style={{ background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)", height: "100%", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", padding: 10 }}>
+          <div style={{ background: "#fff", borderRadius: 8, padding: "7px 12px", width: "80%", boxShadow: "0 3px 10px rgba(0,0,0,0.3)" }}>
+            <div style={{ height: 4, background: "#ccc", borderRadius: 3, marginBottom: 4 }} />
+            <div style={{ height: 4, background: "#ccc", borderRadius: 3, width: "65%" }} />
+          </div>
+        </div>
+      );
+    }
+    if (value === "compressed") {
+      return (
+        <div style={{ background: "#1a1a2a", height: "100%", borderRadius: 5, display: "flex", alignItems: "center", padding: 8 }}>
+          <div style={{ background: "#22223a", borderLeft: "3px solid #7c3aed", borderRadius: 6, padding: "7px 9px", width: "100%" }}>
+            <div style={{ height: 3, background: "#a78bfa", borderRadius: 3, marginBottom: 5, width: "45%" }} />
+            <div style={{ height: 3, background: "#4a4a6a", borderRadius: 3, marginBottom: 3 }} />
+            <div style={{ height: 3, background: "#4a4a6a", borderRadius: 3, width: "70%" }} />
+          </div>
+        </div>
+      );
+    }
+    // twitter
+    return (
+      <div style={{ background: "#f7f9f9", height: "100%", borderRadius: 5, display: "flex", alignItems: "center", padding: 8 }}>
+        <div style={{ background: "#fff", border: "1px solid #cfd9de", borderRadius: 8, padding: "7px 9px", width: "100%" }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 5, alignItems: "center" }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#1d9bf0", flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 2.5, background: "#333", borderRadius: 2, marginBottom: 2 }} />
+              <div style={{ height: 2.5, background: "#aaa", borderRadius: 2, width: "55%" }} />
+            </div>
+          </div>
+          <div style={{ height: 2.5, background: "#ccc", borderRadius: 2, marginBottom: 3 }} />
+          <div style={{ height: 2.5, background: "#ccc", borderRadius: 2, width: "75%", marginBottom: 4 }} />
+          <div style={{ height: 1, background: "#eff3f4", marginBottom: 3 }} />
+          <div style={{ height: 2.5, background: "#1d9bf0", borderRadius: 2, width: "40%" }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: selected ? "rgba(59,91,255,0.12)" : "transparent",
+        border: selected ? "1.5px solid #3B5BFF" : "1.5px solid var(--mantine-color-default-border)",
+        borderRadius: 10,
+        padding: 8,
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        flex: 1,
+      }}
+    >
+      <div style={{ aspectRatio: "4/3", borderRadius: 5, overflow: "hidden" }}>
+        <PreviewContent />
+      </div>
+      <Text
+        size="xs"
+        fw={600}
+        ta="center"
+        style={{ color: "var(--mantine-color-text)" }}
+      >
+        {label}
+      </Text>
+    </button>
+  );
 }
 
 export default function Messages() {
@@ -54,7 +171,6 @@ export default function Messages() {
   const [focusedCardIndex, setFocusedCardIndex] = useState<number>(-1);
   const messageCardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Local storage settings
   const [appendProfileLink, setAppendProfileLink] = useLocalStorage({
     key: "appendProfileLink",
     defaultValue: false,
@@ -77,40 +193,27 @@ export default function Messages() {
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isPortrait, setIsPortrait] = useState(
-    window.matchMedia("(orientation: portrait)").matches,
-  );
   const [deleteModalOpened, setDeleteModalOpened] = useState<boolean>(false);
-  const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
-    null,
-  );
+  const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(null);
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
   const [characterLimit, setCharacterLimit] = useState<number>(280);
   const [deletingTid, setDeletingTid] = useState<string | null>(null);
 
-  const {
-    data: session,
-    isLoading: sessionLoading,
-    error: sessionError,
-  } = useSession();
+  const { data: session, isLoading: sessionLoading } = useSession();
 
   const {
     data: messagesData,
     isLoading: messagesLoading,
-    error: messagesError,
     refetch: refetchMessages,
   } = useMessages(session?.did || null, {
-    refetchInterval: 10000, //10 seconds
+    refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
 
-  const { mutate: deleteMessage, isPending: deleteLoading } =
-    useDeleteMessage();
-  const { mutate: respondToMessage, isPending: respondLoading } =
-    useRespondToMessage();
-  const { mutate: addExamples, isPending: examplesLoading } =
-    useAddExampleMessages();
+  const { mutate: deleteMessage, isPending: deleteLoading } = useDeleteMessage();
+  const { mutate: respondToMessage, isPending: respondLoading } = useRespondToMessage();
+  const { mutate: addExamples, isPending: examplesLoading } = useAddExampleMessages();
 
   const { data: userSettings, isLoading: settingsLoading } = useUserSettings();
   const updateSettings = useUpdateUserSettings({
@@ -124,50 +227,23 @@ export default function Messages() {
   });
 
   useEffect(() => {
-    let maxLengthForResponse = MAX_BSKY_POST_LENGTH - GENERAL_BUFFER;
-
+    let maxLength = MAX_BSKY_POST_LENGTH - GENERAL_BUFFER;
     if (appendProfileLink && session?.profile?.handle) {
-      const profileLinkFull = ` ${shortlinkurl}/${session.profile.handle}`;
-      maxLengthForResponse -= profileLinkFull.length;
+      maxLength -= ` ${shortlinkurl}/${session.profile.handle}`.length;
     }
-
-    if (!includeQuestionAsImage) {
-      if (respondingTid && messagesData?.messages) {
-        const currentMessage = messagesData.messages.find(
-          (m) => m.tid === respondingTid,
-        );
-        if (currentMessage) {
-          const originalMessageText = currentMessage.message;
-          // This should align with the backend formatting for accuracy
-          const formattingPrefix = " \\n\\nAnon asked via 💙📩❓: *";
-          const formattingSuffix = "*";
-          const questionPartOverhead =
-            formattingPrefix.length +
-            originalMessageText.length +
-            formattingSuffix.length;
-          maxLengthForResponse -= questionPartOverhead;
-        }
+    if (!includeQuestionAsImage && respondingTid && messagesData?.messages) {
+      const msg = messagesData.messages.find((m) => m.tid === respondingTid);
+      if (msg) {
+        maxLength -= ` \\n\\nAnon asked via 💙📩❓: *${msg.message}*`.length;
       }
     }
-
-    setCharacterLimit(Math.max(0, maxLengthForResponse));
-  }, [
-    appendProfileLink,
-    session?.profile?.handle,
-    shortlinkurl,
-    includeQuestionAsImage,
-    respondingTid,
-    messagesData,
-  ]);
+    setCharacterLimit(Math.max(0, maxLength));
+  }, [appendProfileLink, session?.profile?.handle, includeQuestionAsImage, respondingTid, messagesData]);
 
   useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
-      setPageAlert({
-        title: "Welcome back!",
-        message: "You have successfully logged in.",
-        color: "green",
-      });
+      setPageAlert({ title: "Welcome back!", message: "You have successfully logged in.", color: "green" });
       sessionStorage.removeItem("newLogin");
     }
   }, []);
@@ -176,15 +252,9 @@ export default function Messages() {
     if (!session?.did) return;
     setPageAlert(null);
     addExamples(session.did, {
-      onSuccess: () => {
-        refetchMessages();
-      },
+      onSuccess: () => refetchMessages(),
       onError: (err: any) => {
-        setPageAlert({
-          title: "Error Adding Examples",
-          message: err.error || "Failed to add example messages.",
-          color: "red",
-        });
+        setPageAlert({ title: "Error Adding Examples", message: err.error || "Failed to add example messages.", color: "red" });
       },
     });
   };
@@ -198,141 +268,73 @@ export default function Messages() {
     }
   };
 
-  const performDelete = (tid: string, fromModal: boolean = false) => {
+  const performDelete = (tid: string, fromModal = false) => {
     setPageAlert(null);
     setDeletingTid(tid);
     deleteMessage(tid, {
       onSuccess: () => {
         if (respondingTid === tid) setRespondingTid(null);
-        if (fromModal) {
-          setDeleteModalOpened(false);
-          setMessageIdToDelete(null);
-        }
+        if (fromModal) { setDeleteModalOpened(false); setMessageIdToDelete(null); }
         setDeletingTid(null);
         refetchMessages();
       },
       onError: (err: any) => {
-        setPageAlert({
-          title: "Error Deleting Message",
-          message: err.error || "Failed to delete message.",
-          color: "red",
-        });
-        if (fromModal) {
-          setDeleteModalOpened(false);
-          setMessageIdToDelete(null);
-        }
+        setPageAlert({ title: "Error Deleting Message", message: err.error || "Failed to delete message.", color: "red" });
+        if (fromModal) { setDeleteModalOpened(false); setMessageIdToDelete(null); }
         setDeletingTid(null);
       },
     });
   };
 
   const handleConfirmDelete = () => {
-    if (messageIdToDelete) {
-      performDelete(messageIdToDelete, true);
-    }
+    if (messageIdToDelete) performDelete(messageIdToDelete, true);
   };
 
   const handlePrepareResponse = (tid: string) => {
     setRespondingTid(tid);
     setResponseText("");
-    // Ensure the card that is being responded to gets focus for a11y
-    const messageIndex = messagesData?.messages.findIndex(
-      (msg) => msg.tid === tid,
-    );
-    if (messageIndex !== undefined && messageIndex !== -1) {
-      setFocusedCardIndex(messageIndex);
-    }
+    const idx = messagesData?.messages.findIndex((m) => m.tid === tid);
+    if (idx !== undefined && idx !== -1) setFocusedCardIndex(idx);
   };
 
   const handleSendResponse = (msg: Message) => {
     setPageAlert(null);
     if (!responseText.trim()) {
-      setPageAlert({
-        title: "Empty Response",
-        message: "Response cannot be empty.",
-        color: "yellow",
-      });
+      setPageAlert({ title: "Empty Response", message: "Response cannot be empty.", color: "yellow" });
       return;
     }
-    let appendedResponseText;
-    if (appendProfileLink && session?.profile?.handle) {
-      appendedResponseText =
-        responseText + ` ${shortlinkurl}/${session.profile.handle}`;
-    }
+    const text = appendProfileLink && session?.profile?.handle
+      ? responseText + ` ${shortlinkurl}/${session.profile.handle}`
+      : responseText;
 
     respondToMessage(
-      {
-        tid: msg.tid,
-        recipient: msg.recipient,
-        original: msg.message,
-        response: appendedResponseText ?? responseText,
-        includeQuestionAsImage: includeQuestionAsImage,
-      },
+      { tid: msg.tid, recipient: msg.recipient, original: msg.message, response: text, includeQuestionAsImage },
       {
         onSuccess: (data) => {
           setRespondingTid(null);
           setResponseText("");
-          let successMessage: React.ReactNode =
-            "Your response has been posted.";
-          if (data.link) {
-            successMessage = (
-              <>
-                Your response has been posted. View on Bluesky:{" "}
-                <a
-                  href={data.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "inherit", textDecoration: "underline" }}
-                >
-                  {data.link}
-                </a>
-              </>
-            );
-          }
-          setPageAlert({
-            title: "Response Sent!",
-            message: successMessage,
-            color: "green",
-          });
+          const successMsg: React.ReactNode = data.link ? (
+            <>Your response has been posted. <a href={data.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>{data.link}</a></>
+          ) : "Your response has been posted.";
+          setPageAlert({ title: "Response Sent!", message: successMsg, color: "green" });
           refetchMessages();
         },
         onError: (err: any) => {
-          setPageAlert({
-            title: "Response Error",
-            message: err.error || "Failed to send response.",
-            color: "red",
-          });
+          setPageAlert({ title: "Response Error", message: err.error || "Failed to send response.", color: "red" });
         },
-      },
+      }
     );
   };
 
   useEffect(() => {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
-      const messageCardId = `message-card-${respondingTid}`;
-      const messageCardElement = document.getElementById(messageCardId);
-      if (messageCardElement) {
-        setTimeout(() => {
-          messageCardElement.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-          });
-        }, 150);
-      }
+      const el = document.getElementById(`message-card-${respondingTid}`);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
     }
   }, [respondingTid]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(orientation: portrait)");
-    const handleChange = () => setIsPortrait(mediaQuery.matches);
-    handleChange();
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
-
-  useEffect(() => {
-    // Initialize or update messageCardRefs when messagesData changes
     if (messagesData?.messages) {
       messageCardRefs.current = messagesData.messages.map(() => null);
     }
@@ -340,389 +342,434 @@ export default function Messages() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const targetNodeName = (event.target as HTMLElement)?.nodeName;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(targetNodeName)) {
-        return;
-      }
+      const tag = (event.target as HTMLElement)?.nodeName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
 
-      if (event.altKey || event.metaKey) {
-        if (event.key.toUpperCase() === "R") {
-          event.preventDefault();
-          if (messagesData?.messages && messagesData.messages.length > 0) {
-            const newIndex =
-              focusedCardIndex === -1
-                ? 0
-                : (focusedCardIndex + 1) % messagesData.messages.length;
-            setFocusedCardIndex(newIndex);
-            messageCardRefs.current[newIndex]?.focus();
-          }
-        }
-      }
-
-      // Navigate between cards with arrow keys when a card is focused
-      if (
-        focusedCardIndex !== -1 &&
-        (event.key === "ArrowDown" || event.key === "ArrowUp")
-      ) {
+      if ((event.altKey || event.metaKey) && event.key.toUpperCase() === "R") {
         event.preventDefault();
-        if (messagesData?.messages && messagesData.messages.length > 0) {
-          let newIndex = focusedCardIndex;
-          if (event.key === "ArrowDown") {
-            newIndex = (focusedCardIndex + 1) % messagesData.messages.length;
-          }
-          if (event.key === "ArrowUp") {
-            newIndex =
-              (focusedCardIndex - 1 + messagesData.messages.length) %
-              messagesData.messages.length;
-          }
-          setFocusedCardIndex(newIndex);
-          messageCardRefs.current[newIndex]?.focus();
+        if (messagesData?.messages?.length) {
+          const newIdx = focusedCardIndex === -1 ? 0 : (focusedCardIndex + 1) % messagesData.messages.length;
+          setFocusedCardIndex(newIdx);
+          messageCardRefs.current[newIdx]?.focus();
+        }
+      }
+      if (focusedCardIndex !== -1 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+        event.preventDefault();
+        if (messagesData?.messages?.length) {
+          const newIdx = event.key === "ArrowDown"
+            ? (focusedCardIndex + 1) % messagesData.messages.length
+            : (focusedCardIndex - 1 + messagesData.messages.length) % messagesData.messages.length;
+          setFocusedCardIndex(newIdx);
+          messageCardRefs.current[newIdx]?.focus();
         }
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [focusedCardIndex, messagesData, setFocusedCardIndex]);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [focusedCardIndex, messagesData]);
+
+  const msgCount = messagesData?.messages?.length ?? 0;
+  const handle = session?.profile?.handle ?? "";
+  const fullUrl = `https://${shortlinkurl}/${handle}`;
 
   return (
-    <Container>
-      <Title mb="md">Messages</Title>
+    <Box maw={1080}>
       {pageAlert && (
-        <Alert
-          title={pageAlert.title}
-          color={pageAlert.color}
-          withCloseButton
-          onClose={() => setPageAlert(null)}
-          mb="lg"
-        >
+        <Alert title={pageAlert.title} color={pageAlert.color} withCloseButton onClose={() => setPageAlert(null)} mb="lg">
           {pageAlert.message}
-        </Alert>
-      )}
-      {sessionError && (
-        <Alert
-          color="red"
-          title="Session Error"
-          mb="lg"
-          withCloseButton
-          onClose={() => {}}
-        >
-          {typeof sessionError === "object" &&
-          sessionError !== null &&
-          "error" in sessionError
-            ? (sessionError as any).error
-            : "Failed to load session data"}
-        </Alert>
-      )}
-      {messagesError && (
-        <Alert
-          color="red"
-          title="Messages Error"
-          mb="lg"
-          withCloseButton
-          onClose={() => {}}
-        >
-          {typeof messagesError === "object" &&
-          messagesError !== null &&
-          "error" in messagesError
-            ? (messagesError as any).error
-            : "Failed to load messages"}
         </Alert>
       )}
 
       {sessionLoading ? (
-        <Center>
-          <Loader size="xl" />
-        </Center>
+        <Center><Loader size="xl" /></Center>
       ) : !session?.isLoggedIn ? (
-        <Alert color="red" title="Not logged in">
-          Please log in to see your messages.
-        </Alert>
+        <Alert color="red" title="Not logged in">Please log in to see your messages.</Alert>
       ) : (
         <>
-          <Paper withBorder p="md" mb="lg" shadow="sm">
-            <Text mb="md">
-              Share the link below to let others send you anonymous questions
-              and messages. Don't forget, your inbox link is publicly
-              accessible!
-            </Text>
-            <Group>
-              <TextInput
-                readOnly
-                value={`${shortlinkurl}/${session.profile?.handle || ""}`}
-                style={{ flexGrow: 1 }}
-              />
-              <CopyButton
-                value={`${shortlinkurl}/${session.profile?.handle || ""}`}
-              >
-                {({ copied, copy }) => (
-                  <Tooltip
-                    label={copied ? "Copied" : "Copy"}
-                    withArrow
-                    position="right"
-                  >
-                    <Button onClick={copy}>
-                      <IconClipboard />
-                    </Button>
-                  </Tooltip>
-                )}
-              </CopyButton>
-              {(() => {
-                const handle = session.profile?.handle || "";
-                const fullUrl = `https://${shortlinkurl}/${handle}`;
-                const sharePayload = {
-                  title: "Send me anonymous messages on Navyfragen!",
-                  text: `Send ${session.profile?.displayName} anonymous messages!`,
-                  url: fullUrl,
-                };
-                return <ShareButton shareData={sharePayload} />;
-              })()}
-              <Button
-                onClick={handleAddExampleMessages}
-                loading={examplesLoading}
-              >
-                Add Examples
-              </Button>
-            </Group>
-          </Paper>
-          {messagesLoading ? (
-            <Center>
-              <Loader size="lg" />
-            </Center>
-          ) : messagesData &&
-            messagesData.messages &&
-            messagesData.messages.length > 0 ? (
-            <>
-              <Stack gap="xs" mb="md">
-                <Group>
-                  <Switch
-                    checked={appendProfileLink}
-                    onChange={(event) =>
-                      setAppendProfileLink(event.currentTarget.checked)
-                    }
-                    label="Append my inbox link automatically to the BlueSky post (will reduce your available character budget)"
-                  />
-                  <Switch
-                    checked={useGradients}
-                    onChange={(event) =>
-                      setUseGradients(event.currentTarget.checked)
-                    }
-                    label="Use gradient backgrounds (turn off for better contrast, turn on to take screenshots)"
-                  />
-                  <Switch
-                    checked={includeQuestionAsImage}
-                    onChange={(event) =>
-                      setIncludeQuestionAsImage(event.currentTarget.checked)
-                    }
-                    label="Include question as an image (includes automatic alt text generation too)"
-                  />
-                  <Switch
-                    checked={confirmBeforeDelete}
-                    onChange={(event) =>
-                      setConfirmBeforeDelete(event.currentTarget.checked)
-                    }
-                    label="Confirm before deleting messages (leave off if you want to bulk delete messages)"
-                  />
-                </Group>
-                <Group>
-                  <Select
-                    label="Image theme"
-                    data={Object.entries(themes).map(([value, label]) => ({
-                      value,
-                      label,
-                    }))}
-                    value={userSettings?.imageTheme || "default"}
-                    onChange={(value) => {
-                      if (value) {
-                        updateSettings.mutate({
-                          imageTheme: value,
-                          pdsSyncEnabled: Boolean(userSettings?.pdsSyncEnabled),
-                        });
-                      }
-                    }}
-                    disabled={settingsLoading || updateSettings.isPending}
-                    size="sm"
-                    w={160}
-                  />
-                </Group>
-              </Stack>
-              <Divider mb="md" />
-              <Grid align="flex-start">
-                {(messagesData.messages ?? []).map(
-                  (msg: Message, index: number) => (
-                    <Grid.Col
-                      span={isPortrait ? 12 : { base: 12, sm: 6, md: 6, lg: 6 }}
-                      key={msg.tid}
-                    >
-                      <Paper
-                        id={`message-card-${msg.tid}`}
-                        ref={(el) => {
-                          messageCardRefs.current[index] = el;
-                        }}
-                        tabIndex={0}
-                        p="md"
-                        radius="lg"
-                        shadow="md"
-                        onClick={() => {
-                          if (respondingTid !== msg.tid) {
-                            handlePrepareResponse(msg.tid);
-                          } else {
-                            setRespondingTid(null);
-                          }
-                        }}
-                        onFocus={() => setFocusedCardIndex(index)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            if (respondingTid !== msg.tid) {
-                              handlePrepareResponse(msg.tid);
-                            } else {
-                              setRespondingTid(null);
-                            }
-                          }
-                        }}
+          {/* ── Header row ── */}
+          <Group justify="space-between" align="flex-end" mb="lg" wrap="wrap" gap="sm">
+            <Box>
+              <Title order={1} style={{ fontFamily: "Inter", fontWeight: 800, fontSize: 32, letterSpacing: "-0.03em" }}>
+                Messages
+              </Title>
+              {!messagesLoading && (
+                <Text size="xs" ff="monospace" c="dimmed" mt={4}>
+                  {msgCount > 0 && (
+                    <Text component="span" style={{ color: "#FACC15" }}>● </Text>
+                  )}
+                  {msgCount} in inbox
+                </Text>
+              )}
+            </Box>
+          </Group>
+
+          {/* ── Gradient inbox link hero card ── */}
+          <Paper
+            radius="lg"
+            mb="md"
+            p="lg"
+            style={{
+              background: "linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%)",
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 18px 40px -18px rgba(107,63,212,0.6)",
+            }}
+          >
+            {/* WinkMark watermark */}
+            <Box
+              style={{
+                position: "absolute",
+                right: -24,
+                top: -24,
+                opacity: 0.1,
+                pointerEvents: "none",
+              }}
+            >
+              <WinkMark size={160} sparkle={false} aria-hidden />
+            </Box>
+            <Group align="center" gap="md" wrap="wrap" style={{ position: "relative" }}>
+              <Box style={{ flex: 1, minWidth: 200 }}>
+                <Text
+                  ff="monospace"
+                  size="xs"
+                  style={{ letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.85, fontWeight: 700, color: "#FDF8FF" }}
+                >
+                  your inbox link · publicly accessible
+                </Text>
+                <Text
+                  ff="monospace"
+                  fw={700}
+                  style={{ fontSize: 17, color: "#FDF8FF", marginTop: 4 }}
+                >
+                  {shortlinkurl}/{handle}
+                </Text>
+              </Box>
+              <Group gap="xs" wrap="wrap">
+                <CopyButton value={fullUrl}>
+                  {({ copied, copy }) => (
+                    <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
+                      <button
+                        onClick={copy}
                         style={{
+                          background: "rgba(255,255,255,0.15)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          color: "#FDF8FF",
+                          padding: "8px 14px",
+                          borderRadius: 999,
+                          fontFamily: "Inter",
+                          fontWeight: 600,
+                          fontSize: 13,
                           cursor: "pointer",
-                          height: "100%",
-                          background: useGradients
-                            ? "linear-gradient(135deg, #1a5fb4 0%, #6e2fa0 100%)"
-                            : "var(--mantine-color-deepBlue-9)",
-                          border:
-                            focusedCardIndex === index
-                              ? "2px solid rgba(255,255,255,0.6)"
-                              : "2px solid rgba(255,255,255,0.08)",
-                          transition: "border-color 0.15s ease",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
                         }}
                       >
-                        <Stack gap="sm">
-                          <Group justify="space-between" align="center">
-                            <Text
-                              size="xs"
-                              style={{ color: "rgba(255,255,255,0.55)" }}
-                            >
-                              {new Date(msg.createdAt).toLocaleString(
-                                undefined,
-                                {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: false,
-                                  timeZoneName: "short",
-                                },
-                              )}
-                            </Text>
-                            <ActionIcon
-                              size="lg"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRequest(msg.tid);
-                              }}
-                              color="red"
-                              variant="subtle"
-                              loading={deletingTid === msg.tid}
-                            >
-                              <IconTrash size={16} />
-                            </ActionIcon>
-                          </Group>
-                          <Center py="xs">
-                            <Text
-                              c="white"
-                              fw={500}
-                              size="lg"
+                        <IconClipboard size={14} /> {copied ? "Copied" : "Copy"}
+                      </button>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+                {(() => {
+                  const sharePayload = {
+                    title: "Send me anonymous messages on Navyfragen!",
+                    text: `Send ${session.profile?.displayName} anonymous messages!`,
+                    url: fullUrl,
+                  };
+                  return <ShareButton shareData={sharePayload} />;
+                })()}
+                <button
+                  onClick={handleAddExampleMessages}
+                  disabled={examplesLoading}
+                  style={{
+                    background: "#FACC15",
+                    border: "none",
+                    color: "#1E1B4B",
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    fontFamily: "Inter",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    opacity: examplesLoading ? 0.7 : 1,
+                  }}
+                >
+                  {examplesLoading ? "Adding…" : "Add Examples"}
+                </button>
+              </Group>
+            </Group>
+          </Paper>
+
+          {messagesLoading ? (
+            <Center><Loader size="lg" /></Center>
+          ) : msgCount > 0 ? (
+            <>
+              {/* ── Two-column: Preferences + Image theme ── */}
+              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="lg">
+                {/* Posting preferences accordion */}
+                <Paper withBorder radius="md" p={0} style={{ overflow: "hidden" }}>
+                  <details open>
+                    <summary
+                      style={{
+                        listStyle: "none",
+                        cursor: "pointer",
+                        padding: "14px 20px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontFamily: "Inter",
+                        fontWeight: 700,
+                        fontSize: 15,
+                      }}
+                    >
+                      <Text fw={700} size="sm">Posting preferences</Text>
+                      <Text ff="monospace" size="xs" c="dimmed">
+                        {[appendProfileLink, useGradients, includeQuestionAsImage, confirmBeforeDelete].filter(Boolean).length} of 4 on
+                      </Text>
+                    </summary>
+                    <Box px="md" pb="sm" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+                      {[
+                        { checked: appendProfileLink, onChange: setAppendProfileLink, label: "Auto-append inbox link", sub: "Appends your link to every post. Reduces character budget." },
+                        { checked: useGradients, onChange: setUseGradients, label: "Gradient backgrounds", sub: "Pretty for screenshots. Turn off for higher contrast." },
+                        { checked: includeQuestionAsImage, onChange: setIncludeQuestionAsImage, label: "Question as image", sub: "Generates a shareable image with auto alt text." },
+                        { checked: confirmBeforeDelete, onChange: setConfirmBeforeDelete, label: "Confirm before deleting", sub: "Leave off if you want to bulk-delete messages." },
+                      ].map(({ checked, onChange, label, sub }) => (
+                        <Box key={label} py="xs" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+                          <Switch
+                            checked={!!checked}
+                            onChange={(e) => onChange(e.currentTarget.checked)}
+                            label={
+                              <Box>
+                                <Text fw={600} size="sm">{label}</Text>
+                                <Text size="xs" c="dimmed" mt={2}>{sub}</Text>
+                              </Box>
+                            }
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  </details>
+                </Paper>
+
+                {/* Image theme visual picker */}
+                <Paper withBorder radius="md" p="md">
+                  <Text fw={700} size="sm" mb="sm">Image theme</Text>
+                  <Group grow gap="sm">
+                    {Object.entries(themes).map(([value, label]) => (
+                      <ThemeCard
+                        key={value}
+                        value={value}
+                        label={label as string}
+                        selected={
+                          settingsLoading
+                            ? value === "default"
+                            : (userSettings?.imageTheme || "default") === value
+                        }
+                        onClick={() => {
+                          if (!settingsLoading && !updateSettings.isPending) {
+                            updateSettings.mutate({
+                              imageTheme: value,
+                              pdsSyncEnabled: Boolean(userSettings?.pdsSyncEnabled),
+                            });
+                          }
+                        }}
+                      />
+                    ))}
+                  </Group>
+                </Paper>
+              </SimpleGrid>
+
+              <Divider mb="lg" />
+
+              {/* ── Question cards grid ── */}
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" style={{ alignItems: "start" }}>
+                {messagesData?.messages.map((msg: Message, index: number) => {
+                  const isExpanded = respondingTid === msg.tid;
+                  const isFocused = focusedCardIndex === index;
+
+                  return (
+                    <Paper
+                      id={`message-card-${msg.tid}`}
+                      ref={(el) => { messageCardRefs.current[index] = el; }}
+                      key={msg.tid}
+                      tabIndex={0}
+                      radius="lg"
+                      onFocus={() => setFocusedCardIndex(index)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          isExpanded ? setRespondingTid(null) : handlePrepareResponse(msg.tid);
+                        }
+                      }}
+                      style={{
+                        background: useGradients
+                          ? "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)"
+                          : "var(--mantine-color-midnight-9)",
+                        border: isFocused
+                          ? "2px solid rgba(255,255,255,0.5)"
+                          : "2px solid rgba(255,255,255,0.06)",
+                        boxShadow: "0 18px 40px -16px rgba(0,0,0,0.4)",
+                        padding: 22,
+                        transition: "border-color 0.15s ease",
+                        cursor: isExpanded ? "default" : "pointer",
+                      }}
+                      onClick={() => {
+                        if (!isExpanded) handlePrepareResponse(msg.tid);
+                      }}
+                    >
+                      <Stack gap="sm">
+                        {/* Timestamp row */}
+                        <Group justify="space-between" align="center">
+                          <Group gap={8} align="center">
+                            <span
+                              className="nf-pulse-dot"
                               style={{
-                                wordBreak: "break-word",
-                                whiteSpace: "pre-wrap",
-                                textAlign: "center",
-                                lineHeight: 1.5,
+                                display: "inline-block",
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background: "#FACC15",
+                                boxShadow: "0 0 0 4px rgba(250,204,21,0.25)",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <Text
+                              style={{
+                                fontFamily: "JetBrains Mono, monospace",
+                                fontSize: 10,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                color: "rgba(253,248,255,0.8)",
                               }}
                             >
-                              {msg.message}
+                              anonymous · {timeAgo(msg.createdAt)}
                             </Text>
-                          </Center>
-                          {respondingTid === msg.tid && (
-                            <Stack gap="xs">
-                              <Divider color="rgba(255,255,255,0.15)" my={2} />
-                              <Textarea
-                                ref={textareaRef}
-                                value={responseText}
-                                maxLength={characterLimit}
-                                description={`${responseText.length}/${characterLimit} characters`}
-                                onChange={(e) =>
-                                  setResponseText(e.target.value)
+                          </Group>
+                          <ActionIcon
+                            size="lg"
+                            className="nf-delete-btn"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteRequest(msg.tid); }}
+                            variant="transparent"
+                            radius="md"
+                            loading={deletingTid === msg.tid}
+                            style={{
+                              color: "rgba(253,248,255,0.5)",
+                              transition: "color 150ms ease, background 150ms ease",
+                            }}
+                          >
+                            <IconTrash size={18} />
+                          </ActionIcon>
+                        </Group>
+
+                        {/* Message text */}
+                        <Text
+                          c="white"
+                          fw={600}
+                          style={{
+                            fontSize: 20,
+                            lineHeight: 1.35,
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-wrap",
+                            textAlign: "center",
+                            textWrap: "balance",
+                          } as React.CSSProperties}
+                        >
+                          {msg.message}
+                        </Text>
+
+                        {/* Action area */}
+                        {isExpanded ? (
+                          <Box
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              marginTop: 4,
+                              background: "#fff",
+                              borderRadius: 12,
+                              padding: 12,
+                              border: "1.5px solid #5B7BFF",
+                            }}
+                          >
+                            <Textarea
+                              ref={textareaRef}
+                              value={responseText}
+                              maxLength={characterLimit}
+                              onChange={(e) => setResponseText(e.target.value)}
+                              autosize
+                              minRows={2}
+                              maxRows={4}
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleSendResponse(msg);
                                 }
-                                onClick={(e) => e.stopPropagation()}
-                                autosize
-                                minRows={2}
-                                maxRows={4}
-                                onKeyDown={(event) => {
-                                  event.stopPropagation();
-                                  if (
-                                    event.key === "Enter" &&
-                                    !event.shiftKey
-                                  ) {
-                                    event.preventDefault();
-                                    handleSendResponse(msg);
-                                  }
-                                }}
-                                size="sm"
-                                radius="md"
-                                placeholder="Write your reply…"
-                                styles={{
-                                  input: {
-                                    backgroundColor: "rgba(255,255,255,0.95)",
-                                    color: "#1a1a2e",
-                                    border: "none",
-                                  },
-                                  description: {
-                                    color: "rgba(255,255,255,0.5)",
-                                  },
-                                }}
-                              />
-                              <Group justify="flex-end">
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSendResponse(msg);
-                                  }}
-                                  loading={respondLoading}
-                                  variant="white"
-                                  color="dark"
-                                  radius="md"
-                                  leftSection={<IconSend2 size={16} />}
-                                >
-                                  Reply
-                                </Button>
+                              }}
+                              placeholder="write your reply…"
+                              styles={{
+                                input: { background: "transparent", color: "#1E1B4B", border: "none", padding: 0 },
+                              }}
+                            />
+                            <Group justify="space-between" align="center" mt={8}>
+                              <Group gap={8} align="center">
+                                <CharRing count={responseText.length} limit={characterLimit} />
+                                <Text ff="monospace" size="xs" style={{ color: "#5B5680" }}>
+                                  {responseText.length}/{characterLimit}
+                                </Text>
                               </Group>
-                            </Stack>
-                          )}
-                        </Stack>
-                      </Paper>
-                    </Grid.Col>
-                  ),
-                )}
-              </Grid>
+                              <Button
+                                size="xs"
+                                onClick={() => handleSendResponse(msg)}
+                                loading={respondLoading}
+                                variant="gradient"
+                                gradient={{ from: "royal", to: "purple", deg: 135 }}
+                                leftSection={<IconSend2 size={12} />}
+                              >
+                                Reply
+                              </Button>
+                            </Group>
+                          </Box>
+                        ) : (
+                          <Box mt={4} onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => handlePrepareResponse(msg.tid)}
+                              style={{
+                                width: "100%",
+                                background: "#FACC15",
+                                border: "none",
+                                color: "#1E1B4B",
+                                padding: "8px 0",
+                                borderRadius: 999,
+                                fontFamily: "Inter",
+                                fontWeight: 700,
+                                fontSize: 13,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                              }}
+                            >
+                              ↩ Reply
+                            </button>
+                          </Box>
+                        )}
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </SimpleGrid>
             </>
           ) : (
             <Alert color="blue" title="No messages">
-              You don't have any messages yet. Share your profile link to
-              receive anonymous messages.
+              You don't have any messages yet. Share your profile link to receive anonymous questions.
             </Alert>
           )}
         </>
       )}
+
       <ConfirmationModal
         opened={deleteModalOpened}
-        onClose={() => {
-          if (!deleteLoading) {
-            setDeleteModalOpened(false);
-            setMessageIdToDelete(null);
-          }
-        }}
+        onClose={() => { if (!deleteLoading) { setDeleteModalOpened(false); setMessageIdToDelete(null); } }}
         onConfirm={handleConfirmDelete}
         title="Confirm Deletion"
         message="Are you sure you want to delete this message? This action cannot be undone."
@@ -730,6 +777,6 @@ export default function Messages() {
         cancelLabel="Cancel"
         loading={deletingTid !== null && deletingTid === messageIdToDelete}
       />
-    </Container>
+    </Box>
   );
 }

@@ -8,21 +8,25 @@ import {
   Stack,
   Center,
   Box,
-  Loader,
   Skeleton,
   SimpleGrid,
   Group,
   Anchor,
 } from "@mantine/core";
-import { IconButterfly } from "@tabler/icons-react";
+import { IconButterfly, IconBrandGithub } from "@tabler/icons-react";
 import { useSession } from "../api/authService";
 import React from "react";
 import { useSyncMessages } from "../api/messageService";
+import { WinkMark } from "../components/WinkMark";
 
 const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
-  <Box style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+  <Box
+    style={{ display: "flex", justifyContent: "space-between", width: "100%" }}
+  >
     <Text size="xs">{label}</Text>
-    <Text size="xs" c="dimmed">{hint.replace("Alt", "Alt/Cmd")}</Text>
+    <Text size="xs" c="dimmed">
+      {hint.replace("Alt", "Alt/Cmd")}
+    </Text>
   </Box>
 );
 
@@ -39,21 +43,28 @@ export default function Home() {
 
   return (
     <>
-      <Paper p="lg" radius="md" shadow="xs" mb="xl">
-        <Title order={1} size="h2" c="deepBlue">
-          Navyfragen - Anonymous questions and answers on Bluesky
-        </Title>
-        <Text c="dimmed" size="lg">
-          Receive questions from the web and post the answers directly on
-          Bluesky.
-        </Text>
-      </Paper>
+      <Title
+        order={1}
+        size="h2"
+        mb={6}
+        style={{
+          background: "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+          paddingBottom: "0.05em",
+        }}
+      >
+        Navyfragen — Anonymous questions and answers on Bluesky
+      </Title>
+      <Text c="dimmed" size="md" mb="xl">
+        Receive questions from the web and post the answers directly on Bluesky.
+      </Text>
 
       {isLoading ? (
-        <Paper p="xl" radius="md" withBorder shadow="xs">
+        <Paper p="xl" radius="lg" withBorder>
           <Stack gap="lg">
             <Skeleton height={30} width="60%" />
-            <Skeleton height={20} />
             <Skeleton height={20} />
             <Skeleton height={20} />
             <Center mt="md">
@@ -62,29 +73,65 @@ export default function Home() {
           </Stack>
         </Paper>
       ) : sessionData?.profile ? (
-        <Paper p="xl" radius="md" withBorder shadow="xs">
-          <Stack gap="md">
+        <Paper
+          p="xl"
+          radius="lg"
+          withBorder
+          style={{ position: "relative", overflow: "hidden" }}
+        >
+          {/* Aurora glow */}
+          <Box
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)",
+              pointerEvents: "none",
+            }}
+          />
+          <Stack gap="md" style={{ position: "relative" }}>
             <Center>
-              <Title order={2} size="h3" c="deepBlue">
+              <WinkMark
+                size={64}
+                sparkle
+                style={{
+                  borderRadius: 16,
+                  boxShadow: "0 8px 24px rgba(107,63,212,0.35)",
+                }}
+              />
+            </Center>
+            <Center>
+              <Title order={2} size="h3" ta="center">
                 Good to see you again,{" "}
-                {sessionData.profile.displayName || sessionData.profile.handle}!
+                <Text
+                  component="span"
+                  inherit
+                  variant="gradient"
+                  gradient={{ from: "royal", to: "purple", deg: 135 }}
+                >
+                  {sessionData.profile.displayName || sessionData.profile.handle}
+                </Text>
+                !
               </Title>
             </Center>
           </Stack>
-          <Center mt="xl">
+          <Center mt="xl" style={{ position: "relative" }}>
             <Button
               component={Link}
               to="/messages"
               size="lg"
               radius="md"
-              color="deepBlue"
+              variant="gradient"
+              gradient={{ from: "royal", to: "purple", deg: 135 }}
             >
               View Your Messages
             </Button>
           </Center>
         </Paper>
       ) : (
-        <Paper p="xl" radius="md" withBorder shadow="xs">
+        <Paper p="xl" radius="lg" withBorder>
           <List spacing="md" size="md">
             <List.Item>
               <Text fw={500}>Fast and free</Text>
@@ -106,14 +153,15 @@ export default function Home() {
                 you want!
               </Text>
             </List.Item>
-          </List>{" "}
+          </List>
           <Center mt="xl">
             <Button
               component={Link}
               to="/login"
               size="lg"
               radius="md"
-              color="deepBlue"
+              variant="gradient"
+              gradient={{ from: "royal", to: "purple", deg: 135 }}
             >
               Get Started
             </Button>
@@ -122,8 +170,16 @@ export default function Home() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="xl">
-        <Paper p="lg" radius="md" withBorder shadow="xs">
-          <Text size="sm" fw={600} c="dimmed" mb="sm" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+        <Paper p="lg" radius="md" withBorder>
+          <Text
+            size="sm"
+            fw={600}
+            c="dimmed"
+            mb="sm"
+            tt="uppercase"
+            ff="monospace"
+            style={{ letterSpacing: "0.1em" }}
+          >
             Keyboard Shortcuts
           </Text>
           <Stack gap={6}>
@@ -141,22 +197,52 @@ export default function Home() {
           </Stack>
         </Paper>
 
-        <Paper p="lg" radius="md" withBorder shadow="xs">
-          <Text size="sm" fw={600} c="dimmed" mb="sm" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+        <Paper p="lg" radius="md" withBorder>
+          <Text
+            size="sm"
+            fw={600}
+            c="dimmed"
+            mb="sm"
+            tt="uppercase"
+            ff="monospace"
+            style={{ letterSpacing: "0.1em" }}
+          >
             Questions? Feedback?
           </Text>
-          <Text size="sm" mb="md">Reach out to us on Bluesky</Text>
-          <Anchor
-            href="https://bsky.app/profile/navyfragen.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            size="sm"
-          >
-            <Group gap="xs">
-              <IconButterfly size="1rem" stroke={1.5} />
-              @navyfragen.app
-            </Group>
-          </Anchor>
+          <Stack gap="sm">
+            <div>
+              <Text size="sm" c="dimmed" mb={4}>
+                Reach out on Bluesky
+              </Text>
+              <Anchor
+                href="https://bsky.app/profile/navyfragen.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                size="sm"
+              >
+                <Group gap="xs">
+                  <IconButterfly size="1rem" stroke={1.5} />
+                  @navyfragen.app
+                </Group>
+              </Anchor>
+            </div>
+            <div>
+              <Text size="sm" c="dimmed" mb={4}>
+                Submit an issue on GitHub
+              </Text>
+              <Anchor
+                href="https://github.com/karanshukla/navyfragen-app"
+                target="_blank"
+                rel="noopener noreferrer"
+                size="sm"
+              >
+                <Group gap="xs">
+                  <IconBrandGithub size="1rem" stroke={1.5} />
+                  GitHub - Navyfragen
+                </Group>
+              </Anchor>
+            </div>
+          </Stack>
         </Paper>
       </SimpleGrid>
     </>

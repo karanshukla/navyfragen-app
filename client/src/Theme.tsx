@@ -1,43 +1,83 @@
-import { createTheme } from "@mantine/core";
+import { createTheme, MantineColorsTuple } from "@mantine/core";
+
+const royal: MantineColorsTuple = [
+  "#EEF2FF", "#D9E0FF", "#B0BEFF", "#849BFF", "#6178FF",
+  "#4A65FF", "#3B5BFF", "#2A47E6", "#1F38C2", "#142899",
+];
+
+const purple: MantineColorsTuple = [
+  "#F3EEFF", "#E2D5FF", "#C7B0FE", "#AC8AFD", "#9C72FA",
+  "#9162F8", "#8B5CF6", "#7847E0", "#6638C4", "#522BA3",
+];
+
+const midnight: MantineColorsTuple = [
+  "#EDEBF7", "#D5D1EA", "#A8A2D0", "#7D74B6", "#594F9A",
+  "#3F367D", "#2E2A6B", "#1E1B4B", "#14123A", "#0B0A24",
+];
+
+const sunshine: MantineColorsTuple = [
+  "#FFF9E0", "#FFF1B8", "#FFE57A", "#FCD848", "#FBD129",
+  "#FACC15", "#E0B70F", "#B89409", "#8F7206", "#665104",
+];
+
+// Dark mode surface colors — body=#0B0A24 (void), Paper/card=#15192B
+const dark: MantineColorsTuple = [
+  "#C4C0DC",   // [0] light text
+  "#A9A5C8",   // [1]
+  "#8B87B5",   // [2] dimmed text
+  "#6E6A9E",   // [3] placeholder
+  "#3A3660",   // [4] subtle border
+  "#252040",   // [5] hover
+  "#15192B",   // [6] Paper / card bg
+  "#0B0A24",   // [7] body bg (void)
+  "#080718",   // [8]
+  "#050412",   // [9]
+];
 
 const navyfragenTheme = createTheme({
-  colors: {
-    deepBlue: [
-      "#e0e8f5",
-      "#c2d1e8",
-      "#a3badb",
-      "#85a3ce",
-      "#678cc0",
-      "#4975b3",
-      "#3a68a6",
-      "#2b5b99",
-      "#1c4e8c",
-      "#0d417f",
-    ],
-    blue: [
-      "#e2e9f7",
-      "#c5d3ef",
-      "#a8bde7",
-      "#8ba7df",
-      "#6e91d7",
-      "#517bcf",
-      "#416cb9",
-      "#315da3",
-      "#224e8d",
-      "#123f77",
-    ],
+  primaryColor: "royal",
+  primaryShade: { light: 6, dark: 4 },
+  colors: { royal, purple, midnight, sunshine, dark },
+  white: "#FDF8FF",
+  black: "#1E1B4B",
+
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontFamilyMonospace: "JetBrains Mono, ui-monospace, monospace",
+
+  headings: {
+    fontFamily: "Inter, system-ui, sans-serif",
+    fontWeight: "800",
+    sizes: {
+      h1: { fontSize: "42px", lineHeight: "1.1", fontWeight: "800" },
+      h2: { fontSize: "28px", lineHeight: "1.15", fontWeight: "700" },
+      h3: { fontSize: "22px", lineHeight: "1.2", fontWeight: "700" },
+      h4: { fontSize: "17px", lineHeight: "1.3", fontWeight: "600" },
+    },
   },
+
+  defaultRadius: "md",
+  radius: { xs: "4px", sm: "8px", md: "12px", lg: "16px", xl: "22px" },
+  spacing: { xs: "8px", sm: "12px", md: "16px", lg: "24px", xl: "32px" },
 
   shadows: {
-    md: "1px 1px 3px rgba(0, 0, 0, .25)",
-    xl: "5px 5px 3px rgba(0, 0, 0, .25)",
+    xs: "0 1px 2px rgba(20,18,58,.06)",
+    sm: "0 1px 2px rgba(20,18,58,.06), 0 1px 3px rgba(20,18,58,.04)",
+    md: "0 4px 12px -2px rgba(20,18,58,.08), 0 2px 4px rgba(20,18,58,.04)",
+    lg: "0 12px 30px -8px rgba(20,18,58,.18), 0 4px 10px rgba(20,18,58,.06)",
+    xl: "0 30px 60px -20px rgba(20,18,58,.35)",
   },
 
-  primaryColor: "deepBlue",
-  defaultRadius: "md",
-  fontFamily: "Noto Sans, 'Noto Color Emoji', sans-serif",
-  scale: 1.05,
-  headings: { fontFamily: "Noto Sans, 'Noto Color Emoji', sans-serif" },
+  other: {
+    gradHero: "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
+    gradMark: "linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%)",
+    gradDark: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)",
+    paper2: "#F2EBFF",
+    lavender: "#C4B5FD",
+    ease: "cubic-bezier(.2,.7,.2,1)",
+    durFast: "120ms",
+    durBase: "200ms",
+    durSlow: "360ms",
+  },
 });
 
 export default navyfragenTheme;

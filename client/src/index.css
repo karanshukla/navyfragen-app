@@ -2,3 +2,58 @@
 .mantine-AppShell-navbar {
   max-width: 60vw !important;
 }
+
+/* Brand CSS tokens */
+:root {
+  --nf-midnight:  #1E1B4B;
+  --nf-royal:     #3B5BFF;
+  --nf-purple:    #8B5CF6;
+  --nf-lavender:  #C4B5FD;
+  --nf-paper:     #FDF8FF;
+  --nf-paper-2:   #F2EBFF;
+  --nf-sunshine:  #FACC15;
+  --nf-void:      #0B0A24;
+  --nf-surface-d: #15192B;
+  --nf-text-muted: #5B5680;
+  --nf-border:     #E6DDFF;
+  --nf-grad-hero:  linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%);
+  --nf-grad-mark:  linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%);
+  --nf-grad-dark:  linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%);
+  --nf-font-sans: 'Inter', system-ui, sans-serif;
+  --nf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --nf-ease:     cubic-bezier(.2,.7,.2,1);
+  --nf-dur-fast: 120ms;
+  --nf-dur-base: 200ms;
+}
+
+[data-mantine-color-scheme="dark"] {
+  --nf-bg:         #0B0A24;
+  --nf-surface:    #15192B;
+  --nf-surface-subtle: #1A1F35;
+  --nf-text:       var(--nf-paper);
+  --nf-text-muted: rgba(253,248,255,0.55);
+  --nf-border:     rgba(255,255,255,0.06);
+}
+
+/* Delete button hover */
+.nf-delete-btn:hover,
+.nf-delete-btn:focus-visible {
+  color: #FCA5A5 !important;
+  background: rgba(220, 38, 38, 0.18) !important;
+}
+
+/* Alert / notification brand radius */
+.mantine-Alert-root {
+  border-radius: 12px;
+}
+
+/* Sunshine "new" pulse animation */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes nf-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,0.5); }
+    50%       { box-shadow: 0 0 0 5px rgba(250,204,21,0); }
+  }
+  .nf-pulse-dot {
+    animation: nf-pulse 1.8s ease-in-out infinite;
+  }
+}

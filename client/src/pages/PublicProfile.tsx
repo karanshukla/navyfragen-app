@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Container,
-  Title,
   Text,
   Paper,
   Stack,
@@ -14,9 +13,7 @@ import {
   Center,
   Box,
   Alert,
-  BackgroundImage,
-  Divider,
-  Anchor,
+  Badge,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
@@ -26,8 +23,9 @@ import {
 } from "../api/profileService";
 import { useSendMessage } from "../api/messageService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { IconSend, IconX } from "@tabler/icons-react";
+import { IconSend, IconX, IconWorld, IconLock } from "@tabler/icons-react";
 import { parseRichText } from "../utils/parseRichText";
+import { WinkMark } from "../components/WinkMark";
 
 const MAX_MESSAGE_LENGTH = 150;
 
@@ -129,7 +127,6 @@ export default function PublicProfile() {
     );
   };
 
-  // Combined loading state
   const isLoading =
     handleLoading || userExistsLoading || profileLoading || sendLoading;
 
@@ -235,137 +232,131 @@ export default function PublicProfile() {
 
       {profile ? (
         <>
-          <Paper
-            radius="lg"
-            mb="lg"
-            shadow="md"
-            style={{ position: "relative", overflow: "hidden" }}
-          >
-            <BackgroundImage
-              src={profile.banner || ""}
-              style={{
-                filter: "blur(8px) brightness(0.4)",
-                position: "absolute",
-                top: -10,
-                left: -10,
-                right: -10,
-                bottom: -10,
-                zIndex: 1,
-              }}
-            />
+          {/* URL breadcrumb pill + answered counter */}
+          <Group justify="space-between" align="center" mb="sm">
+            <Badge
+              variant="outline"
+              color="royal"
+              radius="xl"
+              leftSection={<IconWorld size={12} />}
+              style={{ fontFamily: "JetBrains Mono, monospace", textTransform: "none", fontWeight: 500 }}
+            >
+              fragen.navy/{profile.handle}
+            </Badge>
+          </Group>
+
+          {/* Bluesky-style profile card */}
+          <Paper radius="lg" mb="lg" withBorder style={{ overflow: "hidden" }}>
+            {/* Banner */}
             <Box
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
+                height: 160,
                 background: profile.banner
-                  ? "rgba(0,0,0,0.35)"
-                  : "linear-gradient(135deg, #1a5fb4 0%, #6e2fa0 100%)",
-                zIndex: 2,
-              }}
-            />
-            <Box
-              style={{
+                  ? `url(${profile.banner}) center/cover no-repeat`
+                  : "linear-gradient(115deg, #1E1B4B 0%, #3B2E78 45%, #8B5CF6 100%)",
                 position: "relative",
-                zIndex: 3,
-                padding: "var(--mantine-spacing-lg)",
               }}
             >
-              {/* Desktop Layout */}
-              <Box visibleFrom="sm">
-                <Group align="center">
-                  <Avatar
-                    src={profile.avatar}
-                    alt={profile.displayName || profile.handle || "User"}
-                    size="xl"
-                    radius="xl"
-                    style={{ border: "2px solid rgba(255,255,255,0.8)" }}
-                  />
-                  <Box style={{ flex: 1 }}>
-                    <Title order={3} c="white">
-                      {profile.displayName}
-                    </Title>
-                    <Anchor
-                      href={`https://bsky.app/profile/${profile.handle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "rgba(255,255,255,0.7)", fontSize: "var(--mantine-font-size-sm)" }}
-                    >
-                      @{profile.handle}
-                    </Anchor>
-                    {profile.description && (
-                      <Text
-                        mt="xs"
-                        size="sm"
-                        style={{
-                          color: "rgba(255,255,255,0.85)",
-                          wordBreak: "break-word",
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {parseRichText(profile.description)}
-                      </Text>
-                    )}
-                  </Box>
-                </Group>
-              </Box>
+              {/* Subtle overlay on banners for readability */}
+              {profile.banner && (
+                <Box
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "rgba(0,0,0,0.2)",
+                  }}
+                />
+              )}
+            </Box>
 
-              {/* Mobile Layout */}
-              <Box hiddenFrom="sm">
-                <Stack align="center" gap="sm">
-                  <Avatar
-                    src={profile.avatar}
-                    alt={profile.displayName || profile.handle || "User"}
-                    size={90}
-                    radius="xl"
-                    style={{ border: "2px solid rgba(255,255,255,0.8)" }}
-                  />
-                  <Title order={4} c="white" ta="center">
+            {/* Profile content below banner */}
+            <Box p="md" style={{ position: "relative" }}>
+              {/* Avatar — overlaps the banner */}
+              <Avatar
+                src={profile.avatar}
+                alt={profile.displayName || profile.handle || "User"}
+                size={84}
+                radius="xl"
+                style={{
+                  border: "4px solid var(--mantine-color-body)",
+                  position: "absolute",
+                  top: -42,
+                  left: 16,
+                }}
+              >
+                <WinkMark size={60} sparkle={false} aria-hidden />
+              </Avatar>
+
+              {/* Name row — padded to clear the avatar */}
+              <Group justify="space-between" align="flex-start" pt={48}>
+                <Box>
+                  <Text fw={800} size="xl" lh={1.1} style={{ letterSpacing: "-0.02em" }}>
                     {profile.displayName}
-                  </Title>
-                  <Anchor
-                    href={`https://bsky.app/profile/${profile.handle}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    ta="center"
-                    style={{ color: "rgba(255,255,255,0.7)", fontSize: "var(--mantine-font-size-sm)" }}
-                  >
+                  </Text>
+                  <Text size="sm" c="dimmed" ff="monospace" mt={2}>
                     @{profile.handle}
-                  </Anchor>
-                  {profile.description && (
-                    <Text
-                      size="sm"
-                      ta="center"
-                      style={{
-                        color: "rgba(255,255,255,0.85)",
-                        wordBreak: "break-word",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {parseRichText(profile.description)}
-                    </Text>
-                  )}
-                </Stack>
-              </Box>
+                  </Text>
+                </Box>
+                <Button
+                  component="a"
+                  href={`https://bsky.app/profile/${profile.handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="outline"
+                  size="xs"
+                  radius="xl"
+                  style={{ flexShrink: 0 }}
+                  leftSection={
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 2h3v3"/><path d="M21 2L10 13"/><path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6"/>
+                    </svg>
+                  }
+                >
+                  View on Bluesky
+                </Button>
+              </Group>
+
+              {profile.description && (
+                <Text
+                  mt="sm"
+                  size="sm"
+                  c="dimmed"
+                  style={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}
+                >
+                  {parseRichText(profile.description)}
+                </Text>
+              )}
             </Box>
           </Paper>
 
+          {/* Ask card */}
           <Paper
-            p="lg"
+            p="xl"
             radius="lg"
             shadow="md"
             onClick={() => textareaRef.current?.focus()}
             style={{
-              background: "linear-gradient(135deg, #1a5fb4 0%, #6e2fa0 100%)",
-              border: "2px solid rgba(255,255,255,0.08)",
+              background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
+              border: "2px solid rgba(255,255,255,0.06)",
               cursor: "text",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            <Title order={4} mb="md" c="white" ta="center">
-              Send an anonymous message or question!
-            </Title>
+            {/* WinkMark watermark */}
+            <Box style={{ position: "absolute", right: -30, top: -30, opacity: 0.12, pointerEvents: "none" }}>
+              <WinkMark size={220} sparkle={false} aria-hidden />
+            </Box>
+            <Text
+              fw={700}
+              size="lg"
+              mb="lg"
+              c="white"
+              ta="center"
+              style={{ position: "relative", fontFamily: "Inter", fontSize: 20, letterSpacing: "-0.01em" }}
+            >
+              Send {profile.displayName || profile.handle} an anonymous message
+            </Text>
 
             <Stack gap="xs">
               <Textarea
@@ -418,25 +409,46 @@ export default function PublicProfile() {
                 >
                   <IconX size={18} />
                 </ActionIcon>
+                {/* Sunshine Send button */}
                 <Button
                   onClick={(e) => { e.stopPropagation(); handleSend(); }}
                   loading={sendLoading}
-                  variant="white"
-                  color="dark"
                   radius="md"
                   leftSection={<IconSend size={16} />}
+                  style={{
+                    background: "#FACC15",
+                    color: "#1E1B4B",
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
                 >
                   Send
                 </Button>
               </Group>
             </Stack>
           </Paper>
-          <Divider my="md" />
-          <Text size="xs" c="dimmed">
-            Your message will be sent anonymously to the user. They may post it
-            publicly on Bluesky, so please don't share any personal information
-            or passwords. Be curious, but respectful and kind!
-          </Text>
+
+          {/* Lock icon disclaimer */}
+          <Group
+            gap="xs"
+            mt="md"
+            align="flex-start"
+            style={{
+              background: "var(--mantine-color-default)",
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
+          >
+            <IconLock size={16} style={{ marginTop: 2, flexShrink: 0, opacity: 0.5 }} />
+            <Text size="xs" c="dimmed">
+              Your message will be sent anonymously to the user. They may post it
+              publicly on Bluesky, so please don't share any personal information
+              or passwords. Be curious, but respectful and kind!
+            </Text>
+          </Group>
+
           <ConfirmationModal
             opened={modalOpened}
             onClose={() => setModalOpened(false)}

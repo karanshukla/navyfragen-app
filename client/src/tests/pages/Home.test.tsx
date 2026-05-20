@@ -57,6 +57,15 @@ describe("Home page", () => {
     expect(screen.getByRole("link", { name: /view your messages/i })).toBeInTheDocument();
   });
 
+  it("renders Bluesky and GitHub links in the feedback section", () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: false, profile: null }, isLoading: false } as any);
+    renderWithProviders(<Home />);
+    const bskyLink = screen.getByRole("link", { name: /@navyfragen\.app/i });
+    expect(bskyLink).toHaveAttribute("href", "https://bsky.app/profile/navyfragen.app");
+    const githubLink = screen.getByRole("link", { name: /github/i });
+    expect(githubLink).toHaveAttribute("href", "https://github.com/karanshukla/navyfragen-app");
+  });
+
   it("falls back to handle when displayName is absent", () => {
     mockUseSession.mockReturnValue({
       data: {
