@@ -1,4 +1,4 @@
-import { createTheme, MantineColorsTuple } from "@mantine/core";
+import { Alert, createTheme, MantineColorsTuple } from "@mantine/core";
 
 const royal: MantineColorsTuple = [
   "#EEF2FF", "#D9E0FF", "#B0BEFF", "#849BFF", "#6178FF",
@@ -65,6 +65,43 @@ const navyfragenTheme = createTheme({
     md: "0 4px 12px -2px rgba(20,18,58,.08), 0 2px 4px rgba(20,18,58,.04)",
     lg: "0 12px 30px -8px rgba(20,18,58,.18), 0 4px 10px rgba(20,18,58,.06)",
     xl: "0 30px 60px -20px rgba(20,18,58,.35)",
+  },
+
+  components: {
+    Alert: Alert.extend({
+      styles: (_theme, props) => {
+        // Map semantic colors to brand-consistent translucent backgrounds.
+        // Keeps the semantic signal without clashing with the purple-dominant palette.
+        const bg: Record<string, string> = {
+          red:    "rgba(220,38,38,0.09)",
+          green:  "rgba(34,197,94,0.09)",
+          yellow: "rgba(250,204,21,0.09)",
+          royal:  "rgba(59,91,255,0.09)",
+          blue:   "rgba(59,91,255,0.09)",
+          purple: "rgba(139,92,246,0.09)",
+        };
+        const bd: Record<string, string> = {
+          red:    "1px solid rgba(220,38,38,0.22)",
+          green:  "1px solid rgba(34,197,94,0.22)",
+          yellow: "1px solid rgba(250,204,21,0.22)",
+          royal:  "1px solid rgba(59,91,255,0.22)",
+          blue:   "1px solid rgba(59,91,255,0.22)",
+          purple: "1px solid rgba(139,92,246,0.22)",
+        };
+        const c = (props.color as string | undefined) ?? "royal";
+        return {
+          root: {
+            borderRadius: 12,
+            background: bg[c] ?? bg.royal,
+            border: bd[c] ?? bd.royal,
+          },
+          title: {
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 700,
+          },
+        };
+      },
+    }),
   },
 
   other: {

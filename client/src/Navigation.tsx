@@ -3,6 +3,7 @@ import {
   IconMessage,
   IconLogin,
   IconSettings,
+  IconUser,
 } from "@tabler/icons-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
@@ -86,6 +87,9 @@ export function Navigation({
 
   const isActive = (path: string) => location.pathname === path;
 
+  const profileMatch = location.pathname.match(/^\/profile\/(.+)$/);
+  const viewingHandle = profileMatch ? profileMatch[1] : null;
+
   const navItemStyles = (path: string) => ({
     root: isActive(path)
       ? activeNavStyle
@@ -162,6 +166,32 @@ export function Navigation({
             leftSection={<IconLogin size={16} stroke={1.5} />}
             styles={navItemStyles("/login")}
           />
+        )}
+
+        {viewingHandle && (
+          <Box
+            mt={4}
+            px={12}
+            py={8}
+            style={{
+              borderRadius: 12,
+              background: "var(--mantine-color-default)",
+              border: "1px solid var(--mantine-color-default-border)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
+            <Box style={{ minWidth: 0 }}>
+              <Text style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5 }}>
+                Viewing profile
+              </Text>
+              <Text style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, fontWeight: 600 }} truncate>
+                @{viewingHandle}
+              </Text>
+            </Box>
+          </Box>
         )}
       </Box>
 

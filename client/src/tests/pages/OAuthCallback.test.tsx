@@ -28,7 +28,7 @@ describe("OAuthCallback page", () => {
     renderWithProviders(<OAuthCallback />, {
       route: "/oauth_callback?oauth_token=abc123",
     });
-    expect(screen.getByText(/completing oauth login/i)).toBeInTheDocument();
+    expect(screen.getByText(/logging you in/i)).toBeInTheDocument();
   });
 
   it("shows error when oauth_token is absent from URL", async () => {

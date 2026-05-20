@@ -52,8 +52,8 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    // Name appears inline inside the h2 heading, so check the heading's accessible name
-    expect(screen.getByRole("heading", { level: 2, name: /karan/i })).toBeInTheDocument();
+    // Name appears inside a styled div (not a heading element)
+    expect(screen.getByText("Karan")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view your messages/i })).toBeInTheDocument();
   });
 
@@ -76,6 +76,6 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    expect(screen.getByRole("heading", { level: 2, name: /karan\.bsky\.social/i })).toBeInTheDocument();
+    expect(screen.getByText("karan.bsky.social")).toBeInTheDocument();
   });
 });

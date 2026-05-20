@@ -13,7 +13,6 @@ import {
   Textarea,
   CopyButton,
   Tooltip,
-  Divider,
   Switch,
   Box,
   SimpleGrid,
@@ -567,6 +566,20 @@ export default function Messages() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement)?.nodeName;
+
+      // Escape always collapses the expanded card, even from inside a textarea.
+      // The textarea's own onKeyDown fires first and calls stopPropagation, so
+      // Escape from the textarea is handled there — this catches other child elements.
+      if (event.key === "Escape" && respondingTid) {
+        event.preventDefault();
+        const idx =
+          messagesData?.messages.findIndex((m) => m.tid === respondingTid) ??
+          -1;
+        setRespondingTid(null);
+        if (idx !== -1) messageCardRefs.current[idx]?.focus();
+        return;
+      }
+
       if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
 
       if ((event.altKey || event.metaKey) && event.key.toUpperCase() === "R") {
@@ -598,7 +611,7 @@ export default function Messages() {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [focusedCardIndex, messagesData]);
+  }, [focusedCardIndex, messagesData, respondingTid]);
 
   const msgCount = messagesData?.messages?.length ?? 0;
   const handle = session?.profile?.handle ?? "";
@@ -649,24 +662,35 @@ export default function Messages() {
                 Messages
               </Title>
               {!messagesLoading && (
-                <Text size="xs" ff="monospace" c="dimmed" mt={4}>
-                  {msgCount > 0 && (
-                    <Text component="span" style={{ color: "#FACC15" }}>
-                      ●{" "}
-                    </Text>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    marginTop: 6,
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: 11,
+                    color: "var(--mantine-color-dimmed)",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {msgCount > 0 ? (
+                    <span>
+                      <span style={{ color: "#FACC15" }}>●</span> {msgCount} new
+                    </span>
+                  ) : (
+                    <span>no messages</span>
                   )}
-                  {msgCount} in inbox
-                </Text>
+                </div>
               )}
             </Box>
           </Group>
 
           {/* ── Gradient inbox link hero card ── */}
           <Paper
-            radius="lg"
             mb="md"
             p="lg"
             style={{
+              borderRadius: 18,
               background:
                 "linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%)",
               position: "relative",
@@ -781,9 +805,9 @@ export default function Messages() {
                 {/* Posting preferences accordion */}
                 <Paper
                   withBorder
-                  radius="lg"
                   p={0}
                   style={{
+                    borderRadius: 16,
                     overflow: "hidden",
                     background:
                       computedColorScheme === "dark"
@@ -805,7 +829,13 @@ export default function Messages() {
                         fontSize: 15,
                       }}
                     >
-                      <Text fw={700} size="sm">
+                      <Text
+                        style={{
+                          fontFamily: "Inter",
+                          fontWeight: 700,
+                          fontSize: 15,
+                        }}
+                      >
                         Posting preferences
                       </Text>
                       <Text ff="monospace" size="xs" c="dimmed">
@@ -885,16 +915,23 @@ export default function Messages() {
                 {/* Image theme visual picker */}
                 <Paper
                   withBorder
-                  radius="lg"
                   p="md"
                   style={{
+                    borderRadius: 16,
                     background:
                       computedColorScheme === "dark"
                         ? "rgba(255,255,255,0.06)"
                         : "#F2EBFF",
                   }}
                 >
-                  <Text fw={700} size="sm" mb="sm">
+                  <Text
+                    style={{
+                      fontFamily: "Inter",
+                      fontWeight: 700,
+                      fontSize: 15,
+                    }}
+                    mb="sm"
+                  >
                     Image theme
                   </Text>
                   <Group grow gap="sm">
@@ -921,10 +958,57 @@ export default function Messages() {
                       />
                     ))}
                   </Group>
+
+                  <Box
+                    mt="md"
+                    pt="md"
+                    style={{
+                      borderTop:
+                        "1px solid var(--mantine-color-default-border)",
+                    }}
+                  >
+                    <Text
+                      ff="monospace"
+                      fw={700}
+                      tt="uppercase"
+                      c="dimmed"
+                      mb="xs"
+                      style={{ fontSize: 10, letterSpacing: "0.1em" }}
+                    >
+                      Keyboard Shortcuts
+                    </Text>
+                    <Stack gap={2}>
+                      {[
+                        { label: "Focus / cycle cards", hint: "Alt+R" },
+                        { label: "Navigate cards", hint: "↑ / ↓" },
+                        { label: "Close expanded card", hint: "Esc" },
+                      ].map(({ label, hint }) => (
+                        <Box
+                          key={label}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            padding: "3px 0",
+                          }}
+                        >
+                          <Text style={{ fontFamily: "Inter", fontSize: 12 }}>
+                            {label}
+                          </Text>
+                          <Text
+                            style={{
+                              fontFamily: "JetBrains Mono, monospace",
+                              fontSize: 11,
+                              color: "var(--mantine-color-dimmed)",
+                            }}
+                          >
+                            {hint.replace("Alt", "Alt/⌘")}
+                          </Text>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
                 </Paper>
               </SimpleGrid>
-
-              <Divider mb="lg" />
 
               {/* ── Question cards grid ── */}
               <SimpleGrid
@@ -955,6 +1039,7 @@ export default function Messages() {
                         }
                       }}
                       style={{
+                        borderRadius: 18,
                         background: useGradients
                           ? "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)"
                           : "var(--mantine-color-midnight-9)",
@@ -967,7 +1052,9 @@ export default function Messages() {
                         cursor: "pointer",
                       }}
                       onClick={() => {
-                        isExpanded ? setRespondingTid(null) : handlePrepareResponse(msg.tid);
+                        isExpanded
+                          ? setRespondingTid(null)
+                          : handlePrepareResponse(msg.tid);
                       }}
                     >
                       <Stack gap="sm">
@@ -1058,7 +1145,11 @@ export default function Messages() {
                               maxRows={4}
                               onKeyDown={(e) => {
                                 e.stopPropagation();
-                                if (e.key === "Enter" && !e.shiftKey) {
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  setRespondingTid(null);
+                                  messageCardRefs.current[index]?.focus();
+                                } else if (e.key === "Enter" && !e.shiftKey) {
                                   e.preventDefault();
                                   handleSendResponse(msg);
                                 }
@@ -1139,7 +1230,7 @@ export default function Messages() {
               </SimpleGrid>
             </>
           ) : (
-            <Alert color="blue" title="No messages">
+            <Alert color="royal" title="No messages">
               You don't have any messages yet. Share your profile link to
               receive anonymous questions.
             </Alert>

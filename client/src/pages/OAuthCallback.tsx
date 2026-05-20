@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Container, Center, Loader, Alert, Title, Stack } from "@mantine/core";
+import {
+  Box,
+  Center,
+  Loader,
+  Stack,
+  Text,
+  Title,
+  Paper,
+  Button,
+} from "@mantine/core";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/apiClient";
 import { authKeys } from "../api/authService";
+import { WinkMark } from "../components/WinkMark";
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
@@ -34,28 +45,62 @@ export default function OAuthCallback() {
       });
   }, [location, navigate, queryClient]);
 
-  if (loading) {
-    return (
-      <Container>
-        <Center>
-          <Stack align="center" gap="md">
-            <Title order={3}>Completing OAuth Login...</Title>
-            <Loader />
-          </Stack>
-        </Center>
-      </Container>
-    );
-  }
+  return (
+    <Box maw={480} mx="auto" mt="xl">
+      <Paper
+        radius="lg"
+        p="xl"
+        style={{
+          background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          color: "#FDF8FF",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <Box style={{ position: "absolute", right: -28, top: -28, opacity: 0.08, pointerEvents: "none" }}>
+          <WinkMark size={160} sparkle={false} aria-hidden />
+        </Box>
 
-  if (error) {
-    return (
-      <Container>
-        <Alert color="red" title="OAuth Error">
-          {error}
-        </Alert>
-      </Container>
-    );
-  }
+        <Stack gap="md" align="center" style={{ position: "relative" }}>
+          <WinkMark size={60} sparkle={loading} style={{ borderRadius: 16 }} />
 
-  return null;
+          {loading ? (
+            <>
+              <Title order={2} style={{ color: "#FDF8FF", fontWeight: 800, fontSize: 24, textAlign: "center" }}>
+                Logging you in…
+              </Title>
+              <Text size="sm" style={{ color: "rgba(253,248,255,0.65)", textAlign: "center" }}>
+                Completing your Bluesky authentication
+              </Text>
+              <Loader color="white" size="sm" />
+            </>
+          ) : (
+            <>
+              <Title order={2} style={{ color: "#FCA5A5", fontWeight: 800, fontSize: 24, textAlign: "center" }}>
+                Login failed
+              </Title>
+              <Text size="sm" style={{ color: "rgba(253,248,255,0.65)", textAlign: "center" }}>
+                {error}
+              </Text>
+              <Button
+                component={Link}
+                to="/login"
+                variant="gradient"
+                gradient={{ from: "royal", to: "purple", deg: 135 }}
+                fullWidth
+                radius="md"
+              >
+                Try again
+              </Button>
+            </>
+          )}
+        </Stack>
+      </Paper>
+
+      <Text size="xs" c="dimmed" ta="center" mt="md" style={{ lineHeight: 1.6 }}>
+        You will be redirected automatically once login is complete.
+      </Text>
+    </Box>
+  );
 }

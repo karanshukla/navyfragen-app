@@ -77,17 +77,16 @@ describe("ProfileService", () => {
   });
 
   describe("getPublicProfile", () => {
-    it("should fetch public profile successfully", async () => {
+    it("should fetch public profile and return exists: false when user not in DB", async () => {
       // Arrange
       const testDid = "did:test:user123";
-      const expectedHandle = "handle-for-did:test:user123";
+      mockSelectBuilder.executeTakeFirst = async () => undefined;
 
       // Act
       const result = await profileService.getPublicProfile(testDid);
 
       // Assert
-      assert.strictEqual(result.did, testDid);
-      assert.strictEqual(result.handle, expectedHandle);
+      assert.strictEqual(result.exists, false);
       assert.deepStrictEqual(result.profile, {
         did: testDid,
         handle: "test.bsky.app",
@@ -97,50 +96,41 @@ describe("ProfileService", () => {
       assert.deepStrictEqual(mockGetProfile.mock.calls[0].arguments, [
         { actor: testDid },
       ]);
-      assert.strictEqual(mockResolver.resolveDidToHandle.mock.calls.length, 1);
+      assert.strictEqual(mockResolver.resolveDidToHandle.mock.calls.length, 0);
     });
 
-    it("should use DID as fallback when handle resolution fails", async () => {
+    it("should return exists: true when user is registered in DB", async () => {
       // Arrange
       const testDid = "did:test:user456";
-      mockResolver.resolveDidToHandle = mock.fn(async () => {
-        throw new Error("Handle resolution failed");
-      });
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
 
       // Act
       const result = await profileService.getPublicProfile(testDid);
 
       // Assert
-      assert.strictEqual(result.did, testDid);
-      assert.strictEqual(result.handle, testDid); // DID used as fallback
-      assert.strictEqual(mockLogger.warn.mock.calls.length, 1);
+      assert.strictEqual(result.exists, true);
+      assert.ok(result.profile);
     });
-    it("should throw an error when profile is not found", async () => {
+
+    it("should throw 'Profile not found' when Bluesky returns success: false", async () => {
       // Arrange
       const testDid = "did:test:notfound";
-      // Create a new mock implementation for this test
-      const tempMockGetProfile = mock.fn(async () => ({
-        success: false,
-      }));
-      // Replace the original mock
+      const tempMockGetProfile = mock.fn(async () => ({ success: false }));
       (profileService as any).agent.getProfile = tempMockGetProfile;
 
       // Act & Assert
       await assert.rejects(
         async () => await profileService.getPublicProfile(testDid),
-        { message: "Failed to fetch profile" }
+        { message: "Profile not found" }
       );
-      assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
 
     it("should throw an error when the API call fails", async () => {
       // Arrange
       const testDid = "did:test:error";
-      // Create a new mock implementation for this test
       const tempMockGetProfile = mock.fn(async () => {
         throw new Error("API call failed");
       });
-      // Replace the original mock
       (profileService as any).agent.getProfile = tempMockGetProfile;
 
       // Act & Assert

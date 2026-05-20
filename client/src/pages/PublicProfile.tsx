@@ -13,11 +13,11 @@ import {
   Center,
   Box,
   Alert,
+  useComputedColorScheme,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
   useResolveHandle,
-  useUserExists,
   usePublicProfile,
 } from "../api/profileService";
 import { useSendMessage } from "../api/messageService";
@@ -50,22 +50,16 @@ export default function PublicProfile() {
   const did = handleData?.did || null;
 
   const {
-    data: userExistsData,
-    isLoading: userExistsLoading,
-    error: userExistsError,
-  } = useUserExists(did);
-
-  const userExists = userExistsData?.exists;
-
-  const {
     data: profileData,
     isLoading: profileLoading,
-    error: profileError,
-  } = usePublicProfile(userExists ? did : null);
+  } = usePublicProfile(did);
 
   const profile = profileData?.profile || null;
 
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
+  const isDark =
+    useComputedColorScheme("light", { getInitialValueInEffect: true }) ===
+    "dark";
 
   const handleSend = () => {
     setPageAlert(null);
@@ -122,12 +116,11 @@ export default function PublicProfile() {
           });
           setModalOpened(false);
         },
-      }
+      },
     );
   };
 
-  const isLoading =
-    handleLoading || userExistsLoading || profileLoading || sendLoading;
+  const isLoading = handleLoading || profileLoading || sendLoading;
 
   useEffect(() => {
     const handleFocus = () => {
@@ -199,7 +192,7 @@ export default function PublicProfile() {
     );
   }
 
-  if (did && !userExists) {
+  if (did && profileData && !profileData.exists) {
     return (
       <Container>
         <Paper p="md" withBorder>
@@ -249,12 +242,23 @@ export default function PublicProfile() {
               }}
             >
               <IconWorld size={12} />
-              fragen.navy/<Text component="span" inherit style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}>{profile.handle}</Text>
+              fragen.navy/
+              <Text
+                component="span"
+                inherit
+                style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}
+              >
+                {profile.handle}
+              </Text>
             </Box>
           </Group>
 
           {/* Bluesky-style profile card */}
-          <Paper radius="lg" mb="lg" withBorder style={{ overflow: "hidden" }}>
+          <Paper
+            mb="lg"
+            withBorder
+            style={{ borderRadius: 16, overflow: "hidden" }}
+          >
             {/* Banner */}
             <Box
               style={{
@@ -278,7 +282,7 @@ export default function PublicProfile() {
             </Box>
 
             {/* Profile content below banner */}
-            <Box p="md" style={{ position: "relative" }}>
+            <Box style={{ padding: "0 24px 18px", position: "relative" }}>
               {/* Avatar — overlaps the banner */}
               <Avatar
                 src={profile.avatar}
@@ -298,10 +302,23 @@ export default function PublicProfile() {
               {/* Name row — padded to clear the avatar */}
               <Group justify="space-between" align="flex-start" pt={48}>
                 <Box>
-                  <Text fw={800} size="xl" lh={1.1} style={{ letterSpacing: "-0.02em" }}>
+                  <Text
+                    style={{
+                      fontFamily: "Inter",
+                      fontWeight: 800,
+                      fontSize: 24,
+                      letterSpacing: "-0.02em",
+                      lineHeight: 1.1,
+                    }}
+                  >
                     {profile.displayName}
                   </Text>
-                  <Text size="sm" c="dimmed" ff="monospace" mt={2}>
+                  <Text
+                    ff="monospace"
+                    c="dimmed"
+                    mt={2}
+                    style={{ fontSize: 13 }}
+                  >
                     @{profile.handle}
                   </Text>
                 </Box>
@@ -319,8 +336,19 @@ export default function PublicProfile() {
                     color: "var(--mantine-color-text)",
                   }}
                   leftSection={
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 2h3v3"/><path d="M21 2L10 13"/><path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6"/>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 2h3v3" />
+                      <path d="M21 2L10 13" />
+                      <path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6" />
                     </svg>
                   }
                 >
@@ -331,9 +359,12 @@ export default function PublicProfile() {
               {profile.description && (
                 <Text
                   mt="sm"
-                  size="sm"
-                  c="dimmed"
-                  style={{ wordBreak: "break-word", whiteSpace: "pre-wrap" }}
+                  style={{
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    wordBreak: "break-word",
+                    whiteSpace: "pre-wrap",
+                  }}
                 >
                   {parseRichText(profile.description)}
                 </Text>
@@ -343,12 +374,12 @@ export default function PublicProfile() {
 
           {/* Ask card */}
           <Paper
-            p="xl"
-            radius="lg"
-            shadow="md"
             onClick={() => textareaRef.current?.focus()}
             style={{
-              background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
+              borderRadius: 18,
+              padding: 28,
+              background:
+                "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
               border: "2px solid rgba(255,255,255,0.06)",
               cursor: "text",
               position: "relative",
@@ -356,7 +387,15 @@ export default function PublicProfile() {
             }}
           >
             {/* WinkMark watermark */}
-            <Box style={{ position: "absolute", right: -30, top: -30, opacity: 0.12, pointerEvents: "none" }}>
+            <Box
+              style={{
+                position: "absolute",
+                right: -30,
+                top: -30,
+                opacity: 0.12,
+                pointerEvents: "none",
+              }}
+            >
               <WinkMark size={220} sparkle={false} aria-hidden />
             </Box>
             <Text
@@ -365,7 +404,12 @@ export default function PublicProfile() {
               mb="lg"
               c="white"
               ta="center"
-              style={{ position: "relative", fontFamily: "Inter", fontSize: 20, letterSpacing: "-0.01em" }}
+              style={{
+                position: "relative",
+                fontFamily: "Inter",
+                fontSize: 22,
+                letterSpacing: "-0.01em",
+              }}
             >
               Send {profile.displayName || profile.handle} an anonymous message
             </Text>
@@ -412,7 +456,10 @@ export default function PublicProfile() {
               />
               <Group justify="flex-end" gap="xs">
                 <ActionIcon
-                  onClick={(e) => { e.stopPropagation(); setMessage(""); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMessage("");
+                  }}
                   variant="subtle"
                   color="white"
                   size="lg"
@@ -423,9 +470,12 @@ export default function PublicProfile() {
                 </ActionIcon>
                 {/* Sunshine Send button */}
                 <Button
-                  onClick={(e) => { e.stopPropagation(); handleSend(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSend();
+                  }}
                   loading={sendLoading}
-                  radius="md"
+                  radius="xl"
                   leftSection={<IconSend size={16} />}
                   style={{
                     background: "#FACC15",
@@ -448,16 +498,19 @@ export default function PublicProfile() {
             mt="md"
             align="flex-start"
             style={{
-              background: "var(--mantine-color-default)",
+              background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
               borderRadius: 12,
               padding: "12px 14px",
             }}
           >
-            <IconLock size={16} style={{ marginTop: 2, flexShrink: 0, opacity: 0.5 }} />
+            <IconLock
+              size={16}
+              style={{ marginTop: 2, flexShrink: 0, opacity: 0.5 }}
+            />
             <Text size="xs" c="dimmed">
-              Your message will be sent anonymously to the user. They may post it
-              publicly on Bluesky, so please don't share any personal information
-              or passwords. Be curious, but respectful and kind!
+              Your message will be sent anonymously to the user. They may post
+              it publicly on Bluesky, so please don't share any personal
+              information or passwords. Be curious, but respectful and kind!
             </Text>
           </Group>
 

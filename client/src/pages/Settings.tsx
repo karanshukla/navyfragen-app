@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Container,
   Title,
   Grid,
   SimpleGrid,
@@ -63,6 +62,8 @@ export default function Settings() {
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    borderRadius: 14,
+    padding: 20,
     background:
       computedColorScheme === "dark" ? "rgba(255,255,255,0.06)" : "#F2EBFF",
   };
@@ -89,7 +90,7 @@ export default function Settings() {
   };
 
   return (
-    <Container my="md">
+    <>
       {!session?.isLoggedIn && !sessionLoading ? (
         <Alert title="Error" color="red">
           You cannot access this page without logging in.
@@ -107,18 +108,26 @@ export default function Settings() {
               {updateError}
             </Notification>
           )}
+          <Title
+            order={1}
+            mb="xl"
+            style={{
+              fontFamily: "Inter",
+              fontWeight: 800,
+              fontSize: 32,
+              letterSpacing: "-0.03em",
+            }}
+          >
+            Settings
+          </Title>
           <Grid gutter="md">
-            <Grid.Col span={12}>
-              <Title order={1}>Settings</Title>
-            </Grid.Col>
-
             {/* Account Overview */}
             <Grid.Col span={12}>
               <Paper
-                p="lg"
-                radius="md"
                 withBorder
                 style={{
+                  borderRadius: 14,
+                  padding: 24,
                   background:
                     computedColorScheme === "dark"
                       ? "rgba(255,255,255,0.06)"
@@ -138,7 +147,11 @@ export default function Settings() {
                     ))}
                   </SimpleGrid>
                 ) : (
-                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl" style={{ alignItems: "flex-end" }}>
+                  <SimpleGrid
+                    cols={{ base: 2, sm: 4 }}
+                    spacing="xl"
+                    style={{ alignItems: "flex-end" }}
+                  >
                     <Stack gap={2}>
                       <Text
                         fw={800}
@@ -187,9 +200,14 @@ export default function Settings() {
                     </Stack>
                     <Stack gap={2}>
                       <Text
-                        fw={600}
-                        ff="monospace"
-                        style={{ fontSize: 15, lineHeight: 1.2 }}
+                        fw={800}
+                        variant="gradient"
+                        gradient={{ from: "royal", to: "purple", deg: 135 }}
+                        style={{
+                          fontSize: 22,
+                          letterSpacing: "-0.02em",
+                          lineHeight: 1.1,
+                        }}
                       >
                         {userStats?.memberSince
                           ? new Date(userStats.memberSince).toLocaleDateString(
@@ -214,10 +232,15 @@ export default function Settings() {
                     </Stack>
                     <Stack gap={2} style={{ minWidth: 0 }}>
                       <Text
-                        fw={600}
-                        ff="monospace"
+                        fw={800}
+                        variant="gradient"
+                        gradient={{ from: "royal", to: "purple", deg: 135 }}
                         truncate
-                        style={{ fontSize: 15, lineHeight: 1.2 }}
+                        style={{
+                          fontSize: 13,
+                          letterSpacing: "-0.01em",
+                          lineHeight: 1.1,
+                        }}
                       >
                         {pdsInfo?.pdsUrl
                           ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "")
@@ -243,7 +266,7 @@ export default function Settings() {
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
             >
-              <Paper p="md" radius="md" withBorder style={cardStyle}>
+              <Paper withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Install Application</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   Install the app for faster access. Works with almost any
@@ -271,7 +294,7 @@ export default function Settings() {
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
             >
-              <Paper p="md" radius="md" withBorder style={cardStyle}>
+              <Paper withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>PDS Sync</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   By default, Navyfragen syncs your anonymous messages with your
@@ -323,7 +346,7 @@ export default function Settings() {
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
             >
-              <Paper p="md" radius="md" withBorder style={cardStyle}>
+              <Paper withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Image Theme</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   Select a theme for the generated question images. By default,
@@ -374,7 +397,7 @@ export default function Settings() {
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
             >
-              <Paper p="md" radius="md" withBorder style={cardStyle}>
+              <Paper withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Navyfragen Feed</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   Browse anonymous questions and answers posted by everyone on
@@ -399,19 +422,26 @@ export default function Settings() {
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
             >
-              <Paper p="md" radius="md" withBorder style={cardStyle}>
+              <Paper withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Daily Notifications</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   Follow the Navyfragen notification bot on Bluesky to receive a
                   daily alert when you have new messages in your inbox.
                 </Text>
-                {botFollowLoading ? (
+                {sessionLoading || botFollowLoading ? (
                   <Skeleton height={36} radius="sm" />
                 ) : botFollowData?.following ? (
-                  <Alert color="green" title="Notifications enabled">
-                    You are following the notification bot and will receive
-                    daily alerts for new messages.
-                  </Alert>
+                  <Button
+                    component="a"
+                    href="https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    fullWidth
+                    variant="gradient"
+                    gradient={{ from: "royal", to: "purple", deg: 135 }}
+                  >
+                    Notifications enabled ✓
+                  </Button>
                 ) : (
                   <Button
                     component="a"
@@ -432,7 +462,7 @@ export default function Settings() {
               span={{ base: 12, md: 6, lg: 4 }}
               style={{ display: "flex" }}
             >
-              <Paper p="md" radius="md" withBorder style={cardStyle}>
+              <Paper withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Delete my Data</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   Permanently remove all your data from the Navyfragen servers,
@@ -473,6 +503,6 @@ export default function Settings() {
           />
         </>
       )}
-    </Container>
+    </>
   );
 }

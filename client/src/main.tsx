@@ -199,7 +199,7 @@ function AppLayout() {
         />
       </AppShell.Navbar>
       <AppShell.Main pt={70}>
-        <Container>
+        <Container pt="md">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />

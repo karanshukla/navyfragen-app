@@ -10,11 +10,9 @@ import {
   Box,
   Skeleton,
   SimpleGrid,
-  Group,
-  Anchor,
   useComputedColorScheme,
 } from "@mantine/core";
-import { IconButterfly, IconBrandGithub } from "@tabler/icons-react";
+import { IconBrandGithub } from "@tabler/icons-react";
 import { useSession } from "../api/authService";
 import React from "react";
 import { useSyncMessages } from "../api/messageService";
@@ -28,8 +26,14 @@ const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
       padding: "5px 0",
     }}
   >
-    <Text size="sm">{label}</Text>
-    <Text size="sm" c="dimmed" ff="monospace">
+    <Text style={{ fontFamily: "Inter", fontSize: 13 }}>{label}</Text>
+    <Text
+      style={{
+        fontFamily: "JetBrains Mono, monospace",
+        fontSize: 12,
+        color: "var(--mantine-color-dimmed)",
+      }}
+    >
       {hint.replace("Alt", "Alt/Cmd")}
     </Text>
   </Box>
@@ -49,13 +53,18 @@ export default function Home() {
     }
   }, [sessionData?.did]);
 
+  const isDark = computedColorScheme === "dark";
+
   return (
     <>
       <Title
         order={1}
-        size="h2"
         mb={6}
         style={{
+          fontFamily: "Inter",
+          fontWeight: 800,
+          fontSize: 32,
+          letterSpacing: "-0.03em",
           background:
             "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
           WebkitBackgroundClip: "text",
@@ -66,7 +75,14 @@ export default function Home() {
       >
         Navyfragen - Anonymous questions and answers on Bluesky
       </Title>
-      <Text c="dimmed" size="md" mb="xl">
+      <Text
+        mb="xl"
+        style={{
+          fontFamily: "Inter",
+          fontSize: 15,
+          color: "var(--mantine-color-dimmed)",
+        }}
+      >
         Receive questions from the web and post the answers directly on Bluesky.
       </Text>
 
@@ -83,28 +99,24 @@ export default function Home() {
         </Paper>
       ) : sessionData?.profile ? (
         <Paper
-          p="xl"
           radius="lg"
           withBorder
           style={{
+            padding: "40px 24px",
+            textAlign: "center",
             position: "relative",
             overflow: "hidden",
-            background:
-              computedColorScheme === "dark"
-                ? "rgba(255,255,255,0.06)"
-                : "#F2EBFF",
+            background: isDark ? "rgba(255,255,255,0.06)" : "#F2EBFF",
           }}
         >
           {/* Aurora glow */}
           <Box
             style={{
               position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background:
-                "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)",
+              inset: 0,
+              background: isDark
+                ? "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)"
+                : "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(196,181,253,0.4), transparent 70%)",
               pointerEvents: "none",
             }}
           />
@@ -115,24 +127,35 @@ export default function Home() {
                 sparkle
                 style={{
                   borderRadius: 16,
-                  boxShadow: "0 8px 24px rgba(107,63,212,0.35)",
+                  boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)",
                 }}
               />
             </Center>
             <Center>
-              <Title order={2} size="h3" ta="center">
+              <div
+                style={{
+                  fontFamily: "Inter",
+                  fontWeight: 800,
+                  fontSize: 26,
+                  letterSpacing: "-0.025em",
+                  color: "var(--mantine-color-text)",
+                }}
+              >
                 Good to see you again,{" "}
-                <Text
-                  component="span"
-                  inherit
-                  variant="gradient"
-                  gradient={{ from: "royal", to: "purple", deg: 135 }}
+                <span
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
                 >
                   {sessionData.profile.displayName ||
                     sessionData.profile.handle}
-                </Text>
+                </span>
                 !
-              </Title>
+              </div>
             </Center>
           </Stack>
           <Center mt="xl" style={{ position: "relative" }}>
@@ -187,26 +210,20 @@ export default function Home() {
         </Paper>
       )}
 
-      <SimpleGrid cols={{ base: 1, sm: 2 }} mt="xl">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
         <Paper
           p="lg"
           radius="md"
           withBorder
-          style={{
-            background:
-              computedColorScheme === "dark"
-                ? "rgba(255,255,255,0.06)"
-                : "#F2EBFF",
-          }}
+          style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#F2EBFF" }}
         >
           <Text
-            size="sm"
-            fw={600}
-            c="dimmed"
+            fw={700}
             mb="sm"
             tt="uppercase"
             ff="monospace"
-            style={{ letterSpacing: "0.1em" }}
+            c="dimmed"
+            style={{ fontSize: 11, letterSpacing: "0.1em" }}
           >
             Keyboard Shortcuts
           </Text>
@@ -229,56 +246,60 @@ export default function Home() {
           p="lg"
           radius="md"
           withBorder
-          style={{
-            background:
-              computedColorScheme === "dark"
-                ? "rgba(255,255,255,0.06)"
-                : "#F2EBFF",
-          }}
+          style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#F2EBFF" }}
         >
           <Text
-            size="sm"
-            fw={600}
-            c="dimmed"
+            fw={700}
             mb="sm"
             tt="uppercase"
             ff="monospace"
-            style={{ letterSpacing: "0.1em" }}
+            c="dimmed"
+            style={{ fontSize: 11, letterSpacing: "0.1em" }}
           >
             Questions? Feedback?
           </Text>
           <Stack gap="sm">
             <div>
-              <Text size="sm" c="dimmed" mb={4}>
+              <Text style={{ fontFamily: "Inter", fontSize: 15 }} mb={4}>
                 Reach out on Bluesky
               </Text>
-              <Anchor
+              <a
                 href="https://bsky.app/profile/navyfragen.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                size="sm"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: "Inter",
+                  fontSize: 15,
+                  color: "#8B5CF6",
+                  textDecoration: "none",
+                }}
               >
-                <Group gap="xs">
-                  <IconButterfly size="1rem" stroke={1.5} />
-                  @navyfragen.app
-                </Group>
-              </Anchor>
+                🦋 @navyfragen.app
+              </a>
             </div>
             <div>
-              <Text size="sm" c="dimmed" mb={4}>
+              <Text style={{ fontFamily: "Inter", fontSize: 15 }} mb={4}>
                 Submit an issue on GitHub
               </Text>
-              <Anchor
+              <a
                 href="https://github.com/karanshukla/navyfragen-app"
                 target="_blank"
                 rel="noopener noreferrer"
-                size="sm"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: "Inter",
+                  fontSize: 15,
+                  color: "#8B5CF6",
+                  textDecoration: "none",
+                }}
               >
-                <Group gap="xs">
-                  <IconBrandGithub size="1rem" stroke={1.5} />
-                  GitHub - Navyfragen
-                </Group>
-              </Anchor>
+                <IconBrandGithub size={18} /> GitHub - Navyfragen
+              </a>
             </div>
           </Stack>
         </Paper>

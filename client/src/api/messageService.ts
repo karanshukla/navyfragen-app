@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { apiClient, ApiError } from "./apiClient";
 import { queryClient } from "./queryClient";
+import { settingsKeys } from "./settingsService";
 
 // Defined in the DB schema in /server
 export interface Message {
@@ -115,9 +116,9 @@ export function useSendMessage() {
 export function useDeleteMessage() {
   return useMutation({
     mutationFn: (tid: string) => messageService.deleteMessage(tid),
-    onSuccess: (_data, tid) => {
-      // Update all message queries after successful deletion
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messageKeys.all });
+      queryClient.invalidateQueries({ queryKey: settingsKeys.stats() });
     },
   });
 }
@@ -126,6 +127,10 @@ export function useRespondToMessage() {
   return useMutation({
     mutationFn: (data: ResponseMessageRequest) =>
       messageService.respondToMessage(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messageKeys.all });
+      queryClient.invalidateQueries({ queryKey: settingsKeys.stats() });
+    },
   });
 }
 
@@ -134,8 +139,8 @@ export function useAddExampleMessages() {
     mutationFn: (recipient: string) =>
       messageService.addExampleMessages(recipient),
     onSuccess: () => {
-      // Invalidate message queries to refresh the list
       queryClient.invalidateQueries({ queryKey: messageKeys.all });
+      queryClient.invalidateQueries({ queryKey: settingsKeys.stats() });
     },
   });
 }
@@ -143,6 +148,9 @@ export function useAddExampleMessages() {
 export function useSyncMessages() {
   return useMutation({
     mutationFn: () => messageService.syncMessages(),
-    onSuccess: (_data) => {},
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messageKeys.all });
+      queryClient.invalidateQueries({ queryKey: settingsKeys.stats() });
+    },
   });
 }

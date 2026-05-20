@@ -20,7 +20,7 @@ describe("Login page", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />);
     expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /log in/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue with bluesky/i })).toBeInTheDocument();
   });
 
   it("shows error notification when URL contains ?error=oauth_failed", () => {
@@ -48,7 +48,7 @@ describe("Login page", () => {
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(
@@ -69,7 +69,7 @@ describe("Login page", () => {
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /log in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
     act(() => {
@@ -82,7 +82,7 @@ describe("Login page", () => {
   it("shows loading state on the button while mutation is pending", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
     renderWithProviders(<Login />);
-    const button = screen.getByRole("button", { name: /log in/i });
+    const button = screen.getByRole("button", { name: /continue with bluesky/i });
     expect(button).toBeDisabled();
   });
 });

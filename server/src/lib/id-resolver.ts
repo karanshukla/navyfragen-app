@@ -7,6 +7,7 @@ export function createIdResolver() {
   return new IdResolver({
     didCache: new MemoryCache(HOUR, DAY),
     backupNameservers: ["8.8.8.8", "1.1.1.1"],
+    timeout: 5000,
   });
 }
 
@@ -17,6 +18,9 @@ export interface BidirectionalResolver {
 }
 
 export function createBidirectionalResolver(resolver: IdResolver) {
+  // Cache handle → DID lookups (DNS/HTTP, so inherently slow without caching)
+  const handleCache = new Map<string, { did: string | undefined; expiresAt: number }>();
+
   return {
     async resolveDidToHandle(did: string): Promise<string> {
       try {
@@ -56,8 +60,15 @@ export function createBidirectionalResolver(resolver: IdResolver) {
     },
 
     async resolveHandleToDid(handle: string): Promise<string | undefined> {
+      const now = Date.now();
+      const cached = handleCache.get(handle);
+      if (cached && cached.expiresAt > now) {
+        return cached.did;
+      }
+
       try {
         const did = await resolver.handle.resolve(handle);
+        handleCache.set(handle, { did, expiresAt: now + HOUR });
         return did;
       } catch (error) {
         return undefined;

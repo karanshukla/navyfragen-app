@@ -3,6 +3,7 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Settings from "../../pages/Settings";
 import * as authService from "../../api/authService";
 import * as settingsService from "../../api/settingsService";
+import * as profileService from "../../api/profileService";
 import * as installPromptContext from "../../components/InstallPromptContext";
 import { renderWithProviders } from "../testUtils";
 
@@ -22,6 +23,11 @@ vi.mock("../../api/settingsService", async (importOriginal) => {
   };
 });
 
+vi.mock("../../api/profileService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/profileService")>();
+  return { ...actual, useBotFollow: vi.fn() };
+});
+
 vi.mock("../../components/InstallPromptContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../components/InstallPromptContext")>();
   return { ...actual, useInstallPrompt: vi.fn() };
@@ -32,6 +38,7 @@ const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
 const mockUseUpdateUserSettings = vi.mocked(settingsService.useUpdateUserSettings);
 const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 const mockUsePdsInfo = vi.mocked(settingsService.usePdsInfo);
+const mockUseBotFollow = vi.mocked(profileService.useBotFollow);
 const mockUseInstallPrompt = vi.mocked(installPromptContext.useInstallPrompt);
 
 const noopMutation = { mutate: vi.fn(), isPending: false } as any;
@@ -49,6 +56,7 @@ describe("Settings page", () => {
     vi.clearAllMocks();
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     mockUseInstallPrompt.mockReturnValue(noopInstall);
+    mockUseBotFollow.mockReturnValue({ data: undefined, isLoading: false } as any);
   });
 
   it("shows auth error when user is not logged in", () => {
