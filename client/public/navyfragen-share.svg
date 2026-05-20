@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="nf-share-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3349E0"/>
+      <stop offset="55%" stop-color="#6B3FD4"/>
+      <stop offset="100%" stop-color="#4F1FA6"/>
+    </linearGradient>
+    <radialGradient id="nf-share-glow" cx="0.82" cy="0.15" r="0.55">
+      <stop offset="0%" stop-color="#7B5CFF" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#7B5CFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#nf-share-bg)"/>
+  <rect width="1200" height="630" fill="url(#nf-share-glow)"/>
+
+  <!-- Wink mark — frosted glass, 240×240, vertically centered at y=315 -->
+  <g transform="translate(80, 195) scale(1.5)">
+    <rect width="160" height="160" rx="36"
+          fill="white" fill-opacity="0.12"
+          stroke="white" stroke-opacity="0.22" stroke-width="1.5"/>
+    <!-- cheek highlights -->
+    <ellipse cx="40" cy="100" rx="11" ry="6" fill="#FDF8FF" opacity="0.18"/>
+    <ellipse cx="120" cy="100" rx="11" ry="6" fill="#FDF8FF" opacity="0.18"/>
+    <!-- left eye -->
+    <circle cx="60" cy="66" r="10" fill="#FDF8FF"/>
+    <!-- right eye (wink) -->
+    <path d="M88 70 Q100 56 112 70" stroke="#FDF8FF" stroke-width="10"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- smile -->
+    <path d="M50 96 Q80 124 110 96" stroke="#FDF8FF" stroke-width="10"
+          fill="none" stroke-linecap="round"/>
+    <!-- yellow star accent -->
+    <path d="M130 32 L133 42 L143 45 L133 48 L130 58 L127 48 L117 45 L127 42 Z"
+          fill="#FACC15"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="400" y="300"
+        font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        font-weight="800" font-size="88" fill="#FDF8FF" letter-spacing="-2">Navyfragen</text>
+
+  <!-- Tagline -->
+  <text x="403" y="362"
+        font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        font-weight="400" font-size="28" fill="#FDF8FF" opacity="0.70">Anonymous messages on Bluesky</text>
+</svg>

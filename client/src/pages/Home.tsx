@@ -10,8 +10,9 @@ import {
   Skeleton,
   SimpleGrid,
   useComputedColorScheme,
+  Divider,
 } from "@mantine/core";
-import { IconBrandGithub } from "@tabler/icons-react";
+import { IconBrandGithub, IconButterfly } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -278,7 +279,7 @@ export default function Home() {
                   textDecoration: "none",
                 }}
               >
-                🦋 @navyfragen.app
+                <IconButterfly size={18} /> @navyfragen.app
               </a>
             </div>
             <div>
@@ -302,6 +303,11 @@ export default function Home() {
                 <IconBrandGithub size={18} /> GitHub - Navyfragen
               </a>
             </div>
+            <Divider></Divider>
+            <Text style={{ fontFamily: "Inter", fontSize: 13 }}>
+              Disclaimer: Please follow Bluesky's ToS. Cookies are used to keep
+              you logged in. This app does not include any moderation.
+            </Text>
           </Stack>
         </Paper>
       </SimpleGrid>

@@ -120,6 +120,10 @@ describe("MessageService", () => {
             createRecord: mock.fn(async () => ({
               data: { uri: "uri", cid: "cid" },
             })),
+            listRecords: mock.fn(async () => ({
+              success: true,
+              data: { records: [], cursor: undefined },
+            })),
           },
         },
       },
@@ -137,6 +141,7 @@ describe("MessageService", () => {
     mockAgent.uploadBlob.mock.resetCalls();
     mockAgent.com.atproto.repo.deleteRecord.mock.resetCalls();
     mockAgent.com.atproto.repo.createRecord.mock.resetCalls();
+    mockAgent.com.atproto.repo.listRecords.mock.resetCalls();
     mockAgent.app.bsky.actor.getProfile.mock.resetCalls();
     messageService = new MessageService(mockDb, mockResolver, mockLogger);
   });
@@ -215,6 +220,24 @@ describe("MessageService", () => {
     );
     const result = await messageService.deleteMessage(tid, did, mockAgent);
     assert.deepStrictEqual(result, { success: true });
+    assert.strictEqual(mockAgent.com.atproto.repo.deleteRecord.mock.calls.length, 1);
+    assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 1);
+  });
+
+  test("deleteMessage does not delete from DB if PDS deletion fails", async () => {
+    const tid = "tid";
+    const did = "did:foo";
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
+      async () => ({ tid, recipient: did })
+    );
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(
+      async () => { throw new Error("PDS unavailable"); }
+    );
+    await assert.rejects(
+      () => messageService.deleteMessage(tid, did, mockAgent),
+      /Failed to delete message from PDS/
+    );
+    assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 0);
   });
 
   test("deleteMessage throws if not found", async () => {
@@ -283,46 +306,130 @@ describe("MessageService", () => {
     assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 3);
   });
 
-  test("syncMessages happy path", async () => {
+  test("syncMessages: pushes DB-only records to PDS when PDS is empty", async () => {
+    // listRecords default returns empty — PDS has nothing
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
-      { tid: "t", message: "m", createdAt: "now", recipient: "did" },
+      { tid: "t1", message: "m", createdAt: "now", recipient: "did:foo" },
     ]);
-    mockAgent.com.atproto.repo.createRecord.mock.mockImplementation(
-      async () => ({ data: { uri: "uri", cid: "cid" } })
-    );
-    mockDb.insertInto.mock.mockImplementation(() => mockInsertBuilder);
-    mockInsertBuilder.execute.mock.mockImplementation(async () => ({}));
-    const result = await messageService.syncMessages("did", mockAgent);
+    const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.success, true);
     assert.strictEqual(result.syncedCount, 1);
+    assert.strictEqual(result.importedCount, 0);
     assert.strictEqual(result.errorCount, 0);
+    assert.strictEqual(mockAgent.com.atproto.repo.createRecord.mock.calls.length, 1);
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
   });
 
-  test("syncMessages returns 0 if no messages", async () => {
+  test("syncMessages: imports PDS-only records to DB when DB is empty", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: {
+        records: [{
+          uri: "at://did:foo/app.navyfragen.message/pds-only",
+          value: { message: "from pds", createdAt: "now", recipient: "did:foo" },
+        }],
+        cursor: undefined,
+      },
+    }));
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => []);
-    const result = await messageService.syncMessages("did", mockAgent);
+    const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.success, true);
     assert.strictEqual(result.syncedCount, 0);
+    assert.strictEqual(result.importedCount, 1);
+    assert.strictEqual(result.errorCount, 0);
+    assert.strictEqual(mockAgent.com.atproto.repo.createRecord.mock.calls.length, 0);
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
   });
 
-  test("syncMessages error for some", async () => {
+  test("syncMessages: skips records present in both DB and PDS", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: {
+        records: [{
+          uri: "at://did:foo/app.navyfragen.message/shared",
+          value: { message: "hello", createdAt: "now", recipient: "did:foo" },
+        }],
+        cursor: undefined,
+      },
+    }));
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
-      { tid: "t1", message: "m", createdAt: "now", recipient: "did" },
-      { tid: "t2", message: "m", createdAt: "now", recipient: "did" },
+      { tid: "shared", message: "hello", createdAt: "now", recipient: "did:foo" },
     ]);
-    let call = 0;
-    mockAgent.com.atproto.repo.createRecord.mock.mockImplementation(
-      async () => {
-        if (call++ === 0) return { data: { uri: "uri", cid: "cid" } };
-        throw new Error("fail");
-      }
-    );
-    mockDb.insertInto.mock.mockImplementation(() => mockInsertBuilder);
-    mockInsertBuilder.execute.mock.mockImplementation(async () => ({}));
-    const result = await messageService.syncMessages("did", mockAgent);
-    assert.strictEqual(result.success, true);
+    const result = await messageService.syncMessages("did:foo", mockAgent);
+    assert.strictEqual(result.syncedCount, 0);
+    assert.strictEqual(result.importedCount, 0);
+    assert.strictEqual(result.errorCount, 0);
+    assert.strictEqual(mockAgent.com.atproto.repo.createRecord.mock.calls.length, 0);
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
+  });
+
+  test("syncMessages: mixed — pushes DB-only, imports PDS-only, skips overlap", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: {
+        records: [
+          { uri: "at://did:foo/app.navyfragen.message/pds-only", value: { message: "p", createdAt: "now", recipient: "did:foo" } },
+          { uri: "at://did:foo/app.navyfragen.message/both",     value: { message: "b", createdAt: "now", recipient: "did:foo" } },
+        ],
+        cursor: undefined,
+      },
+    }));
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
+      { tid: "db-only", message: "d", createdAt: "now", recipient: "did:foo" },
+      { tid: "both",    message: "b", createdAt: "now", recipient: "did:foo" },
+    ]);
+    const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.syncedCount, 1);
-    assert.strictEqual(result.errorCount, 1);
-    assert.ok(result.errors && result.errors[0].tid === "t2");
+    assert.strictEqual(result.importedCount, 1);
+    assert.strictEqual(result.errorCount, 0);
+    assert.strictEqual(mockAgent.com.atproto.repo.createRecord.mock.calls.length, 1);
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
+  });
+
+  test("syncMessages: counts push errors and import errors independently", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: {
+        records: [{ uri: "at://did:foo/app.navyfragen.message/pds-only", value: { message: "p", createdAt: "now", recipient: "did:foo" } }],
+        cursor: undefined,
+      },
+    }));
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
+      { tid: "db-only", message: "d", createdAt: "now", recipient: "did:foo" },
+    ]);
+    mockAgent.com.atproto.repo.createRecord.mock.mockImplementationOnce(async () => { throw new Error("push failed"); });
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => { throw new Error("import failed"); });
+    const result = await messageService.syncMessages("did:foo", mockAgent);
+    assert.strictEqual(result.errorCount, 2);
+    assert.strictEqual(result.syncedCount, 0);
+    assert.strictEqual(result.importedCount, 0);
+    assert.ok(result.errors?.some((e) => e.error === "push failed"));
+    assert.ok(result.errors?.some((e) => e.error === "import failed"));
+  });
+
+  test("syncMessages: paginates through multiple pages of PDS records", async () => {
+    let pageCall = 0;
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementation(async () => {
+      if (pageCall++ === 0) {
+        return {
+          success: true,
+          data: {
+            records: [{ uri: "at://did:foo/app.navyfragen.message/p1", value: { message: "m", createdAt: "now", recipient: "did:foo" } }],
+            cursor: "page2",
+          },
+        };
+      }
+      return {
+        success: true,
+        data: {
+          records: [{ uri: "at://did:foo/app.navyfragen.message/p2", value: { message: "m2", createdAt: "now", recipient: "did:foo" } }],
+          cursor: undefined,
+        },
+      };
+    });
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => []);
+    const result = await messageService.syncMessages("did:foo", mockAgent);
+    assert.strictEqual(result.importedCount, 2);
+    assert.strictEqual(mockAgent.com.atproto.repo.listRecords.mock.calls.length, 2);
   });
 });

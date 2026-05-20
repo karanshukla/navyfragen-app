@@ -165,10 +165,8 @@ export class MessageService {
         throw new Error("Not authorized to delete this message");
       }
 
-      // Delete the message from the database
-      await this.db.deleteFrom("message").where("tid", "=", tid).execute();
-
-      // Delete from the PDS
+      // Delete from PDS first — if this fails, the DB record is preserved
+      // so the message won't be re-imported on the next bidirectional sync.
       try {
         await agent.com.atproto.repo.deleteRecord({
           repo: userDid,
@@ -180,10 +178,10 @@ export class MessageService {
           { error: err, tid },
           "Failed to delete message from PDS"
         );
-        throw new Error(
-          "Failed to delete message from PDS, but data deleted in the DB"
-        );
+        throw new Error("Failed to delete message from PDS");
       }
+
+      await this.db.deleteFrom("message").where("tid", "=", tid).execute();
 
       return { success: true };
     } catch (err) {
@@ -372,39 +370,49 @@ export class MessageService {
     success: boolean;
     message?: string;
     syncedCount?: number;
+    importedCount?: number;
     errorCount?: number;
     errors?: { tid: string; error: string }[];
   }> {
     try {
-      // Fetch messages from the local database for the user
+      // Fetch all existing PDS records first to avoid redundant pushes and enable pull
+      const pdsRecords: { rkey: string; value: MessageSchemaRecord }[] = [];
+      let cursor: string | undefined;
+      do {
+        const res = await agent.com.atproto.repo.listRecords({
+          repo: userDid,
+          collection: ids.AppNavyfragenMessage,
+          limit: 100,
+          cursor,
+        });
+        if (!res.success) break;
+        for (const r of res.data.records) {
+          const rkey = r.uri.split("/").pop()!;
+          pdsRecords.push({ rkey, value: r.value as MessageSchemaRecord });
+        }
+        cursor = res.data.cursor;
+      } while (cursor);
+
+      const pdsRkeys = new Set(pdsRecords.map((r) => r.rkey));
+
+      // Fetch local DB messages for the user
       const localMessages = await this.db
         .selectFrom("message")
         .selectAll()
         .where("recipient", "=", userDid)
         .execute();
 
-      if (localMessages.length === 0) {
-        this.logger.info({ did: userDid }, "No local messages to sync to PDS.");
-        return {
-          success: true,
-          message: "No local messages to sync.",
-          syncedCount: 0,
-          errorCount: 0,
-          errors: [],
-        };
-      }
+      const localTids = new Set(localMessages.map((m) => m.tid));
 
       let syncedCount = 0;
+      let importedCount = 0;
       let errorCount = 0;
       const syncErrors: { tid: string; error: string }[] = [];
 
-      this.logger.info(
-        { did: userDid, count: localMessages.length },
-        `Starting PDS sync for ${localMessages.length} messages.`
-      );
-
+      // Phase 1: Push DB messages that are missing from PDS (DB → PDS)
       for (const dbMessage of localMessages) {
-        const rkey = dbMessage.tid;
+        if (pdsRkeys.has(dbMessage.tid)) continue;
+
         const recordToCreate: MessageSchemaRecord = {
           $type: ids.AppNavyfragenMessage,
           createdAt: dbMessage.createdAt,
@@ -413,33 +421,56 @@ export class MessageService {
         };
 
         try {
-          const createResponse = await agent.com.atproto.repo.createRecord({
+          await agent.com.atproto.repo.createRecord({
             repo: agent.assertDid,
             collection: ids.AppNavyfragenMessage,
-            rkey: rkey,
+            rkey: dbMessage.tid,
             record: recordToCreate,
           });
           syncedCount++;
-          this.logger.info(
-            { did: userDid, rkey, uri: createResponse.data.uri },
-            "Successfully synced message to PDS"
-          );
         } catch (err: any) {
           errorCount++;
-          const errorMessage =
-            err.message || "Unknown error during PDS record creation";
-          syncErrors.push({ tid: rkey, error: errorMessage });
+          syncErrors.push({
+            tid: dbMessage.tid,
+            error: err.message || "Unknown error during PDS record creation",
+          });
+        }
+      }
+
+      // Phase 2: Import PDS records missing from DB (PDS → DB)
+      for (const pdsRecord of pdsRecords) {
+        if (localTids.has(pdsRecord.rkey)) continue;
+
+        try {
+          await this.db
+            .insertInto("message")
+            .values({
+              tid: pdsRecord.rkey,
+              message: pdsRecord.value.message,
+              createdAt: pdsRecord.value.createdAt,
+              recipient: pdsRecord.value.recipient,
+            })
+            .onConflict((oc) => oc.column("tid").doNothing())
+            .execute();
+          importedCount++;
+        } catch (err: any) {
+          errorCount++;
+          syncErrors.push({
+            tid: pdsRecord.rkey,
+            error: err.message || "Unknown error during DB import",
+          });
         }
       }
 
       this.logger.info(
-        { did: userDid, syncedCount, errorCount },
-        "PDS sync completed."
+        { did: userDid, syncedCount, importedCount, errorCount },
+        "Bidirectional PDS sync completed."
       );
 
       return {
         success: true,
         syncedCount,
+        importedCount,
         errorCount,
         errors: syncErrors,
       };
