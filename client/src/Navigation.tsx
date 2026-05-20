@@ -3,38 +3,60 @@ import {
   IconMessage,
   IconLogin,
   IconSettings,
+  IconUser,
 } from "@tabler/icons-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { Divider, NavLink, Text, Box, Skeleton, Stack, Avatar, Group } from "@mantine/core";
+import {
+  NavLink,
+  Text,
+  Box,
+  Skeleton,
+  Stack,
+  Avatar,
+  Group,
+  Button,
+  CopyButton,
+} from "@mantine/core";
 import { useEffect } from "react";
-import { useMediaQuery } from "@mantine/hooks";
 import { useFriends } from "./api/profileService";
+import { useUserStats } from "./api/settingsService";
+import { WinkMark } from "./components/WinkMark";
+
+const shortlinkurl =
+  import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
 interface NavigationProps {
   onLinkClick?: () => void;
   isLoggedIn: boolean;
+  handle?: string;
 }
 
-export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
+const activeNavStyle = {
+  background: "linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%)",
+  borderRadius: 12,
+  color: "#FDF8FF",
+  boxShadow: "0 6px 16px -8px rgba(107,63,212,0.6)",
+};
+
+export function Navigation({
+  onLinkClick,
+  isLoggedIn,
+  handle,
+}: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const isMd = useMediaQuery("(min-width: 62em)");
-  const isLg = useMediaQuery("(min-width: 75em)");
-  const avatarSize = isLg ? 26 : isMd ? 22 : 20;
-  const { data: friendsData, isLoading: friendsLoading } = useFriends(isLoggedIn);
+  const { data: friendsData, isLoading: friendsLoading } =
+    useFriends(isLoggedIn);
+  const { data: userStats } = useUserStats();
 
   const handleClick = () => {
-    if (onLinkClick) {
-      onLinkClick();
-    }
+    if (onLinkClick) onLinkClick();
   };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const targetNodeName = (event.target as HTMLElement)?.nodeName;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(targetNodeName)) {
-        return;
-      }
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(targetNodeName)) return;
 
       if (event.altKey) {
         let targetPath: string | null = null;
@@ -51,134 +73,278 @@ export function Navigation({ onLinkClick, isLoggedIn }: NavigationProps) {
           case "L":
             if (!isLoggedIn) targetPath = "/login";
             break;
-          default:
-            break;
         }
-
         if (targetPath) {
           event.preventDefault();
           navigate(targetPath);
-          if (onLinkClick) {
-            onLinkClick();
-          }
+          if (onLinkClick) onLinkClick();
         }
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isLoggedIn, navigate, onLinkClick]);
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const profileMatch = location.pathname.match(/^\/profile\/(.+)$/);
+  const viewingHandle = profileMatch ? profileMatch[1] : null;
+
+  const navItemStyles = (path: string) => ({
+    root: isActive(path)
+      ? activeNavStyle
+      : { borderRadius: 12, transition: "background 120ms ease" },
+    label: {
+      fontFamily: "Inter, sans-serif",
+      fontSize: 16,
+      fontWeight: isActive(path) ? 600 : 500,
+    },
+  });
 
   return (
     <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-
-      {/* Fixed top: nav links, how it works, friends header */}
       <Box style={{ flexShrink: 0 }}>
         <NavLink
-          my="xs"
+          my={2}
           label="Home"
           component={Link}
           to="/"
-          active={location.pathname === "/"}
+          active={isActive("/")}
           onClick={handleClick}
-          leftSection={<IconHome size="1rem" stroke={1.5} />}
+          leftSection={<IconHome size={16} stroke={1.5} />}
+          styles={navItemStyles("/")}
         />
         {isLoggedIn ? (
           <>
             <NavLink
-              my="xs"
+              my={2}
               label="Messages"
               component={Link}
               to="/messages"
-              active={location.pathname === "/messages"}
+              active={isActive("/messages")}
               onClick={handleClick}
-              leftSection={<IconMessage size="1rem" stroke={1.5} />}
+              leftSection={<IconMessage size={16} stroke={1.5} />}
+              rightSection={
+                !isActive("/messages") && (userStats?.messageCount ?? 0) > 0 ? (
+                  <span
+                    style={{
+                      background: "#FACC15",
+                      color: "#1E1B4B",
+                      padding: "1px 7px",
+                      borderRadius: 999,
+                      fontFamily: "JetBrains Mono, monospace",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {userStats!.messageCount}
+                  </span>
+                ) : undefined
+              }
+              styles={navItemStyles("/messages")}
             />
-            <Divider />
             <NavLink
-              my="xs"
+              my={2}
               label="Settings"
               component={Link}
               to="/settings"
-              active={location.pathname === "/settings"}
+              active={isActive("/settings")}
               onClick={handleClick}
-              leftSection={<IconSettings size="1rem" stroke={1.5} />}
+              leftSection={<IconSettings size={16} stroke={1.5} />}
+              styles={navItemStyles("/settings")}
             />
           </>
         ) : (
           <NavLink
-            my="xs"
+            my={2}
             label="Login"
             component={Link}
             to="/login"
-            active={location.pathname === "/login"}
+            active={isActive("/login")}
             onClick={handleClick}
-            leftSection={<IconLogin size="1rem" stroke={1.5} />}
+            leftSection={<IconLogin size={16} stroke={1.5} />}
+            styles={navItemStyles("/login")}
           />
         )}
-        {isLoggedIn && (
-          <Box mt="md">
-            <Divider mb="md" />
-            <Text size="xs" fw={600} c="dimmed" mb="xs" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
-              Friends on Navyfragen
-            </Text>
+
+        {viewingHandle && (
+          <Box
+            mt={4}
+            px={12}
+            py={8}
+            style={{
+              borderRadius: 12,
+              background: "var(--mantine-color-default)",
+              border: "1px solid var(--mantine-color-default-border)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
+            <Box style={{ minWidth: 0 }}>
+              <Text style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5 }}>
+                Viewing profile
+              </Text>
+              <Text style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, fontWeight: 600 }} truncate>
+                @{viewingHandle}
+              </Text>
+            </Box>
           </Box>
         )}
       </Box>
 
-      {/* Scrollable friends list — rows only */}
       {isLoggedIn && (
-        <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-          {friendsLoading ? (
-            <Stack gap={6}>
-              {[0, 1, 2].map((i) => (
-                <Group key={i} gap="xs" px={4} py={4}>
-                  <Skeleton circle height={20} width={20} style={{ flexShrink: 0 }} />
-                  <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Skeleton height={10} mb={4} radius="sm" />
-                    <Skeleton height={8} width="60%" radius="sm" />
-                  </Box>
-                </Group>
-              ))}
-            </Stack>
-          ) : friendsData?.friends && friendsData.friends.length > 0 ? (
-            <Box style={{ overflowX: "hidden" }}>
-              {friendsData.friends.map((friend) => (
-                <NavLink
-                  key={friend.did}
-                  label={
-                    <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                      <Avatar size={avatarSize} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }} />
-                      <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Text size="xs" truncate>
-                          {friend.displayName || friend.handle}
-                        </Text>
-                        <Text size="xs" c="dimmed" truncate>
-                          @{friend.handle}
-                        </Text>
-                      </Box>
-                    </Group>
-                  }
-                  component={Link}
-                  to={`/profile/${friend.handle}`}
-                  onClick={handleClick}
-                  py={4}
-                />
-              ))}
-            </Box>
-          ) : !friendsLoading ? (
-            <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
-              None of the people you follow on Bluesky are on Navyfragen yet.
+        <>
+          <Box mt="lg" mb="xs" px={2}>
+            <Text
+              size="xs"
+              fw={700}
+              c="dimmed"
+              tt="uppercase"
+              ff="monospace"
+              style={{ letterSpacing: "0.1em" }}
+            >
+              Friends on Navyfragen
             </Text>
-          ) : null}
-        </Box>
+          </Box>
+
+          <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+            {friendsLoading ? (
+              <Stack gap={6}>
+                {[0, 1, 2].map((i) => (
+                  <Group key={i} gap="xs" px={4} py={4}>
+                    <Skeleton
+                      circle
+                      height={28}
+                      width={28}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Skeleton height={10} mb={4} radius="sm" />
+                      <Skeleton height={8} width="60%" radius="sm" />
+                    </Box>
+                  </Group>
+                ))}
+              </Stack>
+            ) : friendsData?.friends && friendsData.friends.length > 0 ? (
+              <Box style={{ overflowX: "hidden" }}>
+                {friendsData.friends.map((friend) => (
+                  <NavLink
+                    key={friend.did}
+                    label={
+                      <Group
+                        gap={10}
+                        wrap="nowrap"
+                        style={{ overflow: "hidden", width: "100%" }}
+                      >
+                        <Avatar
+                          size={28}
+                          radius="xl"
+                          src={friend.avatar || undefined}
+                          style={{ flexShrink: 0 }}
+                        >
+                          <WinkMark size={22} sparkle={false} aria-hidden />
+                        </Avatar>
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            size="sm"
+                            fw={600}
+                            truncate
+                            style={{
+                              fontFamily: "Inter",
+                              fontSize: 13,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {friend.displayName || friend.handle}
+                          </Text>
+                          <Text
+                            truncate
+                            style={{
+                              fontFamily: "JetBrains Mono, monospace",
+                              fontSize: 10,
+                              color: "var(--mantine-color-dimmed)",
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            @{friend.handle}
+                          </Text>
+                        </Box>
+                      </Group>
+                    }
+                    component={Link}
+                    to={`/profile/${friend.handle}`}
+                    onClick={handleClick}
+                    py={4}
+                    styles={{
+                      root: {
+                        borderRadius: 10,
+                        transition: "background 120ms ease",
+                      },
+                    }}
+                  />
+                ))}
+              </Box>
+            ) : !friendsLoading ? (
+              <Text size="xs" c="dimmed" px={2} style={{ lineHeight: 1.6 }}>
+                None of the people you follow on Bluesky are on Navyfragen yet.
+              </Text>
+            ) : null}
+          </Box>
+
+          {/* Spread the word promo card */}
+          <Box mt="md" style={{ flexShrink: 0 }}>
+            <Box
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                background: "var(--nf-promo-bg)",
+                border: "1px solid var(--nf-promo-border)",
+              }}
+            >
+              <Text fw={700} size="sm">
+                Spread the word
+              </Text>
+              <Text size="xs" c="dimmed" mt={4} style={{ lineHeight: 1.4 }}>
+                Share your inbox link to get more questions.
+              </Text>
+              {handle ? (
+                <CopyButton value={`https://${shortlinkurl}/${handle}`}>
+                  {({ copied, copy }) => (
+                    <Button
+                      size="xs"
+                      variant="gradient"
+                      gradient={{ from: "royal", to: "purple", deg: 135 }}
+                      fullWidth
+                      mt={10}
+                      onClick={copy}
+                    >
+                      {copied ? "Copied!" : "Copy my link"}
+                    </Button>
+                  )}
+                </CopyButton>
+              ) : (
+                <Button
+                  size="xs"
+                  variant="gradient"
+                  gradient={{ from: "royal", to: "purple", deg: 135 }}
+                  fullWidth
+                  mt={10}
+                  component={Link}
+                  to="/messages"
+                  onClick={handleClick}
+                >
+                  Copy my link
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </>
       )}
 
-      {/* Spacer when logged out keeps the bottom section pinned */}
       {!isLoggedIn && <Box style={{ flex: 1 }} />}
-
     </Box>
   );
 }

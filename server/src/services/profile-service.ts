@@ -21,42 +21,30 @@ export class ProfileService {
   /**
    * Get public profile information for a given DID
    * @param did The user's DID
-   * @returns The user's public profile with DID and handle
+   * @returns The user's public profile and whether they're registered on Navyfragen
    */
   async getPublicProfile(did: string): Promise<{
     profile: any;
-    did: string;
-    handle: string;
+    exists: boolean;
   }> {
+    let profileResponse: Awaited<ReturnType<typeof this.agent.getProfile>>;
+    let exists: boolean;
+
     try {
-      const profileResponse = await this.agent.getProfile({ actor: did });
-      if (!profileResponse.success) {
-        throw new Error("Profile not found");
-      }
-
-      // Attempt to resolve DID to handle for convenience
-      let handle = did;
-      try {
-        const resolvedHandle = await this.resolver.resolveDidToHandle(did);
-        if (resolvedHandle) {
-          handle = resolvedHandle;
-        }
-      } catch (resolveError) {
-        this.logger.warn(
-          { err: resolveError, did },
-          "Failed to resolve DID to handle for public profile, using DID as fallback"
-        );
-      }
-
-      return {
-        profile: profileResponse.data,
-        did,
-        handle,
-      };
+      [profileResponse, exists] = await Promise.all([
+        this.agent.getProfile({ actor: did }),
+        this.checkUserExists(did),
+      ]);
     } catch (err) {
       this.logger.error({ err, did }, "Failed to fetch profile by DID");
       throw new Error("Failed to fetch profile");
     }
+
+    if (!profileResponse.success) {
+      throw new Error("Profile not found");
+    }
+
+    return { profile: profileResponse.data, exists };
   }
 
   /**

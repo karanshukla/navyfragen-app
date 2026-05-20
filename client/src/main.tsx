@@ -5,18 +5,19 @@ import {
   Burger,
   MantineProvider,
   Group,
-  Title,
   Container,
   Flex,
   Avatar,
   Text,
   Menu,
   Button,
+  ActionIcon,
   useMantineColorScheme,
   useComputedColorScheme,
   Box,
   Loader,
   Paper,
+  Title,
 } from "@mantine/core";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -36,8 +37,9 @@ import { Notifications } from "@mantine/notifications";
 import navyfragenTheme from "./Theme";
 import { Navigation } from "./Navigation";
 import { InstallPromptProvider } from "./components/InstallPromptContext";
+import { Wordmark } from "./components/Wordmark";
+import { WinkMark } from "./components/WinkMark";
 
-// App layout component
 function AppLayout() {
   const [opened, setOpened] = React.useState(false);
   const { data: sessionData, isLoading } = useSession();
@@ -51,7 +53,7 @@ function AppLayout() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        opened && // Only run if the menu is currently open
+        opened &&
         navbarRef.current &&
         !navbarRef.current.contains(event.target as Node) &&
         burgerRef.current &&
@@ -70,7 +72,7 @@ function AppLayout() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [opened]); // Dependency array ensures this runs when `opened` changes
+  }, [opened]);
 
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const userProfile = sessionData?.profile;
@@ -94,38 +96,54 @@ function AppLayout() {
             hiddenFrom="sm"
             size="sm"
           />
-          <Button size="xs" component={Link} to="/">
-            <Title order={3}>Navyfragen</Title>
-          </Button>
+          <Box component={Link} to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+            <Wordmark size={18} />
+          </Box>
           <Flex
             gap="sm"
             justify="flex-end"
             align="center"
             style={{ flexGrow: 1 }}
           >
-            <Button
-              size="xs"
-              variant="outline"
+            <ActionIcon
               onClick={() => toggleColorScheme()}
               aria-label="Toggle color scheme"
+              size={36}
+              radius="xl"
+              variant="transparent"
+              style={{
+                background: computedColorScheme === "dark" ? "rgba(255,255,255,0.06)" : "#F2EBFF",
+                color: "var(--mantine-color-text)",
+              }}
             >
-              {computedColorScheme === "dark" ? <IconSun /> : <IconMoon />}
-            </Button>
+              {computedColorScheme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
             {isLoading ? (
               <Loader size="sm" />
             ) : isLoggedIn && userProfile ? (
-              <Menu shadow="md" width={200}>
+              <Menu shadow="md" width={200} position="bottom-end">
                 <Menu.Target>
-                  <Button variant="outline">
+                  <Button
+                    variant="transparent"
+                    px={8}
+                    style={{
+                      background: computedColorScheme === "dark" ? "rgba(255,255,255,0.06)" : "#F2EBFF",
+                      borderRadius: 999,
+                      height: 36,
+                      color: "var(--mantine-color-text)",
+                    }}
+                  >
                     <Group gap="xs">
                       <Avatar
-                        size={30}
+                        size={28}
                         src={userProfile.avatar || undefined}
                         alt={userProfile.displayName || "User Avatar"}
-                      />
-                      {/* Hide display name text on xs screens */}
+                        radius="xl"
+                      >
+                        <WinkMark size={22} sparkle={false} aria-hidden />
+                      </Avatar>
                       <Box visibleFrom="sm">
-                        <Text size="sm" truncate>
+                        <Text size="sm" truncate fw={600} style={{ fontFamily: "Inter" }}>
                           {userProfile.displayName}
                         </Text>
                       </Box>
@@ -162,6 +180,9 @@ function AppLayout() {
               <Button
                 component={Link}
                 to="/login"
+                variant="gradient"
+                gradient={{ from: "royal", to: "purple", deg: 135 }}
+                size="xs"
                 onClick={() => setOpened(false)}
               >
                 Login
@@ -174,10 +195,11 @@ function AppLayout() {
         <Navigation
           onLinkClick={() => setOpened(false)}
           isLoggedIn={isLoggedIn}
+          handle={userProfile?.handle}
         />
       </AppShell.Navbar>
       <AppShell.Main pt={70}>
-        <Container>
+        <Container pt="md">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />

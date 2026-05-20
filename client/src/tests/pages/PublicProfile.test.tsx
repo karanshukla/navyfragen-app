@@ -15,7 +15,6 @@ vi.mock("../../api/profileService", async (importOriginal) => {
   return {
     ...actual,
     useResolveHandle: vi.fn(),
-    useUserExists: vi.fn(),
     usePublicProfile: vi.fn(),
   };
 });
@@ -26,7 +25,6 @@ vi.mock("../../api/messageService", async (importOriginal) => {
 });
 
 const mockUseResolveHandle = vi.mocked(profileService.useResolveHandle);
-const mockUseUserExists = vi.mocked(profileService.useUserExists);
 const mockUsePublicProfile = vi.mocked(profileService.usePublicProfile);
 const mockUseSendMessage = vi.mocked(messageService.useSendMessage);
 
@@ -34,9 +32,9 @@ const TEST_DID = "did:example:karan";
 
 function setupProfile() {
   mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
-  mockUseUserExists.mockReturnValue({ data: { exists: true }, isLoading: false, error: null } as any);
   mockUsePublicProfile.mockReturnValue({
     data: {
+      exists: true,
       profile: {
         did: TEST_DID,
         handle: "karan.bsky.social",
@@ -57,7 +55,6 @@ describe("PublicProfile page", () => {
 
   it("shows loading indicator while handle is resolving", () => {
     mockUseResolveHandle.mockReturnValue({ data: undefined, isLoading: true, error: null } as any);
-    mockUseUserExists.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
     mockUsePublicProfile.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
     mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<PublicProfile />);
@@ -70,7 +67,6 @@ describe("PublicProfile page", () => {
       isLoading: false,
       error: { status: 404 },
     } as any);
-    mockUseUserExists.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
     mockUsePublicProfile.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
     mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<PublicProfile />);
@@ -82,7 +78,6 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     expect(screen.getByRole("textbox")).toBeInTheDocument();
-    // Display name appears in both desktop (h3) and mobile (h4) layouts
     expect(screen.getAllByText("Karan").length).toBeGreaterThan(0);
   });
 
@@ -104,7 +99,6 @@ describe("PublicProfile page", () => {
     await waitFor(() => {
       expect(textarea).toHaveValue(atLimit);
     });
-    // Attempting to exceed the limit leaves the value unchanged
     fireEvent.change(textarea, { target: { value: "a".repeat(151) } });
     expect(textarea).toHaveValue(atLimit);
   });

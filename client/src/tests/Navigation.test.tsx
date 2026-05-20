@@ -2,18 +2,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import { Navigation } from "../Navigation";
 import * as profileService from "../api/profileService";
+import * as settingsService from "../api/settingsService";
 import { renderWithProviders } from "./testUtils";
-
-vi.mock("@mantine/hooks", () => ({
-  useMediaQuery: vi.fn().mockReturnValue(false),
-}));
 
 vi.mock("../api/profileService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/profileService")>();
   return { ...actual, useFriends: vi.fn() };
 });
 
+vi.mock("../api/settingsService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../api/settingsService")>();
+  return { ...actual, useUserStats: vi.fn() };
+});
+
 const mockUseFriends = vi.mocked(profileService.useFriends);
+const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 
 const MOCK_FRIENDS = [
   {
@@ -33,6 +36,7 @@ const MOCK_FRIENDS = [
 describe("Navigation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseUserStats.mockReturnValue({ data: undefined } as any);
   });
 
   describe("when logged out", () => {

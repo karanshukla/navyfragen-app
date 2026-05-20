@@ -1,4 +1,3 @@
-import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconShare } from "@tabler/icons-react";
 
@@ -29,7 +28,7 @@ const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
       try {
         await navigator.clipboard.writeText(shareData.url);
         notifications.show({
-          color: "green",
+          color: "royal",
           title: "Copied!",
           message: "Link copied to clipboard.",
         });
@@ -52,9 +51,25 @@ const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
   };
 
   return (
-    <Button onClick={handleClick}>
-      <IconShare />
-    </Button>
+    <button
+      onClick={handleClick}
+      style={{
+        background: "rgba(255,255,255,0.15)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        color: "#FDF8FF",
+        padding: "8px 14px",
+        borderRadius: 999,
+        fontFamily: "Inter",
+        fontWeight: 600,
+        fontSize: 13,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      <IconShare size={14} /> Share
+    </button>
   );
 };
 

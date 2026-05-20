@@ -15,6 +15,7 @@ export interface ProfileResponse {
     avatar?: string;
     banner?: string;
   } | null;
+  exists: boolean;
 }
 
 export interface UserExistsResponse {
@@ -93,7 +94,7 @@ export function usePublicProfile(did: string | null) {
       did
         ? profileService.getPublicProfile(did)
         : Promise.reject("No DID provided"),
-    enabled: !!did, // Only run if DID is provided
+    enabled: !!did,
   });
 }
 
@@ -120,7 +121,6 @@ function getCachedFriends(): { data: FriendsResponse; timestamp: number } | null
 }
 
 export function useFriends(enabled: boolean) {
-  const cached = getCachedFriends();
   return useQuery({
     queryKey: profileKeys.friends(),
     queryFn: async () => {
@@ -137,8 +137,10 @@ export function useFriends(enabled: boolean) {
     },
     enabled,
     staleTime: ONE_DAY,
-    initialData: cached?.data ?? undefined,
-    initialDataUpdatedAt: cached?.timestamp ?? undefined,
+    // Read localStorage lazily — only when the query cache entry is first created,
+    // not on every render.
+    initialData: () => getCachedFriends()?.data ?? undefined,
+    initialDataUpdatedAt: () => getCachedFriends()?.timestamp ?? undefined,
     refetchOnWindowFocus: false,
     retry: false,
   });
@@ -149,7 +151,10 @@ export function useBotFollow(enabled: boolean) {
     queryKey: profileKeys.botFollow(),
     queryFn: () => profileService.checkBotFollow(),
     enabled,
-    staleTime: 5 * 60 * 1000,
+    // staleTime: 0 so the query is always stale — combined with the global
+    // refetchOnWindowFocus:true, this means returning from the Bluesky tab
+    // immediately triggers a background refetch to pick up the new follow.
+    staleTime: 0,
     retry: false,
   });
 }
@@ -161,6 +166,6 @@ export function useResolveHandle(handle: string | null) {
       handle
         ? profileService.resolveHandle(handle)
         : Promise.reject("No handle provided"),
-    enabled: !!handle, // Only run if handle is provided
+    enabled: !!handle,
   });
 }

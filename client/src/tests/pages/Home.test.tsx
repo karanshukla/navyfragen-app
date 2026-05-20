@@ -52,9 +52,18 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    // Name appears inline inside the h2 heading, so check the heading's accessible name
-    expect(screen.getByRole("heading", { level: 2, name: /karan/i })).toBeInTheDocument();
+    // Name appears inside a styled div (not a heading element)
+    expect(screen.getByText("Karan")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view your messages/i })).toBeInTheDocument();
+  });
+
+  it("renders Bluesky and GitHub links in the feedback section", () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: false, profile: null }, isLoading: false } as any);
+    renderWithProviders(<Home />);
+    const bskyLink = screen.getByRole("link", { name: /@navyfragen\.app/i });
+    expect(bskyLink).toHaveAttribute("href", "https://bsky.app/profile/navyfragen.app");
+    const githubLink = screen.getByRole("link", { name: /github/i });
+    expect(githubLink).toHaveAttribute("href", "https://github.com/karanshukla/navyfragen-app");
   });
 
   it("falls back to handle when displayName is absent", () => {
@@ -67,6 +76,6 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    expect(screen.getByRole("heading", { level: 2, name: /karan\.bsky\.social/i })).toBeInTheDocument();
+    expect(screen.getByText("karan.bsky.social")).toBeInTheDocument();
   });
 });
