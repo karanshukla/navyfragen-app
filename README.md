@@ -43,7 +43,7 @@ docker run --rm -p 3033:3033 monkeyphysics/html-to-image
 
 Three image themes are available when responding to a message: `default` (NGL-style purple gradient), `compressed` (dark compact card), and `twitter` (X/Twitter post card). Users can set their preferred theme in settings, and it's stored per-user in the database.
 
-Anubis acts as a WAF to protect the publically available pages from DDoS or spam. It is optional, but highly recommended. In order to run it, you will also need to add a Caddy Reverse Proxy (a sample is provided in /caddy) and associate the frontend/backend appropriately. Point the frontend to Anubis, and then have Anubis redirect to the frontend Vite service. 
+Anubis acts as a WAF to protect the publically available pages from DDoS or spam. It is optional, but highly recommended. In order to run it, you will also need to add a Caddy Reverse Proxy (a sample is provided in /caddy) and associate the frontend/backend appropriately. Point the frontend to Anubis, and then have Anubis redirect to the frontend Vite service. Cloud-Front may also work. 
 
 Users may want also want a shortlink in order to share their public inbox. You can use any external or internal URL redirection service as long as it mantains the path parameters in the request and supports prefixing requests. For example, fragen.navy/user123 should be able to redirect to navyfragen.app/profile/user123. As an example you can use something like this: https://github.com/Intellection/docker-redirector. Make sure you set the variable in the frontend as well.
 
