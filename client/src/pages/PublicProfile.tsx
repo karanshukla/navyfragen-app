@@ -11,17 +11,17 @@ import {
   Box,
   Alert,
   Skeleton,
+  Tooltip,
+  CopyButton,
   useComputedColorScheme,
 } from "@mantine/core";
-import { IconSend, IconX, IconWorld, IconLock } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import { IconSend, IconX, IconWorld, IconLock, IconClipboard, IconShare } from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import { useSendMessage } from "../api/messageService";
-import {
-  useResolveHandle,
-  usePublicProfile,
-} from "../api/profileService";
+import { useResolveHandle, usePublicProfile } from "../api/profileService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { WinkMark } from "../components/WinkMark";
 import { parseRichText } from "../utils/parseRichText";
@@ -40,6 +40,7 @@ export default function PublicProfile() {
   const [modalOpened, setModalOpened] = useState(false);
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const askCardRef = useRef<HTMLDivElement>(null);
 
   const {
     data: handleData,
@@ -49,10 +50,8 @@ export default function PublicProfile() {
 
   const did = handleData?.did || null;
 
-  const {
-    data: profileData,
-    isLoading: profileLoading,
-  } = usePublicProfile(did);
+  const { data: profileData, isLoading: profileLoading } =
+    usePublicProfile(did);
 
   const profile = profileData?.profile || null;
 
@@ -144,6 +143,15 @@ export default function PublicProfile() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && profile && askCardRef.current) {
+      const rect = askCardRef.current.getBoundingClientRect();
+      if (rect.bottom > window.innerHeight) {
+        askCardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [isLoading, profile]);
+
   if (handleError) {
     const is404 =
       typeof handleError === "object" &&
@@ -157,8 +165,8 @@ export default function PublicProfile() {
               No Bluesky account found
             </Text>
             <Text>
-              <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check the
-              handle and try again.
+              <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check
+              the handle and try again.
             </Text>
           </Paper>
         </Container>
@@ -189,7 +197,11 @@ export default function PublicProfile() {
         <Skeleton height={28} width={180} radius={999} mb="sm" />
 
         {/* Profile card skeleton */}
-        <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
+        <Paper
+          mb="lg"
+          withBorder
+          style={{ borderRadius: 16, overflow: "hidden" }}
+        >
           {/* Banner */}
           <Skeleton height={160} radius={0} />
           <Box style={{ padding: "0 24px 18px", position: "relative" }}>
@@ -198,7 +210,12 @@ export default function PublicProfile() {
               circle
               height={84}
               width={84}
-              style={{ position: "absolute", top: -42, left: 16, border: "4px solid var(--mantine-color-body)" }}
+              style={{
+                position: "absolute",
+                top: -42,
+                left: 16,
+                border: "4px solid var(--mantine-color-body)",
+              }}
             />
             <Group justify="space-between" align="flex-start" pt={52}>
               <Box>
@@ -217,7 +234,8 @@ export default function PublicProfile() {
           style={{
             borderRadius: 18,
             padding: 28,
-            background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
+            background:
+              "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
             border: "2px solid rgba(255,255,255,0.06)",
           }}
         >
@@ -240,8 +258,8 @@ export default function PublicProfile() {
             Not on Navyfragen
           </Text>
           <Text>
-            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up
-            their Navyfragen inbox yet.
+            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set
+            up their Navyfragen inbox yet.
           </Text>
         </Paper>
       </Container>
@@ -272,7 +290,7 @@ export default function PublicProfile() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                background: "var(--mantine-color-default)",
+                background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
                 border: "1px solid var(--mantine-color-default-border)",
                 padding: "6px 12px 6px 10px",
                 borderRadius: 999,
@@ -291,6 +309,59 @@ export default function PublicProfile() {
                 {profile.handle}
               </Text>
             </Box>
+            <Group gap="xs">
+              <CopyButton value={`https://fragen.navy/${profile.handle}`}>
+                {({ copied, copy }) => (
+                  <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
+                    <button
+                      onClick={copy}
+                      style={{
+                        background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+                        border: "1px solid var(--mantine-color-default-border)",
+                        color: "var(--mantine-color-dimmed)",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <IconClipboard size={14} />
+                    </button>
+                  </Tooltip>
+                )}
+              </CopyButton>
+              {navigator.share && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.share({
+                        title: `Send ${profile.displayName || profile.handle} an anonymous message`,
+                        url: `https://fragen.navy/${profile.handle}`,
+                      });
+                    } catch (e) {
+                      if (e instanceof DOMException && e.name === "AbortError") return;
+                      notifications.show({ color: "red", title: "Share failed", message: "Could not share link." });
+                    }
+                  }}
+                  style={{
+                    background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+                    border: "1px solid var(--mantine-color-default-border)",
+                    color: "var(--mantine-color-dimmed)",
+                    padding: "6px 12px",
+                    borderRadius: 999,
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <IconShare size={14} />
+                </button>
+              )}
+            </Group>
           </Group>
 
           {/* Bluesky-style profile card */}
@@ -322,7 +393,13 @@ export default function PublicProfile() {
             </Box>
 
             {/* Profile content below banner */}
-            <Box style={{ padding: "0 24px 18px", position: "relative" }}>
+            <Box
+              style={{
+                padding: "0 24px 18px",
+                position: "relative",
+                background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+              }}
+            >
               {/* Avatar — overlaps the banner */}
               <Avatar
                 src={profile.avatar}
@@ -414,6 +491,7 @@ export default function PublicProfile() {
 
           {/* Ask card */}
           <Paper
+            ref={askCardRef}
             onClick={() => textareaRef.current?.focus()}
             style={{
               borderRadius: 18,
@@ -543,10 +621,6 @@ export default function PublicProfile() {
               padding: "12px 14px",
             }}
           >
-            <IconLock
-              size={16}
-              style={{ marginTop: 2, flexShrink: 0, opacity: 0.5 }}
-            />
             <Text size="xs" c="dimmed">
               Your message will be sent anonymously to the user. They may post
               it publicly on Bluesky, so please don&apos;t share any personal

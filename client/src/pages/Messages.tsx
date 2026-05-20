@@ -50,18 +50,14 @@ interface PageAlert {
   color: "red" | "green" | "blue" | "yellow";
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d`;
-  return new Date(dateStr).toLocaleDateString(undefined, {
+function formatTimestamp(dateStr: string): string {
+  return new Date(dateStr).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
   });
 }
 
@@ -1068,18 +1064,6 @@ export default function Messages() {
                         {/* Timestamp row */}
                         <Group justify="space-between" align="center">
                           <Group gap={8} align="center">
-                            <span
-                              className="nf-pulse-dot"
-                              style={{
-                                display: "inline-block",
-                                width: 8,
-                                height: 8,
-                                borderRadius: "50%",
-                                background: "#FACC15",
-                                boxShadow: "0 0 0 4px rgba(250,204,21,0.25)",
-                                flexShrink: 0,
-                              }}
-                            />
                             <Text
                               style={{
                                 fontFamily: "JetBrains Mono, monospace",
@@ -1089,7 +1073,7 @@ export default function Messages() {
                                 color: "rgba(253,248,255,0.8)",
                               }}
                             >
-                              anonymous · {timeAgo(msg.createdAt)}
+                              {formatTimestamp(msg.createdAt)}
                             </Text>
                           </Group>
                           <ActionIcon
