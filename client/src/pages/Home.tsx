@@ -64,7 +64,7 @@ export default function Home() {
           paddingBottom: "0.05em",
         }}
       >
-        Navyfragen — Anonymous questions and answers on Bluesky
+        Navyfragen - Anonymous questions and answers on Bluesky
       </Title>
       <Text c="dimmed" size="md" mb="xl">
         Receive questions from the web and post the answers directly on Bluesky.

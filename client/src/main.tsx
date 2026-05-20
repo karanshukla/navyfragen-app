@@ -121,7 +121,7 @@ function AppLayout() {
             {isLoading ? (
               <Loader size="sm" />
             ) : isLoggedIn && userProfile ? (
-              <Menu shadow="md" width={200}>
+              <Menu shadow="md" width={200} position="bottom-end">
                 <Menu.Target>
                   <Button
                     variant="transparent"

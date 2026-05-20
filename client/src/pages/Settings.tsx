@@ -114,7 +114,17 @@ export default function Settings() {
 
             {/* Account Overview */}
             <Grid.Col span={12}>
-              <Paper p="lg" radius="md" withBorder>
+              <Paper
+                p="lg"
+                radius="md"
+                withBorder
+                style={{
+                  background:
+                    computedColorScheme === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "#F2EBFF",
+                }}
+              >
                 <Text fw={700} style={{ fontSize: 18, marginBottom: 18 }}>
                   Account Overview
                 </Text>
@@ -128,7 +138,7 @@ export default function Settings() {
                     ))}
                   </SimpleGrid>
                 ) : (
-                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl">
+                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl" style={{ alignItems: "flex-end" }}>
                     <Stack gap={2}>
                       <Text
                         fw={800}
@@ -431,9 +441,11 @@ export default function Settings() {
                   reregister automatically.
                 </Text>
                 <Button
-                  color="red"
                   fullWidth
+                  radius="xl"
+                  fw={700}
                   onClick={() => setDeleteModalOpened(true)}
+                  style={{ background: "#DC2626", color: "#fff" }}
                 >
                   Delete my Data
                 </Button>

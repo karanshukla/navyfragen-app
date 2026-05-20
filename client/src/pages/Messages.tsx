@@ -964,10 +964,10 @@ export default function Messages() {
                         boxShadow: "0 18px 40px -16px rgba(0,0,0,0.4)",
                         padding: 22,
                         transition: "border-color 0.15s ease",
-                        cursor: isExpanded ? "default" : "pointer",
+                        cursor: "pointer",
                       }}
                       onClick={() => {
-                        if (!isExpanded) handlePrepareResponse(msg.tid);
+                        isExpanded ? setRespondingTid(null) : handlePrepareResponse(msg.tid);
                       }}
                     >
                       <Stack gap="sm">
