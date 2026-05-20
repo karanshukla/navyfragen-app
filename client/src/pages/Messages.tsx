@@ -18,7 +18,7 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
-import { IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
 import { useEffect, useState, useRef } from "react";
 
 import { ApiError } from "../api/apiClient";
@@ -324,6 +324,8 @@ export default function Messages() {
   const [respondingTid, setRespondingTid] = useState<string | null>(null);
   const [responseText, setResponseText] = useState<string>("");
   const [focusedCardIndex, setFocusedCardIndex] = useState<number>(-1);
+  const [postingPrefsOpen, setPostingPrefsOpen] = useState(true);
+  const [imageThemeOpen, setImageThemeOpen] = useState(true);
   const messageCardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const computedColorScheme = useComputedColorScheme("light", {
     getInitialValueInEffect: true,
@@ -565,13 +567,18 @@ export default function Messages() {
   }, [messagesData]);
 
   useEffect(() => {
-    const count = messagesData?.messages?.length ?? 0;
+    const messages = messagesData?.messages;
+    const count = messages?.length ?? 0;
     const prev = prevMsgCountRef.current;
     prevMsgCountRef.current = count;
-    if (count > prev && prev > 0 && messagesTopRef.current) {
-      const rect = messagesTopRef.current.getBoundingClientRect();
-      if (rect.top < 0 || rect.top > window.innerHeight) {
-        messagesTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (count > prev && messages?.[0]) {
+      const newestCard = document.getElementById(`message-card-${messages[0].tid}`);
+      const target = newestCard ?? messagesTopRef.current;
+      if (target) {
+        const { top, bottom } = target.getBoundingClientRect();
+        if (top >= window.innerHeight || bottom <= 0) {
+          (messagesTopRef.current ?? target).scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     }
   }, [messagesData]);
@@ -828,7 +835,7 @@ export default function Messages() {
                         : "#F2EBFF",
                   }}
                 >
-                  <details open>
+                  <details open={postingPrefsOpen} onToggle={(e) => setPostingPrefsOpen((e.currentTarget as HTMLDetailsElement).open)}>
                     <summary
                       style={{
                         listStyle: "none",
@@ -840,9 +847,11 @@ export default function Messages() {
                         fontFamily: "Inter",
                         fontWeight: 700,
                         fontSize: 15,
+                        userSelect: "none",
                       }}
                     >
                       <Text
+                        component="span"
                         style={{
                           fontFamily: "Inter",
                           fontWeight: 700,
@@ -851,17 +860,27 @@ export default function Messages() {
                       >
                         Posting preferences
                       </Text>
-                      <Text ff="monospace" size="xs" c="dimmed">
-                        {
-                          [
-                            appendProfileLink,
-                            useGradients,
-                            includeQuestionAsImage,
-                            confirmBeforeDelete,
-                          ].filter(Boolean).length
-                        }{" "}
-                        of 4 on
-                      </Text>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Text component="span" ff="monospace" size="xs" c="dimmed">
+                          {
+                            [
+                              appendProfileLink,
+                              useGradients,
+                              includeQuestionAsImage,
+                              confirmBeforeDelete,
+                            ].filter(Boolean).length
+                          }{" "}
+                          of 4 on
+                        </Text>
+                        <IconChevronDown
+                          size={16}
+                          style={{
+                            transition: "transform 200ms ease",
+                            transform: postingPrefsOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            color: "var(--mantine-color-dimmed)",
+                          }}
+                        />
+                      </span>
                     </summary>
                     <Box
                       px="md"
@@ -928,98 +947,133 @@ export default function Messages() {
                 {/* Image theme visual picker */}
                 <Paper
                   withBorder
-                  p="md"
+                  p={0}
                   style={{
                     borderRadius: 16,
+                    overflow: "hidden",
                     background:
                       computedColorScheme === "dark"
                         ? "rgba(255,255,255,0.06)"
                         : "#F2EBFF",
                   }}
                 >
-                  <Text
-                    style={{
-                      fontFamily: "Inter",
-                      fontWeight: 700,
-                      fontSize: 15,
-                    }}
-                    mb="sm"
-                  >
-                    Image theme
-                  </Text>
-                  <Group grow gap="sm">
-                    {Object.entries(themes).map(([value, label]) => (
-                      <ThemeCard
-                        key={value}
-                        value={value}
-                        label={label as string}
-                        selected={
-                          settingsLoading
-                            ? value === "default"
-                            : (userSettings?.imageTheme || "default") === value
-                        }
-                        onClick={() => {
-                          if (!settingsLoading && !updateSettings.isPending) {
-                            updateSettings.mutate({
-                              imageTheme: value,
-                              pdsSyncEnabled: Boolean(
-                                userSettings?.pdsSyncEnabled,
-                              ),
-                            });
-                          }
+                  <details open={imageThemeOpen} onToggle={(e) => setImageThemeOpen((e.currentTarget as HTMLDetailsElement).open)}>
+                    <summary
+                      style={{
+                        listStyle: "none",
+                        cursor: "pointer",
+                        padding: "14px 20px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontFamily: "Inter",
+                        fontWeight: 700,
+                        fontSize: 15,
+                        userSelect: "none",
+                      }}
+                    >
+                      <Text
+                        component="span"
+                        style={{
+                          fontFamily: "Inter",
+                          fontWeight: 700,
+                          fontSize: 15,
+                        }}
+                      >
+                        Image theme &amp; shortcuts
+                      </Text>
+                      <IconChevronDown
+                        size={16}
+                        style={{
+                          transition: "transform 200ms ease",
+                          transform: imageThemeOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          color: "var(--mantine-color-dimmed)",
                         }}
                       />
-                    ))}
-                  </Group>
-
-                  <Box
-                    mt="md"
-                    pt="md"
-                    style={{
-                      borderTop:
-                        "1px solid var(--mantine-color-default-border)",
-                    }}
-                  >
-                    <Text
-                      ff="monospace"
-                      fw={700}
-                      tt="uppercase"
-                      c="dimmed"
-                      mb="xs"
-                      style={{ fontSize: 10, letterSpacing: "0.1em" }}
+                    </summary>
+                    <Box
+                      px="md"
+                      pb="md"
+                      style={{
+                        borderTop:
+                          "1px solid var(--mantine-color-default-border)",
+                      }}
                     >
-                      Keyboard Shortcuts
-                    </Text>
-                    <Stack gap={2}>
-                      {[
-                        { label: "Focus / cycle cards", hint: "Alt+R" },
-                        { label: "Navigate cards", hint: "↑ / ↓" },
-                        { label: "Close expanded card", hint: "Esc" },
-                      ].map(({ label, hint }) => (
-                        <Box
-                          key={label}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            padding: "3px 0",
-                          }}
-                        >
-                          <Text style={{ fontFamily: "Inter", fontSize: 12 }}>
-                            {label}
-                          </Text>
-                          <Text
-                            style={{
-                              fontFamily: "JetBrains Mono, monospace",
-                              fontSize: 11,
-                              color: "var(--mantine-color-dimmed)",
+                      <Group grow gap="sm" mt="sm">
+                        {Object.entries(themes).map(([value, label]) => (
+                          <ThemeCard
+                            key={value}
+                            value={value}
+                            label={label as string}
+                            selected={
+                              settingsLoading
+                                ? value === "default"
+                                : (userSettings?.imageTheme || "default") === value
+                            }
+                            onClick={() => {
+                              if (!settingsLoading && !updateSettings.isPending) {
+                                updateSettings.mutate({
+                                  imageTheme: value,
+                                  pdsSyncEnabled: Boolean(
+                                    userSettings?.pdsSyncEnabled,
+                                  ),
+                                });
+                              }
                             }}
-                          >
-                            {hint.replace("Alt", "Alt/⌘")}
-                          </Text>
-                        </Box>
-                      ))}
-                    </Stack>
-                  </Box>
+                          />
+                        ))}
+                      </Group>
+
+                      <Box
+                        mt="md"
+                        pt="md"
+                        style={{
+                          borderTop:
+                            "1px solid var(--mantine-color-default-border)",
+                        }}
+                      >
+                        <Text
+                          ff="monospace"
+                          fw={700}
+                          tt="uppercase"
+                          c="dimmed"
+                          mb="xs"
+                          style={{ fontSize: 10, letterSpacing: "0.1em" }}
+                        >
+                          Keyboard Shortcuts
+                        </Text>
+                        <Stack gap={2}>
+                          {[
+                            { label: "Focus / cycle cards", hint: "Alt+R" },
+                            { label: "Navigate cards", hint: "↑ / ↓" },
+                            { label: "Close expanded card", hint: "Esc" },
+                          ].map(({ label, hint }) => (
+                            <Box
+                              key={label}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                padding: "3px 0",
+                              }}
+                            >
+                              <Text style={{ fontFamily: "Inter", fontSize: 12 }}>
+                                {label}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontFamily: "JetBrains Mono, monospace",
+                                  fontSize: 11,
+                                  color: "var(--mantine-color-dimmed)",
+                                }}
+                              >
+                                {hint.replace("Alt", "Alt/⌘")}
+                              </Text>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Box>
+                    </Box>
+                  </details>
                 </Paper>
               </SimpleGrid>
 

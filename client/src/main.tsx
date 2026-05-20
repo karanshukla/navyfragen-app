@@ -125,7 +125,7 @@ function AppLayout() {
             ) : isLoggedIn && userProfile ? (
               <Menu
                 shadow="md"
-                width={240}
+                width={180}
                 position="bottom-end"
                 middlewares={{ shift: true, flip: true }}
                 styles={{ item: { padding: "12px 16px", fontSize: "var(--mantine-font-size-sm)" } }}
