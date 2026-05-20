@@ -569,7 +569,7 @@ export default function Messages() {
     const count = messages?.length ?? 0;
     const prev = prevMsgCountRef.current;
     prevMsgCountRef.current = count;
-    if (count > prev && prev > 0 && messages?.[0]) {
+    if (count > prev && messages?.[0]) {
       const newestCard = document.getElementById(`message-card-${messages[0].tid}`);
       const target = newestCard ?? messagesTopRef.current;
       if (target) {
