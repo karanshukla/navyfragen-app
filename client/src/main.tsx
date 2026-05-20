@@ -123,7 +123,13 @@ function AppLayout() {
             {isLoading ? (
               <Loader size="sm" />
             ) : isLoggedIn && userProfile ? (
-              <Menu shadow="md" width={200} position="bottom-end">
+              <Menu
+                shadow="md"
+                width={240}
+                position="bottom-end"
+                middlewares={{ shift: true, flip: true }}
+                styles={{ item: { padding: "12px 16px", fontSize: "var(--mantine-font-size-sm)" } }}
+              >
                 <Menu.Target>
                   <Button
                     variant="transparent"
@@ -157,7 +163,7 @@ function AppLayout() {
                     component={Link}
                     to={`/profile/${userProfile.handle}`}
                     onClick={() => setOpened(false)}
-                    leftSection={<IconUser size="1rem" stroke={1.5} />}
+                    leftSection={<IconUser size="1.2rem" stroke={1.5} />}
                   >
                     View Profile
                   </Menu.Item>
@@ -172,7 +178,7 @@ function AppLayout() {
                       }
                       setOpened(false);
                     }}
-                    leftSection={<IconLogout size="1rem" stroke={1.5} />}
+                    leftSection={<IconLogout size="1.2rem" stroke={1.5} />}
                   >
                     Logout
                   </Menu.Item>

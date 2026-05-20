@@ -351,6 +351,8 @@ export default function Messages() {
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesTopRef = useRef<HTMLDivElement>(null);
+  const prevMsgCountRef = useRef<number>(0);
   const [deleteModalOpened, setDeleteModalOpened] = useState<boolean>(false);
   const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
     null,
@@ -559,6 +561,18 @@ export default function Messages() {
   useEffect(() => {
     if (messagesData?.messages) {
       messageCardRefs.current = messagesData.messages.map(() => null);
+    }
+  }, [messagesData]);
+
+  useEffect(() => {
+    const count = messagesData?.messages?.length ?? 0;
+    const prev = prevMsgCountRef.current;
+    prevMsgCountRef.current = count;
+    if (count > prev && prev > 0 && messagesTopRef.current) {
+      const rect = messagesTopRef.current.getBoundingClientRect();
+      if (rect.top < 0 || rect.top > window.innerHeight) {
+        messagesTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
   }, [messagesData]);
 
@@ -1010,6 +1024,7 @@ export default function Messages() {
               </SimpleGrid>
 
               {/* ── Question cards grid ── */}
+              <div ref={messagesTopRef} />
               <SimpleGrid
                 cols={{ base: 1, sm: 2 }}
                 spacing="md"
