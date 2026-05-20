@@ -13,7 +13,6 @@ import {
   Center,
   Box,
   Alert,
-  Badge,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import {
@@ -232,17 +231,26 @@ export default function PublicProfile() {
 
       {profile ? (
         <>
-          {/* URL breadcrumb pill + answered counter */}
+          {/* URL breadcrumb pill */}
           <Group justify="space-between" align="center" mb="sm">
-            <Badge
-              variant="outline"
-              color="royal"
-              radius="xl"
-              leftSection={<IconWorld size={12} />}
-              style={{ fontFamily: "JetBrains Mono, monospace", textTransform: "none", fontWeight: 500 }}
+            <Box
+              component="span"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "var(--mantine-color-default)",
+                border: "1px solid var(--mantine-color-default-border)",
+                padding: "6px 12px 6px 10px",
+                borderRadius: 999,
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 12,
+                color: "var(--mantine-color-dimmed)",
+              }}
             >
-              fragen.navy/{profile.handle}
-            </Badge>
+              <IconWorld size={12} />
+              fragen.navy/<Text component="span" inherit style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}>{profile.handle}</Text>
+            </Box>
           </Group>
 
           {/* Bluesky-style profile card */}
@@ -305,7 +313,11 @@ export default function PublicProfile() {
                   variant="outline"
                   size="xs"
                   radius="xl"
-                  style={{ flexShrink: 0 }}
+                  style={{
+                    flexShrink: 0,
+                    borderColor: "var(--mantine-color-default-border)",
+                    color: "var(--mantine-color-text)",
+                  }}
                   leftSection={
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M18 2h3v3"/><path d="M21 2L10 13"/><path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6"/>

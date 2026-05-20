@@ -221,8 +221,8 @@ export function Navigation({ onLinkClick, isLoggedIn, handle }: NavigationProps)
               style={{
                 padding: 12,
                 borderRadius: 12,
-                background: "var(--mantine-color-violet-0, rgba(139,92,246,0.10))",
-                border: "1px solid var(--mantine-color-violet-2, rgba(139,92,246,0.25))",
+                background: "var(--nf-promo-bg)",
+                border: "1px solid var(--nf-promo-border)",
               }}
             >
               <Text fw={700} size="sm">Spread the word</Text>

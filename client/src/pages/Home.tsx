@@ -12,6 +12,7 @@ import {
   SimpleGrid,
   Group,
   Anchor,
+  useComputedColorScheme,
 } from "@mantine/core";
 import { IconButterfly, IconBrandGithub } from "@tabler/icons-react";
 import { useSession } from "../api/authService";
@@ -21,10 +22,14 @@ import { WinkMark } from "../components/WinkMark";
 
 const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
   <Box
-    style={{ display: "flex", justifyContent: "space-between", width: "100%" }}
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      padding: "5px 0",
+    }}
   >
-    <Text size="xs">{label}</Text>
-    <Text size="xs" c="dimmed">
+    <Text size="sm">{label}</Text>
+    <Text size="sm" c="dimmed" ff="monospace">
       {hint.replace("Alt", "Alt/Cmd")}
     </Text>
   </Box>
@@ -34,6 +39,9 @@ export default function Home() {
   const { data: sessionData, isLoading } = useSession();
   const syncMessagesMutation = useSyncMessages();
   const isLoggedIn = !!sessionData?.isLoggedIn;
+  const computedColorScheme = useComputedColorScheme("light", {
+    getInitialValueInEffect: true,
+  });
 
   React.useEffect(() => {
     if (sessionData?.did) {
@@ -48,7 +56,8 @@ export default function Home() {
         size="h2"
         mb={6}
         style={{
-          background: "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
+          background:
+            "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           backgroundClip: "text",
@@ -77,7 +86,14 @@ export default function Home() {
           p="xl"
           radius="lg"
           withBorder
-          style={{ position: "relative", overflow: "hidden" }}
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            background:
+              computedColorScheme === "dark"
+                ? "rgba(255,255,255,0.06)"
+                : "#F2EBFF",
+          }}
         >
           {/* Aurora glow */}
           <Box
@@ -87,7 +103,8 @@ export default function Home() {
               left: 0,
               right: 0,
               bottom: 0,
-              background: "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)",
+              background:
+                "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)",
               pointerEvents: "none",
             }}
           />
@@ -111,7 +128,8 @@ export default function Home() {
                   variant="gradient"
                   gradient={{ from: "royal", to: "purple", deg: 135 }}
                 >
-                  {sessionData.profile.displayName || sessionData.profile.handle}
+                  {sessionData.profile.displayName ||
+                    sessionData.profile.handle}
                 </Text>
                 !
               </Title>
@@ -170,7 +188,17 @@ export default function Home() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="xl">
-        <Paper p="lg" radius="md" withBorder>
+        <Paper
+          p="lg"
+          radius="md"
+          withBorder
+          style={{
+            background:
+              computedColorScheme === "dark"
+                ? "rgba(255,255,255,0.06)"
+                : "#F2EBFF",
+          }}
+        >
           <Text
             size="sm"
             fw={600}
@@ -197,7 +225,17 @@ export default function Home() {
           </Stack>
         </Paper>
 
-        <Paper p="lg" radius="md" withBorder>
+        <Paper
+          p="lg"
+          radius="md"
+          withBorder
+          style={{
+            background:
+              computedColorScheme === "dark"
+                ? "rgba(255,255,255,0.06)"
+                : "#F2EBFF",
+          }}
+        >
           <Text
             size="sm"
             fw={600}

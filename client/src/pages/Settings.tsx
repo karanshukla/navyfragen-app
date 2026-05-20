@@ -14,6 +14,7 @@ import {
   Notification,
   Select,
   Stack,
+  useComputedColorScheme,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { ConfirmationModal } from "../components/ConfirmationModal";
@@ -29,30 +30,12 @@ import { useInstallPrompt } from "../components/InstallPromptContext";
 import { themes } from "../lib/themes";
 import { useBotFollow } from "../api/profileService";
 
-const cardStyle: React.CSSProperties = {
-  height: "100%",
-  display: "flex",
-  flexDirection: "column",
-};
-
-const cardTitleStyle: React.CSSProperties = {
-  fontFamily: "Inter, sans-serif",
-  fontWeight: 700,
-  fontSize: 18,
-  marginBottom: 10,
-};
-
-const cardBodyStyle: React.CSSProperties = {
-  fontSize: 13,
-  lineHeight: 1.5,
-  flexGrow: 1,
-  marginBottom: 16,
-};
-
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
-
+  const computedColorScheme = useComputedColorScheme("light", {
+    getInitialValueInEffect: true,
+  });
   const { data: session, isLoading: sessionLoading } = useSession();
   const {
     data: userSettings,
@@ -75,6 +58,28 @@ export default function Settings() {
   const { data: botFollowData, isLoading: botFollowLoading } = useBotFollow(
     Boolean(session?.isLoggedIn),
   );
+
+  const cardStyle: React.CSSProperties = {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    background:
+      computedColorScheme === "dark" ? "rgba(255,255,255,0.06)" : "#F2EBFF",
+  };
+
+  const cardTitleStyle: React.CSSProperties = {
+    fontFamily: "Inter, sans-serif",
+    fontWeight: 700,
+    fontSize: 18,
+    marginBottom: 10,
+  };
+
+  const cardBodyStyle: React.CSSProperties = {
+    fontSize: 13,
+    lineHeight: 1.5,
+    flexGrow: 1,
+    marginBottom: 16,
+  };
 
   const handleInstallClick = async () => {
     if (!installPrompt) return;
@@ -129,11 +134,21 @@ export default function Settings() {
                         fw={800}
                         variant="gradient"
                         gradient={{ from: "royal", to: "purple", deg: 135 }}
-                        style={{ fontSize: 32, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+                        style={{
+                          fontSize: 32,
+                          letterSpacing: "-0.02em",
+                          lineHeight: 1.1,
+                        }}
                       >
                         {userStats?.messageCount ?? "—"}
                       </Text>
-                      <Text ff="monospace" size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.08em" }}>
+                      <Text
+                        ff="monospace"
+                        size="xs"
+                        c="dimmed"
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.08em" }}
+                      >
                         Messages in inbox
                       </Text>
                     </Stack>
@@ -142,33 +157,69 @@ export default function Settings() {
                         fw={800}
                         variant="gradient"
                         gradient={{ from: "royal", to: "purple", deg: 135 }}
-                        style={{ fontSize: 32, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+                        style={{
+                          fontSize: 32,
+                          letterSpacing: "-0.02em",
+                          lineHeight: 1.1,
+                        }}
                       >
                         {pdsInfo?.recordCount ?? "—"}
                       </Text>
-                      <Text ff="monospace" size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.08em" }}>
+                      <Text
+                        ff="monospace"
+                        size="xs"
+                        c="dimmed"
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.08em" }}
+                      >
                         Answers on PDS
                       </Text>
                     </Stack>
                     <Stack gap={2}>
-                      <Text fw={600} ff="monospace" style={{ fontSize: 15, lineHeight: 1.2 }}>
+                      <Text
+                        fw={600}
+                        ff="monospace"
+                        style={{ fontSize: 15, lineHeight: 1.2 }}
+                      >
                         {userStats?.memberSince
-                          ? new Date(userStats.memberSince).toLocaleDateString(undefined, {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })
+                          ? new Date(userStats.memberSince).toLocaleDateString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )
                           : "—"}
                       </Text>
-                      <Text ff="monospace" size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.08em" }}>
+                      <Text
+                        ff="monospace"
+                        size="xs"
+                        c="dimmed"
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.08em" }}
+                      >
                         Active since
                       </Text>
                     </Stack>
                     <Stack gap={2} style={{ minWidth: 0 }}>
-                      <Text fw={600} ff="monospace" truncate style={{ fontSize: 15, lineHeight: 1.2 }}>
-                        {pdsInfo?.pdsUrl ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "") : "—"}
+                      <Text
+                        fw={600}
+                        ff="monospace"
+                        truncate
+                        style={{ fontSize: 15, lineHeight: 1.2 }}
+                      >
+                        {pdsInfo?.pdsUrl
+                          ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "")
+                          : "—"}
                       </Text>
-                      <Text ff="monospace" size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.08em" }}>
+                      <Text
+                        ff="monospace"
+                        size="xs"
+                        c="dimmed"
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.08em" }}
+                      >
                         PDS
                       </Text>
                     </Stack>
@@ -178,20 +229,25 @@ export default function Settings() {
             </Grid.Col>
 
             {/* Install Application */}
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
               <Paper p="md" radius="md" withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Install Application</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
                   Install the app for faster access. Works with almost any
                   device you own, including tablets and laptops. Uninstall the
-                  app anytime. On iOS or Android, it will be added to your
-                  home screen and run with the same browser.
+                  app anytime. On iOS or Android, it will be added to your home
+                  screen and run with the same browser.
                 </Text>
                 <Button
                   onClick={handleInstallClick}
                   fullWidth
                   disabled={!installPrompt}
-                  title={!installPrompt ? "Refresh the page to enable install" : ""}
+                  title={
+                    !installPrompt ? "Refresh the page to enable install" : ""
+                  }
                   variant="gradient"
                   gradient={{ from: "royal", to: "purple", deg: 135 }}
                 >
@@ -201,25 +257,38 @@ export default function Settings() {
             </Grid.Col>
 
             {/* PDS Sync */}
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
               <Paper p="md" radius="md" withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>PDS Sync</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
-                  By default, Navyfragen syncs your anonymous messages with
-                  your Bluesky PDS (Personal Data Server). Disable this if you
-                  wish to keep your data on Navyfragen's servers. Will not
-                  change your ability to post to Bluesky directly.
+                  By default, Navyfragen syncs your anonymous messages with your
+                  Bluesky PDS (Personal Data Server). Disable this if you wish
+                  to keep your data on Navyfragen's servers. Will not change
+                  your ability to post to Bluesky directly.
                 </Text>
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
-                  <Alert color="red" title="Failed to load settings" withCloseButton={false}>
-                    <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
+                  <Alert
+                    color="red"
+                    title="Failed to load settings"
+                    withCloseButton={false}
+                  >
+                    <Button
+                      size="xs"
+                      onClick={() => refetchSettings()}
+                      variant="light"
+                      mt="xs"
+                    >
                       Retry
                     </Button>
                   </Alert>
                 ) : (
                   <Switch
+                    size="lg"
                     label="Enable PDS Sync"
                     checked={Boolean(userSettings?.pdsSyncEnabled)}
                     onChange={(event) => {
@@ -240,26 +309,41 @@ export default function Settings() {
             </Grid.Col>
 
             {/* Image Theme */}
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
               <Paper p="md" radius="md" withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Image Theme</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
-                  Select a theme for the generated question images. By
-                  default, Navyfragen will use a blue gradient similar to the
-                  NGL Application. Note that this setting is not retroactive,
-                  and will only apply to future responses.
+                  Select a theme for the generated question images. By default,
+                  Navyfragen will use a blue gradient similar to the NGL
+                  Application. Note that this setting is not retroactive, and
+                  will only apply to future responses.
                 </Text>
                 {settingsLoading ? (
                   <Loader size="sm" />
                 ) : settingsError ? (
-                  <Alert color="red" title="Failed to load settings" withCloseButton={false}>
-                    <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
+                  <Alert
+                    color="red"
+                    title="Failed to load settings"
+                    withCloseButton={false}
+                  >
+                    <Button
+                      size="xs"
+                      onClick={() => refetchSettings()}
+                      variant="light"
+                      mt="xs"
+                    >
                       Retry
                     </Button>
                   </Alert>
                 ) : (
                   <Select
-                    data={Object.entries(themes).map(([value, label]) => ({ value, label }))}
+                    data={Object.entries(themes).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
                     value={userSettings?.imageTheme || "default"}
                     onChange={(value) => {
                       if (value) {
@@ -276,7 +360,10 @@ export default function Settings() {
             </Grid.Col>
 
             {/* Navyfragen Feed */}
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
               <Paper p="md" radius="md" withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Navyfragen Feed</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
@@ -298,19 +385,22 @@ export default function Settings() {
             </Grid.Col>
 
             {/* Daily Notifications */}
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
               <Paper p="md" radius="md" withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Daily Notifications</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
-                  Follow the Navyfragen notification bot on Bluesky to receive
-                  a daily alert when you have new messages in your inbox.
+                  Follow the Navyfragen notification bot on Bluesky to receive a
+                  daily alert when you have new messages in your inbox.
                 </Text>
                 {botFollowLoading ? (
                   <Skeleton height={36} radius="sm" />
                 ) : botFollowData?.following ? (
                   <Alert color="green" title="Notifications enabled">
-                    You are following the notification bot and will receive daily
-                    alerts for new messages.
+                    You are following the notification bot and will receive
+                    daily alerts for new messages.
                   </Alert>
                 ) : (
                   <Button
@@ -328,14 +418,17 @@ export default function Settings() {
             </Grid.Col>
 
             {/* Delete my Data */}
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col
+              span={{ base: 12, md: 6, lg: 4 }}
+              style={{ display: "flex" }}
+            >
               <Paper p="md" radius="md" withBorder style={cardStyle}>
                 <Text style={cardTitleStyle}>Delete my Data</Text>
                 <Text c="dimmed" style={cardBodyStyle}>
-                  Permanently remove all your data from the Navyfragen
-                  servers, and Bluesky PDS. This also disables your inbox so
-                  you will no longer receive messages. You can always log back
-                  in to reregister automatically.
+                  Permanently remove all your data from the Navyfragen servers,
+                  and Bluesky PDS. This also disables your inbox so you will no
+                  longer receive messages. You can always log back in to
+                  reregister automatically.
                 </Text>
                 <Button
                   color="red"

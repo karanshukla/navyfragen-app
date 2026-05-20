@@ -24,8 +24,20 @@
   --nf-ease:     cubic-bezier(.2,.7,.2,1);
   --nf-dur-fast: 120ms;
   --nf-dur-base: 200ms;
+
+  /* Promo card (Spread the word) — light mode */
+  --nf-promo-bg:     #F2EBFF;
+  --nf-promo-border: #E6DDFF;
 }
 
+/* ── Light mode: white cards on cream page background ── */
+[data-mantine-color-scheme="light"] {
+  --mantine-color-body:           #FDF8FF;
+  --mantine-color-default:        #FFFFFF;
+  --mantine-color-default-border: #E6DDFF;
+}
+
+/* ── Dark mode ── */
 [data-mantine-color-scheme="dark"] {
   --nf-bg:         #0B0A24;
   --nf-surface:    #15192B;
@@ -33,6 +45,13 @@
   --nf-text:       var(--nf-paper);
   --nf-text-muted: rgba(253,248,255,0.55);
   --nf-border:     rgba(255,255,255,0.06);
+
+  /* Mantine card/border overrides for dark mode */
+  --mantine-color-default-border: rgba(255,255,255,0.08);
+
+  /* Promo card — dark mode */
+  --nf-promo-bg:     rgba(139,92,246,0.10);
+  --nf-promo-border: rgba(139,92,246,0.25);
 }
 
 /* Delete button hover */
