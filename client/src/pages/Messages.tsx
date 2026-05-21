@@ -1088,7 +1088,6 @@ export default function Messages() {
               <SimpleGrid
                 cols={{ base: 1, sm: 2 }}
                 spacing="md"
-                style={{ alignItems: "start" }}
               >
                 {messagesData?.messages.map((msg: Message, index: number) => {
                   const isExpanded = respondingTid === msg.tid;
@@ -1128,6 +1127,8 @@ export default function Messages() {
                         padding: "8px 20px 20px",
                         transition: "border-color 0.15s ease, box-shadow 0.15s ease",
                         cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
                       }}
                       onClick={() => {
                         if (isExpanded) {
@@ -1137,7 +1138,7 @@ export default function Messages() {
                         }
                       }}
                     >
-                      <Stack gap="sm">
+                      <Stack gap="sm" style={{ flex: 1 }}>
                         {/* Timestamp row */}
                         <Group justify="space-between" align="center">
                           <Group gap={8} align="center">
@@ -1174,22 +1175,25 @@ export default function Messages() {
                         </Group>
 
                         {/* Message text */}
-                        <Text
-                          c="white"
-                          fw={600}
-                          style={
-                            {
-                              fontSize: 20,
-                              lineHeight: 1.35,
-                              wordBreak: "break-word",
-                              whiteSpace: "pre-wrap",
-                              textAlign: "center",
-                              textWrap: "balance",
-                            } as React.CSSProperties
-                          }
-                        >
-                          {msg.message}
-                        </Text>
+                        <Box style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Text
+                            c="white"
+                            fw={600}
+                            style={
+                              {
+                                fontSize: 20,
+                                lineHeight: 1.35,
+                                wordBreak: "break-word",
+                                whiteSpace: "pre-wrap",
+                                textAlign: "center",
+                                textWrap: "balance",
+                                width: "100%",
+                              } as React.CSSProperties
+                            }
+                          >
+                            {msg.message}
+                          </Text>
+                        </Box>
 
                         {/* Action area */}
                         {isExpanded ? (
