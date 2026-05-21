@@ -1,3 +1,19 @@
+/* ── Viewport / PWA ── */
+
+/* dvh: address bar show/hide no longer snaps the layout */
+html {
+  height: 100%;
+}
+body {
+  min-height: 100%;
+  /* Prevent rubber-band overscroll that re-triggers Chrome's address bar logic */
+  overscroll-behavior-y: none;
+}
+/* Mantine defaults to 100vh; 100dvh tracks the visible viewport dynamically */
+.mantine-AppShell-root {
+  min-height: 100dvh;
+}
+
 /* Constrain the mobile navbar to 60% of the viewport width */
 .mantine-AppShell-navbar {
   max-width: 60vw !important;
