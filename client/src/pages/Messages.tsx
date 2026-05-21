@@ -773,17 +773,6 @@ export default function Messages() {
                   };
                   return <ShareButton shareData={sharePayload} />;
                 })()}
-                <Button
-                  onClick={handleAddExampleMessages}
-                  loading={examplesLoading}
-                  size="sm"
-                  radius="xl"
-                  color="sunshine"
-                  variant="filled"
-                  style={{ color: "var(--nf-midnight)", fontWeight: 700 }}
-                >
-                  Add Examples
-                </Button>
               </Group>
             </Group>
           </Paper>
@@ -1249,8 +1238,21 @@ export default function Messages() {
             </>
           ) : (
             <Alert color="royal" title="No messages">
-              You don&apos;t have any messages yet. Share your profile link to
-              receive anonymous questions.
+              <Text fz="sm" mb="sm">
+                You don&apos;t have any messages yet. Share your profile link to
+                receive anonymous questions.
+              </Text>
+              <Button
+                onClick={handleAddExampleMessages}
+                loading={examplesLoading}
+                size="xs"
+                radius="xl"
+                color="sunshine"
+                variant="filled"
+                style={{ color: "var(--nf-midnight)", fontWeight: 700 }}
+              >
+                Add example messages
+              </Button>
             </Alert>
           )}
         </>
