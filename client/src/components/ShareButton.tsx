@@ -1,5 +1,7 @@
+import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconShare } from "@tabler/icons-react";
+import React from "react";
 
 interface ShareButtonProps {
   shareData: {
@@ -51,25 +53,16 @@ const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
   };
 
   return (
-    <button
+    <Button
       onClick={handleClick}
-      style={{
-        background: "rgba(255,255,255,0.15)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        color: "#FDF8FF",
-        padding: "8px 14px",
-        borderRadius: 999,
-        fontFamily: "Inter",
-        fontWeight: 600,
-        fontSize: 13,
-        cursor: "pointer",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-      }}
+      size="sm"
+      radius="xl"
+      variant="transparent"
+      leftSection={<IconShare size={14} />}
+      style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", "--button-color": "var(--mantine-white)" } as React.CSSProperties}
     >
-      <IconShare size={14} /> Share
-    </button>
+      Share
+    </Button>
   );
 };
 

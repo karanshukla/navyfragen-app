@@ -16,10 +16,30 @@ import { z } from "zod";
 import { useLogin } from "../api/authService";
 import { WinkMark } from "../components/WinkMark";
 
+// Hoisted to avoid recreating on each render
+const handleSchema = z.string().min(1, "Handle is required").max(64, "Handle too long");
+
+// Styles for inputs rendered on the dark gradient card
+const darkInputStyles = {
+  label: { color: "rgba(253,248,255,0.8)", fontWeight: 600 },
+  input: {
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.15)",
+    color: "var(--mantine-white)",
+  },
+} as const;
+
+const errorNotificationStyles = {
+  root: { background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)" },
+  title: { color: "#FCA5A5" },
+  description: { color: "#FCA5A5" },
+} as const;
+
 export default function Login() {
   const [handle, setHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const location = useLocation();
+  const { mutate: login, isPending } = useLogin();
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -27,9 +47,6 @@ export default function Login() {
       setError("Login failed. Please try again.");
     }
   }, [location]);
-
-  const handleSchema = z.string().min(1, "Handle is required").max(64, "Handle too long");
-  const { mutate: login, isPending } = useLogin();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +78,9 @@ export default function Login() {
         radius="lg"
         p="xl"
         style={{
-          background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: "#FDF8FF",
+          background: "var(--nf-grad-dark)",
+          border: "1px solid var(--mantine-color-default-border)",
+          color: "var(--mantine-white)",
           position: "relative",
           overflow: "hidden",
         }}
@@ -78,16 +95,21 @@ export default function Login() {
             <WinkMark size={60} sparkle style={{ borderRadius: 16 }} />
           </Center>
           <Box ta="center">
-            <Title order={2} style={{ color: "#FDF8FF", fontWeight: 800, fontSize: 24 }}>
+            <Title order={2} c="white" fw={800} fz={24}>
               Log in to Navyfragen
             </Title>
-            <Text size="sm" style={{ color: "rgba(253,248,255,0.65)" }} mt={4}>
+            <Text size="sm" c="white" opacity={0.65} mt={4}>
               Enter your Bluesky handle to continue
             </Text>
           </Box>
 
           {error && (
-            <Notification color="red" withCloseButton onClose={() => setError(null)} styles={{ root: { background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)" }, title: { color: "#FCA5A5" }, description: { color: "#FCA5A5" } }}>
+            <Notification
+              color="red"
+              withCloseButton
+              onClose={() => setError(null)}
+              styles={errorNotificationStyles}
+            >
               {error}
             </Notification>
           )}
@@ -102,14 +124,7 @@ export default function Login() {
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
-              styles={{
-                label: { color: "rgba(253,248,255,0.8)", fontWeight: 600 },
-                input: {
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  color: "#FDF8FF",
-                },
-              }}
+              styles={darkInputStyles}
             />
             <Button
               type="submit"

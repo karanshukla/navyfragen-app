@@ -16,7 +16,7 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconSend, IconX, IconWorld, IconLock, IconClipboard, IconShare } from "@tabler/icons-react";
+import { IconSend, IconX, IconWorld, IconClipboard, IconShare } from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
@@ -24,6 +24,7 @@ import { useSendMessage } from "../api/messageService";
 import { useResolveHandle, usePublicProfile } from "../api/profileService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { WinkMark } from "../components/WinkMark";
+import { ghostBg } from "../styles/tokens";
 import { parseRichText } from "../utils/parseRichText";
 
 const MAX_MESSAGE_LENGTH = 150;
@@ -32,6 +33,30 @@ interface PageAlert {
   title: string;
   message: React.ReactNode;
   color: "red" | "green" | "blue" | "yellow";
+}
+
+// Styles for the ask-card textarea (rendered on a dark gradient background)
+const askCardTextareaStyles = {
+  input: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    color: "#1a1a2e",
+    border: "none",
+  },
+  description: {
+    color: "rgba(255,255,255,0.5)",
+    textAlign: "right" as const,
+  },
+} as const;
+
+// Reusable SVG icon for "open in new tab" links
+function ExternalLinkIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 2h3v3" />
+      <path d="M21 2L10 13" />
+      <path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6" />
+    </svg>
+  );
 }
 
 export default function PublicProfile() {
@@ -49,25 +74,16 @@ export default function PublicProfile() {
   } = useResolveHandle(handle || null);
 
   const did = handleData?.did || null;
-
-  const { data: profileData, isLoading: profileLoading } =
-    usePublicProfile(did);
-
+  const { data: profileData, isLoading: profileLoading } = usePublicProfile(did);
   const profile = profileData?.profile || null;
 
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
-  const isDark =
-    useComputedColorScheme("light", { getInitialValueInEffect: true }) ===
-    "dark";
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   const handleSend = () => {
     setPageAlert(null);
     if (!message.trim()) {
-      setPageAlert({
-        title: "Validation Error",
-        message: "Message cannot be empty.",
-        color: "red",
-      });
+      setPageAlert({ title: "Validation Error", message: "Message cannot be empty.", color: "red" });
       return;
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
@@ -84,11 +100,7 @@ export default function PublicProfile() {
   const handleConfirmSend = () => {
     setPageAlert(null);
     if (!profileData?.profile?.did) {
-      setPageAlert({
-        title: "Error",
-        message: "Cannot send message: User DID not found.",
-        color: "red",
-      });
+      setPageAlert({ title: "Error", message: "Cannot send message: User DID not found.", color: "red" });
       setModalOpened(false);
       return;
     }
@@ -96,21 +108,17 @@ export default function PublicProfile() {
       { recipient: profileData.profile.did, message },
       {
         onSuccess: () => {
-          setPageAlert({
-            title: "Success!",
-            message: "Message sent! Let's go!",
-            color: "green",
-          });
+          setPageAlert({ title: "Success!", message: "Message sent! Let's go!", color: "green" });
           setMessage("");
           setModalOpened(false);
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
+          const e = err as Record<string, unknown>;
           setPageAlert({
             title: "Error",
-            message:
-              err.message ||
-              err.error ||
-              "Failed to send message. Please try again.",
+            message: (typeof e?.message === "string" ? e.message : undefined)
+              ?? (typeof e?.error === "string" ? e.error : undefined)
+              ?? "Failed to send message. Please try again.",
             color: "red",
           });
           setModalOpened(false);
@@ -121,28 +129,16 @@ export default function PublicProfile() {
 
   const isLoading = handleLoading || profileLoading;
 
+  // Scroll textarea into view on mobile when focused
   useEffect(() => {
-    const handleFocus = () => {
-      if (textareaRef.current) {
-        textareaRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    };
-
-    const textareaElement = textareaRef.current;
-    if (textareaElement) {
-      textareaElement.addEventListener("focus", handleFocus);
-    }
-
-    return () => {
-      if (textareaElement) {
-        textareaElement.removeEventListener("focus", handleFocus);
-      }
-    };
+    const el = textareaRef.current;
+    if (!el) return;
+    const handleFocus = () => el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.addEventListener("focus", handleFocus);
+    return () => el.removeEventListener("focus", handleFocus);
   }, []);
 
+  // Scroll the ask card into view once the profile loads
   useEffect(() => {
     if (!isLoading && profile && askCardRef.current) {
       const rect = askCardRef.current.getBoundingClientRect();
@@ -153,37 +149,21 @@ export default function PublicProfile() {
   }, [isLoading, profile]);
 
   if (handleError) {
-    const is404 =
-      typeof handleError === "object" &&
-      handleError !== null &&
-      (handleError as any).status === 404;
-    if (is404) {
-      return (
-        <Container>
-          <Paper p="md" withBorder>
-            <Text c="yellow" fw={700}>
-              No Bluesky account found
-            </Text>
-            <Text>
-              <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check
-              the handle and try again.
-            </Text>
-          </Paper>
-        </Container>
-      );
-    }
+    const errObj = typeof handleError === "object" && handleError !== null ? handleError as unknown as Record<string, unknown> : null;
+    const is404 = errObj !== null && errObj["status"] === 404;
+    const errMessage = errObj !== null && typeof errObj["error"] === "string"
+      ? errObj["error"]
+      : "Failed to resolve handle. The handle may not exist.";
     return (
       <Container>
         <Paper p="md" withBorder>
-          <Text c="red" fw={700}>
-            Error
+          <Text c={is404 ? "yellow" : "red"} fw={700}>
+            {is404 ? "No Bluesky account found" : "Error"}
           </Text>
           <Text>
-            {typeof handleError === "object" &&
-            handleError !== null &&
-            "error" in handleError
-              ? (handleError as any).error
-              : "Failed to resolve handle. The handle may not exist."}
+            {is404
+              ? <><strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check the handle and try again.</>
+              : errMessage}
           </Text>
         </Paper>
       </Container>
@@ -193,29 +173,15 @@ export default function PublicProfile() {
   if (isLoading) {
     return (
       <Container>
-        {/* URL breadcrumb pill skeleton */}
         <Skeleton height={28} width={180} radius={999} mb="sm" />
-
-        {/* Profile card skeleton */}
-        <Paper
-          mb="lg"
-          withBorder
-          style={{ borderRadius: 16, overflow: "hidden" }}
-        >
-          {/* Banner */}
+        <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
           <Skeleton height={160} radius={0} />
           <Box style={{ padding: "0 24px 18px", position: "relative" }}>
-            {/* Avatar overlapping banner */}
             <Skeleton
               circle
               height={84}
               width={84}
-              style={{
-                position: "absolute",
-                top: -42,
-                left: 16,
-                border: "4px solid var(--mantine-color-body)",
-              }}
+              style={{ position: "absolute", top: -42, left: 16, border: "4px solid var(--mantine-color-body)" }}
             />
             <Group justify="space-between" align="flex-start" pt={52}>
               <Box>
@@ -228,15 +194,12 @@ export default function PublicProfile() {
             <Skeleton height={14} mt={6} width="75%" />
           </Box>
         </Paper>
-
-        {/* Ask card skeleton */}
         <Paper
           style={{
             borderRadius: 18,
             padding: 28,
-            background:
-              "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
-            border: "2px solid rgba(255,255,255,0.06)",
+            background: "var(--nf-grad-dark)",
+            border: "2px solid var(--mantine-color-default-border)",
           }}
         >
           <Skeleton height={26} width="70%" mx="auto" mb="lg" />
@@ -254,12 +217,9 @@ export default function PublicProfile() {
     return (
       <Container>
         <Paper p="md" withBorder>
-          <Text c="yellow" fw={700}>
-            Not on Navyfragen
-          </Text>
+          <Text c="yellow" fw={700}>Not on Navyfragen</Text>
           <Text>
-            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set
-            up their Navyfragen inbox yet.
+            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up their Navyfragen inbox yet.
           </Text>
         </Paper>
       </Container>
@@ -282,7 +242,7 @@ export default function PublicProfile() {
 
       {profile ? (
         <>
-          {/* URL breadcrumb pill */}
+          {/* URL breadcrumb row — pill showing fragen.navy/handle + copy/share actions */}
           <Group justify="space-between" align="center" mb="sm">
             <Box
               component="span"
@@ -290,49 +250,46 @@ export default function PublicProfile() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+                background: ghostBg(isDark),
                 border: "1px solid var(--mantine-color-default-border)",
                 padding: "6px 12px 6px 10px",
                 borderRadius: 999,
-                fontFamily: "JetBrains Mono, monospace",
+                fontFamily: "var(--nf-font-mono)",
                 fontSize: 12,
                 color: "var(--mantine-color-dimmed)",
               }}
             >
               <IconWorld size={12} />
               fragen.navy/
-              <Text
-                component="span"
-                inherit
-                style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}
-              >
+              <Text component="span" inherit style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}>
                 {profile.handle}
               </Text>
             </Box>
+
             <Group gap="xs">
               <CopyButton value={`https://fragen.navy/${profile.handle}`}>
                 {({ copied, copy }) => (
                   <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
-                    <button
+                    <ActionIcon
                       onClick={copy}
+                      variant="subtle"
+                      radius="xl"
+                      size="md"
+                      aria-label="Copy profile link"
                       style={{
-                        background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+                        background: ghostBg(isDark),
                         border: "1px solid var(--mantine-color-default-border)",
                         color: "var(--mantine-color-dimmed)",
-                        padding: "6px 8px",
-                        borderRadius: 999,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
                       }}
                     >
                       <IconClipboard size={14} />
-                    </button>
+                    </ActionIcon>
                   </Tooltip>
                 )}
               </CopyButton>
+
               {navigator.share && (
-                <button
+                <ActionIcon
                   onClick={async () => {
                     try {
                       await navigator.share({
@@ -344,98 +301,67 @@ export default function PublicProfile() {
                       notifications.show({ color: "red", title: "Share failed", message: "Could not share link." });
                     }
                   }}
+                  variant="subtle"
+                  radius="xl"
+                  size="md"
+                  aria-label="Share profile link"
                   style={{
-                    background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+                    background: ghostBg(isDark),
                     border: "1px solid var(--mantine-color-default-border)",
                     color: "var(--mantine-color-dimmed)",
                     padding: "6px 12px",
-                    borderRadius: 999,
-                    fontFamily: "JetBrains Mono, monospace",
+                    fontFamily: "var(--nf-font-mono)",
                     fontSize: 12,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
                   }}
                 >
                   <IconShare size={14} />
-                </button>
+                </ActionIcon>
               )}
             </Group>
           </Group>
 
           {/* Bluesky-style profile card */}
-          <Paper
-            mb="lg"
-            withBorder
-            style={{ borderRadius: 16, overflow: "hidden" }}
-          >
-            {/* Banner */}
+          <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
             <Box
               style={{
                 height: 160,
                 background: profile.banner
                   ? `url(${profile.banner}) center/cover no-repeat`
-                  : "linear-gradient(115deg, #1E1B4B 0%, #3B2E78 45%, #8B5CF6 100%)",
+                  : "var(--nf-grad-dark)",
                 position: "relative",
               }}
             >
-              {/* Subtle overlay on banners for readability */}
+              {/* Subtle overlay on custom banners for readability */}
               {profile.banner && (
-                <Box
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "rgba(0,0,0,0.2)",
-                  }}
-                />
+                <Box style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.2)" }} />
               )}
             </Box>
 
-            {/* Profile content below banner */}
             <Box
               style={{
                 padding: "0 24px 18px",
                 position: "relative",
-                background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
+                background: ghostBg(isDark),
               }}
             >
-              {/* Avatar — overlaps the banner */}
+              {/* Avatar overlapping the banner */}
               <Avatar
                 src={profile.avatar}
                 alt={profile.displayName || profile.handle || "User"}
                 size={84}
                 radius="xl"
-                style={{
-                  border: "4px solid var(--mantine-color-body)",
-                  position: "absolute",
-                  top: -42,
-                  left: 16,
-                }}
+                style={{ border: "4px solid var(--mantine-color-body)", position: "absolute", top: -42, left: 16 }}
               >
                 <WinkMark size={60} sparkle={false} aria-hidden />
               </Avatar>
 
-              {/* Name row — padded to clear the avatar */}
+              {/* Name row — top-padded to clear the overlapping avatar */}
               <Group justify="space-between" align="flex-start" pt={48}>
                 <Box>
-                  <Text
-                    style={{
-                      fontFamily: "Inter",
-                      fontWeight: 800,
-                      fontSize: 24,
-                      letterSpacing: "-0.02em",
-                      lineHeight: 1.1,
-                    }}
-                  >
+                  <Text fw={800} fz={24} style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                     {profile.displayName}
                   </Text>
-                  <Text
-                    ff="monospace"
-                    c="dimmed"
-                    mt={2}
-                    style={{ fontSize: 13 }}
-                  >
+                  <Text ff="monospace" c="dimmed" mt={2} fz={13}>
                     @{profile.handle}
                   </Text>
                 </Box>
@@ -447,42 +373,15 @@ export default function PublicProfile() {
                   variant="outline"
                   size="xs"
                   radius="xl"
-                  style={{
-                    flexShrink: 0,
-                    borderColor: "var(--mantine-color-default-border)",
-                    color: "var(--mantine-color-text)",
-                  }}
-                  leftSection={
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M18 2h3v3" />
-                      <path d="M21 2L10 13" />
-                      <path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6" />
-                    </svg>
-                  }
+                  style={{ flexShrink: 0, borderColor: "var(--mantine-color-default-border)", color: "var(--mantine-color-text)" }}
+                  leftSection={<ExternalLinkIcon />}
                 >
                   View on Bluesky
                 </Button>
               </Group>
 
               {profile.description && (
-                <Text
-                  mt="sm"
-                  style={{
-                    fontSize: 14,
-                    lineHeight: 1.5,
-                    wordBreak: "break-word",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
+                <Text mt="sm" fz={14} style={{ lineHeight: 1.5, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
                   {parseRichText(profile.description)}
                 </Text>
               )}
@@ -496,38 +395,25 @@ export default function PublicProfile() {
             style={{
               borderRadius: 18,
               padding: 28,
-              background:
-                "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
-              border: "2px solid rgba(255,255,255,0.06)",
+              background: "var(--nf-grad-dark)",
+              border: "2px solid var(--mantine-color-default-border)",
               cursor: "text",
               position: "relative",
               overflow: "hidden",
             }}
           >
             {/* WinkMark watermark */}
-            <Box
-              style={{
-                position: "absolute",
-                right: -30,
-                top: -30,
-                opacity: 0.12,
-                pointerEvents: "none",
-              }}
-            >
+            <Box style={{ position: "absolute", right: -30, top: -30, opacity: 0.12, pointerEvents: "none" }}>
               <WinkMark size={220} sparkle={false} aria-hidden />
             </Box>
+
             <Text
               fw={700}
-              size="lg"
               mb="lg"
               c="white"
               ta="center"
-              style={{
-                position: "relative",
-                fontFamily: "Inter",
-                fontSize: 22,
-                letterSpacing: "-0.01em",
-              }}
+              fz={22}
+              style={{ position: "relative", letterSpacing: "-0.01em" }}
             >
               Send {profile.displayName || profile.handle} an anonymous message
             </Text>
@@ -549,10 +435,7 @@ export default function PublicProfile() {
                 description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
                 onKeyDown={(e) => {
                   if (
-                    (e.key === "Enter" &&
-                      !e.shiftKey &&
-                      !e.altKey &&
-                      !e.metaKey) ||
+                    (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey) ||
                     (e.key === "Enter" && e.ctrlKey)
                   ) {
                     e.preventDefault();
@@ -560,24 +443,11 @@ export default function PublicProfile() {
                   }
                 }}
                 radius="md"
-                styles={{
-                  input: {
-                    backgroundColor: "rgba(255,255,255,0.95)",
-                    color: "#1a1a2e",
-                    border: "none",
-                  },
-                  description: {
-                    color: "rgba(255,255,255,0.5)",
-                    textAlign: "right",
-                  },
-                }}
+                styles={askCardTextareaStyles}
               />
               <Group justify="flex-end" gap="xs">
                 <ActionIcon
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMessage("");
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setMessage(""); }}
                   variant="subtle"
                   color="white"
                   size="lg"
@@ -586,19 +456,16 @@ export default function PublicProfile() {
                 >
                   <IconX size={18} />
                 </ActionIcon>
-                {/* Sunshine Send button */}
                 <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSend();
-                  }}
+                  onClick={(e) => { e.stopPropagation(); handleSend(); }}
                   loading={sendLoading}
                   radius="xl"
                   leftSection={<IconSend size={16} />}
+                  color="sunshine"
+                  variant="filled"
                   style={{
-                    background: "#FACC15",
-                    color: "#1E1B4B",
-                    fontFamily: "JetBrains Mono, monospace",
+                    color: "var(--nf-midnight)",
+                    fontFamily: "var(--nf-font-mono)",
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
@@ -610,21 +477,16 @@ export default function PublicProfile() {
             </Stack>
           </Paper>
 
-          {/* Lock icon disclaimer */}
+          {/* Anonymity disclaimer */}
           <Group
             gap="xs"
             mt="md"
             align="flex-start"
-            style={{
-              background: isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF",
-              borderRadius: 12,
-              padding: "12px 14px",
-            }}
+            style={{ background: ghostBg(isDark), borderRadius: 12, padding: "12px 14px" }}
           >
             <Text size="xs" c="dimmed">
-              Your message will be sent anonymously to the user. They may post
-              it publicly on Bluesky, so please don&apos;t share any personal
-              information or passwords. Be curious, but respectful and kind!
+              Your message will be sent anonymously to the user. They may post it publicly on Bluesky,
+              so please don&apos;t share any personal information or passwords. Be curious, but respectful and kind!
             </Text>
           </Group>
 
@@ -640,9 +502,7 @@ export default function PublicProfile() {
         </>
       ) : (
         <Paper p="md" withBorder>
-          <Text c="red" fw={700}>
-            Error
-          </Text>
+          <Text c="red" fw={700}>Error</Text>
           <Text>Failed to load profile information.</Text>
         </Paper>
       )}

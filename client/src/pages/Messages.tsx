@@ -19,7 +19,12 @@ import {
   Collapse,
 } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
-import { IconChevronDown, IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconClipboard,
+  IconSend2,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useEffect, useState, useRef } from "react";
 
 import { ApiError } from "../api/apiClient";
@@ -36,8 +41,12 @@ import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
 import { WinkMark } from "../components/WinkMark";
 import { themes } from "../lib/themes";
+import { surfaceBg } from "../styles/tokens";
 
-
+// Styles for the reply textarea inside the response box (white card on dark background)
+const replyTextareaStyles = {
+  input: { background: "transparent", color: "var(--nf-midnight)", border: "none", padding: 0 },
+} as const;
 
 const shortlinkurl =
   import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
@@ -68,7 +77,7 @@ function CharRing({ count, limit }: { count: number; limit: number }) {
   const circ = 2 * Math.PI * r;
   const pct = Math.min(count / limit, 1);
   const danger = count > limit * 0.9;
-  const color = danger ? "#FACC15" : "#3B5BFF";
+  const color = danger ? "var(--nf-sunshine)" : "var(--nf-royal)";
   return (
     <svg width={22} height={22} viewBox="0 0 22 22" style={{ flexShrink: 0 }}>
       <circle
@@ -76,7 +85,7 @@ function CharRing({ count, limit }: { count: number; limit: number }) {
         cy={11}
         r={r}
         fill="none"
-        stroke="rgba(253,248,255,0.15)"
+        stroke="rgba(253,248,255,0.15)" /* track */
         strokeWidth={2.5}
       />
       <circle
@@ -112,8 +121,7 @@ function ThemeCard({
       return (
         <div
           style={{
-            background:
-              "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%)",
+            background: "var(--nf-grad-dark)",
             height: "100%",
             borderRadius: 5,
             display: "flex",
@@ -328,9 +336,7 @@ export default function Messages() {
   const [postingPrefsOpen, setPostingPrefsOpen] = useState(true);
   const [imageThemeOpen, setImageThemeOpen] = useState(true);
   const messageCardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const computedColorScheme = useComputedColorScheme("light", {
-    getInitialValueInEffect: true,
-  });
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   const [appendProfileLink, setAppendProfileLink] = useLocalStorage({
     key: "appendProfileLink",
@@ -578,7 +584,9 @@ export default function Messages() {
     const prev = prevMsgCountRef.current;
     prevMsgCountRef.current = count;
     if (autoScrollToMessages && count > prev && messages?.[0]) {
-      const newestCard = document.getElementById(`message-card-${messages[0].tid}`);
+      const newestCard = document.getElementById(
+        `message-card-${messages[0].tid}`,
+      );
       const target = newestCard ?? messagesTopRef.current;
       if (target) {
         const { top, bottom } = target.getBoundingClientRect();
@@ -676,37 +684,15 @@ export default function Messages() {
             gap="sm"
           >
             <Box>
-              <Title
-                order={1}
-                style={{
-                  fontFamily: "Inter",
-                  fontWeight: 800,
-                  fontSize: 32,
-                  letterSpacing: "-0.03em",
-                }}
-              >
+              <Title order={1} style={{ letterSpacing: "-0.03em" }}>
                 Messages
               </Title>
               {!messagesLoading && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    marginTop: 6,
-                    fontFamily: "JetBrains Mono, monospace",
-                    fontSize: 11,
-                    color: "var(--mantine-color-dimmed)",
-                    letterSpacing: "0.05em",
-                  }}
-                >
+                <Text ff="monospace" fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
                   {msgCount > 0 ? (
-                    <span>
-                      <span style={{ color: "#FACC15" }}>●</span> {msgCount} new
-                    </span>
-                  ) : (
-                    <span>no messages</span>
-                  )}
-                </div>
+                    <><span style={{ color: "var(--nf-sunshine)" }}>●</span> {msgCount} new</>
+                  ) : "no messages"}
+                </Text>
               )}
             </Box>
           </Group>
@@ -717,8 +703,7 @@ export default function Messages() {
             p="lg"
             style={{
               borderRadius: 18,
-              background:
-                "linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%)",
+              background: "var(--nf-grad-mark)",
               position: "relative",
               overflow: "hidden",
               boxShadow: "0 18px 40px -18px rgba(107,63,212,0.6)",
@@ -746,20 +731,19 @@ export default function Messages() {
                 <Text
                   ff="monospace"
                   size="xs"
-                  style={{
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    opacity: 0.85,
-                    fontWeight: 700,
-                    color: "#FDF8FF",
-                  }}
+                  c="white"
+                  opacity={0.85}
+                  fw={700}
+                  style={{ letterSpacing: "0.1em", textTransform: "uppercase" }}
                 >
                   your inbox link · publicly accessible
                 </Text>
                 <Text
                   ff="monospace"
                   fw={700}
-                  style={{ fontSize: 17, color: "#FDF8FF", marginTop: 4 }}
+                  c="white"
+                  fz={17}
+                  mt={4}
                 >
                   {shortlinkurl}/{handle}
                 </Text>
@@ -768,25 +752,16 @@ export default function Messages() {
                 <CopyButton value={fullUrl}>
                   {({ copied, copy }) => (
                     <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
-                      <button
+                      <Button
                         onClick={copy}
-                        style={{
-                          background: "rgba(255,255,255,0.15)",
-                          border: "1px solid rgba(255,255,255,0.2)",
-                          color: "#FDF8FF",
-                          padding: "8px 14px",
-                          borderRadius: 999,
-                          fontFamily: "Inter",
-                          fontWeight: 600,
-                          fontSize: 13,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
+                        size="sm"
+                        radius="xl"
+                        variant="transparent"
+                        leftSection={<IconClipboard size={14} />}
+                        style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", "--button-color": "var(--mantine-white)" } as React.CSSProperties}
                       >
-                        <IconClipboard size={14} /> {copied ? "Copied" : "Copy"}
-                      </button>
+                        {copied ? "Copied!" : "Copy"}
+                      </Button>
                     </Tooltip>
                   )}
                 </CopyButton>
@@ -798,24 +773,17 @@ export default function Messages() {
                   };
                   return <ShareButton shareData={sharePayload} />;
                 })()}
-                <button
+                <Button
                   onClick={handleAddExampleMessages}
-                  disabled={examplesLoading}
-                  style={{
-                    background: "#FACC15",
-                    border: "none",
-                    color: "#1E1B4B",
-                    padding: "8px 14px",
-                    borderRadius: 999,
-                    fontFamily: "Inter",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    opacity: examplesLoading ? 0.7 : 1,
-                  }}
+                  loading={examplesLoading}
+                  size="sm"
+                  radius="xl"
+                  color="sunshine"
+                  variant="filled"
+                  style={{ color: "var(--nf-midnight)", fontWeight: 700 }}
                 >
-                  {examplesLoading ? "Adding…" : "Add Examples"}
-                </button>
+                  Add Examples
+                </Button>
               </Group>
             </Group>
           </Paper>
@@ -827,7 +795,12 @@ export default function Messages() {
           ) : msgCount > 0 ? (
             <>
               {/* ── Two-column: Preferences + Image theme ── */}
-              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="lg" style={{ alignItems: "start" }}>
+              <SimpleGrid
+                cols={{ base: 1, md: 2 }}
+                spacing="md"
+                mb="lg"
+                style={{ alignItems: "start" }}
+              >
                 {/* Posting preferences accordion */}
                 <Paper
                   withBorder
@@ -835,10 +808,7 @@ export default function Messages() {
                   style={{
                     borderRadius: 16,
                     overflow: "hidden",
-                    background:
-                      computedColorScheme === "dark"
-                        ? "rgba(255,255,255,0.06)"
-                        : "#F2EBFF",
+                    background: surfaceBg(isDark),
                   }}
                 >
                   <Box
@@ -852,12 +822,12 @@ export default function Messages() {
                     }}
                     onClick={() => setPostingPrefsOpen((o) => !o)}
                   >
-                    <Text
-                      style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 15 }}
-                    >
+                    <Text fw={700} fz={15}>
                       Posting preferences
                     </Text>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
                       <Text ff="monospace" size="xs" c="dimmed">
                         {
                           [
@@ -874,7 +844,9 @@ export default function Messages() {
                         size={16}
                         style={{
                           transition: "transform 200ms ease",
-                          transform: postingPrefsOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          transform: postingPrefsOpen
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
                           color: "var(--mantine-color-dimmed)",
                         }}
                       />
@@ -956,10 +928,7 @@ export default function Messages() {
                   style={{
                     borderRadius: 16,
                     overflow: "hidden",
-                    background:
-                      computedColorScheme === "dark"
-                        ? "rgba(255,255,255,0.06)"
-                        : "#F2EBFF",
+                    background: surfaceBg(isDark),
                   }}
                 >
                   <Box
@@ -973,24 +942,29 @@ export default function Messages() {
                     }}
                     onClick={() => setImageThemeOpen((o) => !o)}
                   >
-                    <Text
-                      style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 15 }}
-                    >
+                    <Text fw={700} fz={15}>
                       Image theme
                     </Text>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
                       <Text ff="monospace" size="xs" c="dimmed">
-                        {themes[
-                          (settingsLoading
-                            ? "default"
-                            : userSettings?.imageTheme || "default") as keyof typeof themes
-                        ]}
+                        {
+                          themes[
+                            (settingsLoading
+                              ? "default"
+                              : userSettings?.imageTheme ||
+                                "default") as keyof typeof themes
+                          ]
+                        }
                       </Text>
                       <IconChevronDown
                         size={16}
                         style={{
                           transition: "transform 200ms ease",
-                          transform: imageThemeOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          transform: imageThemeOpen
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
                           color: "var(--mantine-color-dimmed)",
                         }}
                       />
@@ -1014,10 +988,14 @@ export default function Messages() {
                             selected={
                               settingsLoading
                                 ? value === "default"
-                                : (userSettings?.imageTheme || "default") === value
+                                : (userSettings?.imageTheme || "default") ===
+                                  value
                             }
                             onClick={() => {
-                              if (!settingsLoading && !updateSettings.isPending) {
+                              if (
+                                !settingsLoading &&
+                                !updateSettings.isPending
+                              ) {
                                 updateSettings.mutate({
                                   imageTheme: value,
                                   pdsSyncEnabled: Boolean(
@@ -1056,22 +1034,10 @@ export default function Messages() {
                           ].map(({ label, hint }) => (
                             <Box
                               key={label}
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                padding: "3px 0",
-                              }}
+                              style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}
                             >
-                              <Text style={{ fontFamily: "Inter", fontSize: 12 }}>
-                                {label}
-                              </Text>
-                              <Text
-                                style={{
-                                  fontFamily: "JetBrains Mono, monospace",
-                                  fontSize: 11,
-                                  color: "var(--mantine-color-dimmed)",
-                                }}
-                              >
+                              <Text fz={12}>{label}</Text>
+                              <Text ff="monospace" fz={11} c="dimmed">
                                 {hint.replace("Alt", "Alt/⌘")}
                               </Text>
                             </Box>
@@ -1085,10 +1051,7 @@ export default function Messages() {
 
               {/* ── Question cards grid ── */}
               <div ref={messagesTopRef} />
-              <SimpleGrid
-                cols={{ base: 1, sm: 2 }}
-                spacing="md"
-              >
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                 {messagesData?.messages.map((msg: Message, index: number) => {
                   const isExpanded = respondingTid === msg.tid;
                   const isFocused = focusedCardIndex === index;
@@ -1115,17 +1078,16 @@ export default function Messages() {
                       }}
                       style={{
                         borderRadius: 18,
-                        background: useGradients
-                          ? "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)"
-                          : "var(--mantine-color-midnight-9)",
+                        background: useGradients ? "var(--nf-grad-dark)" : "var(--mantine-color-midnight-9)",
                         border: isFocused
-                          ? "2px solid #8B5CF6"
+                          ? "2px solid var(--nf-purple)"
                           : "2px solid rgba(255,255,255,0.06)",
                         boxShadow: isFocused
                           ? "0 18px 40px -16px rgba(0,0,0,0.4), 0 0 0 3px rgba(139,92,246,0.35)"
                           : "0 18px 40px -16px rgba(0,0,0,0.4)",
                         padding: "8px 20px 20px",
-                        transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                        transition:
+                          "border-color 0.15s ease, box-shadow 0.15s ease",
                         cursor: "pointer",
                         display: "flex",
                         flexDirection: "column",
@@ -1143,13 +1105,11 @@ export default function Messages() {
                         <Group justify="space-between" align="center">
                           <Group gap={8} align="center">
                             <Text
-                              style={{
-                                fontFamily: "JetBrains Mono, monospace",
-                                fontSize: 10,
-                                letterSpacing: "0.08em",
-                                textTransform: "uppercase",
-                                color: "rgba(253,248,255,0.8)",
-                              }}
+                              ff="monospace"
+                              fz={10}
+                              c="white"
+                              opacity={0.8}
+                              style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
                             >
                               {formatTimestamp(msg.createdAt)}
                             </Text>
@@ -1175,7 +1135,14 @@ export default function Messages() {
                         </Group>
 
                         {/* Message text */}
-                        <Box style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Box
+                          style={{
+                            flex: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
                           <Text
                             c="white"
                             fw={600}
@@ -1227,14 +1194,7 @@ export default function Messages() {
                                 }
                               }}
                               placeholder="write your reply…"
-                              styles={{
-                                input: {
-                                  background: "transparent",
-                                  color: "#1E1B4B",
-                                  border: "none",
-                                  padding: 0,
-                                },
-                              }}
+                              styles={replyTextareaStyles}
                             />
                             <Group
                               justify="space-between"
@@ -1246,11 +1206,7 @@ export default function Messages() {
                                   count={responseText.length}
                                   limit={characterLimit}
                                 />
-                                <Text
-                                  ff="monospace"
-                                  size="xs"
-                                  style={{ color: "#5B5680" }}
-                                >
+                                <Text ff="monospace" size="xs" c="dimmed">
                                   {responseText.length}/{characterLimit}
                                 </Text>
                               </Group>
@@ -1272,27 +1228,17 @@ export default function Messages() {
                           </Box>
                         ) : (
                           <Box mt={4} onClick={(e) => e.stopPropagation()}>
-                            <button
+                            <Button
                               onClick={() => handlePrepareResponse(msg.tid)}
-                              style={{
-                                width: "100%",
-                                background: "#FACC15",
-                                border: "none",
-                                color: "#1E1B4B",
-                                padding: "8px 0",
-                                borderRadius: 999,
-                                fontFamily: "Inter",
-                                fontWeight: 700,
-                                fontSize: 13,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: 6,
-                              }}
+                              fullWidth
+                              radius="xl"
+                              color="sunshine"
+                              variant="filled"
+                              fw={700}
+                              style={{ color: "var(--nf-midnight)" }}
                             >
                               ↩ Reply
-                            </button>
+                            </Button>
                           </Box>
                         )}
                       </Stack>
