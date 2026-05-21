@@ -1,7 +1,18 @@
 import fetch from "node-fetch";
 import sharp from "sharp";
+import fs from "fs";
+import path from "path";
 import type { Logger } from "pino";
 import { env } from "#/lib/env";
+
+const LOGO_DATA_URL = (() => {
+  try {
+    const buf = fs.readFileSync(path.resolve(__dirname, "navyfragen-logo.png"));
+    return `data:image/png;base64,${buf.toString("base64")}`;
+  } catch {
+    return "";
+  }
+})();
 
 interface ImageGenerationResult {
   imageBlob?: Buffer;
@@ -50,7 +61,8 @@ export async function generateQuestionImage(
     themeName,
     escapedMessage,
     footerText,
-    originalMessage.length
+    originalMessage.length,
+    userBskyHandle
   );
 
   try {
@@ -98,13 +110,14 @@ function generateThemeSpecificHtml(
   themeName: string,
   escapedMessage: string,
   footerText: string,
-  messageLength: number
+  messageLength: number,
+  handle?: string
 ): { html: string; width: number; height: number } {
   switch (themeName) {
     case "compressed":
       return generateCompressedHtml(escapedMessage, footerText, messageLength);
     case "twitter":
-      return generateTwitterHtml(escapedMessage, footerText, messageLength);
+      return generateTwitterHtml(escapedMessage, footerText, messageLength, handle);
     default:
       return generateDefaultHtml(escapedMessage, footerText, messageLength);
   }
@@ -302,7 +315,8 @@ function generateCompressedHtml(
 function generateTwitterHtml(
   escapedMessage: string,
   footerText: string,
-  messageLength: number
+  messageLength: number,
+  handle?: string
 ): { html: string; width: number; height: number } {
   const width = 420;
   const height = twitterHeight(messageLength);
@@ -350,13 +364,13 @@ function generateTwitterHtml(
       height: 36px;
       min-width: 36px;
       border-radius: 50%;
+      overflow: hidden;
       background: #1d9bf0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ffffff;
-      font-size: 13px;
-      font-weight: 700;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
     .user-info {
       flex: 1;
@@ -386,10 +400,9 @@ function generateTwitterHtml(
     .content {
       overflow: visible;
     }
-    .anon-label {
-      font-size: 11px;
-      color: #536471;
-      margin-bottom: 4px;
+    .mention {
+      color: #1d9bf0;
+      font-weight: 400;
     }
     .message {
       color: #0f1419;
@@ -412,18 +425,17 @@ function generateTwitterHtml(
 <body>
   <div class="card">
     <div class="top">
-      <div class="avatar">NF</div>
+      <div class="avatar">${LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="Navyfragen logo" />` : "NF"}</div>
       <div class="user-info">
         <div class="name-row">
-          <span class="user-name">NavyFragen</span>
-          <span class="verified">&#10003;</span>
+          <span class="user-name">Navyfragen - Anonymous QnA</span>
+          <span class="verified">🔷📩</span>
         </div>
-        <div class="user-handle">@navyfragen</div>
+        <div class="user-handle">@navyfragen.app</div>
       </div>
     </div>
     <div class="content">
-      <div class="anon-label">received an anonymous question:</div>
-      <div class="message">${escapedMessage}</div>
+      <div class="message">${handle ? `<span class="mention">@${handle}</span> ` : ""}${escapedMessage}</div>
     </div>
     <div class="footer">${footerText}</div>
   </div>
