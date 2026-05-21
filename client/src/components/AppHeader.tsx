@@ -25,15 +25,22 @@ import { Wordmark } from "./Wordmark";
 interface AppHeaderProps {
   opened: boolean;
   onBurgerToggle: () => void;
-  burgerRef: React.RefObject<HTMLButtonElement>;
+  burgerRef: React.RefObject<HTMLButtonElement> | null;
   onNavClose: () => void;
 }
 
-export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: AppHeaderProps) {
+export function AppHeader({
+  opened,
+  onBurgerToggle,
+  burgerRef,
+  onNavClose,
+}: AppHeaderProps) {
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
-  const computedColorScheme = useComputedColorScheme("light", { getInitialValueInEffect: true });
+  const computedColorScheme = useComputedColorScheme("light", {
+    getInitialValueInEffect: true,
+  });
 
   const isDark = computedColorScheme === "dark";
   const isLoggedIn = !!sessionData?.isLoggedIn;
@@ -48,7 +55,15 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
         hiddenFrom="sm"
         size="sm"
       />
-      <Box component={Link} to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+      <Box
+        component={Link}
+        to="/"
+        style={{
+          textDecoration: "none",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
         <Wordmark size={18} />
       </Box>
 
@@ -59,7 +74,10 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
           size={36}
           radius="xl"
           variant="transparent"
-          style={{ background: surfaceBg(isDark), color: "var(--mantine-color-text)" }}
+          style={{
+            background: surfaceBg(isDark),
+            color: "var(--mantine-color-text)",
+          }}
         >
           {isDark ? <IconSun size={18} /> : <IconMoon size={18} />}
         </ActionIcon>
@@ -101,20 +119,31 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
 }
 
 interface UserMenuProps {
-  userProfile: { avatar?: string | null; displayName?: string | null; handle?: string };
+  userProfile: {
+    avatar?: string | null;
+    displayName?: string | null;
+    handle?: string;
+  };
   isDark: boolean;
   onLogout: () => void;
   onNavigate: () => void;
 }
 
-function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) {
+function UserMenu({
+  userProfile,
+  isDark,
+  onLogout,
+  onNavigate,
+}: UserMenuProps) {
   return (
     <Menu
       shadow="md"
       width={180}
       position="bottom-end"
       middlewares={{ shift: true, flip: true }}
-      styles={{ item: { padding: "12px 16px", fontSize: "var(--mantine-font-size-sm)" } }}
+      styles={{
+        item: { padding: "12px 16px", fontSize: "var(--mantine-font-size-sm)" },
+      }}
     >
       <Menu.Target>
         <Button
