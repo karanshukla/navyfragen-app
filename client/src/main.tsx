@@ -204,6 +204,7 @@ function AppLayout() {
           onLinkClick={() => setOpened(false)}
           isLoggedIn={isLoggedIn}
           handle={userProfile?.handle}
+          did={sessionData?.did ?? undefined}
         />
       </AppShell.Navbar>
       <AppShell.Main pt={70}>

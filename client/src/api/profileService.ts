@@ -50,7 +50,7 @@ export const profileKeys = {
   detail: (did: string) => [...profileKeys.all, did] as const,
   resolveHandle: (handle: string) =>
     [...profileKeys.all, "resolve", handle] as const,
-  friends: () => [...profileKeys.all, "friends"] as const,
+  friends: (did: string) => [...profileKeys.all, "friends", did] as const,
   botFollow: () => [...profileKeys.all, "bot-follow"] as const,
 };
 
@@ -109,11 +109,14 @@ export function useUserExists(did: string | null) {
 }
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const FRIENDS_CACHE_KEY = "navyfragen_friends_cache";
 
-function getCachedFriends(): { data: FriendsResponse; timestamp: number } | null {
+function getFriendsCacheKey(did: string) {
+  return `navyfragen_friends_cache_${did}`;
+}
+
+function getCachedFriends(did: string): { data: FriendsResponse; timestamp: number } | null {
   try {
-    const raw = localStorage.getItem(FRIENDS_CACHE_KEY);
+    const raw = localStorage.getItem(getFriendsCacheKey(did));
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -121,14 +124,14 @@ function getCachedFriends(): { data: FriendsResponse; timestamp: number } | null
   }
 }
 
-export function useFriends(enabled: boolean) {
+export function useFriends(did: string | null) {
   return useQuery({
-    queryKey: profileKeys.friends(),
+    queryKey: did ? profileKeys.friends(did) : profileKeys.all,
     queryFn: async () => {
       const data = await profileService.getFriends();
       try {
         localStorage.setItem(
-          FRIENDS_CACHE_KEY,
+          getFriendsCacheKey(did!),
           JSON.stringify({ data, timestamp: Date.now() })
         );
       } catch {
@@ -136,12 +139,12 @@ export function useFriends(enabled: boolean) {
       }
       return data;
     },
-    enabled,
+    enabled: !!did,
     staleTime: ONE_DAY,
     // Read localStorage lazily — only when the query cache entry is first created,
     // not on every render.
-    initialData: () => getCachedFriends()?.data ?? undefined,
-    initialDataUpdatedAt: () => getCachedFriends()?.timestamp ?? undefined,
+    initialData: () => (did ? getCachedFriends(did)?.data : undefined) ?? undefined,
+    initialDataUpdatedAt: () => (did ? getCachedFriends(did)?.timestamp : undefined) ?? undefined,
     refetchOnWindowFocus: false,
     retry: false,
   });

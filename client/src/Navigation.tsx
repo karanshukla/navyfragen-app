@@ -30,6 +30,7 @@ interface NavigationProps {
   onLinkClick?: () => void;
   isLoggedIn: boolean;
   handle?: string;
+  did?: string;
 }
 
 const activeNavStyle = {
@@ -43,11 +44,12 @@ export function Navigation({
   onLinkClick,
   isLoggedIn,
   handle,
+  did,
 }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: friendsData, isLoading: friendsLoading } =
-    useFriends(isLoggedIn);
+    useFriends(isLoggedIn ? (did ?? null) : null);
   const { data: userStats } = useUserStats();
 
   const handleClick = () => {
