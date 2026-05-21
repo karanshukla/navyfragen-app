@@ -835,53 +835,45 @@ export default function Messages() {
                         : "#F2EBFF",
                   }}
                 >
-                  <details open={postingPrefsOpen} onToggle={(e) => setPostingPrefsOpen((e.currentTarget as HTMLDetailsElement).open)}>
-                    <summary
-                      style={{
-                        listStyle: "none",
-                        cursor: "pointer",
-                        padding: "14px 20px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        fontFamily: "Inter",
-                        fontWeight: 700,
-                        fontSize: 15,
-                        userSelect: "none",
-                      }}
+                  <Box
+                    style={{
+                      cursor: "pointer",
+                      padding: "14px 20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      userSelect: "none",
+                    }}
+                    onClick={() => setPostingPrefsOpen((o) => !o)}
+                  >
+                    <Text
+                      style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 15 }}
                     >
-                      <Text
-                        component="span"
-                        style={{
-                          fontFamily: "Inter",
-                          fontWeight: 700,
-                          fontSize: 15,
-                        }}
-                      >
-                        Posting preferences
+                      Posting preferences
+                    </Text>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Text ff="monospace" size="xs" c="dimmed">
+                        {
+                          [
+                            appendProfileLink,
+                            useGradients,
+                            includeQuestionAsImage,
+                            confirmBeforeDelete,
+                          ].filter(Boolean).length
+                        }{" "}
+                        of 4 on
                       </Text>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <Text component="span" ff="monospace" size="xs" c="dimmed">
-                          {
-                            [
-                              appendProfileLink,
-                              useGradients,
-                              includeQuestionAsImage,
-                              confirmBeforeDelete,
-                            ].filter(Boolean).length
-                          }{" "}
-                          of 4 on
-                        </Text>
-                        <IconChevronDown
-                          size={16}
-                          style={{
-                            transition: "transform 200ms ease",
-                            transform: postingPrefsOpen ? "rotate(180deg)" : "rotate(0deg)",
-                            color: "var(--mantine-color-dimmed)",
-                          }}
-                        />
-                      </span>
-                    </summary>
+                      <IconChevronDown
+                        size={16}
+                        style={{
+                          transition: "transform 200ms ease",
+                          transform: postingPrefsOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          color: "var(--mantine-color-dimmed)",
+                        }}
+                      />
+                    </span>
+                  </Box>
+                  {postingPrefsOpen && (
                     <Box
                       px="md"
                       pb="sm"
@@ -941,7 +933,7 @@ export default function Messages() {
                         </Box>
                       ))}
                     </Box>
-                  </details>
+                  )}
                 </Paper>
 
                 {/* Image theme visual picker */}
@@ -957,30 +949,29 @@ export default function Messages() {
                         : "#F2EBFF",
                   }}
                 >
-                  <details open={imageThemeOpen} onToggle={(e) => setImageThemeOpen((e.currentTarget as HTMLDetailsElement).open)}>
-                    <summary
-                      style={{
-                        listStyle: "none",
-                        cursor: "pointer",
-                        padding: "14px 20px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        fontFamily: "Inter",
-                        fontWeight: 700,
-                        fontSize: 15,
-                        userSelect: "none",
-                      }}
+                  <Box
+                    style={{
+                      cursor: "pointer",
+                      padding: "14px 20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      userSelect: "none",
+                    }}
+                    onClick={() => setImageThemeOpen((o) => !o)}
+                  >
+                    <Text
+                      style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 15 }}
                     >
-                      <Text
-                        component="span"
-                        style={{
-                          fontFamily: "Inter",
-                          fontWeight: 700,
-                          fontSize: 15,
-                        }}
-                      >
-                        Image theme &amp; shortcuts
+                      Image theme
+                    </Text>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Text ff="monospace" size="xs" c="dimmed">
+                        {themes[
+                          (settingsLoading
+                            ? "default"
+                            : userSettings?.imageTheme || "default") as keyof typeof themes
+                        ]}
                       </Text>
                       <IconChevronDown
                         size={16}
@@ -990,7 +981,9 @@ export default function Messages() {
                           color: "var(--mantine-color-dimmed)",
                         }}
                       />
-                    </summary>
+                    </span>
+                  </Box>
+                  {imageThemeOpen && (
                     <Box
                       px="md"
                       pb="md"
@@ -1073,7 +1066,7 @@ export default function Messages() {
                         </Stack>
                       </Box>
                     </Box>
-                  </details>
+                  )}
                 </Paper>
               </SimpleGrid>
 
