@@ -63,20 +63,22 @@ export class MessageService {
   async addExampleMessages(recipient: string): Promise<Message[]> {
     try {
       const now = new Date();
-      const messages = [
-        {
-          tid: `example-1-${Date.now()}`,
-          message: "Do you like cats?",
-          createdAt: now.toISOString(),
-          recipient,
-        },
-        {
-          tid: `example-2-${Date.now()}`,
-          message: "Do you like dogs?",
-          createdAt: new Date(now.getTime() + 1000).toISOString(),
-          recipient,
-        },
+      const exampleTexts = [
+        "Do you like cats?",
+        "Do you like dogs?",
+        "What's your favorite movie?",
+        "If you could travel anywhere, where would you go?",
+        "What's something most people don't know about you?",
+        "What's the best piece of advice you've ever received?",
+        "What are you currently obsessed with?",
+        "What's your hot take on something totally mundane?",
       ];
+      const messages = exampleTexts.map((message, i) => ({
+        tid: `example-${i + 1}-${Date.now()}`,
+        message,
+        createdAt: new Date(now.getTime() + i * 1000).toISOString(),
+        recipient,
+      }));
 
       for (const msg of messages) {
         await this.db
