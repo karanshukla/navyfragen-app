@@ -56,7 +56,7 @@ export function AppLayout() {
         <AppHeader
           opened={navOpen}
           onBurgerToggle={() => setNavOpen((o) => !o)}
-          burgerRef={burgerRef}
+          burgerRef={burgerRef as React.RefObject<HTMLButtonElement>}
           onNavClose={() => setNavOpen(false)}
         />
       </AppShell.Header>
