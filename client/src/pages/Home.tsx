@@ -19,35 +19,32 @@ import { Link } from "react-router-dom";
 import { useSession } from "../api/authService";
 import { useSyncMessages } from "../api/messageService";
 import { WinkMark } from "../components/WinkMark";
+import { surfaceBg } from "../styles/tokens";
 
-const ShortcutHint = ({ label, hint }: { label: string; hint: string }) => (
-  <Box
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      padding: "5px 0",
-    }}
-  >
-    <Text style={{ fontFamily: "Inter", fontSize: 13 }}>{label}</Text>
-    <Text
-      style={{
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: 12,
-        color: "var(--mantine-color-dimmed)",
-      }}
-    >
-      {hint.replace("Alt", "Alt/Cmd")}
-    </Text>
-  </Box>
-);
+// Gradient text — reused for the page title and the greeting name span
+const gradientTextStyle = {
+  background: "var(--nf-grad-hero)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text",
+} as const;
+
+function ShortcutHint({ label, hint }: { label: string; hint: string }) {
+  return (
+    <Box style={{ display: "flex", justifyContent: "space-between", padding: "5px 0" }}>
+      <Text fz={13}>{label}</Text>
+      <Text ff="monospace" fz={12} c="dimmed">
+        {hint.replace("Alt", "Alt/Cmd")}
+      </Text>
+    </Box>
+  );
+}
 
 export default function Home() {
   const { data: sessionData, isLoading } = useSession();
   const syncMessagesMutation = useSyncMessages();
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
   const isLoggedIn = !!sessionData?.isLoggedIn;
-  const computedColorScheme = useComputedColorScheme("light", {
-    getInitialValueInEffect: true,
-  });
 
   React.useEffect(() => {
     if (sessionData?.did) {
@@ -55,36 +52,20 @@ export default function Home() {
     }
   }, [sessionData?.did]);
 
-  const isDark = computedColorScheme === "dark";
-
   return (
     <>
       <Title
         order={1}
         mb={6}
         style={{
-          fontFamily: "Inter",
-          fontWeight: 800,
-          fontSize: 32,
+          ...gradientTextStyle,
           letterSpacing: "-0.03em",
-          background:
-            "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
           paddingBottom: "0.05em",
         }}
       >
         Navyfragen - Anonymous questions and answers on Bluesky
       </Title>
-      <Text
-        mb="xl"
-        style={{
-          fontFamily: "Inter",
-          fontSize: 15,
-          color: "var(--mantine-color-dimmed)",
-        }}
-      >
+      <Text mb="xl" fz={15} c="dimmed">
         Receive questions from the web and post the answers directly on Bluesky.
       </Text>
 
@@ -108,10 +89,10 @@ export default function Home() {
             textAlign: "center",
             position: "relative",
             overflow: "hidden",
-            background: isDark ? "rgba(255,255,255,0.06)" : "#F2EBFF",
+            background: surfaceBg(isDark),
           }}
         >
-          {/* Aurora glow */}
+          {/* Subtle radial glow from top center */}
           <Box
             style={{
               position: "absolute",
@@ -127,37 +108,21 @@ export default function Home() {
               <WinkMark
                 size={64}
                 sparkle
-                style={{
-                  borderRadius: 16,
-                  boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)",
-                }}
+                style={{ borderRadius: 16, boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }}
               />
             </Center>
             <Center>
-              <div
-                style={{
-                  fontFamily: "Inter",
-                  fontWeight: 800,
-                  fontSize: 26,
-                  letterSpacing: "-0.025em",
-                  color: "var(--mantine-color-text)",
-                }}
+              <Text
+                fw={800}
+                fz={26}
+                style={{ letterSpacing: "-0.025em" }}
               >
                 Good to see you again,{" "}
-                <span
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  {sessionData.profile.displayName ||
-                    sessionData.profile.handle}
+                <span style={gradientTextStyle}>
+                  {sessionData.profile.displayName || sessionData.profile.handle}
                 </span>
                 !
-              </div>
+              </Text>
             </Center>
           </Stack>
           <Center mt="xl" style={{ position: "relative" }}>
@@ -179,21 +144,17 @@ export default function Home() {
             <List.Item>
               <Text fw={500}>Fast and free</Text>
               <Text c="dimmed">
-                No downloads required, just log in with your Bluesky credentials
-                and share your inbox link
+                No downloads required, just log in with your Bluesky credentials and share your inbox link
               </Text>
             </List.Item>
             <List.Item>
               <Text fw={500}>Spam protection, without captchas</Text>
-              <Text c="dimmed">
-                Protected by Anubis, a powerful bot detection service
-              </Text>
+              <Text c="dimmed">Protected by Anubis, a powerful bot detection service</Text>
             </List.Item>
             <List.Item>
               <Text fw={500}>Open source</Text>
               <Text c="dimmed">
-                Contribute directly to the project, or host your own version if
-                you want!
+                Contribute directly to the project, or host your own version if you want!
               </Text>
             </List.Item>
           </List>
@@ -213,20 +174,8 @@ export default function Home() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
-        <Paper
-          p="lg"
-          radius="md"
-          withBorder
-          style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#F2EBFF" }}
-        >
-          <Text
-            fw={700}
-            mb="sm"
-            tt="uppercase"
-            ff="monospace"
-            c="dimmed"
-            style={{ fontSize: 11, letterSpacing: "0.1em" }}
-          >
+        <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
+          <Text fw={700} mb="sm" tt="uppercase" ff="monospace" c="dimmed" fz={11} style={{ letterSpacing: "0.1em" }}>
             Keyboard Shortcuts
           </Text>
           <Stack gap={6}>
@@ -244,69 +193,37 @@ export default function Home() {
           </Stack>
         </Paper>
 
-        <Paper
-          p="lg"
-          radius="md"
-          withBorder
-          style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#F2EBFF" }}
-        >
-          <Text
-            fw={700}
-            mb="sm"
-            tt="uppercase"
-            ff="monospace"
-            c="dimmed"
-            style={{ fontSize: 11, letterSpacing: "0.1em" }}
-          >
+        <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
+          <Text fw={700} mb="sm" tt="uppercase" ff="monospace" c="dimmed" fz={11} style={{ letterSpacing: "0.1em" }}>
             Questions? Feedback?
           </Text>
           <Stack gap="sm">
             <div>
-              <Text style={{ fontFamily: "Inter", fontSize: 15 }} mb={4}>
-                Reach out on Bluesky
-              </Text>
+              <Text fz={15} mb={4}>Reach out on Bluesky</Text>
               <a
                 href="https://bsky.app/profile/navyfragen.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontFamily: "Inter",
-                  fontSize: 15,
-                  color: "#8B5CF6",
-                  textDecoration: "none",
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "var(--nf-purple)", textDecoration: "none" }}
               >
                 <IconButterfly size={18} /> @navyfragen.app
               </a>
             </div>
             <div>
-              <Text style={{ fontFamily: "Inter", fontSize: 15 }} mb={4}>
-                Submit an issue on GitHub
-              </Text>
+              <Text fz={15} mb={4}>Submit an issue on GitHub</Text>
               <a
                 href="https://github.com/karanshukla/navyfragen-app"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontFamily: "Inter",
-                  fontSize: 15,
-                  color: "#8B5CF6",
-                  textDecoration: "none",
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "var(--nf-purple)", textDecoration: "none" }}
               >
                 <IconBrandGithub size={18} /> GitHub - Navyfragen
               </a>
             </div>
-            <Divider></Divider>
-            <Text style={{ fontFamily: "Inter", fontSize: 13 }}>
-              Disclaimer: Please follow Bluesky's ToS. Cookies are used to keep
-              you logged in. This app does not include any moderation.
+            <Divider />
+            <Text fz={13}>
+              Disclaimer: Please follow Bluesky&apos;s ToS. Cookies are used to keep you logged in.
+              This app does not include any moderation.
             </Text>
           </Stack>
         </Paper>
