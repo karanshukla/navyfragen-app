@@ -309,9 +309,6 @@ export default function PublicProfile() {
                     background: ghostBg(isDark),
                     border: "1px solid var(--mantine-color-default-border)",
                     color: "var(--mantine-color-dimmed)",
-                    padding: "6px 12px",
-                    fontFamily: "var(--nf-font-mono)",
-                    fontSize: 12,
                   }}
                 >
                   <IconShare size={14} />
