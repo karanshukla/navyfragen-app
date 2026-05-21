@@ -577,7 +577,7 @@ export default function Messages() {
       if (target) {
         const { top, bottom } = target.getBoundingClientRect();
         if (top >= window.innerHeight || bottom <= 0) {
-          (messagesTopRef.current ?? target).scrollIntoView({ behavior: "smooth", block: "start" });
+          target.scrollIntoView({ behavior: "smooth", block: "end" });
         }
       }
     }
