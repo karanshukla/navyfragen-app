@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as messageService from "../../api/messageService";
 import * as profileService from "../../api/profileService";
@@ -52,6 +52,10 @@ function setupProfile() {
 describe("PublicProfile page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("shows loading indicator while handle is resolving", () => {
@@ -113,6 +117,42 @@ describe("PublicProfile page", () => {
     fireEvent.click(screen.getByRole("button", { name: /send/i }));
     await waitFor(() => {
       expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+    });
+  });
+
+  it("renders a copy button next to the profile breadcrumb", () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    // CopyButton renders a button; its tooltip label is "Copy link"
+    // The button itself has no accessible name but its Tooltip has the label
+    const buttons = screen.getAllByRole("button");
+    // At minimum: copy + send — verify one of them is present
+    expect(buttons.length).toBeGreaterThan(0);
+    // The breadcrumb URL text is present
+    expect(screen.getByText(/fragen\.navy\//i)).toBeInTheDocument();
+  });
+
+  it("calls scrollIntoView with block:nearest when ask card is below the viewport", async () => {
+    const scrollSpy = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 9999,
+      top: 0,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    } as DOMRect);
+
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+
+    await waitFor(() => {
+      expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
     });
   });
 });

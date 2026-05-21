@@ -16,6 +16,7 @@ import {
   Box,
   SimpleGrid,
   useComputedColorScheme,
+  Collapse,
 } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
 import { IconChevronDown, IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
@@ -50,7 +51,7 @@ interface PageAlert {
   color: "red" | "green" | "blue" | "yellow";
 }
 
-function formatTimestamp(dateStr: string): string {
+export function formatTimestamp(dateStr: string): string {
   return new Date(dateStr).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -351,6 +352,11 @@ export default function Messages() {
     defaultValue: false,
     getInitialValueInEffect: true,
   });
+  const [autoScrollToMessages, setAutoScrollToMessages] = useLocalStorage({
+    key: "autoScrollToMessages",
+    defaultValue: true,
+    getInitialValueInEffect: true,
+  });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesTopRef = useRef<HTMLDivElement>(null);
@@ -571,17 +577,17 @@ export default function Messages() {
     const count = messages?.length ?? 0;
     const prev = prevMsgCountRef.current;
     prevMsgCountRef.current = count;
-    if (count > prev && messages?.[0]) {
+    if (autoScrollToMessages && count > prev && messages?.[0]) {
       const newestCard = document.getElementById(`message-card-${messages[0].tid}`);
       const target = newestCard ?? messagesTopRef.current;
       if (target) {
         const { top, bottom } = target.getBoundingClientRect();
         if (top >= window.innerHeight || bottom <= 0) {
-          (messagesTopRef.current ?? target).scrollIntoView({ behavior: "smooth", block: "start" });
+          target.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
       }
     }
-  }, [messagesData]);
+  }, [messagesData, autoScrollToMessages]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -821,7 +827,7 @@ export default function Messages() {
           ) : msgCount > 0 ? (
             <>
               {/* ── Two-column: Preferences + Image theme ── */}
-              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="lg">
+              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="lg" style={{ alignItems: "start" }}>
                 {/* Posting preferences accordion */}
                 <Paper
                   withBorder
@@ -859,9 +865,10 @@ export default function Messages() {
                             useGradients,
                             includeQuestionAsImage,
                             confirmBeforeDelete,
+                            autoScrollToMessages,
                           ].filter(Boolean).length
                         }{" "}
-                        of 4 on
+                        of 5 on
                       </Text>
                       <IconChevronDown
                         size={16}
@@ -873,7 +880,7 @@ export default function Messages() {
                       />
                     </span>
                   </Box>
-                  {postingPrefsOpen && (
+                  <Collapse in={postingPrefsOpen}>
                     <Box
                       px="md"
                       pb="sm"
@@ -907,6 +914,12 @@ export default function Messages() {
                           label: "Confirm before deleting",
                           sub: "Leave off if you want to bulk-delete messages.",
                         },
+                        {
+                          checked: autoScrollToMessages,
+                          onChange: setAutoScrollToMessages,
+                          label: "Auto-scroll to messages",
+                          sub: "Scrolls new messages into view when they load.",
+                        },
                       ].map(({ checked, onChange, label, sub }) => (
                         <Box
                           key={label}
@@ -933,7 +946,7 @@ export default function Messages() {
                         </Box>
                       ))}
                     </Box>
-                  )}
+                  </Collapse>
                 </Paper>
 
                 {/* Image theme visual picker */}
@@ -983,7 +996,7 @@ export default function Messages() {
                       />
                     </span>
                   </Box>
-                  {imageThemeOpen && (
+                  <Collapse in={imageThemeOpen}>
                     <Box
                       px="md"
                       pb="md"
@@ -1066,7 +1079,7 @@ export default function Messages() {
                         </Stack>
                       </Box>
                     </Box>
-                  )}
+                  </Collapse>
                 </Paper>
               </SimpleGrid>
 
@@ -1107,11 +1120,13 @@ export default function Messages() {
                           ? "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)"
                           : "var(--mantine-color-midnight-9)",
                         border: isFocused
-                          ? "2px solid rgba(255,255,255,0.5)"
+                          ? "2px solid #8B5CF6"
                           : "2px solid rgba(255,255,255,0.06)",
-                        boxShadow: "0 18px 40px -16px rgba(0,0,0,0.4)",
-                        padding: 22,
-                        transition: "border-color 0.15s ease",
+                        boxShadow: isFocused
+                          ? "0 18px 40px -16px rgba(0,0,0,0.4), 0 0 0 3px rgba(139,92,246,0.35)"
+                          : "0 18px 40px -16px rgba(0,0,0,0.4)",
+                        padding: "8px 20px 20px",
+                        transition: "border-color 0.15s ease, box-shadow 0.15s ease",
                         cursor: "pointer",
                       }}
                       onClick={() => {
