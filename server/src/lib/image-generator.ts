@@ -58,6 +58,13 @@ export async function generateQuestionImage(
   );
 
   try {
+    logger.info(`Warming up image service at: ${env.EXPORT_HTML_URL}`);
+    try {
+      await fetch(env.EXPORT_HTML_URL, { method: "GET" });
+    } catch {
+      // Ignore — wake-up request just needs to reach the service
+    }
+
     logger.info(`Attempting to generate image via service at: ${env.EXPORT_HTML_URL}`);
     const payload = {
       source: html,
