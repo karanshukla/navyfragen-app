@@ -213,12 +213,12 @@ function ThemeCard({
     return (
       <div
         style={{
-          background: "#f7f9f9",
+          background: "#ffffff",
           height: "100%",
           borderRadius: 5,
           display: "flex",
           alignItems: "center",
-          padding: 8,
+          padding: 0,
         }}
       >
         <div
