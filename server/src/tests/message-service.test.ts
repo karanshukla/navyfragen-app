@@ -185,7 +185,7 @@ describe("MessageService", () => {
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => msgs);
     const result = await messageService.addExampleMessages("did:foo");
     assert.deepStrictEqual(result, msgs);
-    assert.strictEqual(mockDb.insertInto.mock.calls.length, 2);
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 8);
   });
 
   test("sendMessage inserts and returns success", async () => {

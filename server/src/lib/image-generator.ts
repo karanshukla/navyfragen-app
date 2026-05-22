@@ -1,5 +1,4 @@
-﻿import fetch from "node-fetch";
-import sharp from "sharp";
+﻿import sharp from "sharp";
 import type { Logger } from "pino";
 import { env } from "#/lib/env";
 
@@ -81,7 +80,7 @@ export async function generateQuestionImage(
     });
 
     if (response.ok) {
-      const raw = await response.buffer();
+      const raw = Buffer.from(await response.arrayBuffer());
       const imageBlob = await sharp(raw)
         .resize(width * 2, height * 2, { kernel: sharp.kernel.lanczos3 })
         .png({ compressionLevel: 9 })
