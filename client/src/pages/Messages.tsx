@@ -1067,7 +1067,7 @@ export default function Messages() {
                       }}
                       style={{
                         borderRadius: 18,
-                        background: useGradients ? "var(--nf-grad-dark)" : "var(--mantine-color-midnight-9)",
+                        background: useGradients ? "var(--nf-grad-dark)" : surfaceBg(isDark),
                         border: isFocused
                           ? "2px solid var(--nf-purple)"
                           : "2px solid rgba(255,255,255,0.06)",
