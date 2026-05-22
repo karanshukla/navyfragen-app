@@ -96,6 +96,17 @@ React Query is the data layer. Each domain (auth, messages, profile, settings) h
 
 All API calls use `credentials: "include"` for cookie forwarding.
 
+### Logging
+
+The server uses Pino (`src/index.ts` → `createLogger()`). In development, stdout is piped through `pino-pretty` via the dev script. In production, when `AXIOM_TOKEN` and `AXIOM_DATASET` are both set, logs are shipped to Axiom via `@axiomhq/pino` as a transport target alongside stdout. Without those vars the logger falls back to stdout only.
+
+Key events that are instrumented:
+- OAuth flow: login initiation, callback success/failure, session creation, token consumption, logout
+- Anonymous message sent, response posted to Bluesky (with AT URI)
+- Account deletion, PDS sync (with counts)
+- Settings changes (pdsSyncEnabled, imageTheme)
+- All 500-class errors across controllers and services carry structured `{ err, did }` fields
+
 ## Environment Setup
 
 Copy `server/.env.template` to `server/.env`. Required for production; development defaults are safe for local use. The one required secret with no default is `OAUTH_TOKEN_SECRET` (32-byte hex string for AES-256).

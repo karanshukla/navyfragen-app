@@ -37,6 +37,7 @@ export class ProfileController {
       if (err.message === "Profile not found") {
         return res.status(404).json({ error: "Profile not found" });
       }
+      this.logger.error({ err, did }, "Failed to fetch public profile");
       return res.status(500).json({ error: "Failed to fetch profile" });
     }
   };
@@ -61,6 +62,7 @@ export class ProfileController {
       const exists = await this.profileService.checkUserExists(did);
       return res.json({ exists, did });
     } catch (err) {
+      this.logger.error({ err, did }, "Failed to check user existence");
       return res.status(500).json({ error: "Failed to check user existence" });
     }
   };

@@ -131,6 +131,7 @@ export class MessageService {
         .onConflict((oc) => oc.column("tid").doNothing())
         .execute();
 
+      this.logger.info({ recipient, tid }, "Message saved to DB");
       return { success: true };
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to send message");
@@ -264,6 +265,7 @@ export class MessageService {
       }
 
       const postRes = await agent.post(postRecord);
+      this.logger.info({ tid, did, uri: postRes.uri }, "Response posted to Bluesky");
       let webUrl = null;
       let profileName = null;
       const match = postRes.uri.match(

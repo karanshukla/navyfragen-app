@@ -144,8 +144,10 @@ export class MessageController {
 
     try {
       const result = await this.messageService.sendMessage(recipient, message);
+      this.logger.info({ recipient }, "Anonymous message sent");
       return res.json(result);
     } catch (err: any) {
+      this.logger.error({ err, recipient }, "Failed to send message");
       return res.status(err.message.includes("not found") ? 404 : 500).json({
         error: err.message || "Failed to send message",
       });
@@ -174,6 +176,7 @@ export class MessageController {
           .status(404)
           .json({ error: "User not found (user profile does not exist)" });
       }
+      this.logger.error({ err, recipient }, "Failed to fetch messages");
       return res.status(500).json({ error: "Failed to fetch messages" });
     }
   };
@@ -244,12 +247,11 @@ export class MessageController {
 
     try {
       await this.messageService.deleteUserData(userSessionDid, agent);
-
-      // Invalidate session
-      req.session = null; // Clear the session
-
+      req.session = null;
+      this.logger.info({ did: userSessionDid }, "Account and all data deleted");
       return res.json({ success: true });
     } catch (err: any) {
+      this.logger.error({ err, did: userSessionDid }, "Failed to delete account data");
       return res
         .status(500)
         .json({ error: err.message || "Failed to delete account data" });
@@ -298,6 +300,7 @@ export class MessageController {
       );
       return res.json(syncResult);
     } catch (err: any) {
+      this.logger.error({ err, did: userSessionDid }, "Failed to sync messages to PDS");
       return res.status(500).json({
         error: "Failed to sync messages to PDS",
         details: err.message,

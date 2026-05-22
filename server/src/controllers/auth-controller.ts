@@ -48,7 +48,7 @@ export class AuthController {
   async session(req: Request, res: Response) {
     if (!req.session?.did) {
       req.session = null;
-      this.ctx.logger.error("No session cookie found, user is not logged in");
+      this.ctx.logger.debug("No session cookie, returning not logged in");
       return res.json({ isLoggedIn: false, profile: null, did: null });
     }
     try {

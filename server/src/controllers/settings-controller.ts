@@ -127,7 +127,7 @@ export class SettingsController {
         pdsSyncEnabled,
         imageTheme
       );
-
+      this.logger.info({ did: userSessionDid, pdsSyncEnabled, imageTheme }, "Settings updated");
       return res.json(updatedSettings);
     } catch (err) {
       this.logger.error(
