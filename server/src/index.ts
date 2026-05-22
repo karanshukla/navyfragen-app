@@ -24,6 +24,28 @@ import type { IdResolver } from "@atproto/identity";
 import type { Database } from "./database/db";
 import cookieSession from "cookie-session";
 
+function createLogger(): pino.Logger {
+  const { AXIOM_TOKEN, AXIOM_DATASET } = env;
+  if (!AXIOM_TOKEN || !AXIOM_DATASET) {
+    return pino({ name: "navyfragen" });
+  }
+  const transport = pino.transport({
+    targets: [
+      {
+        target: "@axiomhq/pino",
+        options: { dataset: AXIOM_DATASET, token: AXIOM_TOKEN },
+        level: "info",
+      },
+      {
+        target: "pino/file",
+        options: { destination: 1 },
+        level: "info",
+      },
+    ],
+  });
+  return pino({ name: "navyfragen" }, transport);
+}
+
 // Application state passed to the router and elsewhere
 export type AppContext = {
   db: Database;
@@ -42,7 +64,7 @@ export class Server {
 
   static async create() {
     const { NODE_ENV, HOST, PORT, DB_PATH } = env;
-    const logger = pino({ name: "server start" });
+    const logger = createLogger();
 
     // Set up the SQLite database
     const db = createDb(DB_PATH);

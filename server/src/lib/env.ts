@@ -25,4 +25,6 @@ export const env = cleanEnv(process.env, {
   OAUTH_TOKEN_SECRET: str({
     desc: "Secret key for encrypting OAuth tokens (hex-encoded, 32 bytes for AES-256)",
   }),
+  AXIOM_TOKEN: str({ default: "" }),
+  AXIOM_DATASET: str({ default: "" }),
 });
