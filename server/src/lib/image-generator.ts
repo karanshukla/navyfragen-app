@@ -140,12 +140,12 @@ function compressedHeight(length: number): number {
 }
 
 function twitterHeight(length: number): number {
-  if (length <= 40) return 170;
-  if (length <= 80) return 195;
-  if (length <= 130) return 218;
-  if (length <= 200) return 255;
-  if (length <= 300) return 288;
-  return 318;
+  if (length <= 40) return 150;
+  if (length <= 80) return 175;
+  if (length <= 130) return 198;
+  if (length <= 200) return 235;
+  if (length <= 300) return 268;
+  return 298;
 }
 
 // Default theme: NGL-style — vivid purple gradient, large prominent white bubble
@@ -328,8 +328,8 @@ function generateTwitterHtml(
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', ${NOTO_STACK};
     }
     body {
-      background: #f7f9f9;
-      padding: 10px;
+      background: #ffffff;
+      padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
