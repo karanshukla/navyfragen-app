@@ -232,29 +232,35 @@ export class MessageService {
             imageTheme
           );
 
-        if (!imageBlob) {
-          this.logger.error("Image generation failed, no imageBlob returned");
-          throw new Error("Image generation failed");
+        if (imageBlob) {
+          try {
+            const uploadedImage = await agent.uploadBlob(imageBlob, {
+              encoding: "image/png",
+            });
+            const imageEmbed: any = {
+              image: uploadedImage.data.blob,
+              alt: imageAltText || "Image of the anonymous question",
+            };
+            if (width && height) {
+              imageEmbed.aspectRatio = { width, height };
+            }
+            postRecord.embed = {
+              $type: "app.bsky.embed.images",
+              images: [imageEmbed],
+            };
+          } catch (uploadErr) {
+            this.logger.error(uploadErr, "Failed to upload image to Bluesky, falling back to text-only");
+          }
+        } else {
+          this.logger.warn("Image generation failed, falling back to text-only response");
         }
 
-        try {
-          const uploadedImage = await agent.uploadBlob(imageBlob, {
-            encoding: "image/png",
-          });
-          const imageEmbed: any = {
-            image: uploadedImage.data.blob,
-            alt: imageAltText || "Image of the anonymous question",
-          };
-          if (width && height) {
-            imageEmbed.aspectRatio = { width, height };
-          }
-          postRecord.embed = {
-            $type: "app.bsky.embed.images",
-            images: [imageEmbed],
-          };
-        } catch (uploadErr) {
-          this.logger.error(uploadErr, "Failed to upload image to Bluesky");
-          throw new Error("Failed to upload image, try a text only response");
+        if (!postRecord.embed) {
+          const combinedText = `${response}\n\nAnon asked via 🔷💬📩: "${original}"`;
+          const richTextWithQuestion = new RichText({ text: combinedText });
+          await richTextWithQuestion.detectFacets(agent);
+          postRecord.text = richTextWithQuestion.text;
+          postRecord.facets = richTextWithQuestion.facets || [];
         }
       } else {
         const combinedText = `${response}\n\nAnon asked via 🔷💬📩: "${original}"`;
