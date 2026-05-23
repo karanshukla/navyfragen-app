@@ -127,31 +127,39 @@ function msgFontSize(length: number, large: number, medium: number, small: numbe
   return small;
 }
 
+// Estimates rendered line count using avg char width (0.58× font size for Noto Sans),
+// with a 20% buffer for word wrapping and character width variance.
+function estimateLines(messageLength: number, fontSize: number, areaWidth: number): number {
+  const charsPerLine = Math.max(1, Math.floor(areaWidth / (fontSize * 0.58)));
+  return Math.max(1, Math.ceil((messageLength / charsPerLine) * 1.2));
+}
+
 function nglHeight(length: number): number {
-  if (length <= 40) return 200;
-  if (length <= 80) return 230;
-  if (length <= 130) return 265;
-  if (length <= 200) return 310;
-  if (length <= 300) return 355;
-  return 395;
+  const fontSize = msgFontSize(length, 26, 21, 17);
+  // message area: 360px wide − 32px body padding − 36px bubble padding (18px each side)
+  const lines = estimateLines(length, fontSize, 292);
+  const bubbleH = Math.ceil(lines * fontSize * 1.45) + 24; // 24 = 12px top + 12px bottom bubble padding
+  // fixed chrome: 16 top pad + 20 header + 10 gap + 10 gap + 16 footer + 16 bottom pad = 88
+  return Math.max(bubbleH + 88, 180);
 }
 
 function compressedHeight(length: number): number {
-  if (length <= 40) return 115;
-  if (length <= 80) return 136;
-  if (length <= 130) return 158;
-  if (length <= 200) return 190;
-  if (length <= 300) return 228;
-  return 262;
+  const fontSize = msgFontSize(length, 19, 16, 14);
+  // message area: 380px − 24px body padding − 4px border − 27px card padding (13px+14px)
+  const lines = estimateLines(length, fontSize, 325);
+  const textH = Math.ceil(lines * fontSize * 1.45);
+  // fixed chrome: 24 body pad + 24 card pad + 9 label + 6 label-margin + 8 footer-margin + 10 footer = 81
+  return Math.max(textH + 81, 100);
 }
 
-function twitterHeight(length: number): number {
-  if (length <= 40) return 150;
-  if (length <= 80) return 175;
-  if (length <= 130) return 198;
-  if (length <= 200) return 235;
-  if (length <= 300) return 268;
-  return 298;
+function twitterHeight(length: number, handle?: string): number {
+  const fontSize = msgFontSize(length, 21, 17, 14);
+  // message area: 420px − 32px card padding (16px each side)
+  const effectiveLength = handle ? length + handle.length + 2 : length;
+  const lines = estimateLines(effectiveLength, fontSize, 388);
+  const textH = Math.ceil(lines * fontSize * 1.45);
+  // fixed chrome: 14 card-top + 36 avatar-row + 10 header-margin + 37 footer (margin+pad+border+text) + 12 card-bottom = 109
+  return Math.max(textH + 109, 140);
 }
 
 // Default theme: NGL-style — vivid purple gradient, large prominent white bubble
@@ -183,7 +191,7 @@ function generateDefaultHtml(
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      justify-content: space-between;
+      gap: 10px;
     }
     .header {
       color: rgba(255, 255, 255, 0.90);
@@ -199,7 +207,6 @@ function generateDefaultHtml(
       border-radius: 16px;
       padding: 12px 18px;
       box-shadow: 0 6px 24px rgba(0, 0, 0, 0.30);
-      overflow: hidden;
     }
     .message {
       color: #111111;
@@ -270,7 +277,6 @@ function generateCompressedHtml(
       width: 100%;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
     .label {
       font-size: 9px;
@@ -317,7 +323,7 @@ function generateTwitterHtml(
   handle?: string
 ): { html: string; width: number; height: number } {
   const width = 420;
-  const height = twitterHeight(messageLength);
+  const height = twitterHeight(messageLength, handle);
   const fontSize = msgFontSize(messageLength, 21, 17, 14);
 
   const html = `<!DOCTYPE html>
@@ -348,7 +354,6 @@ function generateTwitterHtml(
       width: 100%;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
     .top {
       display: flex;
