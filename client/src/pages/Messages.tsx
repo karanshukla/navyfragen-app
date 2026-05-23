@@ -125,34 +125,55 @@ function ThemeCard({
             height: "100%",
             borderRadius: 5,
             display: "flex",
-            alignItems: "center",
+            flexDirection: "column",
+            alignItems: "stretch",
             justifyContent: "center",
-            padding: 10,
+            padding: "8px 10px",
+            gap: 6,
           }}
         >
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <div
+              style={{
+                height: 2.5,
+                background: "rgba(255,255,255,0.7)",
+                borderRadius: 2,
+                width: "55%",
+              }}
+            />
+          </div>
           <div
             style={{
               background: "#fff",
               borderRadius: 8,
-              padding: "7px 12px",
-              width: "80%",
+              padding: "6px 10px",
               boxShadow: "0 3px 10px rgba(0,0,0,0.3)",
             }}
           >
             <div
               style={{
-                height: 4,
+                height: 3.5,
                 background: "#ccc",
-                borderRadius: 3,
+                borderRadius: 2,
                 marginBottom: 4,
               }}
             />
             <div
               style={{
-                height: 4,
+                height: 3.5,
                 background: "#ccc",
-                borderRadius: 3,
+                borderRadius: 2,
                 width: "65%",
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <div
+              style={{
+                height: 2,
+                background: "rgba(255,255,255,0.4)",
+                borderRadius: 2,
+                width: "40%",
               }}
             />
           </div>
@@ -203,6 +224,15 @@ function ThemeCard({
                 background: "#4a4a6a",
                 borderRadius: 3,
                 width: "70%",
+                marginBottom: 5,
+              }}
+            />
+            <div
+              style={{
+                height: 2.5,
+                background: "#3a3a5a",
+                borderRadius: 2,
+                width: "45%",
               }}
             />
           </div>
