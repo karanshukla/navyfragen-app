@@ -26,6 +26,30 @@ const BASE_CSS = `
   body { overflow: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-synthesis: none; }
 `;
 
+// Retries a fetch on network errors (ECONNREFUSED, ETIMEDOUT, etc.) for up to
+// timeoutMs. Does not retry HTTP error responses — those mean the service is up.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const deadline = Date.now() + timeoutMs;
+  let delay = 500;
+  let lastError: unknown;
+  while (true) {
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      lastError = err;
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    await new Promise((r) => setTimeout(r, Math.min(delay, remaining)));
+    delay = Math.min(Math.ceil(delay * 1.5), 2000);
+  }
+  throw lastError;
+}
+
 export async function generateQuestionImage(
   originalMessage: string,
   logger: Logger,
@@ -57,16 +81,6 @@ export async function generateQuestionImage(
   );
 
   try {
-    try {
-      await fetch(env.EXPORT_HTML_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "<html><body></body></html>", format: "png", options: { width: 1, height: 1 } }),
-      });
-    } catch {
-      // ignore — warmup just needs to knock on the door
-    }
-
     logger.info(`Attempting to generate image via service at: ${env.EXPORT_HTML_URL}`);
     const payload = {
       source: html,
@@ -76,11 +90,15 @@ export async function generateQuestionImage(
         height: height * 4,
       },
     };
-    const response = await fetch(env.EXPORT_HTML_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetchWithRetry(
+      env.EXPORT_HTML_URL,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      10_000
+    );
 
     if (response.ok) {
       const raw = Buffer.from(await response.arrayBuffer());
