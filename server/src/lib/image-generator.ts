@@ -28,7 +28,7 @@ const BASE_CSS = `
 
 // Retries a fetch on network errors (ECONNREFUSED, ETIMEDOUT, etc.) for up to
 // timeoutMs. Does not retry HTTP error responses — those mean the service is up.
-async function fetchWithRetry(
+export async function fetchWithRetry(
   url: string,
   init: RequestInit,
   timeoutMs: number
