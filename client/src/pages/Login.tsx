@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   TextInput,
   Title,
@@ -7,7 +8,6 @@ import {
   Box,
   Center,
   Stack,
-  Notification,
 } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -29,10 +29,10 @@ const darkInputStyles = {
   },
 } as const;
 
-const errorNotificationStyles = {
-  root: { background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)" },
-  title: { color: "#FCA5A5" },
-  description: { color: "#FCA5A5" },
+const errorAlertStyles = {
+  root: { background: "rgba(220,38,38,0.18)", border: "1px solid rgba(220,38,38,0.35)" },
+  message: { color: "#FCA5A5" },
+  closeButton: { color: "#FCA5A5" },
 } as const;
 
 export default function Login() {
@@ -104,14 +104,15 @@ export default function Login() {
           </Box>
 
           {error && (
-            <Notification
+            <Alert
               color="red"
               withCloseButton
               onClose={() => setError(null)}
-              styles={errorNotificationStyles}
+              role="alert"
+              styles={errorAlertStyles}
             >
               {error}
-            </Notification>
+            </Alert>
           )}
 
           <form onSubmit={onSubmit}>

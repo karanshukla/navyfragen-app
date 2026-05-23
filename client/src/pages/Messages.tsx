@@ -19,6 +19,7 @@ import {
   Collapse,
 } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import {
   IconChevronDown,
   IconClipboard,
@@ -53,12 +54,6 @@ const shortlinkurl =
 
 const MAX_BSKY_POST_LENGTH = 280;
 const GENERAL_BUFFER = 3;
-
-interface PageAlert {
-  title: string;
-  message: React.ReactNode;
-  color: "red" | "green" | "blue" | "yellow";
-}
 
 export function formatTimestamp(dateStr: string): string {
   return new Date(dateStr).toLocaleString(undefined, {
@@ -401,7 +396,6 @@ export default function Messages() {
   const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(
     null,
   );
-  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
   const [characterLimit, setCharacterLimit] = useState<number>(280);
   const [deletingTid, setDeletingTid] = useState<string | null>(null);
 
@@ -427,7 +421,7 @@ export default function Messages() {
   const { data: userSettings, isLoading: settingsLoading } = useUserSettings();
   const updateSettings = useUpdateUserSettings({
     onError: (error: ApiError) => {
-      setPageAlert({
+      notifications.show({
         title: "Error updating theme",
         message: error.error || "Failed to update image theme.",
         color: "red",
@@ -458,7 +452,7 @@ export default function Messages() {
   useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
-      setPageAlert({
+      notifications.show({
         title: "Welcome back!",
         message: "You have successfully logged in.",
         color: "green",
@@ -469,11 +463,10 @@ export default function Messages() {
 
   const handleAddExampleMessages = () => {
     if (!session?.did) return;
-    setPageAlert(null);
     addExamples(session.did, {
       onSuccess: () => refetchMessages(),
       onError: (err: any) => {
-        setPageAlert({
+        notifications.show({
           title: "Error Adding Examples",
           message: err.error || "Failed to add example messages.",
           color: "red",
@@ -492,7 +485,6 @@ export default function Messages() {
   };
 
   const performDelete = (tid: string, fromModal = false) => {
-    setPageAlert(null);
     setDeletingTid(tid);
     deleteMessage(tid, {
       onSuccess: () => {
@@ -505,7 +497,7 @@ export default function Messages() {
         refetchMessages();
       },
       onError: (err: any) => {
-        setPageAlert({
+        notifications.show({
           title: "Error Deleting Message",
           message: err.error || "Failed to delete message.",
           color: "red",
@@ -531,9 +523,8 @@ export default function Messages() {
   };
 
   const handleSendResponse = (msg: Message) => {
-    setPageAlert(null);
     if (!responseText.trim()) {
-      setPageAlert({
+      notifications.show({
         title: "Empty Response",
         message: "Response cannot be empty.",
         color: "yellow",
@@ -572,15 +563,16 @@ export default function Messages() {
           ) : (
             "Your response has been posted."
           );
-          setPageAlert({
+          notifications.show({
             title: "Response Sent!",
             message: successMsg,
             color: "green",
+            autoClose: 8000,
           });
           refetchMessages();
         },
         onError: (err: any) => {
-          setPageAlert({
+          notifications.show({
             title: "Response Error",
             message: err.error || "Failed to send response.",
             color: "red",
@@ -683,18 +675,6 @@ export default function Messages() {
 
   return (
     <Box maw={1080}>
-      {pageAlert && (
-        <Alert
-          title={pageAlert.title}
-          color={pageAlert.color}
-          withCloseButton
-          onClose={() => setPageAlert(null)}
-          mb="lg"
-        >
-          {pageAlert.message}
-        </Alert>
-      )}
-
       {sessionLoading ? (
         <Center>
           <Loader size="xl" />
@@ -1136,6 +1116,7 @@ export default function Messages() {
                           <ActionIcon
                             size="lg"
                             className="nf-delete-btn"
+                            aria-label="Delete message"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteRequest(msg.tid);
@@ -1201,6 +1182,7 @@ export default function Messages() {
                               autosize
                               minRows={2}
                               maxRows={4}
+                              aria-label="Your response"
                               onKeyDown={(e) => {
                                 e.stopPropagation();
                                 if (e.key === "Escape") {

@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
@@ -134,6 +134,31 @@ describe("Settings page", () => {
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({ pdsSyncEnabled: false })
       );
+    });
+  });
+
+  it("shows a toast notification when settings update fails", async () => {
+    let capturedOnError: ((err: any) => void) | undefined;
+    mockUseUpdateUserSettings.mockImplementation((options: any) => {
+      capturedOnError = options?.onError;
+      return noopMutation;
+    });
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
+    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    renderWithProviders(<Settings />);
+
+    act(() => { capturedOnError?.({ error: "Server unavailable" }); });
+
+    await waitFor(() => {
+      expect(screen.getByText(/update failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/server unavailable/i)).toBeInTheDocument();
     });
   });
 });

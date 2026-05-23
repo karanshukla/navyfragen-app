@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as messageService from "../../api/messageService";
@@ -130,6 +130,50 @@ describe("PublicProfile page", () => {
     expect(buttons.length).toBeGreaterThan(0);
     // The breadcrumb URL text is present
     expect(screen.getByText(/fragen\.navy\//i)).toBeInTheDocument();
+  });
+
+  it("shows a toast notification on successful message send", async () => {
+    let capturedCallbacks: any;
+    setupProfile();
+    const mockMutate = vi.fn((_data: any, callbacks: any) => { capturedCallbacks = callbacks; });
+    mockUseSendMessage.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello there!" } });
+    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+    await waitFor(() => screen.getByText(/are you sure/i));
+
+    // The modal confirm button is labeled "Send Message"
+    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => { capturedCallbacks.onSuccess(); });
+
+    await waitFor(() => {
+      expect(screen.getByText(/message sent/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows a toast notification when message send fails", async () => {
+    let capturedCallbacks: any;
+    setupProfile();
+    const mockMutate = vi.fn((_data: any, callbacks: any) => { capturedCallbacks = callbacks; });
+    mockUseSendMessage.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello there!" } });
+    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+    await waitFor(() => screen.getByText(/are you sure/i));
+
+    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => { capturedCallbacks.onError({ error: "Rate limited" }); });
+
+    await waitFor(() => {
+      expect(screen.getByText(/failed to send/i)).toBeInTheDocument();
+      expect(screen.getByText(/rate limited/i)).toBeInTheDocument();
+    });
   });
 
   it("calls scrollIntoView with block:nearest when ask card is below the viewport", async () => {

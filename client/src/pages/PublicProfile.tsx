@@ -29,12 +29,6 @@ import { parseRichText } from "../utils/parseRichText";
 
 const MAX_MESSAGE_LENGTH = 150;
 
-interface PageAlert {
-  title: string;
-  message: React.ReactNode;
-  color: "red" | "green" | "blue" | "yellow";
-}
-
 // Styles for the ask-card textarea (rendered on a dark gradient background)
 const askCardTextareaStyles = {
   input: {
@@ -63,7 +57,7 @@ export default function PublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const [message, setMessage] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
-  const [pageAlert, setPageAlert] = useState<PageAlert | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const askCardRef = useRef<HTMLDivElement>(null);
 
@@ -81,26 +75,21 @@ export default function PublicProfile() {
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   const handleSend = () => {
-    setPageAlert(null);
+    setFormError(null);
     if (!message.trim()) {
-      setPageAlert({ title: "Validation Error", message: "Message cannot be empty.", color: "red" });
+      setFormError("Message cannot be empty.");
       return;
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
-      setPageAlert({
-        title: "Validation Error",
-        message: `Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`,
-        color: "red",
-      });
+      setFormError(`Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`);
       return;
     }
     setModalOpened(true);
   };
 
   const handleConfirmSend = () => {
-    setPageAlert(null);
     if (!profileData?.profile?.did) {
-      setPageAlert({ title: "Error", message: "Cannot send message: User DID not found.", color: "red" });
+      notifications.show({ title: "Error", message: "Cannot send message: User DID not found.", color: "red" });
       setModalOpened(false);
       return;
     }
@@ -108,14 +97,14 @@ export default function PublicProfile() {
       { recipient: profileData.profile.did, message },
       {
         onSuccess: () => {
-          setPageAlert({ title: "Success!", message: "Message sent! Let's go!", color: "green" });
+          notifications.show({ title: "Message sent!", message: "Your anonymous message is on its way.", color: "green" });
           setMessage("");
           setModalOpened(false);
         },
         onError: (err: unknown) => {
           const e = err as Record<string, unknown>;
-          setPageAlert({
-            title: "Error",
+          notifications.show({
+            title: "Failed to send",
             message: (typeof e?.message === "string" ? e.message : undefined)
               ?? (typeof e?.error === "string" ? e.error : undefined)
               ?? "Failed to send message. Please try again.",
@@ -228,18 +217,6 @@ export default function PublicProfile() {
 
   return (
     <Container>
-      {pageAlert && (
-        <Alert
-          title={pageAlert.title}
-          color={pageAlert.color}
-          withCloseButton
-          onClose={() => setPageAlert(null)}
-          mb="lg"
-        >
-          {pageAlert.message}
-        </Alert>
-      )}
-
       {profile ? (
         <>
           {/* URL breadcrumb row — pill showing fragen.navy/handle + copy/share actions */}
@@ -416,6 +393,21 @@ export default function PublicProfile() {
             </Text>
 
             <Stack gap="xs">
+              {formError && (
+                <Alert
+                  color="red"
+                  withCloseButton
+                  onClose={() => setFormError(null)}
+                  role="alert"
+                  styles={{
+                    root: { background: "rgba(220,38,38,0.18)", border: "1px solid rgba(220,38,38,0.35)" },
+                    message: { color: "#FCA5A5" },
+                    closeButton: { color: "#FCA5A5" },
+                  }}
+                >
+                  {formError}
+                </Alert>
+              )}
               <Textarea
                 ref={textareaRef}
                 value={message}
