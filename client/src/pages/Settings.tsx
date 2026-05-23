@@ -9,12 +9,11 @@ import {
   Alert,
   Skeleton,
   Loader,
-  Notification,
   Select,
   Stack,
   useComputedColorScheme,
 } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 
 import { apiClient, ApiError } from "../api/apiClient";
@@ -38,7 +37,6 @@ const STAT_SIZE_SMALL = 13;
 
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
   const computedColorScheme = useComputedColorScheme("light", {
     getInitialValueInEffect: true,
   });
@@ -54,10 +52,11 @@ export default function Settings() {
   const updateSettings = useUpdateUserSettings({
     onSuccess: () => {},
     onError: (error: ApiError) => {
-      setUpdateError(
-        error.error || "Failed to update settings. Please try again.",
-      );
-      setTimeout(() => setUpdateError(null), 5000);
+      notifications.show({
+        title: "Update Failed",
+        message: error.error || "Failed to update settings. Please try again.",
+        color: "red",
+      });
     },
   });
   const { data: userStats, isLoading: statsLoading } = useUserStats();
@@ -90,18 +89,6 @@ export default function Settings() {
         </Alert>
       ) : (
         <>
-          {updateError && (
-            <Notification
-              icon={<IconX size="1.1rem" />}
-              color="red"
-              title="Update Failed"
-              mb="md"
-              onClose={() => setUpdateError(null)}
-            >
-              {updateError}
-            </Notification>
-          )}
-
           <Title order={1} mb="xl" style={{ letterSpacing: "-0.03em" }}>
             Settings
           </Title>

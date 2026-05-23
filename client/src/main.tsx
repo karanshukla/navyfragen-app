@@ -12,12 +12,13 @@ import { InstallPromptProvider } from "./components/InstallPromptContext";
 import navyfragenTheme from "./Theme";
 
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="auto" theme={navyfragenTheme}>
-      <Notifications />
+      <Notifications position="bottom-center" autoClose={5000} limit={3} />
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <InstallPromptProvider>

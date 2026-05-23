@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
@@ -217,5 +217,64 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     expect(screen.queryByText(/posting preferences/i)).toBeNull();
     expect(screen.queryByText(/image theme/i)).toBeNull();
+  });
+
+  it("shows a welcome-back toast notification after a new login", async () => {
+    sessionStorage.setItem("newLogin", "true");
+    setupMocks();
+    renderWithProviders(<Messages />);
+    await waitFor(() => {
+      expect(screen.getByText(/welcome back/i)).toBeInTheDocument();
+    });
+    expect(sessionStorage.getItem("newLogin")).toBeNull();
+  });
+
+  it("shows an error toast notification when delete fails", async () => {
+    let capturedCallbacks: any;
+    setupMocks();
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => { capturedCallbacks = callbacks; });
+    mockUseDeleteMessage.mockReturnValue({ mutate: mockDeleteMutate, isPending: false } as any);
+    renderWithProviders(<Messages />);
+
+    const deleteButtons = screen.getAllByRole("button", { name: /delete message/i });
+    fireEvent.click(deleteButtons[0]);
+    await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
+
+    act(() => { capturedCallbacks.onError({ error: "Network error" }); });
+
+    await waitFor(() => {
+      expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
+      expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error toast notification when responding fails", async () => {
+    let capturedRespondCallbacks: any;
+    setupMocks();
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => { capturedRespondCallbacks = callbacks; });
+    mockUseRespondToMessage.mockReturnValue({ mutate: mockRespondMutate, isPending: false } as any);
+    renderWithProviders(<Messages />);
+
+    // Click the "↩ Reply" button (text button to open the response area)
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
+    fireEvent.click(openReplyBtn!);
+
+    // Wait for the response textarea to appear
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "Great question!" },
+    });
+
+    // Click the "Reply" send button (the gradient button inside the response box)
+    const sendReplyBtn = screen.getByRole("button", { name: /^reply$/i });
+    fireEvent.click(sendReplyBtn);
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+
+    act(() => { capturedRespondCallbacks.onError({ error: "Post failed" }); });
+
+    await waitFor(() => {
+      expect(screen.getByText(/response error/i)).toBeInTheDocument();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { Alert, createTheme, MantineColorsTuple } from "@mantine/core";
+import { Alert, Notification, createTheme, MantineColorsTuple } from "@mantine/core";
 
 const royal: MantineColorsTuple = [
   "#EEF2FF", "#D9E0FF", "#B0BEFF", "#849BFF", "#6178FF",
@@ -94,6 +94,40 @@ const navyfragenTheme = createTheme({
             borderRadius: 12,
             background: bg[c] ?? bg.royal,
             border: bd[c] ?? bd.royal,
+          },
+          title: {
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 700,
+          },
+        };
+      },
+    }),
+
+    Notification: Notification.extend({
+      styles: (_theme, props) => {
+        const bg: Record<string, string> = {
+          red:    "rgba(220,38,38,0.12)",
+          green:  "rgba(34,197,94,0.12)",
+          yellow: "rgba(250,204,21,0.12)",
+          royal:  "rgba(59,91,255,0.12)",
+          blue:   "rgba(59,91,255,0.12)",
+          purple: "rgba(139,92,246,0.12)",
+        };
+        const bd: Record<string, string> = {
+          red:    "1px solid rgba(220,38,38,0.28)",
+          green:  "1px solid rgba(34,197,94,0.28)",
+          yellow: "1px solid rgba(250,204,21,0.28)",
+          royal:  "1px solid rgba(59,91,255,0.28)",
+          blue:   "1px solid rgba(59,91,255,0.28)",
+          purple: "1px solid rgba(139,92,246,0.28)",
+        };
+        const c = (props.color as string | undefined) ?? "royal";
+        return {
+          root: {
+            borderRadius: 12,
+            background: bg[c] ?? bg.royal,
+            border: bd[c] ?? bd.royal,
+            backdropFilter: "blur(8px)",
           },
           title: {
             fontFamily: "Inter, sans-serif",
