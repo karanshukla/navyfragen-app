@@ -57,6 +57,16 @@ export async function generateQuestionImage(
   );
 
   try {
+    try {
+      await fetch(env.EXPORT_HTML_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "<html><body></body></html>", format: "png", options: { width: 1, height: 1 } }),
+      });
+    } catch {
+      // ignore — warmup just needs to knock on the door
+    }
+
     logger.info(`Attempting to generate image via service at: ${env.EXPORT_HTML_URL}`);
     const payload = {
       source: html,
