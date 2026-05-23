@@ -57,11 +57,14 @@ export async function generateQuestionImage(
   );
 
   try {
-    logger.info(`Warming up image service at: ${env.EXPORT_HTML_URL}`);
     try {
-      await fetch(env.EXPORT_HTML_URL, { method: "GET" });
+      await fetch(env.EXPORT_HTML_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "<html><body></body></html>", format: "png", options: { width: 1, height: 1 } }),
+      });
     } catch {
-      // Ignore — wake-up request just needs to reach the service
+      // ignore — warmup just needs to knock on the door
     }
 
     logger.info(`Attempting to generate image via service at: ${env.EXPORT_HTML_URL}`);
@@ -191,7 +194,7 @@ function generateDefaultHtml(
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      justify-content: space-between;
     }
     .header {
       color: rgba(255, 255, 255, 0.90);
@@ -277,6 +280,7 @@ function generateCompressedHtml(
       width: 100%;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
     }
     .label {
       font-size: 9px;
