@@ -18,7 +18,7 @@ import "./index.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="auto" theme={navyfragenTheme}>
-      <Notifications position="top-right" autoClose={5000} limit={3} />
+      <Notifications position="bottom-center" autoClose={5000} limit={3} />
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <InstallPromptProvider>
