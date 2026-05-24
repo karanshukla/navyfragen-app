@@ -169,8 +169,8 @@ function compressedHeight(length: number): number {
   // message area: 380px − 24px body padding − 4px border − 27px card padding (13px+14px)
   const lines = estimateLines(length, fontSize, 325);
   const textH = Math.ceil(lines * fontSize * 1.45);
-  // fixed chrome: 24 body pad + 24 card pad + 9 label + 6 label-margin + 8 footer-margin + 10 footer = 81
-  return Math.max(textH + 81, 100);
+  // fixed chrome: 24 body pad + 24 card pad + 11 label (9px×1.2lh) + 6 label-margin + 8 footer-margin + 12 footer (10px×1.2lh) = 85
+  return Math.max(textH + 85, 100);
 }
 
 function twitterHeight(length: number, handle?: string): number {
@@ -212,7 +212,7 @@ function generateDefaultHtml(
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      justify-content: space-between;
+      gap: 10px;
     }
     .header {
       color: rgba(255, 255, 255, 0.90);
@@ -298,7 +298,6 @@ function generateCompressedHtml(
       width: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
     }
     .label {
       font-size: 9px;
