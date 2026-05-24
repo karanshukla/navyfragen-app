@@ -76,7 +76,7 @@ export async function generateQuestionImage(
     themeName,
     escapedMessage,
     footerText,
-    originalMessage.length,
+    originalMessage,
     userBskyHandle
   );
 
@@ -129,16 +129,16 @@ function generateThemeSpecificHtml(
   themeName: string,
   escapedMessage: string,
   footerText: string,
-  messageLength: number,
+  originalMessage: string,
   handle?: string
 ): { html: string; width: number; height: number } {
   switch (themeName) {
     case "compressed":
-      return generateCompressedHtml(escapedMessage, footerText, messageLength);
+      return generateCompressedHtml(escapedMessage, footerText, originalMessage);
     case "twitter":
-      return generateTwitterHtml(escapedMessage, footerText, messageLength, handle);
+      return generateTwitterHtml(escapedMessage, footerText, originalMessage, handle);
     default:
-      return generateDefaultHtml(escapedMessage, footerText, messageLength);
+      return generateDefaultHtml(escapedMessage, footerText, originalMessage);
   }
 }
 
@@ -148,36 +148,72 @@ function msgFontSize(length: number, large: number, medium: number, small: numbe
   return small;
 }
 
-// Estimates rendered line count using avg char width (0.58× font size for Noto Sans),
-// with a 20% buffer for word wrapping and character width variance.
-function estimateLines(messageLength: number, fontSize: number, areaWidth: number): number {
-  const charsPerLine = Math.max(1, Math.floor(areaWidth / (fontSize * 0.58)));
-  return Math.max(1, Math.ceil((messageLength / charsPerLine) * 1.2));
+// Simulates CSS word-wrap by placing words one-by-one and breaking at the line
+// boundary. Handles explicit newlines and long words (matched to break-word CSS).
+// charWidthCoeff: avg rendered char width as a fraction of fontSize.
+// Noto Sans ≈ 0.58; compact system fonts (SF Pro, Segoe UI, Roboto) ≈ 0.55.
+function wrapLines(
+  text: string,
+  fontSize: number,
+  areaWidth: number,
+  charWidthCoeff: number
+): number {
+  const charsPerLine = areaWidth / (fontSize * charWidthCoeff);
+  let totalLines = 0;
+  for (const para of text.split("\n")) {
+    const words = para.split(/\s+/).filter((w) => w.length > 0);
+    if (words.length === 0) {
+      totalLines++;
+      continue;
+    }
+    let lineChars = 0;
+    let pLines = 1;
+    for (const word of words) {
+      if (word.length > charsPerLine) {
+        if (lineChars > 0) pLines++;
+        pLines += Math.ceil(word.length / charsPerLine) - 1;
+        lineChars = word.length % charsPerLine || charsPerLine;
+      } else if (lineChars === 0) {
+        lineChars = word.length;
+      } else if (lineChars + 1 + word.length <= charsPerLine) {
+        lineChars += 1 + word.length;
+      } else {
+        pLines++;
+        lineChars = word.length;
+      }
+    }
+    totalLines += pLines;
+  }
+  return Math.max(1, totalLines);
 }
 
-function nglHeight(length: number): number {
+function nglHeight(message: string): number {
+  const length = message.length;
   const fontSize = msgFontSize(length, 26, 21, 17);
   // message area: 360px wide − 32px body padding − 36px bubble padding (18px each side)
-  const lines = estimateLines(length, fontSize, 292);
+  const lines = wrapLines(message, fontSize, 292, 0.58);
   const bubbleH = Math.ceil(lines * fontSize * 1.45) + 24; // 24 = 12px top + 12px bottom bubble padding
   // fixed chrome: 16 top pad + 20 header + 10 gap + 10 gap + 16 footer + 16 bottom pad = 88
   return Math.max(bubbleH + 88, 180);
 }
 
-function compressedHeight(length: number): number {
+function compressedHeight(message: string): number {
+  const length = message.length;
   const fontSize = msgFontSize(length, 19, 16, 14);
   // message area: 380px − 24px body padding − 4px border − 27px card padding (13px+14px)
-  const lines = estimateLines(length, fontSize, 325);
+  const lines = wrapLines(message, fontSize, 325, 0.55);
   const textH = Math.ceil(lines * fontSize * 1.45);
   // fixed chrome: 24 body pad + 24 card pad + 11 label (9px×1.2lh) + 6 label-margin + 8 footer-margin + 12 footer (10px×1.2lh) = 85
   return Math.max(textH + 85, 100);
 }
 
-function twitterHeight(length: number, handle?: string): number {
+function twitterHeight(message: string, handle?: string): number {
+  const length = message.length;
   const fontSize = msgFontSize(length, 21, 17, 14);
   // message area: 420px − 32px card padding (16px each side)
-  const effectiveLength = handle ? length + handle.length + 2 : length;
-  const lines = estimateLines(effectiveLength, fontSize, 388);
+  // Prepend handle mention since it's rendered inline before the message text
+  const displayText = handle ? `@${handle} ${message}` : message;
+  const lines = wrapLines(displayText, fontSize, 388, 0.55);
   const textH = Math.ceil(lines * fontSize * 1.45);
   // fixed chrome: 14 card-top + 36 avatar-row + 10 header-margin + 37 footer (margin+pad+border+text) + 12 card-bottom = 109
   return Math.max(textH + 109, 140);
@@ -187,11 +223,11 @@ function twitterHeight(length: number, handle?: string): number {
 function generateDefaultHtml(
   escapedMessage: string,
   footerText: string,
-  messageLength: number
+  originalMessage: string
 ): { html: string; width: number; height: number } {
   const width = 360;
-  const height = nglHeight(messageLength);
-  const fontSize = msgFontSize(messageLength, 26, 21, 17);
+  const height = nglHeight(originalMessage);
+  const fontSize = msgFontSize(originalMessage.length, 26, 21, 17);
 
   const html = `<!DOCTYPE html>
 <html>
@@ -265,11 +301,11 @@ function generateDefaultHtml(
 function generateCompressedHtml(
   escapedMessage: string,
   footerText: string,
-  messageLength: number
+  originalMessage: string
 ): { html: string; width: number; height: number } {
   const width = 380;
-  const height = compressedHeight(messageLength);
-  const fontSize = msgFontSize(messageLength, 19, 16, 14);
+  const height = compressedHeight(originalMessage);
+  const fontSize = msgFontSize(originalMessage.length, 19, 16, 14);
 
   const html = `<!DOCTYPE html>
 <html>
@@ -340,12 +376,12 @@ function generateCompressedHtml(
 function generateTwitterHtml(
   escapedMessage: string,
   footerText: string,
-  messageLength: number,
+  originalMessage: string,
   handle?: string
 ): { html: string; width: number; height: number } {
   const width = 420;
-  const height = twitterHeight(messageLength, handle);
-  const fontSize = msgFontSize(messageLength, 21, 17, 14);
+  const height = twitterHeight(originalMessage, handle);
+  const fontSize = msgFontSize(originalMessage.length, 21, 17, 14);
 
   const html = `<!DOCTYPE html>
 <html>
