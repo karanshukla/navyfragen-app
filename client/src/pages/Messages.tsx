@@ -376,7 +376,7 @@ export default function Messages() {
   const [includeQuestionAsImage, setIncludeQuestionAsImage] = useLocalStorage({
     key: "includeQuestionAsImage",
     defaultValue: true,
-    getInitialValueInEffect: true,
+    getInitialValueInEffect: false,
   });
   const [confirmBeforeDelete, setConfirmBeforeDelete] = useLocalStorage({
     key: "confirmBeforeDelete",

@@ -57,7 +57,7 @@ describe("fetchWithRetry", () => {
     assert.strictEqual(callCount, 1);
   });
 
-  test("passes url and init options through to fetch", async () => {
+  test("passes url and init options through to fetch, adding an AbortSignal", async () => {
     const mockResponse = new Response("ok", { status: 200 });
     const capturedArgs: any[] = [];
     mock.method(globalThis, "fetch", async (...args: any[]) => {
@@ -69,6 +69,10 @@ describe("fetchWithRetry", () => {
     await fetchWithRetry("http://test/endpoint", init, 5000);
 
     assert.strictEqual(capturedArgs[0][0], "http://test/endpoint");
-    assert.deepStrictEqual(capturedArgs[0][1], init);
+    const passedInit = capturedArgs[0][1];
+    assert.strictEqual(passedInit.method, init.method);
+    assert.deepStrictEqual(passedInit.headers, init.headers);
+    assert.strictEqual(passedInit.body, init.body);
+    assert.ok(passedInit.signal instanceof AbortSignal, "Should include an AbortSignal");
   });
 });
