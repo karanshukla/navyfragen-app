@@ -232,36 +232,26 @@ export class MessageService {
             imageTheme
           );
 
-        if (imageBlob) {
-          try {
-            const uploadedImage = await agent.uploadBlob(imageBlob, {
-              encoding: "image/png",
-            });
-            const imageEmbed: any = {
-              image: uploadedImage.data.blob,
-              alt: imageAltText || "Image of the anonymous question",
-            };
-            if (width && height) {
-              imageEmbed.aspectRatio = { width, height };
-            }
-            postRecord.embed = {
-              $type: "app.bsky.embed.images",
-              images: [imageEmbed],
-            };
-          } catch (uploadErr) {
-            this.logger.error(uploadErr, "Failed to upload image to Bluesky, falling back to text-only");
-          }
-        } else {
-          this.logger.warn("Image generation failed, falling back to text-only response");
+        if (!imageBlob) {
+          throw new Error(
+            "Image generation failed — the image service may still be starting up. Please try again in a moment."
+          );
         }
 
-        if (!postRecord.embed) {
-          const combinedText = `${response}\n\nAnon asked via 🔷💬📩: "${original}"`;
-          const richTextWithQuestion = new RichText({ text: combinedText });
-          await richTextWithQuestion.detectFacets(agent);
-          postRecord.text = richTextWithQuestion.text;
-          postRecord.facets = richTextWithQuestion.facets || [];
+        const uploadedImage = await agent.uploadBlob(imageBlob, {
+          encoding: "image/png",
+        });
+        const imageEmbed: any = {
+          image: uploadedImage.data.blob,
+          alt: imageAltText || "Image of the anonymous question",
+        };
+        if (width && height) {
+          imageEmbed.aspectRatio = { width, height };
         }
+        postRecord.embed = {
+          $type: "app.bsky.embed.images",
+          images: [imageEmbed],
+        };
       } else {
         const combinedText = `${response}\n\nAnon asked via 🔷💬📩: "${original}"`;
         const richTextWithQuestion = new RichText({ text: combinedText });
@@ -305,7 +295,7 @@ export class MessageService {
         { err, tid, did },
         "Error while trying to post response to Bluesky"
       );
-      throw new Error("Failed to post to Bluesky");
+      throw new Error(err instanceof Error ? err.message : "Failed to post to Bluesky");
     }
   }
 
