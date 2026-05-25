@@ -28,6 +28,8 @@ const BASE_CSS = `
 
 // Retries a fetch on network errors (ECONNREFUSED, ETIMEDOUT, etc.) for up to
 // timeoutMs. Does not retry HTTP error responses — those mean the service is up.
+// Each individual request is bounded by an AbortController so a hanging
+// connection cannot block the loop past the overall deadline.
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
@@ -37,14 +39,21 @@ export async function fetchWithRetry(
   let delay = 500;
   let lastError: unknown;
   while (true) {
-    try {
-      return await fetch(url, init);
-    } catch (err) {
-      lastError = err;
-    }
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
-    await new Promise((r) => setTimeout(r, Math.min(delay, remaining)));
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), remaining);
+    try {
+      const response = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(abortTimer);
+      return response;
+    } catch (err) {
+      clearTimeout(abortTimer);
+      lastError = err;
+    }
+    const remainingAfter = deadline - Date.now();
+    if (remainingAfter <= 0) break;
+    await new Promise((r) => setTimeout(r, Math.min(delay, remainingAfter)));
     delay = Math.min(Math.ceil(delay * 1.5), 2000);
   }
   throw lastError;
