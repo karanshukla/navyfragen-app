@@ -203,14 +203,15 @@ function nglHeight(message: string): number {
   const lines = wrapLines(message, fontSize, 292, 0.58);
   const bubbleH = Math.ceil(lines * fontSize * 1.45) + 24; // 24 = 12px top + 12px bottom bubble padding
   // fixed chrome: 16 top pad + 20 header + 10 gap + 10 gap + 16 footer + 16 bottom pad = 88
-  return Math.max(bubbleH + 88, 180);
+  return bubbleH + 88;
 }
 
 function compressedHeight(message: string): number {
   const length = message.length;
   const fontSize = msgFontSize(length, 19, 16, 14);
   // message area: 380px − 24px body padding − 4px border − 27px card padding (13px+14px)
-  const lines = wrapLines(message, fontSize, 325, 0.55);
+  // coeff 0.53: Noto Sans semibold at these sizes fills ~38–39 chars/line at 16px in a 325px area
+  const lines = wrapLines(message, fontSize, 325, 0.53);
   const textH = Math.ceil(lines * fontSize * 1.45);
   // fixed chrome: 24 body pad + 24 card pad + 11 label (9px×1.2lh) + 6 label-margin + 8 footer-margin + 12 footer (10px×1.2lh) = 85
   return Math.max(textH + 85, 100);
@@ -258,6 +259,7 @@ function generateDefaultHtml(
       flex-direction: column;
       align-items: stretch;
       gap: 10px;
+      justify-content: space-between;
     }
     .header {
       color: rgba(255, 255, 255, 0.90);
@@ -282,6 +284,7 @@ function generateDefaultHtml(
       text-align: center;
       word-break: break-word;
       overflow-wrap: break-word;
+      white-space: pre-wrap;
       width: 100%;
     }
     .footer {
@@ -343,6 +346,7 @@ function generateCompressedHtml(
       width: 100%;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
     }
     .label {
       font-size: 9px;
@@ -359,6 +363,7 @@ function generateCompressedHtml(
       line-height: 1.45;
       word-break: break-word;
       overflow-wrap: break-word;
+      white-space: pre-wrap;
     }
     .footer {
       font-size: 10px;
@@ -418,6 +423,11 @@ function generateTwitterHtml(
       border-radius: 16px;
       padding: 14px 16px 12px;
       width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .tweet-body {
       display: flex;
       flex-direction: column;
     }
@@ -480,6 +490,7 @@ function generateTwitterHtml(
       line-height: 1.45;
       word-break: break-word;
       overflow-wrap: break-word;
+      white-space: pre-wrap;
     }
     .footer {
       font-size: 12px;
@@ -493,18 +504,20 @@ function generateTwitterHtml(
 </head>
 <body>
   <div class="card">
-    <div class="top">
-      <div class="avatar">${LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="Navyfragen logo" />` : "NF"}</div>
-      <div class="user-info">
-        <div class="name-row">
-          <span class="user-name">Navyfragen - Anonymous QnA</span>
-          <span class="verified">🔷📩</span>
+    <div class="tweet-body">
+      <div class="top">
+        <div class="avatar">${LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="Navyfragen logo" />` : "NF"}</div>
+        <div class="user-info">
+          <div class="name-row">
+            <span class="user-name">Navyfragen - Anonymous QnA</span>
+            <span class="verified">🔷📩</span>
+          </div>
+          <div class="user-handle">@navyfragen.app</div>
         </div>
-        <div class="user-handle">@navyfragen.app</div>
       </div>
-    </div>
-    <div class="content">
-      <div class="message">${handle ? `<span class="mention">@${handle}</span> ` : ""}${escapedMessage}</div>
+      <div class="content">
+        <div class="message">${handle ? `<span class="mention">@${handle}</span> ` : ""}${escapedMessage}</div>
+      </div>
     </div>
     <div class="footer">${footerText}</div>
   </div>
