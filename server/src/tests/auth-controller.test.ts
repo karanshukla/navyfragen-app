@@ -1,0 +1,333 @@
+import { test, describe, mock, before, afterEach } from "node:test";
+import assert from "node:assert";
+import { AuthController } from "../controllers/auth-controller";
+
+describe("AuthController", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  function makeCtx(overrides: any = {}): any {
+    return {
+      oauthClient: {
+        clientMetadata: { client_id: "test-client" },
+        callback: mock.fn(async () => ({ session: { did: "did:foo" } })),
+      },
+      logger: {
+        info: mock.fn(),
+        error: mock.fn(),
+        debug: mock.fn(),
+        warn: mock.fn(),
+      },
+      ...overrides,
+    };
+  }
+
+  function makeReq(overrides: any = {}): any {
+    return {
+      body: {},
+      session: null,
+      originalUrl: "/oauth/callback?code=abc&state=xyz",
+      ...overrides,
+    };
+  }
+
+  function makeRes(): any {
+    const res: any = {};
+    res.status = mock.fn(() => res);
+    res.json = mock.fn(() => res);
+    res.redirect = mock.fn(() => res);
+    return res;
+  }
+
+  function makeService(overrides: any = {}): any {
+    return {
+      getOAuthRedirectUrl: mock.fn(async () => "https://bsky.app/oauth"),
+      revokeSession: mock.fn(async () => {}),
+      checkSession: mock.fn(async () => null),
+      createOrConfirmUserProfile: mock.fn(async () => {}),
+      encryptDid: mock.fn(() => "enc-token"),
+      decryptDid: mock.fn(() => "did:foo"),
+      findUserByDid: mock.fn(async () => ({ did: "did:foo" })),
+      ...overrides,
+    };
+  }
+
+  describe("login", () => {
+    test("returns 400 for invalid handle (empty string)", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.login(makeReq({ body: { handle: "" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
+    test("returns 400 for non-string handle", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.login(makeReq({ body: { handle: 123 } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
+    test("returns redirectUrl on success", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const res = makeRes();
+
+      await controller.login(makeReq({ body: { handle: "foo.bsky.social" } }), res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        redirectUrl: "https://bsky.app/oauth",
+      });
+    });
+
+    test("returns 500 when service throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        getOAuthRedirectUrl: mock.fn(async () => { throw new Error("network"); }),
+      });
+      const res = makeRes();
+
+      await controller.login(makeReq({ body: { handle: "foo.bsky.social" } }), res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+  });
+
+  describe("logout", () => {
+    test("returns 400 when no session", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.logout(makeReq({ session: null }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
+    test("returns 200 and clears session on success", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const req = makeReq({ session: { did: "did:foo" } });
+      const res = makeRes();
+
+      await controller.logout(req, res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 200);
+      assert.strictEqual(req.session, null);
+    });
+
+    test("returns 500 when revokeSession throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        revokeSession: mock.fn(async () => { throw new Error("revoke failed"); }),
+      });
+      const res = makeRes();
+
+      await controller.logout(makeReq({ session: { did: "did:foo" } }), res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+  });
+
+  describe("session", () => {
+    test("returns isLoggedIn:false when no session DID", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.session(makeReq({ session: null }), res);
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        isLoggedIn: false,
+        profile: null,
+        did: null,
+      });
+    });
+
+    test("returns isLoggedIn:true when checkSession returns profile", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      const mockProfile = { did: "did:foo", handle: "foo.bsky.social" };
+      (controller as any).service = makeService({
+        checkSession: mock.fn(async () => mockProfile),
+      });
+      const res = makeRes();
+
+      await controller.session(makeReq({ session: { did: "did:foo" } }), res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        isLoggedIn: true,
+        profile: mockProfile,
+        did: "did:foo",
+      });
+    });
+
+    test("returns isLoggedIn:false and clears session when checkSession returns null", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({ checkSession: mock.fn(async () => null) });
+      const req = makeReq({ session: { did: "did:foo" } });
+      const res = makeRes();
+
+      await controller.session(req, res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        isLoggedIn: false,
+        profile: null,
+        did: null,
+      });
+      assert.strictEqual(req.session, null);
+    });
+
+    test("returns isLoggedIn:false when checkSession throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        checkSession: mock.fn(async () => { throw new Error("session error"); }),
+      });
+      const res = makeRes();
+
+      await controller.session(makeReq({ session: { did: "did:foo" } }), res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        isLoggedIn: false,
+        profile: null,
+        did: null,
+      });
+    });
+  });
+
+  describe("clientMetadata", () => {
+    test("returns ctx.oauthClient.clientMetadata", () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      const res = makeRes();
+
+      controller.clientMetadata(makeReq(), res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { client_id: "test-client" });
+    });
+  });
+
+  describe("oauthCallback", () => {
+    test("redirects with token on callback success and profile created", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      const res = makeRes();
+
+      await controller.oauthCallback(req, res);
+
+      const redirectUrl: string = res.redirect.mock.calls[0].arguments[0];
+      assert.ok(redirectUrl.includes("oauth_token=enc-token"));
+      assert.deepStrictEqual(req.session, { did: "did:foo" });
+    });
+
+    test("still redirects with token when db profile creation throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        createOrConfirmUserProfile: mock.fn(async () => { throw new Error("db error"); }),
+      });
+      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      const res = makeRes();
+
+      await controller.oauthCallback(req, res);
+
+      const redirectUrl: string = res.redirect.mock.calls[0].arguments[0];
+      assert.ok(redirectUrl.includes("oauth_token=enc-token"));
+    });
+
+    test("redirects with error=server_config when encryptDid throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        encryptDid: mock.fn(() => { throw new Error("no secret"); }),
+      });
+      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      const res = makeRes();
+
+      await controller.oauthCallback(req, res);
+
+      const redirectUrl: string = res.redirect.mock.calls[0].arguments[0];
+      assert.ok(redirectUrl.includes("error=server_config"));
+    });
+
+    test("redirects with error=oauth_failed when callback throws", async () => {
+      const ctx = makeCtx({
+        oauthClient: {
+          clientMetadata: { client_id: "test-client" },
+          callback: mock.fn(async () => { throw new Error("oauth error"); }),
+        },
+      });
+      const controller = new AuthController(ctx);
+      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      const res = makeRes();
+
+      await controller.oauthCallback(req, res);
+
+      const redirectUrl: string = res.redirect.mock.calls[0].arguments[0];
+      assert.ok(redirectUrl.includes("error=oauth_failed"));
+    });
+  });
+
+  describe("oauthConsume", () => {
+    test("returns 400 when oauth_token is missing", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.oauthConsume(makeReq({ body: {} }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
+    test("returns 500 when decryptDid throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        decryptDid: mock.fn(() => { throw new Error("bad secret"); }),
+      });
+      const res = makeRes();
+
+      await controller.oauthConsume(makeReq({ body: { oauth_token: "bad" } }), res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+
+    test("returns 404 when user not found", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        findUserByDid: mock.fn(async () => null),
+      });
+      const res = makeRes();
+
+      await controller.oauthConsume(makeReq({ body: { oauth_token: "token" } }), res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 404);
+    });
+
+    test("returns 200 and sets session on success", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const req = makeReq({ body: { oauth_token: "token" }, session: {} });
+      const res = makeRes();
+
+      await controller.oauthConsume(req, res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
+      assert.deepStrictEqual(req.session, { did: "did:foo" });
+    });
+
+    test("returns 400 when findUserByDid throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        findUserByDid: mock.fn(async () => { throw new Error("db error"); }),
+      });
+      const res = makeRes();
+
+      await controller.oauthConsume(makeReq({ body: { oauth_token: "token" } }), res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+  });
+});

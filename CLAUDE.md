@@ -120,3 +120,59 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
 CI runs client and server tests independently in separate GitHub Actions workflows (`.github/workflows/ClientTests.yml` / `ServerTests.yml`), targeting Node 24.
+
+## Testing & Coverage
+
+### Running Coverage
+
+```bash
+# Server (from server/)
+npm run test:coverage
+
+# Client (from client/)
+npm run test -- --coverage
+```
+
+Target is 100% across all four v8 metrics: statements, lines, branches, functions.
+
+### Coverage Exclusions
+
+**Server** — excluded via `--test-coverage-exclude` flags in the `test:coverage` script:
+- `src/lexicon/**` — auto-generated from AT Protocol lexicons
+- `src/index.ts` — Express boot + process signal handlers
+- `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — AT Protocol OAuth wiring
+- `src/database/db.ts` — Kysely migration runner
+- `src/lib/id-resolver.ts` — AT Protocol DID/handle resolver (requires live network)
+- `src/lib/env.ts` — bootstrapped before tests run via `test-bootstrap.js`
+- `src/routes.ts`, `src/routes/*.ts` — pure Express route wiring with no logic
+
+**Client** — excluded via `coverage.exclude` in `vite.config.ts`:
+- `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and app entry point
+- `src/vite-env.d.ts` — ambient declarations
+- `src/styles/tokens.ts` — pure style constant exports
+
+Adding a new exclusion requires a comment in `docs/testing-notes.md` explaining why and what it would take to test.
+
+### `/* v8 ignore */` Convention
+
+Use `/* v8 ignore next */` (or `/* v8 ignore next N */` for N lines) **only** for:
+1. `catch {}` blocks that wrap non-throwing DOM operations (e.g. the AppHeader logout catch block that resets `body.style` — the try never throws in practice)
+2. TypeScript-narrowed union branches that are structurally unreachable at runtime
+
+Do **not** use it to skip real business logic. Document any usage in `docs/testing-notes.md`.
+
+### Module Mocking in Server Tests
+
+Controller and session-agent tests use `mock.module()` (Node.js v22.3+ API) to mock dependencies before a dynamic `import()` of the module under test. The pattern:
+
+```typescript
+before(async () => {
+  mock.module("@atproto/api", {
+    namedExports: { Agent: function(session) { return mockAgent; } },
+  });
+  const mod = await import("../controllers/some-controller.ts");
+  SomeController = mod.SomeController;
+});
+```
+
+`mock.module` must be called **before** the target module is imported. Always use `before()` + dynamic `import()` in test files that need module-level mocking — never top-level static imports of the module under test.

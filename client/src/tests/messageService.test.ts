@@ -1,7 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 
 import { apiClient } from "../api/apiClient";
-import { messageService } from "../api/messageService";
+import {
+  messageService,
+  useMessages,
+  useSendMessage,
+  useDeleteMessage,
+  useRespondToMessage,
+  useAddExampleMessages,
+  useSyncMessages,
+  messageKeys,
+} from "../api/messageService";
+import { settingsKeys } from "../api/settingsService";
+
+function makeWrapper() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: qc }, children);
+}
 
 vi.mock("../api/apiClient", () => ({
   apiClient: {
@@ -178,5 +199,64 @@ describe("messageService", () => {
       expect(result).toEqual(mockMessagesResponse);
       expect(apiClient.post).toHaveBeenCalledWith("/messages/sync");
     });
+  });
+});
+
+describe("message hooks", () => {
+  const mockDid = "did:example:123";
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it("useMessages returns a query result", () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ messages: [] });
+    const { result } = renderHook(() => useMessages(mockDid), { wrapper: makeWrapper() });
+    expect(typeof result.current.isLoading).toBe("boolean");
+  });
+
+  it("useMessages with null did returns a query result", () => {
+    const { result } = renderHook(() => useMessages(null), { wrapper: makeWrapper() });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("useSendMessage returns a mutation object", () => {
+    const { result } = renderHook(() => useSendMessage(), { wrapper: makeWrapper() });
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useDeleteMessage.onSuccess invalidates messages and stats", async () => {
+    vi.mocked(apiClient.delete).mockResolvedValueOnce({ success: true });
+    const { result } = renderHook(() => useDeleteMessage(), { wrapper: makeWrapper() });
+    await act(async () => { await result.current.mutateAsync("tid-1"); });
+    const { queryClient: qc } = await import("../api/queryClient");
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: settingsKeys.stats() });
+  });
+
+  it("useRespondToMessage.onSuccess invalidates messages and stats", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ success: true });
+    const { result } = renderHook(() => useRespondToMessage(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({
+        tid: "t1", recipient: mockDid, original: "Q", response: "A",
+      });
+    });
+    const { queryClient: qc } = await import("../api/queryClient");
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
+  });
+
+  it("useAddExampleMessages.onSuccess invalidates queries", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ messages: [] });
+    const { result } = renderHook(() => useAddExampleMessages(), { wrapper: makeWrapper() });
+    await act(async () => { await result.current.mutateAsync(mockDid); });
+    const { queryClient: qc } = await import("../api/queryClient");
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
+  });
+
+  it("useSyncMessages.onSuccess invalidates queries", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ messages: [] });
+    const { result } = renderHook(() => useSyncMessages(), { wrapper: makeWrapper() });
+    await act(async () => { await result.current.mutateAsync(); });
+    const { queryClient: qc } = await import("../api/queryClient");
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
   });
 });

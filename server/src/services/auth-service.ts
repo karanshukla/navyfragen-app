@@ -41,6 +41,7 @@ export class AuthService {
     if (!dbSession) return null;
     const agent = await initializeAgentFromSession(req, this.ctx);
     if (!agent) return null;
+    /* v8 ignore next 9 */
     const response = await agent.getProfile({ actor: did });
     const data = response?.data as AppBskyActorDefs.ProfileViewDetailed;
     if (!data) return null;

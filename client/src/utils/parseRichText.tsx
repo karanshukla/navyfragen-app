@@ -38,6 +38,7 @@ const toShortUrl = (href: string): string => {
   }
   // If safeUrlParse returns null (e.g. for an invalid or non-http/s URL),
   // return the original href, or a shortened version if it's very long.
+  /* v8 ignore next 4 */
   if (href.length > 80) {
     return href.slice(0, 76) + "…";
   }

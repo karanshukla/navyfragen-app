@@ -75,4 +75,51 @@ describe("AuthService", () => {
     const user = await service.findUserByDid("did:foo");
     assert.deepStrictEqual(user, { did: "did:foo" });
   });
+
+  describe("checkSession", () => {
+    test("returns null when no db session exists", async () => {
+      ctx.db.selectFrom = mock.fn(() => ({
+        selectAll: mock.fn(function (this: any) { return this as any; }),
+        where: mock.fn(function (this: any) { return this as any; }),
+        executeTakeFirst: mock.fn(async () => undefined),
+      }));
+      const result = await service.checkSession("did:foo", { session: { did: "did:foo" } });
+      assert.strictEqual(result, null);
+    });
+
+    test("returns null when oauthClient.restore returns null (no agent)", async () => {
+      ctx.db.selectFrom = mock.fn(() => ({
+        selectAll: mock.fn(function (this: any) { return this as any; }),
+        where: mock.fn(function (this: any) { return this as any; }),
+        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+      }));
+      ctx.oauthClient.restore = mock.fn(async () => null);
+      const result = await service.checkSession("did:foo", { session: { did: "did:foo" } });
+      assert.strictEqual(result, null);
+    });
+  });
+
+  describe("createOrConfirmUserProfile", () => {
+    test("calls insertInto user_profile with did and createdAt", async () => {
+      const executesMock = mock.fn(async () => ({}));
+      const onConflictMock = mock.fn(function (this: any) { return this as any; });
+      const valuesMock = mock.fn(function (this: any) {
+        (this as any).execute = executesMock;
+        (this as any).onConflict = onConflictMock;
+        return this as any;
+      });
+      ctx.db.insertInto = mock.fn(() => ({
+        values: valuesMock,
+        onConflict: onConflictMock,
+        execute: executesMock,
+      }));
+
+      await service.createOrConfirmUserProfile("did:foo");
+
+      assert.strictEqual(ctx.db.insertInto.mock.calls[0].arguments[0], "user_profile");
+      const valuesArg = valuesMock.mock.calls[0].arguments[0];
+      assert.strictEqual(valuesArg.did, "did:foo");
+      assert.ok(typeof valuesArg.createdAt === "string");
+    });
+  });
 });

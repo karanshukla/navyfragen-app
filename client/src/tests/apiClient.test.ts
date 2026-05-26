@@ -83,6 +83,30 @@ describe("apiClient", () => {
         })
       );
     });
+
+    it("should throw an error when POST response is not ok", async () => {
+      window.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve({ error: "Bad Request" }),
+      });
+
+      await expect(apiClient.post("/test-endpoint", {})).rejects.toEqual(
+        expect.objectContaining({ error: "Bad Request", status: 400 })
+      );
+    });
+
+    it("should handle JSON parse errors on POST failure", async () => {
+      window.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error("Invalid JSON")),
+      });
+
+      await expect(apiClient.post("/test-endpoint")).rejects.toEqual(
+        expect.objectContaining({ error: "Unknown error", status: 500 })
+      );
+    });
   });
 
   describe("delete", () => {
@@ -105,6 +129,30 @@ describe("apiClient", () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(testData),
         })
+      );
+    });
+
+    it("should throw an error when DELETE response is not ok", async () => {
+      window.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ error: "Not Found" }),
+      });
+
+      await expect(apiClient.delete("/test-endpoint")).rejects.toEqual(
+        expect.objectContaining({ error: "Not Found", status: 404 })
+      );
+    });
+
+    it("should handle JSON parse errors on DELETE failure", async () => {
+      window.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error("Invalid JSON")),
+      });
+
+      await expect(apiClient.delete("/test-endpoint")).rejects.toEqual(
+        expect.objectContaining({ error: "Unknown error", status: 500 })
       );
     });
   });

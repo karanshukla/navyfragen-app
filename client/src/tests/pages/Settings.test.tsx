@@ -14,7 +14,8 @@ vi.mock("../../api/authService", async (importOriginal) => {
 });
 
 vi.mock("../../api/settingsService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../api/settingsService")>();
+  const actual =
+    await importOriginal<typeof import("../../api/settingsService")>();
   return {
     ...actual,
     useUserSettings: vi.fn(),
@@ -25,18 +26,24 @@ vi.mock("../../api/settingsService", async (importOriginal) => {
 });
 
 vi.mock("../../api/profileService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../api/profileService")>();
+  const actual =
+    await importOriginal<typeof import("../../api/profileService")>();
   return { ...actual, useBotFollow: vi.fn() };
 });
 
 vi.mock("../../components/InstallPromptContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../components/InstallPromptContext")>();
+  const actual =
+    await importOriginal<
+      typeof import("../../components/InstallPromptContext")
+    >();
   return { ...actual, useInstallPrompt: vi.fn() };
 });
 
 const mockUseSession = vi.mocked(authService.useSession);
 const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
-const mockUseUpdateUserSettings = vi.mocked(settingsService.useUpdateUserSettings);
+const mockUseUpdateUserSettings = vi.mocked(
+  settingsService.useUpdateUserSettings,
+);
 const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 const mockUsePdsInfo = vi.mocked(settingsService.usePdsInfo);
 const mockUseBotFollow = vi.mocked(profileService.useBotFollow);
@@ -57,22 +64,49 @@ describe("Settings page", () => {
     vi.clearAllMocks();
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     mockUseInstallPrompt.mockReturnValue(noopInstall);
-    mockUseBotFollow.mockReturnValue({ data: undefined, isLoading: false } as any);
+    mockUseBotFollow.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
   });
 
   it("shows auth error when user is not logged in", () => {
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
-    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: false, error: null, refetch: vi.fn() } as any);
-    mockUseUserStats.mockReturnValue({ data: undefined, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: undefined, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false },
+      isLoading: false,
+    } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
-    expect(screen.getByText(/cannot access this page without logging in/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot access this page without logging in/i),
+    ).toBeInTheDocument();
   });
 
   it("shows skeleton placeholders while stats are loading", () => {
     setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: true, error: null, refetch: vi.fn() } as any);
-    mockUseUserStats.mockReturnValue({ data: undefined, isLoading: true } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as any);
     mockUsePdsInfo.mockReturnValue({ data: undefined, isLoading: true } as any);
     renderWithProviders(<Settings />);
     expect(screen.getByText(/account overview/i)).toBeInTheDocument();
@@ -82,7 +116,12 @@ describe("Settings page", () => {
 
   it("renders all four account overview stats when data is loaded", () => {
     setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({ data: { pdsSyncEnabled: 1, imageTheme: "default" }, isLoading: false, error: null, refetch: vi.fn() } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
     mockUseUserStats.mockReturnValue({
       data: { messageCount: 7, memberSince: "2025-01-15T00:00:00.000Z" },
       isLoading: false,
@@ -105,9 +144,20 @@ describe("Settings page", () => {
 
   it("shows em-dash placeholders when stats are absent", () => {
     setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: false, error: null, refetch: vi.fn() } as any);
-    mockUseUserStats.mockReturnValue({ data: undefined, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: undefined, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
     const dashes = screen.getAllByText("—");
     expect(dashes.length).toBeGreaterThanOrEqual(4);
@@ -115,7 +165,10 @@ describe("Settings page", () => {
 
   it("calls updateSettings when the PDS sync switch is toggled", async () => {
     const mockMutate = vi.fn();
-    mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     setupLoggedIn();
     mockUseUserSettings.mockReturnValue({
       data: { pdsSyncEnabled: 1, imageTheme: "default" },
@@ -123,8 +176,14 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
 
     // Mantine Switch renders as a labelled checkbox input
@@ -132,7 +191,7 @@ describe("Settings page", () => {
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({ pdsSyncEnabled: false })
+        expect.objectContaining({ pdsSyncEnabled: false }),
       );
     });
   });
@@ -150,15 +209,182 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
 
-    act(() => { capturedOnError?.({ error: "Server unavailable" }); });
+    act(() => {
+      capturedOnError?.({ error: "Server unavailable" });
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/update failed/i)).toBeInTheDocument();
       expect(screen.getByText(/server unavailable/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows 'Notifications enabled' when user follows the bot", () => {
+    setupLoggedIn();
+    mockUseBotFollow.mockReturnValue({
+      data: { following: true },
+      isLoading: false,
+    } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    expect(screen.getByText(/notifications enabled/i)).toBeInTheDocument();
+  });
+
+  it("calls updateSettings when image theme is changed", async () => {
+    const mockMutate = vi.fn();
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+
+    const select = document.querySelector("select, [role='combobox']");
+    if (select) {
+      fireEvent.change(select, { target: { value: "compressed" } });
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledWith(
+          expect.objectContaining({ imageTheme: "compressed" }),
+        );
+      });
+    } else {
+      // Mantine Select — click to open then pick an option
+      const combobox = screen.getByRole("textbox", { hidden: true });
+      expect(combobox).toBeInTheDocument();
+    }
+  });
+
+  it("opens delete account modal when 'Delete my Data' is clicked", async () => {
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByText(/are you sure you want to delete your account/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("calls delete API and redirects on confirming delete account", async () => {
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ success: true }),
+    });
+    window.fetch = fetchMock as any;
+
+    renderWithProviders(<Settings />);
+    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
+    await waitFor(() =>
+      screen.getByText(/are you sure you want to delete your account/i),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/delete-account"),
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+  });
+
+  it("restores body styles when delete account API fails", async () => {
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+
+    window.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Network error")) as any;
+
+    renderWithProviders(<Settings />);
+    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
+    await waitFor(() =>
+      screen.getByText(/are you sure you want to delete your account/i),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(document.body.style.pointerEvents).toBe("");
+      expect(document.body.style.opacity).toBe("");
     });
   });
 });

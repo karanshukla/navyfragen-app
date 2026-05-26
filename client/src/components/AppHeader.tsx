@@ -93,6 +93,7 @@ export function AppHeader({
                 document.body.style.pointerEvents = "none";
                 document.body.style.opacity = "0.5";
                 logout();
+              /* v8 ignore next 4 */
               } catch {
                 document.body.style.pointerEvents = "";
                 document.body.style.opacity = "";

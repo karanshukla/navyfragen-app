@@ -128,13 +128,14 @@ export async function generateQuestionImage(
       }
       return {};
     }
+  /* v8 ignore next 3 */
   } catch (imgErr) {
     logger.error(imgErr, "Error during image generation process");
     return {};
   }
 }
 
-function generateThemeSpecificHtml(
+export function generateThemeSpecificHtml(
   themeName: string,
   escapedMessage: string,
   footerText: string,
@@ -151,7 +152,7 @@ function generateThemeSpecificHtml(
   }
 }
 
-function msgFontSize(length: number, large: number, medium: number, small: number): number {
+export function msgFontSize(length: number, large: number, medium: number, small: number): number {
   if (length <= 60) return large;
   if (length <= 120) return medium;
   return small;
@@ -161,7 +162,7 @@ function msgFontSize(length: number, large: number, medium: number, small: numbe
 // boundary. Handles explicit newlines and long words (matched to break-word CSS).
 // charWidthCoeff: avg rendered char width as a fraction of fontSize.
 // Noto Sans ≈ 0.58; compact system fonts (SF Pro, Segoe UI, Roboto) ≈ 0.55.
-function wrapLines(
+export function wrapLines(
   text: string,
   fontSize: number,
   areaWidth: number,

@@ -31,3 +31,6 @@ dist-ssr
 #claude
 .claude
 settings.local.json
+
+# Superpowers spec/design docs
+docs/superpowers/

@@ -13,7 +13,8 @@ vi.mock("../../api/authService", async (importOriginal) => {
 });
 
 vi.mock("../../api/messageService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../api/messageService")>();
+  const actual =
+    await importOriginal<typeof import("../../api/messageService")>();
   return {
     ...actual,
     useMessages: vi.fn(),
@@ -24,7 +25,8 @@ vi.mock("../../api/messageService", async (importOriginal) => {
 });
 
 vi.mock("../../api/settingsService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../api/settingsService")>();
+  const actual =
+    await importOriginal<typeof import("../../api/settingsService")>();
   return {
     ...actual,
     useUserSettings: vi.fn(),
@@ -36,9 +38,13 @@ const mockUseSession = vi.mocked(authService.useSession);
 const mockUseMessages = vi.mocked(messageService.useMessages);
 const mockUseDeleteMessage = vi.mocked(messageService.useDeleteMessage);
 const mockUseRespondToMessage = vi.mocked(messageService.useRespondToMessage);
-const mockUseAddExampleMessages = vi.mocked(messageService.useAddExampleMessages);
+const mockUseAddExampleMessages = vi.mocked(
+  messageService.useAddExampleMessages,
+);
 const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
-const mockUseUpdateUserSettings = vi.mocked(settingsService.useUpdateUserSettings);
+const mockUseUpdateUserSettings = vi.mocked(
+  settingsService.useUpdateUserSettings,
+);
 
 const SESSION = {
   isLoggedIn: true,
@@ -47,19 +53,36 @@ const SESSION = {
 };
 
 const MESSAGES: messageService.Message[] = [
-  { tid: "msg-1", message: "Hello?", createdAt: "2024-03-15T14:30:00.000Z", recipient: "did:example:1" },
-  { tid: "msg-2", message: "What is your favorite color?", createdAt: "2024-03-14T10:00:00.000Z", recipient: "did:example:1" },
+  {
+    tid: "msg-1",
+    message: "Hello?",
+    createdAt: "2024-03-15T14:30:00.000Z",
+    recipient: "did:example:1",
+  },
+  {
+    tid: "msg-2",
+    message: "What is your favorite color?",
+    createdAt: "2024-03-14T10:00:00.000Z",
+    recipient: "did:example:1",
+  },
 ];
 
 const noopMutation = { mutate: vi.fn(), isPending: false } as any;
 
 function setupMocks(messages = MESSAGES) {
   mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
-  mockUseMessages.mockReturnValue({ data: { messages }, isLoading: false, refetch: vi.fn() } as any);
+  mockUseMessages.mockReturnValue({
+    data: { messages },
+    isLoading: false,
+    refetch: vi.fn(),
+  } as any);
   mockUseDeleteMessage.mockReturnValue(noopMutation);
   mockUseRespondToMessage.mockReturnValue(noopMutation);
   mockUseAddExampleMessages.mockReturnValue(noopMutation);
-  mockUseUserSettings.mockReturnValue({ data: { pdsSyncEnabled: false, imageTheme: "default" }, isLoading: false } as any);
+  mockUseUserSettings.mockReturnValue({
+    data: { pdsSyncEnabled: false, imageTheme: "default" },
+    isLoading: false,
+  } as any);
   mockUseUpdateUserSettings.mockReturnValue(noopMutation);
 }
 
@@ -71,7 +94,9 @@ describe("formatTimestamp", () => {
   });
 
   it("includes hours and zero-padded minutes", () => {
-    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toMatch(/\d{1,2}:\d{2}/);
+    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toMatch(
+      /\d{1,2}:\d{2}/,
+    );
   });
 
   it("includes a timezone abbreviation", () => {
@@ -96,23 +121,40 @@ describe("Messages page", () => {
 
   it("shows a loader while session is loading", () => {
     mockUseSession.mockReturnValue({ data: undefined, isLoading: true } as any);
-    mockUseMessages.mockReturnValue({ data: undefined, isLoading: false, refetch: vi.fn() } as any);
+    mockUseMessages.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
     mockUseAddExampleMessages.mockReturnValue(noopMutation);
-    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
     expect(screen.queryByText(/posting preferences/i)).toBeNull();
   });
 
   it("shows 'not logged in' alert when session is absent", () => {
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
-    mockUseMessages.mockReturnValue({ data: undefined, isLoading: false, refetch: vi.fn() } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false },
+      isLoading: false,
+    } as any);
+    mockUseMessages.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
     mockUseAddExampleMessages.mockReturnValue(noopMutation);
-    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
     expect(screen.getByText(/not logged in/i)).toBeInTheDocument();
@@ -129,7 +171,9 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
     expect(screen.getByText("Hello?")).toBeInTheDocument();
-    expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
+    expect(
+      screen.getByText("What is your favorite color?"),
+    ).toBeInTheDocument();
   });
 
   it("renders timestamps containing the year (not relative time)", () => {
@@ -143,7 +187,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
     expect(() =>
-      fireEvent.click(screen.getByText(/posting preferences/i))
+      fireEvent.click(screen.getByText(/posting preferences/i)),
     ).not.toThrow();
   });
 
@@ -151,7 +195,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
     expect(() =>
-      fireEvent.click(screen.getByText(/image theme/i))
+      fireEvent.click(screen.getByText(/image theme/i)),
     ).not.toThrow();
   });
 
@@ -174,7 +218,10 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
     await waitFor(() => {
-      expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+      expect(scrollSpy).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "nearest",
+      });
     });
     scrollSpy.mockRestore();
   });
@@ -208,7 +255,10 @@ describe("Messages page", () => {
       expect(screen.getByText("Hello?")).toBeInTheDocument();
     });
 
-    expect(scrollSpy).not.toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+    expect(scrollSpy).not.toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "nearest",
+    });
     scrollSpy.mockRestore();
   });
 
@@ -232,15 +282,24 @@ describe("Messages page", () => {
   it("shows an error toast notification when delete fails", async () => {
     let capturedCallbacks: any;
     setupMocks();
-    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => { capturedCallbacks = callbacks; });
-    mockUseDeleteMessage.mockReturnValue({ mutate: mockDeleteMutate, isPending: false } as any);
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseDeleteMessage.mockReturnValue({
+      mutate: mockDeleteMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
-    const deleteButtons = screen.getAllByRole("button", { name: /delete message/i });
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /delete message/i,
+    });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onError({ error: "Network error" }); });
+    act(() => {
+      capturedCallbacks.onError({ error: "Network error" });
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
@@ -248,11 +307,61 @@ describe("Messages page", () => {
     });
   });
 
+  it("pressing Escape in the response textarea closes the response area", async () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
+    fireEvent.click(openReplyBtn!);
+
+    await waitFor(() =>
+      screen.getByRole("textbox", { name: /your response/i }),
+    );
+    fireEvent.keyDown(screen.getByRole("textbox", { name: /your response/i }), {
+      key: "Escape",
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("textbox", { name: /your response/i }),
+      ).toBeNull();
+    });
+  });
+
+  it("pressing Enter (without Shift) in response textarea submits the response", async () => {
+    const mockRespondMutate = vi.fn();
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
+    fireEvent.click(openReplyBtn!);
+
+    await waitFor(() =>
+      screen.getByRole("textbox", { name: /your response/i }),
+    );
+    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    fireEvent.change(textarea, { target: { value: "My answer!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+  });
+
   it("shows an error toast notification when responding fails", async () => {
     let capturedRespondCallbacks: any;
     setupMocks();
-    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => { capturedRespondCallbacks = callbacks; });
-    mockUseRespondToMessage.mockReturnValue({ mutate: mockRespondMutate, isPending: false } as any);
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedRespondCallbacks = callbacks;
+    });
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
     // Click the "↩ Reply" button (text button to open the response area)
@@ -261,7 +370,9 @@ describe("Messages page", () => {
     fireEvent.click(openReplyBtn!);
 
     // Wait for the response textarea to appear
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() =>
+      screen.getByRole("textbox", { name: /your response/i }),
+    );
     fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
       target: { value: "Great question!" },
     });
@@ -271,7 +382,9 @@ describe("Messages page", () => {
     fireEvent.click(sendReplyBtn);
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
-    act(() => { capturedRespondCallbacks.onError({ error: "Post failed" }); });
+    act(() => {
+      capturedRespondCallbacks.onError({ error: "Post failed" });
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/response error/i)).toBeInTheDocument();

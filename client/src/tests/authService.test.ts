@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 
 import { apiClient } from "../api/apiClient";
 import {
@@ -6,9 +9,18 @@ import {
   useSession,
   useLogin,
   useLogout,
+  authKeys,
   SessionResponse,
 } from "../api/authService";
 import { queryClient } from "../api/queryClient";
+
+function makeWrapper() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: qc }, children);
+}
 
 vi.mock("../api/apiClient", () => ({
   apiClient: {
@@ -85,7 +97,7 @@ describe("authService", () => {
       vi.mocked(apiClient.post).mockRejectedValueOnce(mockError);
 
       await expect(authService.login(mockLoginRequest)).rejects.toEqual(
-        mockError
+        mockError,
       );
     });
   });
@@ -101,10 +113,30 @@ describe("authService", () => {
   });
 });
 
-describe("auth hooks structure", () => {
-  it("should have the correct structure", () => {
-    expect(typeof useSession).toBe("function");
-    expect(typeof useLogin).toBe("function");
-    expect(typeof useLogout).toBe("function");
+describe("auth hooks", () => {
+  it("useLogin returns a mutation object", () => {
+    const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useLogout returns a mutation object", () => {
+    const { result } = renderHook(() => useLogout(), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useLogout.onSuccess invalidates session and redirects to root", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ message: "ok" });
+    const { result } = renderHook(() => useLogout(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+    expect(vi.mocked(queryClient.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: authKeys.session,
+    });
+    expect(window.location.href).toBe("/");
   });
 });

@@ -86,4 +86,27 @@ describe("Login page", () => {
     const button = screen.getByRole("button", { name: /continue with bluesky/i });
     expect(button).toBeDisabled();
   });
+
+  it("redirects to redirectUrl and sets newLogin flag on successful login", async () => {
+    let capturedCallbacks: any;
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+      target: { value: "karan.bsky.social" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onSuccess({ redirectUrl: "https://bsky.app/oauth/authorize" });
+    });
+
+    expect(sessionStorage.getItem("newLogin")).toBe("true");
+    expect(window.location.href).toBe("https://bsky.app/oauth/authorize");
+  });
 });

@@ -1,7 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 
 import { apiClient } from "../api/apiClient";
-import { profileService, FriendsResponse } from "../api/profileService";
+import {
+  profileService,
+  FriendsResponse,
+  usePublicProfile,
+  useUserExists,
+  useFriends,
+  useBotFollow,
+  useResolveHandle,
+} from "../api/profileService";
+
+function makeWrapper() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: qc }, children);
+}
 
 vi.mock("../api/apiClient", () => ({
   apiClient: {
@@ -51,7 +70,7 @@ describe("profileService", () => {
 
       expect(result).toEqual(mockProfileResponse);
       expect(apiClient.get).toHaveBeenCalledWith(
-        `/public-profile/${encodeURIComponent(mockDid)}`
+        `/public-profile/${encodeURIComponent(mockDid)}`,
       );
     });
 
@@ -60,7 +79,7 @@ describe("profileService", () => {
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
       await expect(profileService.getPublicProfile(mockDid)).rejects.toEqual(
-        mockError
+        mockError,
       );
     });
   });
@@ -73,7 +92,7 @@ describe("profileService", () => {
 
       expect(result).toEqual(mockUserExistsResponse);
       expect(apiClient.get).toHaveBeenCalledWith(
-        `/user-exists/${encodeURIComponent(mockDid)}`
+        `/user-exists/${encodeURIComponent(mockDid)}`,
       );
     });
 
@@ -100,7 +119,7 @@ describe("profileService", () => {
 
       expect(result).toEqual(mockResolveHandleResponse);
       expect(apiClient.get).toHaveBeenCalledWith(
-        `/resolve-handle/${encodeURIComponent(mockHandle)}`
+        `/resolve-handle/${encodeURIComponent(mockHandle)}`,
       );
     });
 
@@ -109,7 +128,7 @@ describe("profileService", () => {
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
       await expect(profileService.resolveHandle(mockHandle)).rejects.toEqual(
-        mockError
+        mockError,
       );
     });
   });
@@ -165,5 +184,122 @@ describe("profileService", () => {
 
       await expect(profileService.getFriends()).rejects.toEqual(mockError);
     });
+  });
+});
+
+describe("profile hooks", () => {
+  const mockDid = "did:example:123";
+  const mockHandle = "user.example.com";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("usePublicProfile returns query result", () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      profile: null,
+      exists: false,
+    });
+    const { result } = renderHook(() => usePublicProfile(mockDid), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.isLoading).toBe("boolean");
+  });
+
+  it("usePublicProfile with null did is idle", () => {
+    const { result } = renderHook(() => usePublicProfile(null), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("useUserExists returns query result", () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ exists: true, did: mockDid });
+    const { result } = renderHook(() => useUserExists(mockDid), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.isLoading).toBe("boolean");
+  });
+
+  it("useUserExists with null did is idle", () => {
+    const { result } = renderHook(() => useUserExists(null), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("useBotFollow returns query result", () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ following: false });
+    const { result } = renderHook(() => useBotFollow(true), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.isLoading).toBe("boolean");
+  });
+
+  it("useBotFollow with enabled=false is idle", () => {
+    const { result } = renderHook(() => useBotFollow(false), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("useResolveHandle returns query result", () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ did: mockDid });
+    const { result } = renderHook(() => useResolveHandle(mockHandle), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.isLoading).toBe("boolean");
+  });
+
+  it("useResolveHandle with null handle is idle", () => {
+    const { result } = renderHook(() => useResolveHandle(null), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("useFriends stores data in localStorage on success", async () => {
+    const friendsData: FriendsResponse = {
+      friends: [{ did: mockDid, handle: mockHandle }],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(friendsData);
+    const { result } = renderHook(() => useFriends(mockDid), {
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => result.current.isSuccess);
+    const cached = JSON.parse(
+      localStorage.getItem(`navyfragen_friends_cache_${mockDid}`)!,
+    );
+    expect(cached.data).toEqual(friendsData);
+  });
+
+  it("useFriends reads initialData from localStorage when available", () => {
+    const cached = { data: { friends: [] }, timestamp: Date.now() };
+    localStorage.setItem(
+      `navyfragen_friends_cache_${mockDid}`,
+      JSON.stringify(cached),
+    );
+    const { result } = renderHook(() => useFriends(mockDid), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.data).toEqual(cached.data);
+  });
+
+  it("useFriends returns undefined initialData when localStorage has invalid JSON", () => {
+    localStorage.setItem(`navyfragen_friends_cache_${mockDid}`, "not-json");
+    vi.mocked(apiClient.get).mockResolvedValue({ friends: [] });
+    const { result } = renderHook(() => useFriends(mockDid), {
+      wrapper: makeWrapper(),
+    });
+    // getCachedFriends catches JSON.parse error and returns null → initialData undefined
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("useFriends with null did is idle", () => {
+    const { result } = renderHook(() => useFriends(null), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
   });
 });

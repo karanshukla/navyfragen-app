@@ -176,6 +176,75 @@ describe("PublicProfile page", () => {
     });
   });
 
+  it("shows 'Not on Navyfragen' when user exists on Bluesky but has no inbox", () => {
+    mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: { exists: false, profile: null },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText(/not on navyfragen/i)).toBeInTheDocument();
+  });
+
+  it("shows generic error when handleError has non-404 status", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: { status: 500, error: "Internal server error" },
+    } as any);
+    mockUsePublicProfile.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
+    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
+  });
+
+  it("shows profile error fallback when profile exists but data is null", () => {
+    mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: { exists: true, profile: null },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText(/failed to load profile information/i)).toBeInTheDocument();
+  });
+
+  it("pressing Enter (without modifiers) in textarea calls handleSend", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Hello!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false, altKey: false, metaKey: false });
+    await waitFor(() => {
+      expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+    });
+  });
+
+  it("pressing Ctrl+Enter in textarea calls handleSend", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Hello!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+    await waitFor(() => {
+      expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+    });
+  });
+
+  it("clicking the clear button empties the message", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Some text" } });
+    await waitFor(() => expect(textarea).toHaveValue("Some text"));
+    const clearBtn = screen.getByRole("button", { name: /clear message/i });
+    fireEvent.click(clearBtn);
+    expect(textarea).toHaveValue("");
+  });
+
   it("calls scrollIntoView with block:nearest when ask card is below the viewport", async () => {
     const scrollSpy = vi
       .spyOn(Element.prototype, "scrollIntoView")

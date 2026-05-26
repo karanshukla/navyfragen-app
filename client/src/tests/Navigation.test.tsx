@@ -1,11 +1,18 @@
-import { screen } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useLocation } from "react-router-dom";
+import React from "react";
 
 import * as profileService from "../api/profileService";
 import * as settingsService from "../api/settingsService";
 import { Navigation } from "../Navigation";
 
 import { renderWithProviders } from "./testUtils";
+
+function LocationDisplay() {
+  const loc = useLocation();
+  return <div data-testid="location">{loc.pathname}</div>;
+}
 
 vi.mock("../api/profileService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/profileService")>();
@@ -150,6 +157,128 @@ describe("Navigation", () => {
         expect(screen.getByText(`User ${i}`)).toBeInTheDocument();
       }
       expect(screen.queryByText(/load more/i)).toBeNull();
+    });
+  });
+
+  describe("keyboard shortcuts", () => {
+    beforeEach(() => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+    });
+
+    it("Alt+H navigates to home", () => {
+      renderWithProviders(
+        <><Navigation isLoggedIn={true} /><LocationDisplay /></>,
+        { route: "/messages" }
+      );
+      fireEvent.keyDown(document, { key: "H", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
+    it("Alt+M navigates to messages when logged in", () => {
+      renderWithProviders(
+        <><Navigation isLoggedIn={true} /><LocationDisplay /></>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "M", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/messages");
+    });
+
+    it("Alt+S navigates to settings when logged in", () => {
+      renderWithProviders(
+        <><Navigation isLoggedIn={true} /><LocationDisplay /></>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "S", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/settings");
+    });
+
+    it("Alt+L navigates to login when logged out", () => {
+      renderWithProviders(
+        <><Navigation isLoggedIn={false} /><LocationDisplay /></>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "L", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/login");
+    });
+
+    it("Alt+M does not navigate when logged out", () => {
+      renderWithProviders(
+        <><Navigation isLoggedIn={false} /><LocationDisplay /></>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "M", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
+    it("ignores shortcuts when input is focused", () => {
+      renderWithProviders(
+        <><Navigation isLoggedIn={true} /><LocationDisplay /><input data-testid="inp" /></>,
+        { route: "/" }
+      );
+      const inp = screen.getByTestId("inp");
+      fireEvent.keyDown(inp, { key: "H", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
+    it("calls onLinkClick when a keyboard shortcut fires", () => {
+      const onLinkClick = vi.fn();
+      renderWithProviders(
+        <Navigation isLoggedIn={true} onLinkClick={onLinkClick} />,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "M", altKey: true });
+      expect(onLinkClick).toHaveBeenCalled();
+    });
+  });
+
+  describe("viewingHandle box", () => {
+    it("shows 'Viewing profile' when on a profile route", () => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      renderWithProviders(<Navigation isLoggedIn={false} />, {
+        route: "/profile/alice.bsky.social",
+      });
+      expect(screen.getByText(/viewing profile/i)).toBeInTheDocument();
+      expect(screen.getByText("@alice.bsky.social")).toBeInTheDocument();
+    });
+
+    it("does not show 'Viewing profile' on non-profile routes", () => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      renderWithProviders(<Navigation isLoggedIn={false} />, { route: "/" });
+      expect(screen.queryByText(/viewing profile/i)).toBeNull();
+    });
+  });
+
+  describe("promo card", () => {
+    it("shows CopyButton with inbox link when handle prop is provided", () => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      renderWithProviders(
+        <Navigation isLoggedIn={true} handle="karan.bsky.social" />
+      );
+      expect(screen.getByRole("button", { name: /copy my link/i })).toBeInTheDocument();
+    });
+
+    it("shows link to /messages when no handle prop", () => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      renderWithProviders(<Navigation isLoggedIn={true} />);
+      const links = screen.getAllByRole("link");
+      const hrefs = links.map((l) => l.getAttribute("href"));
+      expect(hrefs).toContain("/messages");
+    });
+  });
+
+  describe("MessageCountBadge", () => {
+    it("shows message count badge when userStats has messages and not on /messages route", () => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseUserStats.mockReturnValue({ data: { messageCount: 5 } } as any);
+      renderWithProviders(<Navigation isLoggedIn={true} />, { route: "/" });
+      expect(screen.getByText("5")).toBeInTheDocument();
+    });
+
+    it("does not show badge when on /messages route (active)", () => {
+      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseUserStats.mockReturnValue({ data: { messageCount: 5 } } as any);
+      renderWithProviders(<Navigation isLoggedIn={true} />, { route: "/messages" });
+      expect(screen.queryByText("5")).toBeNull();
     });
   });
 });
