@@ -31,7 +31,7 @@ describe("AppHeader", () => {
   const defaultProps = {
     opened: false,
     onBurgerToggle: vi.fn(),
-    burgerRef: { current: null },
+    burgerRef: null,
     onNavClose: vi.fn(),
   };
 
