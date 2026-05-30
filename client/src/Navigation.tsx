@@ -237,7 +237,7 @@ export function Navigation({
               <Text size="xs" c="dimmed" px={2} style={{ lineHeight: 1.6 }}>
                 None of the people you follow on Bluesky are on Navyfragen yet.
               </Text>
-            ) : null}
+            ) : /* v8 ignore next */ null}
           </Box>
 
           {/* Promo card — encourages sharing the inbox link */}

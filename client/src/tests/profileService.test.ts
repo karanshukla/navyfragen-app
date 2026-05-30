@@ -302,4 +302,17 @@ describe("profile hooks", () => {
     });
     expect(result.current.fetchStatus).toBe("idle");
   });
+
+  it("useFriends catches localStorage.setItem errors silently", async () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
+      throw new Error("QuotaExceededError");
+    });
+    vi.mocked(apiClient.get).mockResolvedValue({ friends: [] });
+    const { result } = renderHook(() => useFriends(mockDid), {
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ friends: [] });
+    setItemSpy.mockRestore();
+  });
 });

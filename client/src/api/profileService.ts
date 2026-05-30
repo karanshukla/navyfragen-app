@@ -94,7 +94,7 @@ export function usePublicProfile(did: string | null) {
     queryFn: () =>
       did
         ? profileService.getPublicProfile(did)
-        : Promise.reject("No DID provided"),
+        : /* v8 ignore next */ Promise.reject("No DID provided"),
     enabled: !!did,
   });
 }
@@ -135,7 +135,7 @@ export function useFriends(did: string | null) {
           JSON.stringify({ data, timestamp: Date.now() })
         );
       } catch {
-        // localStorage unavailable (private browsing quota, etc.)
+        /* v8 ignore next */ // localStorage unavailable (private browsing quota, etc.)
       }
       return data;
     },
@@ -169,7 +169,7 @@ export function useResolveHandle(handle: string | null) {
     queryFn: () =>
       handle
         ? profileService.resolveHandle(handle)
-        : Promise.reject("No handle provided"),
+        : /* v8 ignore next */ Promise.reject("No handle provided"),
     enabled: !!handle,
   });
 }

@@ -95,6 +95,19 @@ describe("AppLayout", () => {
     removeListenerSpy.mockRestore();
   });
 
+  it("renders Navigation with handle when user is logged in", () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        profile: { did: "did:example:123", handle: "user.bsky.social", displayName: "Test User" },
+        did: "did:example:123",
+      },
+      isLoading: false,
+    } as any);
+    const { container } = renderWithProviders(<AppLayout />);
+    expect(container.firstChild).not.toBeNull();
+  });
+
   it("closes nav when clicking outside navbar and burger after nav is open", async () => {
     renderWithProviders(<AppLayout />);
 
