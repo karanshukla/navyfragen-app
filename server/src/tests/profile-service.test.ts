@@ -235,6 +235,55 @@ describe("ProfileService", () => {
     });
   });
 
+  describe("checkFollowsBot", () => {
+    it("should return true when agent is following the bot", async () => {
+      const mockAgent = {
+        getProfile: mock.fn(async () => ({
+          success: true,
+          data: { viewer: { following: "at://did:bot/app.bsky.graph.follow/rkey" } },
+        })),
+      };
+
+      const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
+
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false when agent is not following the bot", async () => {
+      const mockAgent = {
+        getProfile: mock.fn(async () => ({
+          success: true,
+          data: { viewer: { following: undefined } },
+        })),
+      };
+
+      const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
+
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false when getProfile returns success: false", async () => {
+      const mockAgent = {
+        getProfile: mock.fn(async () => ({ success: false, data: {} })),
+      };
+
+      const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
+
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false and log error when getProfile throws", async () => {
+      const mockAgent = {
+        getProfile: mock.fn(async () => { throw new Error("network error"); }),
+      };
+
+      const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
+
+      assert.strictEqual(result, false);
+      assert.strictEqual(mockLogger.error.mock.calls.length, 1);
+    });
+  });
+
   describe("getFriendsOnApp", () => {
     const sampleFollows = [
       { did: "did:user:1", handle: "user1.bsky.app", displayName: "User One", avatar: "https://cdn.test/1.jpg" },

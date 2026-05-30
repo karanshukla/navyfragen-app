@@ -28,6 +28,19 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Inject a mock for `sharp` that throws synchronously at the import level, or export an internal function whose throw can be observed before the outer catch suppresses it.
 
+## TypeScript Transpilation Artifacts (tsx source-map gaps)
+
+The following "uncovered" lines are not executable TypeScript — they are blank lines, type annotations, or closing punctuation of multi-line expressions that tsx maps back to the wrong source position. The underlying code **is** executed and tested; only V8's source-map alignment is imprecise.
+
+| File | Lines | Kind |
+|------|-------|------|
+| `server/src/services/auth-service.ts` | 77 | `const cryptr = new Cryptr(secret)` in `decryptDid` — identical structure to `encryptDid` above it; tsx maps both to the same JS position |
+| `server/src/services/message-service.ts` | 80, 106, 162, 297, 303 | Blank lines, TypeScript parameter-type annotations, and closing-parenthesis lines of multi-line `logger.error(...)` calls |
+| `server/src/services/settings-service.ts` | 128 | Blank line between `getUserSettings` call and `if (!existingSettings)` inside `updateSettings` |
+| `server/src/lib/image-generator.ts` | 144, 454–459 | TypeScript return-type annotation on `generateThemeSpecificHtml` (line 144); static CSS string content inside a multi-hundred-line template literal in `generateTwitterHtml` (lines 454–459) — V8 does not track every line within a template literal |
+
+No `/* v8 ignore */` annotations are added for these because the underlying logic IS reached by tests; the gaps are purely a source-map rendering artefact.
+
 ## Coverage Exclusions (via config)
 
 The following files are excluded from coverage metrics entirely. See the root-level notes in `CLAUDE.md` under "Coverage Exclusions".
