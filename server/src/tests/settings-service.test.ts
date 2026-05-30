@@ -11,6 +11,7 @@ describe("SettingsService", () => {
     error: mock.fn(),
     info: mock.fn(),
     debug: mock.fn(),
+    warn: mock.fn(),
   };
 
   const mockSelectBuilder = {
@@ -58,6 +59,7 @@ describe("SettingsService", () => {
     mockLogger.error.mock.resetCalls();
     mockLogger.info.mock.resetCalls();
     mockLogger.debug.mock.resetCalls();
+    mockLogger.warn.mock.resetCalls();
 
     mockDb.selectFrom.mock.resetCalls();
     mockDb.insertInto.mock.resetCalls();
@@ -233,6 +235,113 @@ describe("SettingsService", () => {
 
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
       assert.strictEqual(mockLogger.error.mock.calls.length, 2);
+    });
+  });
+
+  describe("getPdsInfo", () => {
+    function makeAgent(records: any[], cursor?: string, successOverride: boolean = true) {
+      return {
+        com: {
+          atproto: {
+            repo: {
+              listRecords: mock.fn(async () => ({
+                success: successOverride,
+                data: { records, cursor },
+              })),
+            },
+          },
+        },
+      };
+    }
+
+    function makeIdResolver(pds: string | null, throws?: boolean) {
+      return {
+        did: {
+          resolveAtprotoData: mock.fn(async () => {
+            if (throws) throw new Error("resolve failed");
+            return { pds };
+          }),
+        },
+      };
+    }
+
+    it("should return pdsUrl and recordCount when resolved successfully", async () => {
+      const agent = makeAgent([{ cid: "c1" }, { cid: "c2" }]);
+      const idResolver = makeIdResolver("https://pds.example.com");
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, "https://pds.example.com");
+      assert.strictEqual(result.recordCount, 2);
+    });
+
+    it("should return pdsUrl null when idResolver throws", async () => {
+      const agent = makeAgent([]);
+      const idResolver = makeIdResolver(null, true);
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, null);
+      assert.strictEqual(result.recordCount, 0);
+    });
+
+    it("should return recordCount 0 when listRecords returns success: false", async () => {
+      const agent = makeAgent([], undefined, false);
+      const idResolver = makeIdResolver("https://pds.example.com");
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, "https://pds.example.com");
+      assert.strictEqual(result.recordCount, 0);
+    });
+
+    it("should handle recordCount 0 when listRecords throws", async () => {
+      const agent = {
+        com: {
+          atproto: {
+            repo: {
+              listRecords: mock.fn(async () => { throw new Error("list failed"); }),
+            },
+          },
+        },
+      };
+      const idResolver = makeIdResolver("https://pds.example.com");
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, "https://pds.example.com");
+      assert.strictEqual(result.recordCount, 0);
+    });
+
+    it("should paginate through multiple pages of records", async () => {
+      let callCount = 0;
+      const agent = {
+        com: {
+          atproto: {
+            repo: {
+              listRecords: mock.fn(async () => {
+                callCount++;
+                if (callCount === 1) {
+                  return {
+                    success: true,
+                    data: { records: [{ cid: "c1" }, { cid: "c2" }], cursor: "page2" },
+                  };
+                }
+                return {
+                  success: true,
+                  data: { records: [{ cid: "c3" }], cursor: undefined },
+                };
+              }),
+            },
+          },
+        },
+      };
+      const idResolver = makeIdResolver("https://pds.example.com");
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.recordCount, 3);
+      assert.strictEqual(callCount, 2);
     });
   });
 

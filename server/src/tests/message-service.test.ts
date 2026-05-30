@@ -432,4 +432,173 @@ describe("MessageService", () => {
     assert.strictEqual(result.importedCount, 2);
     assert.strictEqual(mockAgent.com.atproto.repo.listRecords.mock.calls.length, 2);
   });
+
+  test("syncMessages: stops fetching when listRecords returns success: false", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: false,
+      data: { records: [], cursor: undefined },
+    }));
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => []);
+    const result = await messageService.syncMessages("did:foo", mockAgent);
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.syncedCount, 0);
+    assert.strictEqual(result.importedCount, 0);
+  });
+
+  test("syncMessages: throws when db.selectFrom(message) fails", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: { records: [], cursor: undefined },
+    }));
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => {
+      throw new Error("db failure");
+    });
+    await assert.rejects(
+      () => messageService.syncMessages("did:foo", mockAgent),
+      /Failed to sync messages to PDS/
+    );
+  });
+
+  test("addExampleMessages throws on db error", async () => {
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => {
+      throw new Error("db error");
+    });
+    await assert.rejects(
+      () => messageService.addExampleMessages("did:foo"),
+      /Failed to add example messages/
+    );
+    assert.strictEqual((mockLogger.error as any).mock.calls.length, 1);
+  });
+
+  test("deleteMessage throws when message belongs to different user", async () => {
+    const tid = "tid";
+    const did = "did:foo";
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
+      async () => ({ tid, recipient: "did:other" })
+    );
+    await assert.rejects(
+      () => messageService.deleteMessage(tid, did, mockAgent),
+      /Not authorized to delete this message/
+    );
+    assert.strictEqual(mockAgent.com.atproto.repo.deleteRecord.mock.calls.length, 0);
+  });
+
+  test("respondToMessage throws when image generation returns no blob", async () => {
+    generateQuestionImageMock.mock.mockImplementationOnce(async () => ({ imageBlob: null }));
+    await assert.rejects(
+      () => messageService.respondToMessage(
+        "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+      ),
+      /Image generation failed/
+    );
+  });
+
+  test("respondToMessage includes aspectRatio when width and height are returned", async () => {
+    generateQuestionImageMock.mock.mockImplementationOnce(async () => ({
+      imageBlob: Buffer.from("img"),
+      imageAltText: "alt",
+      width: 800,
+      height: 400,
+    }));
+    mockAgent.post.mock.mockImplementationOnce(async () => ({
+      uri: "at://did:foo/app.bsky.feed.post/rkey1",
+    }));
+    const result = await messageService.respondToMessage(
+      "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+    );
+    assert.strictEqual(result.success, true);
+    const postArg = mockAgent.post.mock.calls[0].arguments[0];
+    assert.ok(postArg.embed.images[0].aspectRatio);
+    assert.strictEqual(postArg.embed.images[0].aspectRatio.width, 800);
+    assert.strictEqual(postArg.embed.images[0].aspectRatio.height, 400);
+  });
+
+  test("respondToMessage uses default alt text when imageAltText is falsy", async () => {
+    generateQuestionImageMock.mock.mockImplementationOnce(async () => ({
+      imageBlob: Buffer.from("img"),
+      imageAltText: "",
+    }));
+    mockAgent.post.mock.mockImplementationOnce(async () => ({
+      uri: "at://did:foo/app.bsky.feed.post/rkey1",
+    }));
+    const result = await messageService.respondToMessage(
+      "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+    );
+    assert.strictEqual(result.success, true);
+    const postArg = mockAgent.post.mock.calls[0].arguments[0];
+    assert.strictEqual(postArg.embed.images[0].alt, "Image of the anonymous question");
+  });
+
+  test("respondToMessage falls back to DID in url when getProfile throws", async () => {
+    mockAgent.post.mock.mockImplementationOnce(async () => ({
+      uri: "at://did:foo/app.bsky.feed.post/rkey1",
+    }));
+    mockAgent.app.bsky.actor.getProfile.mock.mockImplementationOnce(async () => {
+      throw new Error("profile fetch failed");
+    });
+    const result = await messageService.respondToMessage(
+      "tid", "did", "rec", "orig", "resp", false, mockAgent
+    );
+    assert.strictEqual(result.success, true);
+    assert.ok(result.link?.includes("did:foo"));
+    assert.ok(result.link?.includes("rkey1"));
+  });
+
+  test("respondToMessage uses DID in url when getProfile returns no handle", async () => {
+    mockAgent.post.mock.mockImplementationOnce(async () => ({
+      uri: "at://did:foo/app.bsky.feed.post/rkey1",
+    }));
+    mockAgent.app.bsky.actor.getProfile.mock.mockImplementationOnce(async () => ({
+      data: { handle: null },
+    }));
+    const result = await messageService.respondToMessage(
+      "tid", "did", "rec", "orig", "resp", false, mockAgent
+    );
+    assert.strictEqual(result.success, true);
+    assert.ok(result.link?.includes("did:foo"));
+  });
+
+  test("respondToMessage returns undefined link when URI does not match AT URI pattern", async () => {
+    mockAgent.post.mock.mockImplementationOnce(async () => ({
+      uri: "not-an-at-uri",
+    }));
+    const result = await messageService.respondToMessage(
+      "tid", "did", "rec", "orig", "resp", false, mockAgent
+    );
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.link, undefined);
+  });
+
+  test("respondToMessage outer catch rethrows on agent.post failure", async () => {
+    mockAgent.post.mock.mockImplementationOnce(async () => {
+      throw new Error("post failed");
+    });
+    await assert.rejects(
+      () => messageService.respondToMessage(
+        "tid", "did", "rec", "orig", "resp", false, mockAgent
+      ),
+      /post failed/
+    );
+  });
+
+  test("deleteUserData logs info and skips PDS deletion when no messages exist", async () => {
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => []);
+    mockDeleteBuilder.execute.mock.mockImplementation(async () => ({}));
+    const result = await messageService.deleteUserData("did:empty", mockAgent);
+    assert.deepStrictEqual(result, { success: true });
+    assert.strictEqual(mockAgent.com.atproto.repo.deleteRecord.mock.calls.length, 0);
+    const infoMessages = (mockLogger.info as any).mock.calls.map((c: any) => c.arguments[1]);
+    assert.ok(infoMessages.some((m: string) => m.includes("No messages found for deletion")));
+  });
+
+  test("deleteUserData outer catch rethrows on PDS delete error", async () => {
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [{ tid: "t1" }]);
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => {
+      throw new Error("PDS delete failed");
+    });
+    await assert.rejects(
+      () => messageService.deleteUserData("did:foo", mockAgent),
+      /Failed to delete user data/
+    );
+  });
 });

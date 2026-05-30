@@ -1,6 +1,7 @@
 import { AuthService } from "../services/auth-service";
 import { test, describe, beforeEach, mock } from "node:test";
 import assert from "node:assert";
+import { OAuthResolverError } from "@atproto/oauth-client-node";
 
 describe("AuthService", () => {
   let ctx: any;
@@ -34,6 +35,12 @@ describe("AuthService", () => {
           execute: mock.fn(async () => ({})),
         })),
       },
+      logger: {
+        error: mock.fn(),
+        warn: mock.fn(),
+        info: mock.fn(),
+        debug: mock.fn(),
+      },
       ...overrides,
     };
   }
@@ -49,6 +56,39 @@ describe("AuthService", () => {
       () => service.getOAuthRedirectUrl(""),
       /invalid handle/
     );
+  });
+
+  test("getOAuthRedirectUrl returns URL for valid handle", async () => {
+    const url = await service.getOAuthRedirectUrl("test.bsky.social");
+    assert.strictEqual(url, "https://example.com/redirect");
+  });
+
+  test("getOAuthRedirectUrl re-throws OAuthResolverError message", async () => {
+    ctx.oauthClient.authorize = mock.fn(async () => {
+      throw new OAuthResolverError("handle not found");
+    });
+    await assert.rejects(
+      () => service.getOAuthRedirectUrl("unknown.bsky.social"),
+      /handle not found/
+    );
+  });
+
+  test("getOAuthRedirectUrl throws generic error for non-OAuthResolverError", async () => {
+    ctx.oauthClient.authorize = mock.fn(async () => {
+      throw new Error("unexpected");
+    });
+    await assert.rejects(
+      () => service.getOAuthRedirectUrl("test.bsky.social"),
+      /couldn't initiate login/
+    );
+  });
+
+  test("decryptDid returns original DID", () => {
+    const did = "did:plc:xyz123";
+    const encrypted = service.encryptDid(did);
+    const decoded = decodeURIComponent(encrypted);
+    const decrypted = service.decryptDid(decoded);
+    assert.strictEqual(decrypted, did);
   });
 
   test("revokeSession calls oauthClient.revoke", async () => {
