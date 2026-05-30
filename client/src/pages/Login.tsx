@@ -17,7 +17,7 @@ import { useLogin } from "../api/authService";
 import { WinkMark } from "../components/WinkMark";
 
 // Hoisted to avoid recreating on each render
-const handleSchema = z.string().min(1, "Handle is required").max(64, "Handle too long");
+const handleSchema = z.string().min(1, { error: "Handle is required" }).max(64, { error: "Handle too long" });
 
 // Styles for inputs rendered on the dark gradient card
 const darkInputStyles = {
@@ -53,7 +53,7 @@ export default function Login() {
     setError(null);
     const result = handleSchema.safeParse(handle);
     if (!result.success) {
-      setError(result.error.errors[0].message);
+      setError(result.error.issues[0]?.message ?? "Validation failed");
       return;
     }
     login(
