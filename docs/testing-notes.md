@@ -20,6 +20,22 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Switch the test runner to use native ES modules (enabling `mock.module`), or refactor `checkSession` to accept an injected `Agent`-like interface that can be replaced in tests.
 
+### `client/src/Navigation.tsx` — unreachable `null` tail of friends ternary
+
+**Line:** the trailing `: null` in `{friendsLoading ? ... : friends.length > 0 ? ... : !friendsLoading ? ... : null}`.
+
+**Why ignored:** This `null` branch is structurally unreachable. The outer ternary only reaches the `else` arm when `friendsLoading` is falsy; at that point the inner guard `!friendsLoading` is always `true`, so the final `null` can never be evaluated at runtime.
+
+**What it would take to test:** Not possible through React rendering — the branch requires `friendsLoading` to be simultaneously falsy (to skip the loading skeleton) and truthy (to skip the empty-state text).
+
+### `client/src/api/profileService.ts` — disabled-query reject branches in `usePublicProfile` and `useResolveHandle`
+
+**Lines:** `Promise.reject("No DID provided")` inside `usePublicProfile`'s `queryFn`, and `Promise.reject("No handle provided")` inside `useResolveHandle`'s `queryFn`.
+
+**Why ignored:** Both hooks set `enabled: !!did` / `enabled: !!handle`, so React Query never calls `queryFn` when the argument is null. These reject branches are structural guards that can only fire if the queryFn is invoked directly outside of React Query's normal flow.
+
+**What it would take to test:** Call `refetch()` on the hook rendered with a null argument; React Query v5 will then invoke `queryFn` regardless of `enabled`. (This was attempted but the disabled-query refetch behaviour is inconsistent across React Query versions, so the branches are ignored instead.)
+
 ### `server/src/lib/image-generator.ts` — outer `catch` block in `generateQuestionImage`
 
 **Lines:** the top-level `catch (imgErr)` in `generateQuestionImage`.

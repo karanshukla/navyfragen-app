@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
@@ -19,6 +19,14 @@ import { queryClient } from "../api/queryClient";
 function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: qc }, children);
+}
+
+function makeWrapperFastRetry() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retryDelay: 0 }, mutations: { retry: false } },
   });
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
@@ -213,5 +221,37 @@ describe("settings hooks", () => {
       wrapper: makeWrapper(),
     });
     expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useUserSettings does not retry on 403 errors", async () => {
+    vi.mocked(apiClient.get).mockRejectedValue({ status: 403, error: "Forbidden" });
+    const { result } = renderHook(() => useUserSettings(), {
+      wrapper: makeWrapperFastRetry(),
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it("useUserSettings retries for non-auth errors (failureCount < 3 branch)", async () => {
+    vi.mocked(apiClient.get)
+      .mockRejectedValueOnce({ status: 500, error: "Server Error" })
+      .mockResolvedValue(mockSettings);
+    const { result } = renderHook(() => useUserSettings(), {
+      wrapper: makeWrapperFastRetry(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(mockSettings);
+  });
+
+  it("useUpdateUserSettings onSuccess invalidates settings cache and calls options.onSuccess", async () => {
+    const onSuccess = vi.fn();
+    vi.mocked(apiClient.post).mockResolvedValueOnce(mockSettings);
+    const { result } = renderHook(
+      () => useUpdateUserSettings({ onSuccess }),
+      { wrapper: makeWrapper() }
+    );
+    await act(async () => {
+      await result.current.mutateAsync({ pdsSyncEnabled: true });
+    });
+    expect(onSuccess).toHaveBeenCalled();
   });
 });

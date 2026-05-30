@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
@@ -114,9 +114,29 @@ describe("authService", () => {
 });
 
 describe("auth hooks", () => {
+  it("useSession returns a query result and executes the queryFn", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      isLoggedIn: true,
+      profile: { did: "did:example:123", handle: "user.example.com" },
+      did: "did:example:123",
+    });
+    const { result } = renderHook(() => useSession(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.isLoggedIn).toBe(true);
+  });
+
   it("useLogin returns a mutation object", () => {
     const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
     expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useLogin executes the mutationFn with the provided data", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ redirectUrl: "https://example.com/auth" });
+    const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({ handle: "user.example.com" });
+    });
+    expect(apiClient.post).toHaveBeenCalledWith("/login", { handle: "user.example.com" });
   });
 
   it("useLogout returns a mutation object", () => {
