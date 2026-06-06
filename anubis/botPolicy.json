@@ -56,19 +56,7 @@
       "action": "ALLOW"
     },
     {
-      "import": "(data)/bots/_deny-pathological.yaml"
-    },
-    {
-      "import": "(data)/bots/ai-robots-txt.yaml"
-    },
-    {
-      "import": "(data)/crawlers/_allow-good.yaml"
-    },
-    {
-      "import": "(data)/bots/aggressive-brazilian-scrapers.yaml"
-    },
-    {
-      "import": "(data)/common/keep-internet-working.yaml"
+      "import": "(data)/meta/default-config.yaml"
     },
     {
       "name": "generic-browser",
