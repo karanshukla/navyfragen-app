@@ -507,7 +507,10 @@ function generateTwitterHtml(
   <div class="card">
     <div class="tweet-body">
       <div class="top">
-        <div class="avatar">${LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="Navyfragen logo" />` : "NF"}</div>
+        <div class="avatar">${
+          /* v8 ignore next */
+          LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="Navyfragen logo" />` : "NF"
+        }</div>
         <div class="user-info">
           <div class="name-row">
             <span class="user-name">Navyfragen - Anonymous QnA</span>

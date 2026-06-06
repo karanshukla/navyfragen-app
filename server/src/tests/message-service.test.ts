@@ -52,16 +52,21 @@ describe("MessageService", () => {
     };
   }
   function makeInsertBuilder() {
-    return {
+    const builder: any = {
       values: mock.fn(function (this: any, arg: any) {
         lastInsertValues = arg;
         return this;
       }),
-      onConflict: mock.fn(function (this: any) {
+      onConflict: mock.fn(function (this: any, cb: any) {
+        if (typeof cb === "function") {
+          const oc = { column: (_col: string) => ({ doNothing: () => builder }) };
+          cb(oc);
+        }
         return this;
       }),
       execute: mock.fn(async () => ({})),
     };
+    return builder;
   }
   function makeDeleteBuilder() {
     return {
@@ -599,6 +604,41 @@ describe("MessageService", () => {
     await assert.rejects(
       () => messageService.deleteUserData("did:foo", mockAgent),
       /Failed to delete user data/
+    );
+  });
+
+  test("sendMessage uses generic message when err is not an Error instance", async () => {
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({ did: "did:foo" }));
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => {
+      throw "string error";
+    });
+    await assert.rejects(
+      () => messageService.sendMessage("did:foo", "hi"),
+      /Failed to send message/
+    );
+  });
+
+  test("respondToMessage uses generic message when err is not an Error instance", async () => {
+    mockAgent.post.mock.mockImplementationOnce(async () => {
+      throw "non-error thrown";
+    });
+    await assert.rejects(
+      () => messageService.respondToMessage("tid", "did", "rec", "orig", "resp", false, mockAgent),
+      /Failed to post to Bluesky/
+    );
+  });
+
+  test("deleteMessage uses generic message when err is not an Error instance", async () => {
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      tid: "tid",
+      recipient: "did:foo",
+    }));
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => {
+      throw "pds-string-error";
+    });
+    await assert.rejects(
+      () => messageService.deleteMessage("tid", "did:foo", mockAgent),
+      /Failed to delete message from PDS/
     );
   });
 });
