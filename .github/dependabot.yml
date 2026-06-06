@@ -11,3 +11,8 @@ updates:
       - "/client"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/anubis"
+    schedule:
+      interval: "weekly"
