@@ -21,10 +21,10 @@ export const createClient = async (db: Database) => {
       client_name: "Navyfragen App",
       client_id: publicUrl
         ? `${url}/client-metadata.json`
-        : `http://localhost?redirect_uri=${enc(`${urlWithAPI}/oauth/callback`)}&scope=${enc("atproto transition:generic")}`,
+        : `http://localhost?redirect_uri=${enc(`${urlWithAPI}/oauth/callback`)}&scope=${enc("atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*")}`,
       client_uri: url,
       redirect_uris: [`${urlWithAPI}/oauth/callback`],
-      scope: "atproto transition:generic",
+      scope: "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       application_type: "web",

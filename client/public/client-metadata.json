@@ -3,7 +3,7 @@
   "client_id": "https://navyfragen.app/client-metadata.json",
   "client_uri": "https://navyfragen.app",
   "redirect_uris": ["https://navyfragen.app/api/oauth/callback"],
-  "scope": "atproto transition:generic",
+  "scope": "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "application_type": "web",

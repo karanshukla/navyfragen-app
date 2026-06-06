@@ -15,7 +15,7 @@ export class AuthService {
     }
     try {
       const url = await this.ctx.oauthClient.authorize(handle, {
-        scope: "atproto transition:generic",
+        scope: "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
       });
       return url.toString();
     } catch (err: any) {
