@@ -42,7 +42,7 @@
     "@atcute/bluesky-richtext-parser": "^1.0.7",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@mantine/core": "^8.0.1",
+    "@mantine/core": "^9.3.0",
     "@mantine/hooks": "^8.0.1",
     "@mantine/notifications": "^8.0.1",
     "@tabler/icons": "^3.44.0",
