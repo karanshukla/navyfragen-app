@@ -44,6 +44,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Inject a mock for `sharp` that throws synchronously at the import level, or export an internal function whose throw can be observed before the outer catch suppresses it.
 
+### `server/src/lib/image-generator.ts` — `LOGO_DATA_URL` ternary false branch in `generateTwitterHtml`
+
+**Line:** the `"NF"` false branch of `LOGO_DATA_URL ? \`<img src="${LOGO_DATA_URL}" ... />\` : "NF"` inside the HTML template literal.
+
+**Why ignored:** `LOGO_DATA_URL` is a module-level constant populated by reading and base64-encoding the logo PNG at import time. It is always a non-empty string when the module loads successfully; the `"NF"` fallback is a dead code path under any realistic execution. V8 counts each arm of the ternary as a branch, so the false arm shows as uncovered.
+
+**What it would take to test:** Mock the `fs.readFileSync` call at module load time to return an empty buffer (so `LOGO_DATA_URL` becomes `""`), then re-import the module. This requires `mock.module` wrapping the Node.js `fs` module before the dynamic import of `image-generator.ts`.
+
 ## TypeScript Transpilation Artifacts (tsx source-map gaps)
 
 The following "uncovered" lines are not executable TypeScript — they are blank lines, type annotations, or closing punctuation of multi-line expressions that tsx maps back to the wrong source position. The underlying code **is** executed and tested; only V8's source-map alignment is imprecise.

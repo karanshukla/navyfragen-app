@@ -282,6 +282,19 @@ describe("ProfileService", () => {
       assert.strictEqual(result, false);
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
+
+    it("should return false when viewer is undefined in profile response", async () => {
+      const mockAgent = {
+        getProfile: mock.fn(async () => ({
+          success: true,
+          data: { viewer: undefined },
+        })),
+      };
+
+      const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
+
+      assert.strictEqual(result, false);
+    });
   });
 
   describe("getFriendsOnApp", () => {

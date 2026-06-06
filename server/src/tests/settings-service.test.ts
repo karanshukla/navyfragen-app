@@ -285,6 +285,34 @@ describe("SettingsService", () => {
       assert.strictEqual(result.recordCount, 0);
     });
 
+    it("should return pdsUrl null when atprotoData has null pds", async () => {
+      const agent = makeAgent([]);
+      const idResolver = {
+        did: {
+          resolveAtprotoData: mock.fn(async () => ({ pds: null })),
+        },
+      };
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, null);
+      assert.strictEqual(result.recordCount, 0);
+    });
+
+    it("should return pdsUrl null when atprotoData has undefined pds", async () => {
+      const agent = makeAgent([]);
+      const idResolver = {
+        did: {
+          resolveAtprotoData: mock.fn(async () => ({})),
+        },
+      };
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, null);
+      assert.strictEqual(result.recordCount, 0);
+    });
+
     it("should return recordCount 0 when listRecords returns success: false", async () => {
       const agent = makeAgent([], undefined, false);
       const idResolver = makeIdResolver("https://pds.example.com");

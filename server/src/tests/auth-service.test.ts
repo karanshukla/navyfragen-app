@@ -162,4 +162,29 @@ describe("AuthService", () => {
       assert.ok(typeof valuesArg.createdAt === "string");
     });
   });
+
+  describe("getOAuthRedirectUrl with non-Error thrown", () => {
+    test("covers err?.message and err?.stack optional chains when err is null", async () => {
+      ctx.oauthClient.authorize = mock.fn(async () => {
+        // eslint-disable-next-line no-throw-literal
+        throw null;
+      });
+      await assert.rejects(
+        () => service.getOAuthRedirectUrl("test.bsky.social"),
+        /couldn't initiate login/
+      );
+      assert.strictEqual(ctx.logger.error.mock.calls.length, 1);
+    });
+
+    test("covers err?.message when err is a plain string", async () => {
+      ctx.oauthClient.authorize = mock.fn(async () => {
+        // eslint-disable-next-line no-throw-literal
+        throw "authorize failed";
+      });
+      await assert.rejects(
+        () => service.getOAuthRedirectUrl("test.bsky.social"),
+        /couldn't initiate login/
+      );
+    });
+  });
 });
