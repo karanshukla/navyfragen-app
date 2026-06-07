@@ -89,8 +89,9 @@ jobs:
             }
 
       - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@v2.3.6
         if: always()
+        continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: server/coverage/lcov.info
