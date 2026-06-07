@@ -87,7 +87,7 @@ jobs:
           file: server/coverage/lcov.info
           flag-name: server
           base-path: server
-          carryforward: client
+          parallel: true
 
       - name: Fail if tests failed
         if: steps.server-tests.outcome == 'failure'

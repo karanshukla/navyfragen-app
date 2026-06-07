@@ -1,0 +1,21 @@
+name: Coveralls Finish
+
+on:
+  workflow_run:
+    workflows: ["Client Tests", "Server Tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  coveralls-finish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize Coveralls build
+        uses: coverallsapp/github-action@v2.3.6
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+          carryforward: "client,server"
