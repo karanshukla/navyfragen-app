@@ -85,6 +85,15 @@ jobs:
               });
             }
 
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: server/coverage/lcov.info
+          flag-name: server
+          base-path: server
+
       - name: Fail if tests failed
         if: steps.server-tests.outcome == 'failure'
         run: exit 1

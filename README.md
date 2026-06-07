@@ -1,64 +1,190 @@
-## Navyfragen - FOSS, AT Protocol native anonymous Question and Answer platform
+# Navyfragen
 
-<img width="1791" height="590" alt="_render_lockup" src="https://github.com/user-attachments/assets/3ae9833a-6dbe-4b5b-bfca-b3f7455ad8bc" />
+> FOSS, AT Protocol-native anonymous Q&A. Receive questions anonymously and answer directly to your Bluesky feed.
 
-*riffs off CuriousCat, AskFM, NGL etc*
+<img width="1791" height="590" alt="Navyfragen lockup" src="https://github.com/user-attachments/assets/3ae9833a-6dbe-4b5b-bfca-b3f7455ad8bc" />
 
-<img width="983" height="734" alt="image" src="https://github.com/user-attachments/assets/ab0e4e7a-01d6-4f86-b2bc-15fc1983f431" />
+[![Client Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/ClientTests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/ClientTests.yml)
+[![Server Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/ServerTests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/ServerTests.yml)
+[![Client Coverage](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main&flag=client)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
+[![Server Coverage](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main&flag=server)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-24-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![AT Protocol](https://img.shields.io/badge/AT%20Protocol-native-0085ff?logo=bluesky&logoColor=white)](https://atproto.com)
 
-<img width="995" height="749" alt="image" src="https://github.com/user-attachments/assets/b3ff44d6-4f45-49b2-8ff5-ba0dbb49f81b" />
+*Inspired by CuriousCat, AskFM, and NGL, rebuilt for the open social web.*
 
-<img width="1004" height="755" alt="image" src="https://github.com/user-attachments/assets/c44e65c6-ef56-4dfb-8818-28cc2451660f" />
+---
 
-## Description
+## Screenshots
 
-Allows users to receive anonymous messages and post the answers directly to Bluesky.
+<img width="983" height="734" alt="Inbox view" src="https://github.com/user-attachments/assets/ab0e4e7a-01d6-4f86-b2bc-15fc1983f431" />
+<img width="995" height="749" alt="Answer view" src="https://github.com/user-attachments/assets/b3ff44d6-4f45-49b2-8ff5-ba0dbb49f81b" />
+<img width="1004" height="755" alt="Image themes" src="https://github.com/user-attachments/assets/c44e65c6-ef56-4dfb-8818-28cc2451660f" />
+
+---
+
+## What It Does
+
+Navyfragen lets Bluesky users receive anonymous questions via a public inbox link and post answers (optionally with a styled image card) directly to their Bluesky feed. Bluesky (AT Protocol) serves as both the identity provider (OAuth) and a secondary data store via PDS sync.
+
+---
+
+## Tech Stack
+
+| Layer | Technologies |
+|---|---|
+| **Client** | React 19, Vite, TypeScript, Mantine UI v8, React Query v5, React Router v7 |
+| **Server** | Express, TypeScript, Kysely ORM, AT Protocol SDK, Pino |
+| **Database** | SQLite (development) · PostgreSQL (production) |
+| **Auth** | AT Protocol OAuth (Bluesky as identity provider) |
+| **Testing** | Vitest + Testing Library (client) · Node.js built-in test runner (server) |
+| **Observability** | Pino structured logging, optional Axiom transport |
+
+---
 
 ## Monorepo Structure
 
 npm workspaces with two packages:
-- `client/` — React + Vite SPA (Mantine UI, React Query, React Router)
-- `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-Root-level `npm run dev` runs both concurrently.
+```
+navyfragen-app/
+├── client/        # React + Vite SPA
+├── server/        # Express API
+├── anubis/        # Anubis WAF config
+├── caddy/         # Caddy reverse proxy config
+└── docs/          # Developer notes
+```
+
+---
 
 ## Getting Started
 
-You will need to install Node, Git and a compatible web browser to run the app locally. Windows users may also need to install the C++ build tools or use WSL2 to run the app.
+### Prerequisites
 
-1. Clone the repository:
+- [Node.js 24+](https://nodejs.org)
+- [Git](https://git-scm.com)
+- A modern web browser
+
+> **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `better-sqlite3` and `sharp`). WSL2 is recommended for the best experience.
+
+### Installation
+
+1. **Clone the repository:**
    ```bash
-   git clone
-   cd navyfragen
+   git clone https://github.com/karanshukla/navyfragen-app.git
+   cd navyfragen-app
    ```
-2. Install dependencies:
+
+2. **Install all dependencies:**
    ```bash
    npm install
    ```
-3. Copy `server/.env.template` to `server/.env` and fill in the required values. The one required secret with no default is `OAUTH_TOKEN_SECRET` (a 32-byte hex string for AES-256).
-4. Start the development server:
+
+3. **Configure the server:**
+
+   Copy the template and fill in your values:
+   ```bash
+   cp server/.env.template server/.env
+   ```
+
+   The only required secret with no default is `OAUTH_TOKEN_SECRET`, a 32-byte hex string used for AES-256 encryption:
+   ```bash
+   # Generate one with:
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+4. **Start the development servers:**
    ```bash
    npm run dev
    ```
-5. Open your web browser and navigate to `http://localhost:5173`. (If you're a Windows user, you might need to go to `http://127.0.0.1` in order for cookies to work, more on this in the /server README)
 
-## External Dependencies
+   This starts both the client (port `5173`) and the server (port `3000`) concurrently.
 
-Image generation is handled by a separate service that can be found here: https://hub.docker.com/r/monkeyphysics/html-to-image. This service takes a HTML source, renders it in a headless browser, then returns a screenshot. 
+5. **Open the app:**
 
-You'll need to run it locally via Docker and update your env file to point to localhost:port (it should default to port 3033).
+   Navigate to `http://localhost:5173`.
+
+   > **Windows users:** Use `http://127.0.0.1:5173`. Cookies may not work correctly with `localhost` on Windows.
+
+---
+
+## Image Generation
+
+Responding to a message with an image card requires the [`monkeyphysics/html-to-image`](https://hub.docker.com/r/monkeyphysics/html-to-image) Docker service. It renders HTML in a headless browser and returns a screenshot.
 
 ```bash
-docker pull monkeyphysics/html-to-image
 docker run --rm -p 3033:3033 monkeyphysics/html-to-image
 ```
 
-Three image themes are available when responding to a message: `default` (NGL-style purple gradient), `compressed` (dark compact card), and `twitter` (X/Twitter post card). Users can set their preferred theme in settings, and it's stored per-user in the database.
+Set `EXPORT_HTML_URL=http://localhost:3033/` in `server/.env` (this is the default).
 
-Anubis acts as a WAF to protect the publically available pages from DDoS or spam. It is optional, but highly recommended. In order to run it, you will also need to add a Caddy Reverse Proxy (a sample is provided in /caddy) and associate the frontend/backend appropriately. Point the frontend to Anubis, and then have Anubis redirect to the frontend Vite service. Cloud-Front may also work. 
+### Image Themes
 
-Users may want also want a shortlink in order to share their public inbox. You can use any external or internal URL redirection service as long as it mantains the path parameters in the request and supports prefixing requests. For example, fragen.navy/user123 should be able to redirect to navyfragen.app/profile/user123. As an example you can use something like this: https://github.com/Intellection/docker-redirector. Make sure you set the variable in the frontend as well.
+Three themes are available when responding to a message:
 
-## Important to note
+| Theme | Description |
+|---|---|
+| `default` | NGL-style purple gradient card |
+| `compressed` | Dark, compact card |
+| `twitter` | X/Twitter-style post card |
 
-Running npm run lexgen on a Windows device may cause it to delete all the generated lexicon files. Although you shouldn't need to change any of the generated files, WSL2 is recommended to avoid any unnecessary deletions. 
+Users set their preferred theme in Settings; it is stored per-user in the database.
+
+---
+
+## Infrastructure
+
+### Anubis WAF (optional but recommended)
+
+[Anubis](https://github.com/TecharoHQ/anubis) acts as a WAF to protect public-facing pages from DDoS and spam. Configuration is in [`/anubis`](anubis/).
+
+Pair it with a [Caddy](https://caddyserver.com) reverse proxy (a sample config is in [`/caddy`](caddy/)). Route traffic as:
+
+```
+Internet → Caddy → Anubis → Vite/Client
+                 → Server (API)
+```
+
+CloudFront can also be used in place of Caddy.
+
+### Short Links
+
+Users share a short link to their public inbox (e.g. `fragen.navy/user123` -> `navyfragen.app/profile/user123`). Any URL-prefix-preserving redirect service works, for example [`docker-redirector`](https://github.com/Intellection/docker-redirector).
+
+Set the shortlink base URL in the frontend environment config.
+
+---
+
+## Development Notes
+
+### Running Tests
+
+```bash
+# Client tests
+cd client && npm test
+
+# Server tests
+cd server && npm test
+
+# With coverage
+cd client && npm run test:coverage
+cd server && npm run test:coverage
+```
+
+Coverage target is **100%** across all v8 metrics (statements, lines, branches, functions).
+
+### AT Protocol Lexicons
+
+Custom lexicons live in `server/lexicons/`. Generated TypeScript types are in `server/src/lexicon/` (**do not edit them manually**). Regenerate with:
+
+```bash
+cd server && npm run lexgen
+```
+
+> **Windows users:** Run `lexgen` in WSL2. Running it natively on Windows may delete the generated files.
+
+### Windows & Cookies
+
+Use `http://127.0.0.1` (not `localhost`) for both the app URL and any callback URLs in your `.env`. Cookie `SameSite` handling differs between the two on Windows.

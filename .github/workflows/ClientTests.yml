@@ -44,3 +44,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: client
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: client/coverage/lcov.info
+          flag-name: client
+          base-path: client
