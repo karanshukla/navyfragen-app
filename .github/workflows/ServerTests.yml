@@ -27,6 +27,9 @@ jobs:
       - name: Install server dependencies
         run: cd server && npm ci
 
+      - name: Create coverage directory
+        run: mkdir -p server/coverage
+
       - name: Run server tests with coverage
         id: server-tests
         run: cd server && npm run test:coverage 2>&1 | tee /tmp/server-test-output.txt
@@ -93,6 +96,7 @@ jobs:
           file: server/coverage/lcov.info
           flag-name: server
           base-path: server
+          carryforward: client
 
       - name: Fail if tests failed
         if: steps.server-tests.outcome == 'failure'

@@ -53,3 +53,4 @@ jobs:
           file: client/coverage/lcov.info
           flag-name: client
           base-path: client
+          carryforward: server

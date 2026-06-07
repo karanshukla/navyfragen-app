@@ -6,8 +6,7 @@
 
 [![Client Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/ClientTests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/ClientTests.yml)
 [![Server Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/ServerTests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/ServerTests.yml)
-[![Client Coverage](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main&flag=client)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
-[![Server Coverage](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main&flag=server)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-24-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -28,6 +27,8 @@
 ## What It Does
 
 Navyfragen lets Bluesky users receive anonymous questions via a public inbox link and post answers (optionally with a styled image card) directly to their Bluesky feed. Bluesky (AT Protocol) serves as both the identity provider (OAuth) and a secondary data store via PDS sync.
+
+The companion [navyfragen-feed](https://github.com/karanshukla/navyfragen-feed) repo is a Bluesky custom feed generator that surfaces answered questions on the network.
 
 ---
 
