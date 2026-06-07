@@ -1,3 +1,15 @@
+## Navyfragen - FOSS, AT Protocol native anonymous Question and Answer platform
+
+<img width="1791" height="590" alt="_render_lockup" src="https://github.com/user-attachments/assets/3ae9833a-6dbe-4b5b-bfca-b3f7455ad8bc" />
+
+*riffs off CuriousCat, AskFM, NGL etc*
+
+<img width="983" height="734" alt="image" src="https://github.com/user-attachments/assets/ab0e4e7a-01d6-4f86-b2bc-15fc1983f431" />
+
+<img width="995" height="749" alt="image" src="https://github.com/user-attachments/assets/b3ff44d6-4f45-49b2-8ff5-ba0dbb49f81b" />
+
+<img width="1004" height="755" alt="image" src="https://github.com/user-attachments/assets/c44e65c6-ef56-4dfb-8818-28cc2451660f" />
+
 ## Description
 
 Allows users to receive anonymous messages and post the answers directly to Bluesky.
