@@ -51,7 +51,7 @@ jobs:
             --test-coverage-exclude=src/routes.ts \
             '--test-coverage-exclude=src/routes/*.ts' \
             --test-coverage-reporter=lcov \
-            src/**/*.test.ts 2>/dev/null | awk '/^TN:/{found=1} found{print}' > coverage/lcov.info || true
+            src/**/*.test.ts 2>/dev/null | awk '/^SF:/{found=1} found{print}' > coverage/lcov.info || true
 
       - name: Report coverage on PR
         if: github.event_name == 'pull_request'
