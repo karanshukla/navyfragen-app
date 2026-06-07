@@ -17,7 +17,23 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
     "test:watch": "node --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts",
-    "test:coverage": "node --import ./src/tests/test-bootstrap.js --import tsx --test --experimental-test-coverage '--test-coverage-exclude=src/lexicon/**' --test-coverage-exclude=src/index.ts --test-coverage-exclude=src/auth/client.ts --test-coverage-exclude=src/auth/storage.ts --test-coverage-exclude=src/auth/session.ts --test-coverage-exclude=src/database/db.ts --test-coverage-exclude=src/lib/id-resolver.ts --test-coverage-exclude=src/lib/env.ts --test-coverage-exclude=src/routes.ts '--test-coverage-exclude=src/routes/*.ts' src/**/*.test.ts"
+    "test:coverage": "c8 node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts"
+  },
+  "c8": {
+    "reporter": ["text", "lcov"],
+    "include": ["src/**"],
+    "exclude": [
+      "src/lexicon/**",
+      "src/index.ts",
+      "src/auth/client.ts",
+      "src/auth/storage.ts",
+      "src/auth/session.ts",
+      "src/database/db.ts",
+      "src/lib/id-resolver.ts",
+      "src/lib/env.ts",
+      "src/routes.ts",
+      "src/routes/*.ts"
+    ]
   },
   "dependencies": {
     "@atproto/api": "^0.19.19",
@@ -59,6 +75,7 @@
     "@types/serve-static": "^1.15.10",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
+    "c8": "^10.1.0",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",

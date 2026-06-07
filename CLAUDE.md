@@ -137,7 +137,7 @@ Target is 100% across all four v8 metrics: statements, lines, branches, function
 
 ### Coverage Exclusions
 
-**Server** — excluded via `--test-coverage-exclude` flags in the `test:coverage` script:
+**Server** — excluded via the `c8.exclude` array in `server/package.json` (coverage is collected by `c8`, which wraps the node test runner):
 - `src/lexicon/**` — auto-generated from AT Protocol lexicons
 - `src/index.ts` — Express boot + process signal handlers
 - `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — AT Protocol OAuth wiring
