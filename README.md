@@ -4,8 +4,7 @@
 
 <img width="1791" height="590" alt="Navyfragen lockup" src="https://github.com/user-attachments/assets/3ae9833a-6dbe-4b5b-bfca-b3f7455ad8bc" />
 
-[![Client Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/ClientTests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/ClientTests.yml)
-[![Server Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/ServerTests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/ServerTests.yml)
+[![Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/Tests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/Tests.yml)
 [![Coverage Status](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-24-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
