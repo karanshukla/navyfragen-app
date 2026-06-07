@@ -88,6 +88,8 @@ jobs:
           flag-name: server
           base-path: server
           parallel: true
+        env:
+          COVERALLS_SERVICE_NUMBER: ${{ github.sha }}
 
       - name: Fail if tests failed
         if: steps.server-tests.outcome == 'failure'

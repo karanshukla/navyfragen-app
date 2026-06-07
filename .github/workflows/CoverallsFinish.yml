@@ -12,6 +12,10 @@ jobs:
   coveralls-finish:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
       - name: Finalize Coveralls build
         uses: coverallsapp/github-action@v2.3.6
         continue-on-error: true
@@ -19,3 +23,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel-finished: true
           carryforward: "client,server"
+        env:
+          COVERALLS_SERVICE_NUMBER: ${{ github.event.workflow_run.head_sha }}

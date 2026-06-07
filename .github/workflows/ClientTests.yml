@@ -55,3 +55,5 @@ jobs:
           flag-name: client
           base-path: client
           parallel: true
+        env:
+          COVERALLS_SERVICE_NUMBER: ${{ github.sha }}
