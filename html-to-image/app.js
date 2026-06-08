@@ -7,11 +7,10 @@ import tmp from 'tmp';
 import { fileURLToPath } from 'url';
 
 const FORMATS = {
-  png:  { contentType: 'image/png',       args: { type: 'png'  } },
-  jpg:  { contentType: 'image/jpeg',      args: { type: 'jpeg' } },
-  jpeg: { contentType: 'image/jpeg',      args: { type: 'jpeg' } },
-  webp: { contentType: 'image/webp',      args: { type: 'webp' } },
-  pdf:  { contentType: 'application/pdf', args: null             },
+  png:  { contentType: 'image/png',  args: { type: 'png'  } },
+  jpg:  { contentType: 'image/jpeg', args: { type: 'jpeg' } },
+  jpeg: { contentType: 'image/jpeg', args: { type: 'jpeg' } },
+  webp: { contentType: 'image/webp', args: { type: 'webp' } },
 };
 
 export function createApp(getBrowser) {
@@ -55,7 +54,6 @@ export function createApp(getBrowser) {
 
     const { source, format: formatName, options = {} } = req.body;
     const format = FORMATS[formatName];
-    const isPdf = formatName === 'pdf';
     const tmpoutput = tmp.fileSync({ prefix: 'htmltoimage-' });
     const tmpinput = tmp.fileSync({ prefix: 'htmltoimage-', postfix: '.html' });
 
@@ -66,11 +64,7 @@ export function createApp(getBrowser) {
       try {
         await page.setViewport({ width: options.width || 1920, height: options.height || 1080 });
         await page.goto('file://' + tmpinput.name);
-        if (isPdf) {
-          await page.pdf(Object.assign({ format: 'A4' }, options.args, { path: tmpoutput.name }));
-        } else {
-          await page.screenshot(Object.assign({}, options.args, format.args, { path: tmpoutput.name }));
-        }
+        await page.screenshot(Object.assign({}, options.args, format.args, { path: tmpoutput.name }));
       } finally {
         await page.close();
       }

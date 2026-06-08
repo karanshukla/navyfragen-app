@@ -21,7 +21,7 @@ function stopServer(server) {
 
 // Mock browser whose page writes dummy bytes so createReadStream succeeds.
 function makeMockBrowser({ failScreenshot = false } = {}) {
-  const calls = { setViewport: [], goto: [], screenshot: [], pdf: [] };
+  const calls = { setViewport: [], goto: [], screenshot: [] };
   const page = {
     setViewport: async (opts) => { calls.setViewport.push(opts); },
     goto:        async (url)  => { calls.goto.push(url); },
@@ -29,10 +29,6 @@ function makeMockBrowser({ failScreenshot = false } = {}) {
       calls.screenshot.push({ ...args });
       if (failScreenshot) throw new Error('screenshot failed');
       if (args.path) await fs.writeFile(args.path, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
-    },
-    pdf: async (args) => {
-      calls.pdf.push({ ...args });
-      if (args.path) await fs.writeFile(args.path, Buffer.from('%PDF-1.4'));
     },
     close: async () => {},
   };
@@ -238,40 +234,6 @@ describe('POST / options.args passthrough', () => {
       options: { args: { type: 'jpeg' } },
     });
     assert.equal(calls.screenshot[1].type, 'png');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// PDF format
-// ---------------------------------------------------------------------------
-describe('POST / pdf format', () => {
-  let server, url, calls;
-
-  before(async () => {
-    const { browser, calls: c } = makeMockBrowser();
-    calls = c;
-    ({ server, url } = await startServer(async () => browser));
-  });
-  after(() => stopServer(server));
-
-  test('returns 200 with application/pdf content-type', async () => {
-    const res = await post(url, { source: '<h1>hi</h1>', format: 'pdf' });
-    assert.equal(res.status, 200);
-    assert.match(res.headers.get('content-type'), /application\/pdf/);
-  });
-
-  test('calls page.pdf with format:A4 and a path', () => {
-    assert.equal(calls.pdf[0]['format'], 'A4');
-    assert.ok(calls.pdf[0].path);
-  });
-
-  test('merges options.args into pdf call', async () => {
-    await post(url, {
-      source: '<h1>hi</h1>',
-      format: 'pdf',
-      options: { args: { landscape: true } },
-    });
-    assert.equal(calls.pdf[1].landscape, true);
   });
 });
 
