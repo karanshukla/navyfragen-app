@@ -179,17 +179,18 @@ export function wrapLines(
     let lineChars = 0;
     let pLines = 1;
     for (const word of words) {
-      if (word.length > charsPerLine) {
+      const wordLen = [...word].length;
+      if (wordLen > charsPerLine) {
         if (lineChars > 0) pLines++;
-        pLines += Math.ceil(word.length / charsPerLine) - 1;
-        lineChars = word.length % charsPerLine || charsPerLine;
+        pLines += Math.ceil(wordLen / charsPerLine) - 1;
+        lineChars = wordLen % charsPerLine || charsPerLine;
       } else if (lineChars === 0) {
-        lineChars = word.length;
-      } else if (lineChars + 1 + word.length <= charsPerLine) {
-        lineChars += 1 + word.length;
+        lineChars = wordLen;
+      } else if (lineChars + 1 + wordLen <= charsPerLine) {
+        lineChars += 1 + wordLen;
       } else {
         pLines++;
-        lineChars = word.length;
+        lineChars = wordLen;
       }
     }
     totalLines += pLines;
@@ -198,7 +199,7 @@ export function wrapLines(
 }
 
 function nglHeight(message: string): number {
-  const length = message.length;
+  const length = [...message].length;
   const fontSize = msgFontSize(length, 26, 21, 17);
   // message area: 360px wide − 32px body padding − 36px bubble padding (18px each side)
   const lines = wrapLines(message, fontSize, 292, 0.58);
@@ -208,7 +209,7 @@ function nglHeight(message: string): number {
 }
 
 function compressedHeight(message: string): number {
-  const length = message.length;
+  const length = [...message].length;
   const fontSize = msgFontSize(length, 19, 16, 14);
   // message area: 380px − 24px body padding − 4px border − 27px card padding (13px+14px)
   // coeff 0.53: Noto Sans semibold at these sizes fills ~38–39 chars/line at 16px in a 325px area
@@ -219,7 +220,7 @@ function compressedHeight(message: string): number {
 }
 
 function twitterHeight(message: string, handle?: string): number {
-  const length = message.length;
+  const length = [...message].length;
   const fontSize = msgFontSize(length, 21, 17, 14);
   // message area: 420px − 32px card padding (16px each side)
   // Prepend handle mention since it's rendered inline before the message text
