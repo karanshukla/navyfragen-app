@@ -90,7 +90,7 @@ export function createApp(getBrowser) {
 
 // Only run when this file is the entry point, not when imported by tests.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const port = parseInt(process.env.PORT ?? '3033', 10);
+  const port = 3033;
 
   function launchBrowser() {
     console.log('Launching browser...');
@@ -113,7 +113,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 
   const app = createApp(getBrowser);
-  app.listen(port, () => console.log(`html-to-image listening on port ${port}`));
+  // Bind to :: so Railway's IPv6 internal network can reach this service.
+  app.listen(port, '::', () => console.log(`html-to-image listening on port ${port}`));
 
   async function shutdown() {
     const browser = await browserPromise.catch(() => null);
