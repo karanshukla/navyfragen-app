@@ -1,0 +1,11 @@
+{
+  "name": "html-to-image",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.18.1",
+    "express-rate-limit": "^7.0.0",
+    "puppeteer": "^23.11.1",
+    "tmp": "^0.2.1"
+  }
+}

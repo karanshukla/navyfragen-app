@@ -142,6 +142,15 @@ describe("wrapLines", () => {
   test("returns at least 1 for empty string", () => {
     assert.strictEqual(wrapLines("", 10, 100, 1.0), 1);
   });
+
+  test("emoji characters count as 1 not 2 (surrogate pair fix)", () => {
+    // "hi 👋" => "hi"(2) + space + "👋"(1 code point) = 4 total, fits on one line of 10
+    assert.strictEqual(wrapLines("hi 👋", 10, 100, 1.0), 1);
+    // 10 emojis => 10 code points, exactly fills one line
+    assert.strictEqual(wrapLines("😀😀😀😀😀😀😀😀😀😀", 10, 100, 1.0), 1);
+    // 11 emojis => wraps to 2 lines
+    assert.strictEqual(wrapLines("😀😀😀😀😀😀😀😀😀😀😀", 10, 100, 1.0), 2);
+  });
 });
 
 describe("generateThemeSpecificHtml", () => {
@@ -172,5 +181,12 @@ describe("generateThemeSpecificHtml", () => {
   test("twitter theme with handle includes mention", () => {
     const result = generateThemeSpecificHtml("twitter", "hello", "fragen.navy/myhandle", "hello", "myhandle");
     assert.ok(result.html.includes("@myhandle"));
+  });
+
+  test("emoji message produces same height as equal-length ascii message", () => {
+    // 5 emojis == 5 visible characters; should produce same layout as 5 ascii chars
+    const emojiResult = generateThemeSpecificHtml("default", "👋👋👋👋👋", "navyfragen.app", "👋👋👋👋👋");
+    const asciiResult = generateThemeSpecificHtml("default", "hello", "navyfragen.app", "hello");
+    assert.strictEqual(emojiResult.height, asciiResult.height);
   });
 });
