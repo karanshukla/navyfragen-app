@@ -81,9 +81,10 @@ The `#/` path alias maps to `src/` (configured in `tsconfig.json` `paths`).
 
 ### Image Generation
 
-Responding to a message with `includeQuestionAsImage: true` calls an external `monkeyphysics/html-to-image` service (`EXPORT_HTML_URL` env var, defaults to `http://localhost:3033/`). Run it locally with:
+Responding to a message with `includeQuestionAsImage: true` calls the in-house `html-to-image` service (`EXPORT_HTML_URL` env var, defaults to `http://localhost:3033/`). The service lives in `html-to-image/` at the repo root. Run it locally with:
 ```bash
-docker run --rm -p 3033:3033 monkeyphysics/html-to-image
+docker build -t html-to-image ./html-to-image
+docker run --rm -p 3033:3033 html-to-image
 ```
 Image themes are defined in `src/lib/themes.ts` and stored per-user in `user_settings.imageTheme`.
 

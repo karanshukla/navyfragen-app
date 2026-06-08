@@ -112,10 +112,11 @@ navyfragen-app/
 
 ## Image Generation
 
-Responding to a message with an image card requires the [`monkeyphysics/html-to-image`](https://hub.docker.com/r/monkeyphysics/html-to-image) Docker service. It renders HTML in a headless browser and returns a screenshot.
+Responding to a message with an image card requires the in-house `html-to-image` service (located in `html-to-image/` at the repo root). It renders HTML in a headless Chromium browser and returns a screenshot.
 
 ```bash
-docker run --rm -p 3033:3033 monkeyphysics/html-to-image
+docker build -t html-to-image ./html-to-image
+docker run --rm -p 3033:3033 html-to-image
 ```
 
 Set `EXPORT_HTML_URL=http://localhost:3033/` in `server/.env` (this is the default).
