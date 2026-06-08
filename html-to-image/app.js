@@ -8,17 +8,18 @@ const app = express();
 const port = parseInt(process.env.PORT ?? '3033', 10);
 
 const FORMATS = {
-  png:  { contentType: 'image/png',      screenshotType: 'png' },
-  jpg:  { contentType: 'image/jpeg',     screenshotType: 'jpeg' },
-  jpeg: { contentType: 'image/jpeg',     screenshotType: 'jpeg' },
-  webp: { contentType: 'image/webp',     screenshotType: 'webp' },
-  pdf:  { contentType: 'application/pdf', screenshotType: null },
+  png:  { contentType: 'image/png',        screenshotType: 'png' },
+  jpg:  { contentType: 'image/jpeg',       screenshotType: 'jpeg' },
+  jpeg: { contentType: 'image/jpeg',       screenshotType: 'jpeg' },
+  webp: { contentType: 'image/webp',       screenshotType: 'webp' },
+  pdf:  { contentType: 'application/pdf',  screenshotType: null },
 };
 
 app.use(express.json({ limit: '2mb' }));
 app.use(rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: true, legacyHeaders: false }));
 
-// Health check — used by Railway and other platforms to detect readiness
+// Health check responds immediately — Railway marks the instance ready without
+// waiting for the browser to finish launching.
 app.get('/', (_req, res) => res.json({ status: 'ok' }));
 
 app.use((req, res, next) => {
@@ -39,6 +40,13 @@ app.use((req, res, next) => {
 });
 
 app.post('/', async (req, res) => {
+  let browser;
+  try {
+    browser = await getBrowser();
+  } catch (err) {
+    return res.status(503).json({ error: 'Browser unavailable: ' + err.message });
+  }
+
   const { source, format: formatName, options = {} } = req.body;
   const format = FORMATS[formatName];
   const isPdf = formatName === 'pdf';
@@ -71,6 +79,8 @@ app.post('/', async (req, res) => {
   } catch (err) {
     tmpinput.removeCallback();
     tmpoutput.removeCallback();
+    // Browser may have crashed — relaunch for next request
+    browserPromise = launchBrowser();
     res.status(500).json({ error: err.message || 'Image generation failed' });
   }
 });
@@ -79,14 +89,35 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
-console.log('Launching browser...');
-const browser = await puppeteer.launch({
-  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-  defaultViewport: { width: 1920, height: 1080 },
-  args: ['--no-sandbox', '--no-zygote', '--headless', '--disable-gpu'],
-});
-console.log('Browser ready.');
-
+// Listen immediately so Railway's health check passes without waiting for the browser.
 app.listen(port, () => console.log(`html-to-image listening on port ${port}`));
 
-process.on('SIGINT', async () => { await browser.close(); process.exit(); });
+// Browser launches in the background — the first POST request awaits this promise.
+function launchBrowser() {
+  console.log('Launching browser...');
+  return puppeteer.launch({
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+    defaultViewport: { width: 1920, height: 1080 },
+    args: ['--no-sandbox', '--no-zygote', '--headless', '--disable-gpu'],
+  }).then(b => { console.log('Browser ready.'); return b; });
+}
+
+let browserPromise = launchBrowser();
+
+async function getBrowser() {
+  const browser = await browserPromise;
+  if (!browser.connected) {
+    browserPromise = launchBrowser();
+    return browserPromise;
+  }
+  return browser;
+}
+
+async function shutdown() {
+  const browser = await browserPromise.catch(() => null);
+  if (browser) await browser.close().catch(() => {});
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
