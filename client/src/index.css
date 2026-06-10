@@ -41,6 +41,11 @@ body {
   --nf-dur-fast: 120ms;
   --nf-dur-base: 200ms;
 
+  /* Nav active state — default (dark mode) */
+  --nf-nav-active-bg:     linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%);
+  --nf-nav-active-color:  #FDF8FF;
+  --nf-nav-active-shadow: 0 4px 12px -6px rgba(107,63,212,0.45);
+
   /* Promo card (Spread the word) — light mode */
   --nf-promo-bg:     #F2EBFF;
   --nf-promo-border: #E6DDFF;
@@ -51,6 +56,11 @@ body {
   --mantine-color-body:           #FDF8FF;
   --mantine-color-default:        #FFFFFF;
   --mantine-color-default-border: #E6DDFF;
+
+  /* Nav active state — light mode: subtle tint with dark text for accessibility */
+  --nf-nav-active-bg:     #EDE9FF;
+  --nf-nav-active-color:  #1E1B4B;
+  --nf-nav-active-shadow: none;
 }
 
 /* ── Dark mode ── */

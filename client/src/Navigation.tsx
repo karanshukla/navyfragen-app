@@ -33,12 +33,12 @@ interface NavigationProps {
   did?: string;
 }
 
-// Active nav item: mark gradient background + subtle shadow
+// Active nav item: mode-aware — subtle tint in light mode, brand gradient in dark
 const activeNavStyle = {
-  background: "var(--nf-grad-mark)",
+  background: "var(--nf-nav-active-bg)",
   borderRadius: 12,
-  color: "var(--mantine-white)",
-  boxShadow: "0 6px 16px -8px rgba(107,63,212,0.6)",
+  color: "var(--nf-nav-active-color)",
+  boxShadow: "var(--nf-nav-active-shadow)",
 };
 
 const inactiveNavStyle = {
