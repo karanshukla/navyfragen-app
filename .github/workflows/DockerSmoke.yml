@@ -1,0 +1,77 @@
+name: Docker Smoke Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  docker-smoke:
+    name: Docker Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create CI secrets
+        run: |
+          printf 'OAUTH_TOKEN_SECRET=%s\nCOOKIE_SECRET=%s\n' \
+            "$(openssl rand -hex 32)" \
+            "$(openssl rand -hex 32)" > .env
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Wait for postgres to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' \
+              "$(docker compose ps -q postgres)" 2>/dev/null || echo "unknown")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Postgres is healthy"
+              break
+            fi
+            echo "Waiting for postgres ($i/30): $STATUS"
+            sleep 3
+          done
+
+      - name: Wait for remaining services to stabilise
+        run: sleep 30
+
+      - name: Check no containers have crashed
+        run: |
+          EXITED=$(docker compose ps -a | grep -iE '\bExit' || true)
+          if [ -n "$EXITED" ]; then
+            echo "The following containers exited unexpectedly:"
+            echo "$EXITED"
+            docker compose logs --tail=50
+            exit 1
+          fi
+          echo "All containers are running"
+
+      # /robots.txt is in the Anubis ALLOW list so the request passes
+      # through Anubis → Caddy → client without triggering a PoW challenge.
+      - name: Smoke test — frontend via Anubis (port 8080)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            --retry 5 --retry-delay 3 --retry-connrefused \
+            http://localhost:8080/robots.txt)
+          [ "$STATUS" != "000" ] || { echo "No response on port 8080"; exit 1; }
+          echo "Port 8080 → HTTP $STATUS"
+
+      - name: Smoke test — redirector (port 8081)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            --max-redirs 0 --retry 5 --retry-delay 3 --retry-connrefused \
+            http://localhost:8081/)
+          [ "$STATUS" != "000" ] || { echo "No response on port 8081"; exit 1; }
+          echo "Port 8081 → HTTP $STATUS"
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
