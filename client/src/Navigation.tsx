@@ -255,6 +255,29 @@ export function Navigation({
   );
 }
 
+const SECTION_OPEN_KEY = "navyfragen_friends_sections_open";
+
+function getSectionOpen(label: string): boolean {
+  try {
+    const raw = localStorage.getItem(SECTION_OPEN_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    return parsed[label] !== false;
+  } catch {
+    return true;
+  }
+}
+
+function setSectionOpen(label: string, open: boolean) {
+  try {
+    const raw = localStorage.getItem(SECTION_OPEN_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    localStorage.setItem(SECTION_OPEN_KEY, JSON.stringify({ ...parsed, [label]: open }));
+  } catch {
+    /* v8 ignore next */
+  }
+}
+
 function FriendSection({
   label,
   friends,
@@ -266,12 +289,17 @@ function FriendSection({
   emptyText: string;
   onLinkClick: () => void;
 }) {
-  const [opened, { toggle }] = useDisclosure(true);
+  const [opened, { toggle }] = useDisclosure(getSectionOpen(label));
+
+  const handleToggle = () => {
+    setSectionOpen(label, !opened);
+    toggle();
+  };
 
   return (
     <>
       <UnstyledButton
-        onClick={toggle}
+        onClick={handleToggle}
         mt="lg"
         mb="xs"
         px={2}

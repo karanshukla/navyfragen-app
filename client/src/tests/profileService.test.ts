@@ -274,7 +274,7 @@ describe("profile hooks", () => {
     });
     await waitFor(() => result.current.isSuccess);
     const cached = JSON.parse(
-      localStorage.getItem(`navyfragen_friends_v2_cache_${mockDid}`)!,
+      localStorage.getItem(`navyfragen_friends_v3_cache_${mockDid}`)!,
     );
     expect(cached.data).toEqual(friendsData);
   });
@@ -282,7 +282,7 @@ describe("profile hooks", () => {
   it("useFriends reads initialData from localStorage when available", () => {
     const cached = { data: { moots: [], following: [], oomfs: [] }, timestamp: Date.now() };
     localStorage.setItem(
-      `navyfragen_friends_v2_cache_${mockDid}`,
+      `navyfragen_friends_v3_cache_${mockDid}`,
       JSON.stringify(cached),
     );
     const { result } = renderHook(() => useFriends(mockDid), {
@@ -292,7 +292,7 @@ describe("profile hooks", () => {
   });
 
   it("useFriends returns undefined initialData when localStorage has invalid JSON", () => {
-    localStorage.setItem(`navyfragen_friends_v2_cache_${mockDid}`, "not-json");
+    localStorage.setItem(`navyfragen_friends_v3_cache_${mockDid}`, "not-json");
     vi.mocked(apiClient.get).mockResolvedValue({ moots: [], following: [], oomfs: [] });
     const { result } = renderHook(() => useFriends(mockDid), {
       wrapper: makeWrapper(),
