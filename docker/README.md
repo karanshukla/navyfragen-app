@@ -2,7 +2,7 @@
 
 This stack is used for **local integration testing and smoke tests** (and optionally self-hosting). It is not how the production deployment works.
 
-**Production** runs on Railway using native Railpack builds.
+**Production** runs on Railway using native Railpack/Nixpacks builds — the `client/railway.json` and `server/railway.json` files govern that path.
 
 ## Services
 
