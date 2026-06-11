@@ -66,6 +66,8 @@ services:
       PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8080}"
       CLIENT_URL: "${PUBLIC_URL:-http://localhost:8080}"
       EXPORT_HTML_URL: http://html-to-image:3033/
+      # DB_PATH is required by the env validator even when POSTGRESQL_URL is set
+      DB_PATH: ""
       OAUTH_TOKEN_SECRET: "${OAUTH_TOKEN_SECRET:?Set OAUTH_TOKEN_SECRET in .env (openssl rand -hex 32)}"
       COOKIE_SECRET: "${COOKIE_SECRET:?Set COOKIE_SECRET in .env (openssl rand -hex 32)}"
       POSTGRESQL_URL: "postgres://${POSTGRES_USER:-navyfragen}:${POSTGRES_PASSWORD:-navyfragen}@postgres:5432/${POSTGRES_DB:-navyfragen}"

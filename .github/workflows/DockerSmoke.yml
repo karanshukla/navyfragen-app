@@ -59,9 +59,12 @@ jobs:
 
       # /robots.txt is in the Anubis ALLOW list so the request passes
       # through Anubis → Caddy → client without triggering a PoW challenge.
+      # X-Real-Ip is required by Anubis when use-remote-address is false
+      # (default); in production a load balancer sets it, so we simulate that here.
       - name: Smoke test — frontend via Anubis (port 8080)
         run: |
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "X-Real-Ip: 127.0.0.1" \
             --retry 5 --retry-delay 3 --retry-connrefused \
             http://localhost:8080/robots.txt)
           [ "$STATUS" != "000" ] || { echo "No response on port 8080"; exit 1; }
