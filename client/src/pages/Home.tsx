@@ -16,7 +16,12 @@ import {
   Tooltip,
   useComputedColorScheme,
 } from "@mantine/core";
-import { IconBrandGithub, IconButterfly, IconClipboard, IconShare } from "@tabler/icons-react";
+import {
+  IconBrandGithub,
+  IconButterfly,
+  IconClipboard,
+  IconShare,
+} from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -37,7 +42,13 @@ const gradientTextStyle = {
 
 function ShortcutHint({ label, hint }: { label: string; hint: string }) {
   return (
-    <Box style={{ display: "flex", justifyContent: "space-between", padding: "5px 0" }}>
+    <Box
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        padding: "5px 0",
+      }}
+    >
       <Text fz={13}>{label}</Text>
       <Text ff="monospace" fz={12} c="dimmed">
         {hint.replace("Alt", "Alt/Cmd")}
@@ -49,7 +60,9 @@ function ShortcutHint({ label, hint }: { label: string; hint: string }) {
 export default function Home() {
   const { data: sessionData, isLoading } = useSession();
   const syncMessagesMutation = useSyncMessages();
-  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
+  const isDark =
+    useComputedColorScheme("light", { getInitialValueInEffect: true }) ===
+    "dark";
   const isLoggedIn = !!sessionData?.isLoggedIn;
 
   React.useEffect(() => {
@@ -113,23 +126,25 @@ export default function Home() {
             <Center>
               <Avatar
                 src={sessionData.profile.avatar ?? undefined}
-                alt={sessionData.profile.displayName || sessionData.profile.handle}
+                alt={
+                  sessionData.profile.displayName || sessionData.profile.handle
+                }
                 size={84}
                 radius="xl"
-                style={{ border: "3px solid rgba(255,255,255,0.25)", boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }}
+                style={{
+                  border: "3px solid rgba(255,255,255,0.25)",
+                  boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)",
+                }}
               >
                 <WinkMark size={60} sparkle={false} aria-hidden />
               </Avatar>
             </Center>
             <Center>
-              <Text
-                fw={800}
-                fz={26}
-                style={{ letterSpacing: "-0.025em" }}
-              >
+              <Text fw={800} fz={26} style={{ letterSpacing: "-0.025em" }}>
                 Good to see you again,{" "}
                 <span style={gradientTextStyle}>
-                  {sessionData.profile.displayName || sessionData.profile.handle}
+                  {sessionData.profile.displayName ||
+                    sessionData.profile.handle}
                 </span>
                 !
               </Text>
@@ -142,13 +157,22 @@ export default function Home() {
                 to="/messages"
                 size="lg"
                 radius="md"
-                style={{ background: "var(--nf-grad-hero)", color: "white", border: "none" }}
+                style={{
+                  background: "var(--nf-grad-hero)",
+                  color: "white",
+                  border: "none",
+                }}
               >
                 View Your Messages
               </Button>
-              <CopyButton value={`https://${shortlinkurl}/${sessionData.profile.handle}`}>
+              <CopyButton
+                value={`https://${shortlinkurl}/${sessionData.profile.handle}`}
+              >
                 {({ copied, copy }) => (
-                  <Tooltip label={copied ? "Copied!" : "Copy profile link"} withArrow>
+                  <Tooltip
+                    label={copied ? "Copied!" : "Copy profile link"}
+                    withArrow
+                  >
                     <Button
                       onClick={copy}
                       size="sm"
@@ -169,7 +193,14 @@ export default function Home() {
                 onClick={async () => {
                   const url = `https://${shortlinkurl}/${sessionData.profile!.handle}`;
                   if (navigator.share) {
-                    try { await navigator.share({ title: "Send me anonymous messages on Navyfragen!", url }); } catch { /* v8 ignore next */ }
+                    try {
+                      await navigator.share({
+                        title: "Send me anonymous messages on Navyfragen!",
+                        url,
+                      });
+                    } catch {
+                      /* v8 ignore next */
+                    }
                   } else if (navigator.clipboard) {
                     await navigator.clipboard.writeText(url);
                   }
@@ -181,22 +212,31 @@ export default function Home() {
           </Center>
         </Paper>
       ) : (
-        <Paper p="xl" radius="lg" withBorder>
+        <Paper
+          p="xl"
+          radius="lg"
+          withBorder
+          style={{ background: surfaceBg(isDark) }}
+        >
           <List spacing="md" size="md">
             <List.Item>
               <Text fw={500}>Fast and free</Text>
               <Text c="dimmed">
-                No downloads required, just log in with your Bluesky credentials and share your inbox link
+                No downloads required, just log in with your Bluesky credentials
+                and share your inbox link
               </Text>
             </List.Item>
             <List.Item>
               <Text fw={500}>Spam protection, without captchas</Text>
-              <Text c="dimmed">Protected by Anubis, a powerful bot detection service</Text>
+              <Text c="dimmed">
+                Protected by Anubis, a powerful bot detection service
+              </Text>
             </List.Item>
             <List.Item>
               <Text fw={500}>Open source</Text>
               <Text c="dimmed">
-                Contribute directly to the project, or host your own version if you want!
+                Contribute directly to the project, or host your own version if
+                you want!
               </Text>
             </List.Item>
           </List>
@@ -216,8 +256,21 @@ export default function Home() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
-        <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
-          <Text fw={700} mb="sm" tt="uppercase" ff="monospace" c="dimmed" fz={11} style={{ letterSpacing: "0.1em" }}>
+        <Paper
+          p="lg"
+          radius="md"
+          withBorder
+          style={{ background: surfaceBg(isDark) }}
+        >
+          <Text
+            fw={700}
+            mb="sm"
+            tt="uppercase"
+            ff="monospace"
+            c="dimmed"
+            fz={11}
+            style={{ letterSpacing: "0.1em" }}
+          >
             Keyboard Shortcuts
           </Text>
           <Stack gap={6}>
@@ -235,37 +288,68 @@ export default function Home() {
           </Stack>
         </Paper>
 
-        <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
-          <Text fw={700} mb="sm" tt="uppercase" ff="monospace" c="dimmed" fz={11} style={{ letterSpacing: "0.1em" }}>
+        <Paper
+          p="lg"
+          radius="md"
+          withBorder
+          style={{ background: surfaceBg(isDark) }}
+        >
+          <Text
+            fw={700}
+            mb="sm"
+            tt="uppercase"
+            ff="monospace"
+            c="dimmed"
+            fz={11}
+            style={{ letterSpacing: "0.1em" }}
+          >
             Questions? Feedback?
           </Text>
           <Stack gap="sm">
             <div>
-              <Text fz={15} mb={4}>Reach out on Bluesky</Text>
+              <Text fz={15} mb={4}>
+                Reach out on Bluesky
+              </Text>
               <a
                 href="https://bsky.app/profile/navyfragen.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "var(--nf-purple)", textDecoration: "none" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 15,
+                  color: "var(--nf-purple)",
+                  textDecoration: "none",
+                }}
               >
                 <IconButterfly size={18} /> @navyfragen.app
               </a>
             </div>
             <div>
-              <Text fz={15} mb={4}>Submit an issue on GitHub</Text>
+              <Text fz={15} mb={4}>
+                Submit an issue on GitHub
+              </Text>
               <a
                 href="https://github.com/karanshukla/navyfragen-app"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "var(--nf-purple)", textDecoration: "none" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 15,
+                  color: "var(--nf-purple)",
+                  textDecoration: "none",
+                }}
               >
                 <IconBrandGithub size={18} /> GitHub - Navyfragen
               </a>
             </div>
             <Divider />
             <Text fz={13}>
-              Disclaimer: Please follow Bluesky&apos;s ToS. Cookies are used to keep you logged in.
-              This app does not include any moderation.
+              Disclaimer: Please follow Bluesky&apos;s ToS. Cookies are used to
+              keep you logged in. This app does not include any moderation.
             </Text>
           </Stack>
         </Paper>

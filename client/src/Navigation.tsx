@@ -59,8 +59,9 @@ export function Navigation({
 }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: friendsData, isLoading: friendsLoading } =
-    useFriends(isLoggedIn ? (did ?? null) : null);
+  const { data: friendsData, isLoading: friendsLoading } = useFriends(
+    isLoggedIn ? (did ?? null) : null,
+  );
   const { data: userStats } = useUserStats();
 
   const handleClick = () => onLinkClick?.();
@@ -73,10 +74,18 @@ export function Navigation({
       if (event.altKey) {
         let targetPath: string | null = null;
         switch (event.key.toUpperCase()) {
-          case "H": targetPath = "/"; break;
-          case "M": if (isLoggedIn) targetPath = "/messages"; break;
-          case "S": if (isLoggedIn) targetPath = "/settings"; break;
-          case "L": if (!isLoggedIn) targetPath = "/login"; break;
+          case "H":
+            targetPath = "/";
+            break;
+          case "M":
+            if (isLoggedIn) targetPath = "/messages";
+            break;
+          case "S":
+            if (isLoggedIn) targetPath = "/settings";
+            break;
+          case "L":
+            if (!isLoggedIn) targetPath = "/login";
+            break;
         }
         if (targetPath) {
           event.preventDefault();
@@ -127,9 +136,9 @@ export function Navigation({
               onClick={handleClick}
               leftSection={<IconMessage size={16} stroke={1.5} />}
               rightSection={
-                !isActive("/messages") && (userStats?.messageCount ?? 0) > 0
-                  ? <MessageCountBadge count={userStats!.messageCount} />
-                  : undefined
+                !isActive("/messages") && (userStats?.messageCount ?? 0) > 0 ? (
+                  <MessageCountBadge count={userStats!.messageCount} />
+                ) : undefined
               }
               styles={navItemStyles("/messages")}
             />
@@ -171,9 +180,19 @@ export function Navigation({
               gap: 8,
             }}
           >
-            <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
+            <IconUser
+              size={13}
+              stroke={1.5}
+              style={{ opacity: 0.5, flexShrink: 0 }}
+            />
             <Box style={{ minWidth: 0 }}>
-              <Text ff="monospace" fz={9} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.08em" }}>
+              <Text
+                ff="monospace"
+                fz={9}
+                tt="uppercase"
+                c="dimmed"
+                style={{ letterSpacing: "0.08em" }}
+              >
                 Viewing profile
               </Text>
               <Text ff="monospace" fz={12} fw={600} truncate>
@@ -187,7 +206,14 @@ export function Navigation({
       {isLoggedIn && (
         <>
           <Box mt="lg" mb="xs" px={2}>
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" ff="monospace" style={{ letterSpacing: "0.1em" }}>
+            <Text
+              size="xs"
+              fw={700}
+              c="dimmed"
+              tt="uppercase"
+              ff="monospace"
+              style={{ letterSpacing: "0.1em" }}
+            >
               Friends on Navyfragen
             </Text>
           </Box>
@@ -197,7 +223,12 @@ export function Navigation({
               <Stack gap={6}>
                 {[0, 1, 2].map((i) => (
                   <Group key={i} gap="xs" px={4} py={4}>
-                    <Skeleton circle height={28} width={28} style={{ flexShrink: 0 }} />
+                    <Skeleton
+                      circle
+                      height={28}
+                      width={28}
+                      style={{ flexShrink: 0 }}
+                    />
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Skeleton height={10} mb={4} radius="sm" />
                       <Skeleton height={8} width="60%" radius="sm" />
@@ -211,15 +242,35 @@ export function Navigation({
                   <NavLink
                     key={friend.did}
                     label={
-                      <Group gap={10} wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                        <Avatar size={28} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }}>
+                      <Group
+                        gap={10}
+                        wrap="nowrap"
+                        style={{ overflow: "hidden", width: "100%" }}
+                      >
+                        <Avatar
+                          size={28}
+                          radius="xl"
+                          src={friend.avatar || undefined}
+                          style={{ flexShrink: 0 }}
+                        >
                           <WinkMark size={22} sparkle={false} aria-hidden />
                         </Avatar>
                         <Box style={{ flex: 1, minWidth: 0 }}>
-                          <Text fz={13} fw={600} truncate style={{ lineHeight: 1.3 }}>
+                          <Text
+                            fz={13}
+                            fw={600}
+                            truncate
+                            style={{ lineHeight: 1.3 }}
+                          >
                             {friend.displayName || friend.handle}
                           </Text>
-                          <Text ff="monospace" fz={10} c="dimmed" truncate style={{ lineHeight: 1.3 }}>
+                          <Text
+                            ff="monospace"
+                            fz={10}
+                            c="dimmed"
+                            truncate
+                            style={{ lineHeight: 1.3 }}
+                          >
                             @{friend.handle}
                           </Text>
                         </Box>
@@ -238,52 +289,6 @@ export function Navigation({
                 None of the people you follow on Bluesky are on Navyfragen yet.
               </Text>
             ) : /* v8 ignore next */ null}
-          </Box>
-
-          {/* Promo card — encourages sharing the inbox link */}
-          <Box mt="md" style={{ flexShrink: 0 }}>
-            <Box
-              style={{
-                padding: 12,
-                borderRadius: 12,
-                background: "var(--nf-promo-bg)",
-                border: "1px solid var(--nf-promo-border)",
-              }}
-            >
-              <Text fw={700} size="sm">Spread the word</Text>
-              <Text size="xs" c="dimmed" mt={4} style={{ lineHeight: 1.4 }}>
-                Share your inbox link to get more questions.
-              </Text>
-              {handle ? (
-                <CopyButton value={`https://${shortlinkurl}/${handle}`}>
-                  {({ copied, copy }) => (
-                    <Button
-                      size="xs"
-                      variant="gradient"
-                      gradient={{ from: "royal", to: "purple", deg: 135 }}
-                      fullWidth
-                      mt={10}
-                      onClick={copy}
-                    >
-                      {copied ? "Copied!" : "Copy my link"}
-                    </Button>
-                  )}
-                </CopyButton>
-              ) : (
-                <Button
-                  size="xs"
-                  variant="gradient"
-                  gradient={{ from: "royal", to: "purple", deg: 135 }}
-                  fullWidth
-                  mt={10}
-                  component={Link}
-                  to="/messages"
-                  onClick={handleClick}
-                >
-                  Copy my link
-                </Button>
-              )}
-            </Box>
           </Box>
         </>
       )}

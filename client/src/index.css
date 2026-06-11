@@ -45,10 +45,6 @@ body {
   --nf-nav-active-bg:     rgba(107, 63, 212, 0.22);
   --nf-nav-active-color:  #FDF8FF;
   --nf-nav-active-shadow: none;
-
-  /* Promo card (Spread the word) — light mode */
-  --nf-promo-bg:     #F2EBFF;
-  --nf-promo-border: #E6DDFF;
 }
 
 /* ── Light mode: white cards on cream page background ── */

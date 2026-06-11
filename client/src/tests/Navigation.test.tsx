@@ -20,7 +20,8 @@ vi.mock("../api/profileService", async (importOriginal) => {
 });
 
 vi.mock("../api/settingsService", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../api/settingsService")>();
+  const actual =
+    await importOriginal<typeof import("../api/settingsService")>();
   return { ...actual, useUserStats: vi.fn() };
 });
 
@@ -50,7 +51,10 @@ describe("Navigation", () => {
 
   describe("when logged out", () => {
     beforeEach(() => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
     });
 
     it("renders Home and Login links", () => {
@@ -73,7 +77,10 @@ describe("Navigation", () => {
 
   describe("when logged in", () => {
     it("renders Home, Messages and Settings links", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: true } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
       expect(screen.getByText("Home")).toBeInTheDocument();
       expect(screen.getByText("Messages")).toBeInTheDocument();
@@ -81,13 +88,19 @@ describe("Navigation", () => {
     });
 
     it("does not render Login link", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: true } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
       expect(screen.queryByText("Login")).toBeNull();
     });
 
     it("renders the Friends section header", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
       expect(screen.getByText(/friends on navyfragen/i)).toBeInTheDocument();
     });
@@ -95,7 +108,10 @@ describe("Navigation", () => {
 
   describe("friends list — loading", () => {
     it("does not show friend names while loading", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: true } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
       expect(screen.queryByText("Alice")).toBeNull();
       expect(screen.queryByText("@alice.bsky.social")).toBeNull();
@@ -104,10 +120,15 @@ describe("Navigation", () => {
 
   describe("friends list — empty", () => {
     it("shows the empty-state message when no friends are on the app", () => {
-      mockUseFriends.mockReturnValue({ data: { friends: [] }, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: { friends: [] },
+        isLoading: false,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
       expect(
-        screen.getByText(/none of the people you follow on bluesky are on navyfragen/i)
+        screen.getByText(
+          /none of the people you follow on bluesky are on navyfragen/i,
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -162,13 +183,19 @@ describe("Navigation", () => {
 
   describe("keyboard shortcuts", () => {
     beforeEach(() => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
     });
 
     it("Alt+H navigates to home", () => {
       renderWithProviders(
-        <><Navigation isLoggedIn={true} /><LocationDisplay /></>,
-        { route: "/messages" }
+        <>
+          <Navigation isLoggedIn={true} />
+          <LocationDisplay />
+        </>,
+        { route: "/messages" },
       );
       fireEvent.keyDown(document, { key: "H", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/");
@@ -176,8 +203,11 @@ describe("Navigation", () => {
 
     it("Alt+M navigates to messages when logged in", () => {
       renderWithProviders(
-        <><Navigation isLoggedIn={true} /><LocationDisplay /></>,
-        { route: "/" }
+        <>
+          <Navigation isLoggedIn={true} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
       );
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/messages");
@@ -185,8 +215,11 @@ describe("Navigation", () => {
 
     it("Alt+S navigates to settings when logged in", () => {
       renderWithProviders(
-        <><Navigation isLoggedIn={true} /><LocationDisplay /></>,
-        { route: "/" }
+        <>
+          <Navigation isLoggedIn={true} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
       );
       fireEvent.keyDown(document, { key: "S", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/settings");
@@ -194,8 +227,11 @@ describe("Navigation", () => {
 
     it("Alt+L navigates to login when logged out", () => {
       renderWithProviders(
-        <><Navigation isLoggedIn={false} /><LocationDisplay /></>,
-        { route: "/" }
+        <>
+          <Navigation isLoggedIn={false} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
       );
       fireEvent.keyDown(document, { key: "L", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/login");
@@ -203,8 +239,11 @@ describe("Navigation", () => {
 
     it("Alt+M does not navigate when logged out", () => {
       renderWithProviders(
-        <><Navigation isLoggedIn={false} /><LocationDisplay /></>,
-        { route: "/" }
+        <>
+          <Navigation isLoggedIn={false} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
       );
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/");
@@ -212,8 +251,12 @@ describe("Navigation", () => {
 
     it("ignores shortcuts when input is focused", () => {
       renderWithProviders(
-        <><Navigation isLoggedIn={true} /><LocationDisplay /><input data-testid="inp" /></>,
-        { route: "/" }
+        <>
+          <Navigation isLoggedIn={true} />
+          <LocationDisplay />
+          <input data-testid="inp" />
+        </>,
+        { route: "/" },
       );
       const inp = screen.getByTestId("inp");
       fireEvent.keyDown(inp, { key: "H", altKey: true });
@@ -224,7 +267,7 @@ describe("Navigation", () => {
       const onLinkClick = vi.fn();
       renderWithProviders(
         <Navigation isLoggedIn={true} onLinkClick={onLinkClick} />,
-        { route: "/" }
+        { route: "/" },
       );
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(onLinkClick).toHaveBeenCalled();
@@ -233,7 +276,10 @@ describe("Navigation", () => {
 
   describe("viewingHandle box", () => {
     it("shows 'Viewing profile' when on a profile route", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={false} />, {
         route: "/profile/alice.bsky.social",
       });
@@ -242,42 +288,35 @@ describe("Navigation", () => {
     });
 
     it("does not show 'Viewing profile' on non-profile routes", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
       renderWithProviders(<Navigation isLoggedIn={false} />, { route: "/" });
       expect(screen.queryByText(/viewing profile/i)).toBeNull();
     });
   });
 
-  describe("promo card", () => {
-    it("shows CopyButton with inbox link when handle prop is provided", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
-      renderWithProviders(
-        <Navigation isLoggedIn={true} handle="karan.bsky.social" />
-      );
-      expect(screen.getByRole("button", { name: /copy my link/i })).toBeInTheDocument();
-    });
-
-    it("shows link to /messages when no handle prop", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
-      renderWithProviders(<Navigation isLoggedIn={true} />);
-      const links = screen.getAllByRole("link");
-      const hrefs = links.map((l) => l.getAttribute("href"));
-      expect(hrefs).toContain("/messages");
-    });
-  });
-
   describe("MessageCountBadge", () => {
     it("shows message count badge when userStats has messages and not on /messages route", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
       mockUseUserStats.mockReturnValue({ data: { messageCount: 5 } } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />, { route: "/" });
       expect(screen.getByText("5")).toBeInTheDocument();
     });
 
     it("does not show badge when on /messages route (active)", () => {
-      mockUseFriends.mockReturnValue({ data: undefined, isLoading: false } as any);
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
       mockUseUserStats.mockReturnValue({ data: { messageCount: 5 } } as any);
-      renderWithProviders(<Navigation isLoggedIn={true} />, { route: "/messages" });
+      renderWithProviders(<Navigation isLoggedIn={true} />, {
+        route: "/messages",
+      });
       expect(screen.queryByText("5")).toBeNull();
     });
   });
