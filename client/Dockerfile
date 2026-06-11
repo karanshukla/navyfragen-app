@@ -14,6 +14,6 @@ ENV VITE_SHORTLINK_URL=$VITE_SHORTLINK_URL
 
 RUN npm run build
 
-EXPOSE 4173
+EXPOSE 3000
 
-CMD ["npx", "serve", "-s", "dist", "-l", "4173"]
+CMD ["npm", "start"]

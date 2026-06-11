@@ -32,7 +32,7 @@ services:
     environment:
       PORT: 80
       FRONTEND_DOMAIN: client
-      FRONTEND_PORT: 4173
+      FRONTEND_PORT: 3000
       BACKEND_DOMAIN: server
       BACKEND_PORT: 3000
     depends_on:
