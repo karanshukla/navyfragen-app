@@ -9,7 +9,7 @@ Navyfragen lets Bluesky users receive anonymous questions and post answers direc
 ## Monorepo Structure
 
 npm workspaces with two packages:
-- `client/` — React + Vite + TypeScript SPA (Mantine UI, React Query, React Router)
+- `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
 Root-level `npm run dev` runs both concurrently via `concurrently`.
@@ -86,7 +86,9 @@ Responding to a message with `includeQuestionAsImage: true` calls the in-house `
 docker build -t html-to-image ./html-to-image
 docker run --rm -p 3033:3033 html-to-image
 ```
-Image themes are defined in `src/lib/themes.ts` and stored per-user in `user_settings.imageTheme`.
+Image themes are defined in `src/lib/themes.ts` and stored per-user in `user_settings.imageTheme`. Available themes: `default` (dark gradient card), `compressed` (light minimal), `twitter` (square Twitter/X card).
+
+The image service call uses `fetchWithRetry(url, init, timeoutMs)` (exported from `src/lib/image-generator.ts`) which retries on network errors with exponential backoff until the overall deadline is reached. Each individual request is bounded by an `AbortController`. If retries are exhausted the function throws — image generation failure is **not** silently downgraded to a text-only reply; the whole response attempt fails with the specific error message surfaced to the frontend.
 
 ## Client Architecture
 
@@ -96,6 +98,26 @@ React Query is the data layer. Each domain (auth, messages, profile, settings) h
 - `src/api/messageService.ts`, `profileService.ts`, `settingsService.ts` — similar pattern
 
 All API calls use `credentials: "include"` for cookie forwarding.
+
+### Form Validation
+
+The client uses **Zod v4** (`^4.4.3`). Zod v4 has breaking syntax changes from v3:
+- Custom messages on `.min()` / `.max()` use `{ error: "..." }` instead of a plain string
+- Validation errors are accessed via `.issues` not `.errors`
+
+### UI Feedback (Toast Notifications)
+
+Transient feedback (success, error) uses Mantine's `showNotification()` from `@mantine/notifications` rather than inline alert state. The `<Notifications>` component is mounted in `src/main.tsx` with `position="bottom-right"` and `autoClose={5000}`. Use `showNotification()` for any new transient messages — don't add stateful alert components to pages.
+
+### Design Tokens
+
+Brand CSS custom properties live in `client/src/index.css` under the `--nf-*` namespace and are the single source of truth for colors and gradients. Key gradient tokens:
+
+- `--nf-grad-mark` — the primary brand gradient (`#3349E0 → #6B3FD4 → #4F1FA6`); use this for all interactive card backgrounds (login, ask, inbox hero, question cards with gradient enabled)
+- `--nf-grad-dark` — reserved exclusively for the "default" image-export theme preview in the `ThemeCard` selector; do not use it for new UI elements
+- `--nf-grad-hero` — defined but no longer applied to any UI element; do not reintroduce it for text or nav items
+
+Nav active state uses a solid tint (`--nf-nav-active-bg`) — no gradients on nav items. Gradient text (`background-clip: text`) is not used in the app; brand color (`--nf-royal`) is used for highlighted text instead.
 
 ### Logging
 
@@ -120,7 +142,12 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
-CI runs client and server tests independently in separate GitHub Actions workflows (`.github/workflows/ClientTests.yml` / `ServerTests.yml`), targeting Node 24.
+CI runs all tests in a single unified workflow `.github/workflows/Tests.yml` targeting Node 24. The workflow has separate jobs for client, server, and html-to-image tests.
+
+The `html-to-image/` service at the repo root is a standalone Express + Puppeteer image renderer. It has its own `app.test.js` using Node.js built-in `node:test`. Run its tests with:
+```bash
+cd html-to-image && node --test app.test.js
+```
 
 ## Testing & Coverage
 
