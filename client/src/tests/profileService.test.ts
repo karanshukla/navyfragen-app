@@ -135,13 +135,16 @@ describe("profileService", () => {
 
   describe("getFriends", () => {
     const mockFriendsResponse: FriendsResponse = {
-      friends: [
+      moots: [
         {
           did: "did:example:1",
           handle: "friend1.bsky.app",
           displayName: "Friend One",
           avatar: "https://cdn.bsky.app/1.jpg",
         },
+      ],
+      following: [],
+      oomfs: [
         {
           did: "did:example:2",
           handle: "friend2.bsky.app",
@@ -160,22 +163,22 @@ describe("profileService", () => {
       expect(apiClient.get).toHaveBeenCalledWith("/friends");
     });
 
-    it("should return empty friends array when user has no friends on app", async () => {
-      vi.mocked(apiClient.get).mockResolvedValueOnce({ friends: [] });
+    it("should return empty arrays when user has no friends on app", async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ moots: [], following: [], oomfs: [] });
 
       const result = await profileService.getFriends();
 
-      expect(result).toEqual({ friends: [] });
+      expect(result).toEqual({ moots: [], following: [], oomfs: [] });
       expect(apiClient.get).toHaveBeenCalledWith("/friends");
     });
 
-    it("should return avatar URLs for friends that have them", async () => {
+    it("should return avatar URLs for moots that have them", async () => {
       vi.mocked(apiClient.get).mockResolvedValueOnce(mockFriendsResponse);
 
       const result = await profileService.getFriends();
 
-      expect(result.friends[0].avatar).toBe("https://cdn.bsky.app/1.jpg");
-      expect(result.friends[1].avatar).toBeUndefined();
+      expect(result.moots[0].avatar).toBe("https://cdn.bsky.app/1.jpg");
+      expect(result.oomfs[0].avatar).toBeUndefined();
     });
 
     it("should handle authentication errors", async () => {
@@ -261,7 +264,9 @@ describe("profile hooks", () => {
 
   it("useFriends stores data in localStorage on success", async () => {
     const friendsData: FriendsResponse = {
-      friends: [{ did: mockDid, handle: mockHandle }],
+      moots: [{ did: mockDid, handle: mockHandle }],
+      following: [],
+      oomfs: [],
     };
     vi.mocked(apiClient.get).mockResolvedValue(friendsData);
     const { result } = renderHook(() => useFriends(mockDid), {
@@ -269,15 +274,15 @@ describe("profile hooks", () => {
     });
     await waitFor(() => result.current.isSuccess);
     const cached = JSON.parse(
-      localStorage.getItem(`navyfragen_friends_cache_${mockDid}`)!,
+      localStorage.getItem(`navyfragen_friends_v3_cache_${mockDid}`)!,
     );
     expect(cached.data).toEqual(friendsData);
   });
 
   it("useFriends reads initialData from localStorage when available", () => {
-    const cached = { data: { friends: [] }, timestamp: Date.now() };
+    const cached = { data: { moots: [], following: [], oomfs: [] }, timestamp: Date.now() };
     localStorage.setItem(
-      `navyfragen_friends_cache_${mockDid}`,
+      `navyfragen_friends_v3_cache_${mockDid}`,
       JSON.stringify(cached),
     );
     const { result } = renderHook(() => useFriends(mockDid), {
@@ -287,8 +292,8 @@ describe("profile hooks", () => {
   });
 
   it("useFriends returns undefined initialData when localStorage has invalid JSON", () => {
-    localStorage.setItem(`navyfragen_friends_cache_${mockDid}`, "not-json");
-    vi.mocked(apiClient.get).mockResolvedValue({ friends: [] });
+    localStorage.setItem(`navyfragen_friends_v3_cache_${mockDid}`, "not-json");
+    vi.mocked(apiClient.get).mockResolvedValue({ moots: [], following: [], oomfs: [] });
     const { result } = renderHook(() => useFriends(mockDid), {
       wrapper: makeWrapper(),
     });

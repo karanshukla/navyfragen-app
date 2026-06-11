@@ -74,37 +74,65 @@ export class ProfileService {
   async getFriendsOnApp(
     userDid: string,
     agent: Agent
-  ): Promise<{ did: string; handle: string; displayName?: string; avatar?: string }[]> {
-    const followed: { did: string; handle: string; displayName?: string; avatar?: string }[] = [];
-    let cursor: string | undefined;
+  ): Promise<{
+    moots: { did: string; handle: string; displayName?: string; avatar?: string }[];
+    following: { did: string; handle: string; displayName?: string; avatar?: string }[];
+    oomfs: { did: string; handle: string; displayName?: string; avatar?: string }[];
+  }> {
+    type FriendEntry = { did: string; handle: string; displayName?: string; avatar?: string };
 
-    for (let page = 0; page < 5; page++) {
-      const res = await agent.app.bsky.graph.getFollows({
-        actor: userDid,
-        limit: 100,
-        cursor,
-      });
-      if (!res.success) break;
-
-      for (const f of res.data.follows) {
-        followed.push({ did: f.did, handle: f.handle, displayName: f.displayName, avatar: f.avatar });
+    async function fetchPages(
+      fetcher: (cursor: string | undefined) => Promise<{ success: boolean; data: { follows?: FriendEntry[]; followers?: FriendEntry[]; cursor?: string } }>
+    ): Promise<Map<string, FriendEntry>> {
+      const map = new Map<string, FriendEntry>();
+      let cursor: string | undefined;
+      for (let page = 0; page < 5; page++) {
+        const res = await fetcher(cursor);
+        if (!res.success) break;
+        const items = res.data.follows ?? res.data.followers ?? [];
+        for (const f of items) {
+          map.set(f.did, { did: f.did, handle: f.handle, displayName: f.displayName, avatar: f.avatar });
+        }
+        cursor = res.data.cursor;
+        if (!cursor) break;
       }
-
-      cursor = res.data.cursor;
-      if (!cursor) break;
+      return map;
     }
 
-    if (followed.length === 0) return [];
+    const [followingMap, followersMap] = await Promise.all([
+      fetchPages((cursor) => agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor })),
+      fetchPages((cursor) => this.agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })),
+    ]);
 
-    const dids = followed.map((f) => f.did);
+    const allDids = new Set([...followingMap.keys(), ...followersMap.keys()]);
+    if (allDids.size === 0) return { moots: [], following: [], oomfs: [] };
+
     const appUsers = await this.db
       .selectFrom("user_profile")
       .select("did")
-      .where("did", "in", dids)
+      .where("did", "in", [...allDids])
       .execute();
 
     const appUserDids = new Set(appUsers.map((u) => u.did));
-    return followed.filter((f) => appUserDids.has(f.did));
+
+    const moots: FriendEntry[] = [];
+    const following: FriendEntry[] = [];
+    const oomfs: FriendEntry[] = [];
+
+    for (const did of appUserDids) {
+      const inFollowing = followingMap.has(did);
+      const inFollowers = followersMap.has(did);
+      const entry = followingMap.get(did) ?? followersMap.get(did)!;
+      if (inFollowing && inFollowers) {
+        moots.push(entry);
+      } else if (inFollowing) {
+        following.push(entry);
+      } else {
+        oomfs.push(entry);
+      }
+    }
+
+    return { moots, following, oomfs };
   }
 
   async checkFollowsBot(agent: Agent, botDid: string): Promise<boolean> {

@@ -304,63 +304,121 @@ describe("ProfileService", () => {
       { did: "did:user:3", handle: "user3.bsky.app", displayName: undefined, avatar: undefined },
     ];
 
-    const makeMockAgent = (follows: typeof sampleFollows, cursor?: string) => ({
+    // authenticated agent — only needs getFollows (getFollowers uses the public agent)
+    const makeAuthAgent = (follows: typeof sampleFollows) => ({
       app: {
         bsky: {
           graph: {
             getFollows: mock.fn(async () => ({
               success: true,
-              data: { follows, cursor },
+              data: { follows, cursor: undefined },
             })),
           },
         },
       },
     });
 
-    it("should return follows who are registered on the app", async () => {
-      const mockAgent = makeMockAgent(sampleFollows);
-      // Only user:1 and user:3 are on the app
-      mockSelectBuilder.execute = async () => [{ did: "did:user:1" }, { did: "did:user:3" }];
+    // sets the service's internal public AtpAgent mock to return the given followers
+    const setPublicAgentFollowers = (followers: typeof sampleFollows) => {
+      (profileService as any).agent = {
+        ...(profileService as any).agent,
+        app: {
+          bsky: {
+            graph: {
+              getFollowers: mock.fn(async () => ({
+                success: true,
+                data: { followers, cursor: undefined },
+              })),
+            },
+          },
+        },
+      };
+    };
+
+    it("should separate moots, following-only, and followers-only", async () => {
+      // user:1 = mutual, user:3 = I follow them (not back), user:2 = they follow me (not back)
+      const mockAgent = makeAuthAgent([sampleFollows[0], sampleFollows[2]]);
+      setPublicAgentFollowers([sampleFollows[0], sampleFollows[1]]);
+      mockSelectBuilder.execute = async () => [
+        { did: "did:user:1" },
+        { did: "did:user:2" },
+        { did: "did:user:3" },
+      ];
 
       const result = await profileService.getFriendsOnApp("did:owner:1", mockAgent as any);
 
-      assert.strictEqual(result.length, 2);
-      assert.strictEqual(result[0].did, "did:user:1");
-      assert.strictEqual(result[0].handle, "user1.bsky.app");
-      assert.strictEqual(result[0].displayName, "User One");
-      assert.strictEqual(result[0].avatar, "https://cdn.test/1.jpg");
-      assert.strictEqual(result[1].did, "did:user:3");
-      assert.strictEqual(result[1].displayName, undefined);
+      assert.strictEqual(result.moots.length, 1);
+      assert.strictEqual(result.moots[0].did, "did:user:1");
+      assert.strictEqual(result.moots[0].displayName, "User One");
+      assert.strictEqual(result.moots[0].avatar, "https://cdn.test/1.jpg");
+      assert.strictEqual(result.following.length, 1);
+      assert.strictEqual(result.following[0].did, "did:user:3");
+      assert.strictEqual(result.oomfs.length, 1);
+      assert.strictEqual(result.oomfs[0].did, "did:user:2");
     });
 
-    it("should return empty array when user follows nobody", async () => {
-      const mockAgent = makeMockAgent([]);
+    it("should put followers-only users in oomfs", async () => {
+      // user:2 follows me but I don't follow them
+      const mockAgent = makeAuthAgent([]);
+      setPublicAgentFollowers([sampleFollows[1]]);
+      mockSelectBuilder.execute = async () => [{ did: "did:user:2" }];
 
       const result = await profileService.getFriendsOnApp("did:owner:1", mockAgent as any);
 
-      assert.strictEqual(result.length, 0);
-      // No DB query should be made when follows list is empty
-      assert.strictEqual(mockDb.selectFrom.mock.calls.length, 0);
+      assert.strictEqual(result.moots.length, 0);
+      assert.strictEqual(result.following.length, 0);
+      assert.strictEqual(result.oomfs.length, 1);
+      assert.strictEqual(result.oomfs[0].did, "did:user:2");
     });
 
-    it("should return empty array when none of the follows are on the app", async () => {
-      const mockAgent = makeMockAgent(sampleFollows);
+    it("should put following-only users in following", async () => {
+      // user:3 I follow but they don't follow back
+      const mockAgent = makeAuthAgent([sampleFollows[2]]);
+      setPublicAgentFollowers([]);
+      mockSelectBuilder.execute = async () => [{ did: "did:user:3" }];
+
+      const result = await profileService.getFriendsOnApp("did:owner:1", mockAgent as any);
+
+      assert.strictEqual(result.moots.length, 0);
+      assert.strictEqual(result.following.length, 1);
+      assert.strictEqual(result.following[0].did, "did:user:3");
+      assert.strictEqual(result.oomfs.length, 0);
+    });
+
+    it("should return empty when nobody is on the app", async () => {
+      const mockAgent = makeAuthAgent(sampleFollows);
+      setPublicAgentFollowers([]);
       mockSelectBuilder.execute = async () => [];
 
       const result = await profileService.getFriendsOnApp("did:owner:1", mockAgent as any);
 
-      assert.strictEqual(result.length, 0);
+      assert.strictEqual(result.moots.length, 0);
+      assert.strictEqual(result.following.length, 0);
+      assert.strictEqual(result.oomfs.length, 0);
     });
 
-    it("should follow cursor pagination across multiple pages", async () => {
-      let callCount = 0;
+    it("should return empty when user has no follows or followers", async () => {
+      const mockAgent = makeAuthAgent([]);
+      setPublicAgentFollowers([]);
+
+      const result = await profileService.getFriendsOnApp("did:owner:1", mockAgent as any);
+
+      assert.strictEqual(result.moots.length, 0);
+      assert.strictEqual(result.following.length, 0);
+      assert.strictEqual(result.oomfs.length, 0);
+      // No DB query should be made when both lists are empty
+      assert.strictEqual(mockDb.selectFrom.mock.calls.length, 0);
+    });
+
+    it("should follow cursor pagination for follows across multiple pages", async () => {
+      let followsCallCount = 0;
       const paginatedAgent = {
         app: {
           bsky: {
             graph: {
               getFollows: mock.fn(async (params: any) => {
-                callCount++;
-                if (callCount === 1) {
+                followsCallCount++;
+                if (followsCallCount === 1) {
                   return {
                     success: true,
                     data: {
@@ -381,12 +439,13 @@ describe("ProfileService", () => {
           },
         },
       };
+      setPublicAgentFollowers([]);
       mockSelectBuilder.execute = async () => [{ did: "did:user:1" }, { did: "did:user:2" }];
 
       const result = await profileService.getFriendsOnApp("did:owner:1", paginatedAgent as any);
 
-      assert.strictEqual(callCount, 2);
-      assert.strictEqual(result.length, 2);
+      assert.strictEqual(followsCallCount, 2);
+      assert.strictEqual(result.following.length, 2);
       // Verify cursor was forwarded on the second call
       const secondCallArgs = (paginatedAgent.app.bsky.graph.getFollows as any).mock.calls[1].arguments[0];
       assert.strictEqual(secondCallArgs.cursor, "page2-cursor");
@@ -402,10 +461,13 @@ describe("ProfileService", () => {
           },
         },
       };
+      setPublicAgentFollowers([]);
 
       const result = await profileService.getFriendsOnApp("did:owner:1", failingAgent as any);
 
-      assert.strictEqual(result.length, 0);
+      assert.strictEqual(result.moots.length, 0);
+      assert.strictEqual(result.following.length, 0);
+      assert.strictEqual(result.oomfs.length, 0);
     });
   });
 });

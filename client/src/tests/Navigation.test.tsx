@@ -71,7 +71,7 @@ describe("Navigation", () => {
 
     it("does not render the Friends section", () => {
       renderWithProviders(<Navigation isLoggedIn={false} />);
-      expect(screen.queryByText(/friends on navyfragen/i)).toBeNull();
+      expect(screen.queryByText(/^moots$/i)).toBeNull();
     });
   });
 
@@ -96,13 +96,15 @@ describe("Navigation", () => {
       expect(screen.queryByText("Login")).toBeNull();
     });
 
-    it("renders the Friends section header", () => {
+    it("renders the friends section headers", () => {
       mockUseFriends.mockReturnValue({
         data: undefined,
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
-      expect(screen.getByText(/friends on navyfragen/i)).toBeInTheDocument();
+      expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^following$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^oomfs$/i)).toBeInTheDocument();
     });
   });
 
@@ -119,24 +121,22 @@ describe("Navigation", () => {
   });
 
   describe("friends list — empty", () => {
-    it("shows the empty-state message when no friends are on the app", () => {
+    it("shows the empty-state messages when no friends are on the app", () => {
       mockUseFriends.mockReturnValue({
-        data: { friends: [] },
+        data: { moots: [], following: [], oomfs: [] },
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);
-      expect(
-        screen.getByText(
-          /none of the people you follow on bluesky are on navyfragen/i,
-        ),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no mutuals on navyfragen yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/no one-sided follows on navyfragen yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/none of your followers are on navyfragen yet/i)).toBeInTheDocument();
     });
   });
 
   describe("friends list — populated", () => {
     beforeEach(() => {
       mockUseFriends.mockReturnValue({
-        data: { friends: MOCK_FRIENDS },
+        data: { moots: MOCK_FRIENDS, following: [], oomfs: [] },
         isLoading: false,
       } as any);
     });
@@ -170,7 +170,7 @@ describe("Navigation", () => {
         avatar: undefined,
       }));
       mockUseFriends.mockReturnValue({
-        data: { friends: manyFriends },
+        data: { moots: manyFriends, following: [], oomfs: [] },
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation isLoggedIn={true} />);

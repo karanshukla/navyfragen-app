@@ -8,18 +8,22 @@ import {
   Group,
   Button,
   CopyButton,
+  Collapse,
+  UnstyledButton,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconHome,
   IconMessage,
   IconLogin,
   IconSettings,
   IconUser,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 
-import { useFriends } from "./api/profileService";
+import { useFriends, Friend } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
 import { WinkMark } from "./components/WinkMark";
 
@@ -46,7 +50,6 @@ const inactiveNavStyle = {
   transition: "background 120ms ease",
 };
 
-// Module-level to avoid recreating objects on every render
 const friendNavLinkStyles = {
   root: { borderRadius: 10, transition: "background 120ms ease" },
 };
@@ -204,31 +207,16 @@ export function Navigation({
       </Box>
 
       {isLoggedIn && (
-        <>
-          <Box mt="lg" mb="xs" px={2}>
-            <Text
-              size="xs"
-              fw={700}
-              c="dimmed"
-              tt="uppercase"
-              ff="monospace"
-              style={{ letterSpacing: "0.1em" }}
-            >
-              Friends on Navyfragen
-            </Text>
-          </Box>
-
-          <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-            {friendsLoading ? (
+        <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          {friendsLoading ? (
+            <>
+              <Box mt="lg" mb="xs" px={2}>
+                <Skeleton height={10} width="60%" radius="sm" />
+              </Box>
               <Stack gap={6}>
                 {[0, 1, 2].map((i) => (
                   <Group key={i} gap="xs" px={4} py={4}>
-                    <Skeleton
-                      circle
-                      height={28}
-                      width={28}
-                      style={{ flexShrink: 0 }}
-                    />
+                    <Skeleton circle height={28} width={28} style={{ flexShrink: 0 }} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
                       <Skeleton height={10} mb={4} radius="sm" />
                       <Skeleton height={8} width="60%" radius="sm" />
@@ -236,65 +224,143 @@ export function Navigation({
                   </Group>
                 ))}
               </Stack>
-            ) : friendsData?.friends && friendsData.friends.length > 0 ? (
-              <Box style={{ overflowX: "hidden" }}>
-                {friendsData.friends.map((friend) => (
-                  <NavLink
-                    key={friend.did}
-                    label={
-                      <Group
-                        gap={10}
-                        wrap="nowrap"
-                        style={{ overflow: "hidden", width: "100%" }}
-                      >
-                        <Avatar
-                          size={28}
-                          radius="xl"
-                          src={friend.avatar || undefined}
-                          style={{ flexShrink: 0 }}
-                        >
-                          <WinkMark size={22} sparkle={false} aria-hidden />
-                        </Avatar>
-                        <Box style={{ flex: 1, minWidth: 0 }}>
-                          <Text
-                            fz={13}
-                            fw={600}
-                            truncate
-                            style={{ lineHeight: 1.3 }}
-                          >
-                            {friend.displayName || friend.handle}
-                          </Text>
-                          <Text
-                            ff="monospace"
-                            fz={10}
-                            c="dimmed"
-                            truncate
-                            style={{ lineHeight: 1.3 }}
-                          >
-                            @{friend.handle}
-                          </Text>
-                        </Box>
-                      </Group>
-                    }
-                    component={Link}
-                    to={`/profile/${friend.handle}`}
-                    onClick={handleClick}
-                    py={4}
-                    styles={friendNavLinkStyles}
-                  />
-                ))}
-              </Box>
-            ) : !friendsLoading ? (
-              <Text size="xs" c="dimmed" px={2} style={{ lineHeight: 1.6 }}>
-                None of the people you follow on Bluesky are on Navyfragen yet.
-              </Text>
-            ) : /* v8 ignore next */ null}
-          </Box>
-        </>
+            </>
+          ) : (
+            <>
+              <FriendSection
+                label="Moots"
+                friends={friendsData?.moots ?? []}
+                emptyText="No mutuals on Navyfragen yet."
+                onLinkClick={handleClick}
+              />
+              <FriendSection
+                label="Following"
+                friends={friendsData?.following ?? []}
+                emptyText="No one-sided follows on Navyfragen yet."
+                onLinkClick={handleClick}
+              />
+              <FriendSection
+                label="Oomfs"
+                friends={friendsData?.oomfs ?? []}
+                emptyText="None of your followers are on Navyfragen yet."
+                onLinkClick={handleClick}
+              />
+            </>
+          )}
+        </Box>
       )}
 
       {!isLoggedIn && <Box style={{ flex: 1 }} />}
     </Box>
+  );
+}
+
+const SECTION_OPEN_KEY = "navyfragen_friends_sections_open";
+
+function getSectionOpen(label: string): boolean {
+  try {
+    const raw = localStorage.getItem(SECTION_OPEN_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    return parsed[label] !== false;
+  } catch {
+    return true;
+  }
+}
+
+function setSectionOpen(label: string, open: boolean) {
+  try {
+    const raw = localStorage.getItem(SECTION_OPEN_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    localStorage.setItem(SECTION_OPEN_KEY, JSON.stringify({ ...parsed, [label]: open }));
+  } catch {
+    /* v8 ignore next */
+  }
+}
+
+function FriendSection({
+  label,
+  friends,
+  emptyText,
+  onLinkClick,
+}: {
+  label: string;
+  friends: Friend[];
+  emptyText: string;
+  onLinkClick: () => void;
+}) {
+  const [opened, { toggle }] = useDisclosure(getSectionOpen(label));
+
+  const handleToggle = () => {
+    setSectionOpen(label, !opened);
+    toggle();
+  };
+
+  return (
+    <>
+      <UnstyledButton
+        onClick={handleToggle}
+        mt="lg"
+        mb="xs"
+        px={2}
+        style={{ display: "flex", alignItems: "center", gap: 4, width: "100%", cursor: "pointer" }}
+      >
+        <Text
+          size="xs"
+          fw={700}
+          c="dimmed"
+          tt="uppercase"
+          ff="monospace"
+          style={{ letterSpacing: "0.1em", flex: 1 }}
+        >
+          {label}
+        </Text>
+        <IconChevronDown
+          size={12}
+          style={{
+            color: "var(--mantine-color-dimmed)",
+            transition: "transform 150ms ease",
+            transform: opened ? "rotate(0deg)" : "rotate(-90deg)",
+            flexShrink: 0,
+          }}
+        />
+      </UnstyledButton>
+      <Collapse in={opened}>
+        {friends.length > 0 ? (
+          <Box style={{ overflowX: "hidden" }}>
+            {friends.map((friend) => (
+              <NavLink
+                key={friend.did}
+                label={
+                  <Group gap={10} wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
+                    <Avatar size={28} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }}>
+                      <WinkMark size={22} sparkle={false} aria-hidden />
+                    </Avatar>
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text fz={13} fw={600} truncate style={{ lineHeight: 1.3 }}>
+                        {friend.displayName || friend.handle}
+                      </Text>
+                      <Text ff="monospace" fz={10} c="dimmed" truncate style={{ lineHeight: 1.3 }}>
+                        @{friend.handle}
+                      </Text>
+                    </Box>
+                  </Group>
+                }
+                component={Link}
+                to={`/profile/${friend.handle}`}
+                onClick={onLinkClick}
+                py={4}
+                styles={friendNavLinkStyles}
+              />
+            ))}
+          </Box>
+        ) : (
+          <Text size="xs" c="dimmed" px={2} style={{ lineHeight: 1.6 }}>
+            {emptyText}
+          </Text>
+        )}
+      </Collapse>
+    </>
   );
 }
 

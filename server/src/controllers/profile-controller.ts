@@ -85,8 +85,8 @@ export class ProfileController {
     }
 
     try {
-      const friends = await this.profileService.getFriendsOnApp(userDid, agent);
-      return res.json({ friends });
+      const result = await this.profileService.getFriendsOnApp(userDid, agent);
+      return res.json(result);
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to fetch friends on app");
       return res.status(500).json({ error: "Failed to fetch friends" });
