@@ -34,6 +34,19 @@ All secrets go in `docker/.env` — see [`.env.example`](.env.example) for the f
 - `OAUTH_TOKEN_SECRET` — AES-256 key for encrypting OAuth tokens
 - `COOKIE_SECRET` — secret for signing session cookies
 
+## File layout
+
+All Docker-related files live here to keep Railway from auto-detecting them in the service directories:
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Full local stack |
+| `Dockerfile.client` | React SPA image (build context: repo root) |
+| `Dockerfile.server` | Express API image (build context: repo root) |
+| `.env.example` | Secret template — copy to `.env` before running |
+
+`client/Dockerfile` and `server/Dockerfile` are intentionally absent. If they existed there, Railway would detect them and attempt a Docker build instead of the Railpack npm build used in production.
+
 ## Caveats
 
 - **Bluesky OAuth requires a public URL.** `localhost` works for local dev but the OAuth callback must be reachable by Bluesky's servers. For a fully functional local stack you need a tunnel (e.g. ngrok) and `PUBLIC_URL` set accordingly.

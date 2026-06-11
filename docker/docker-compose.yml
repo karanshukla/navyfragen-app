@@ -46,7 +46,7 @@ services:
   client:
     build:
       context: ..
-      dockerfile: client/Dockerfile
+      dockerfile: docker/Dockerfile.client
       args:
         # /api is stripped by Caddy before forwarding to the server
         VITE_API_URL: /api
@@ -58,7 +58,7 @@ services:
   server:
     build:
       context: ..
-      dockerfile: server/Dockerfile
+      dockerfile: docker/Dockerfile.server
     environment:
       NODE_ENV: production
       PORT: 3000
