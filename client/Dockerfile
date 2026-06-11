@@ -16,5 +16,4 @@ RUN npm run build
 
 EXPOSE 4173
 
-# --host binds to 0.0.0.0 so Caddy can reach this container
-CMD ["npm", "run", "preview", "--", "--host"]
+CMD ["npx", "serve", "-s", "dist", "-l", "4173"]

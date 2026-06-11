@@ -34,6 +34,7 @@
     "postcss": "^8.5.15",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
+    "serve": "^14.2.6",
     "typescript": "^5.9.3",
     "vite": "^7.0.0",
     "vitest": "^4.1.0"
@@ -51,7 +52,6 @@
     "@tanstack/react-query-devtools": "^5.100.14",
     "@types/react-router-dom": "^5.3.3",
     "react-router-dom": "^7.16.0",
-    "serve": "^14.2.6",
     "zod": "^4.4.3"
   }
 }
