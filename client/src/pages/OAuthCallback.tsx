@@ -7,6 +7,7 @@ import {
   Title,
   Paper,
   Button,
+  useComputedColorScheme,
 } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/apiClient";
 import { authKeys } from "../api/authService";
 import { WinkMark } from "../components/WinkMark";
+import { surfaceBg } from "../styles/tokens";
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ export default function OAuthCallback() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -51,37 +54,43 @@ export default function OAuthCallback() {
       <Paper
         radius="lg"
         p="xl"
+        withBorder
         style={{
-          background: "var(--nf-grad-mark)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: "#FDF8FF",
+          background: surfaceBg(isDark),
           position: "relative",
           overflow: "hidden",
         }}
       >
-        <Box style={{ position: "absolute", right: -28, top: -28, opacity: 0.08, pointerEvents: "none" }}>
-          <WinkMark size={160} sparkle={false} aria-hidden />
-        </Box>
+        <Box
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: isDark
+              ? "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)"
+              : "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(196,181,253,0.4), transparent 70%)",
+            pointerEvents: "none",
+          }}
+        />
 
         <Stack gap="md" align="center" style={{ position: "relative" }}>
-          <WinkMark size={60} sparkle={loading} style={{ borderRadius: 16 }} />
+          <WinkMark size={60} sparkle={loading} style={{ borderRadius: 16, boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }} />
 
           {loading ? (
             <>
-              <Title order={2} style={{ color: "#FDF8FF", fontWeight: 800, fontSize: 24, textAlign: "center" }}>
+              <Title order={2} fw={800} fz={24} ta="center">
                 Logging you in…
               </Title>
-              <Text size="sm" style={{ color: "rgba(253,248,255,0.65)", textAlign: "center" }}>
+              <Text size="sm" c="dimmed" ta="center">
                 Completing your Bluesky authentication
               </Text>
-              <Loader color="white" size="sm" />
+              <Loader size="sm" />
             </>
           ) : (
             <>
-              <Title order={2} style={{ color: "#FCA5A5", fontWeight: 800, fontSize: 24, textAlign: "center" }}>
+              <Title order={2} fw={800} fz={24} ta="center" c="red">
                 Login failed
               </Title>
-              <Text size="sm" style={{ color: "rgba(253,248,255,0.65)", textAlign: "center" }}>
+              <Text size="sm" c="dimmed" ta="center">
                 {error}
               </Text>
               <Button

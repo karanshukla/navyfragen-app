@@ -8,6 +8,7 @@ import {
   Box,
   Center,
   Stack,
+  useComputedColorScheme,
 } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -15,31 +16,16 @@ import { z } from "zod";
 
 import { useLogin } from "../api/authService";
 import { WinkMark } from "../components/WinkMark";
+import { surfaceBg } from "../styles/tokens";
 
-// Hoisted to avoid recreating on each render
 const handleSchema = z.string().min(1, { error: "Handle is required" }).max(64, { error: "Handle too long" });
-
-// Styles for inputs rendered on the dark gradient card
-const darkInputStyles = {
-  label: { color: "rgba(253,248,255,0.8)", fontWeight: 600 },
-  input: {
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(255,255,255,0.15)",
-    color: "var(--mantine-white)",
-  },
-} as const;
-
-const errorAlertStyles = {
-  root: { background: "rgba(220,38,38,0.18)", border: "1px solid rgba(220,38,38,0.35)" },
-  message: { color: "#FCA5A5" },
-  closeButton: { color: "#FCA5A5" },
-} as const;
 
 export default function Login() {
   const [handle, setHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const location = useLocation();
   const { mutate: login, isPending } = useLogin();
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -77,28 +63,33 @@ export default function Login() {
       <Paper
         radius="lg"
         p="xl"
+        withBorder
         style={{
-          background: "var(--nf-grad-mark)",
-          border: "1px solid var(--mantine-color-default-border)",
-          color: "var(--mantine-white)",
+          background: surfaceBg(isDark),
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* WinkMark watermark */}
-        <Box style={{ position: "absolute", right: -28, top: -28, opacity: 0.08, pointerEvents: "none" }}>
-          <WinkMark size={160} sparkle={false} aria-hidden />
-        </Box>
+        <Box
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: isDark
+              ? "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)"
+              : "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(196,181,253,0.4), transparent 70%)",
+            pointerEvents: "none",
+          }}
+        />
 
         <Stack gap="md" style={{ position: "relative" }}>
           <Center>
-            <WinkMark size={60} sparkle style={{ borderRadius: 16 }} />
+            <WinkMark size={60} sparkle style={{ borderRadius: 16, boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }} />
           </Center>
           <Box ta="center">
-            <Title order={2} c="white" fw={800} fz={24}>
+            <Title order={2} fw={800} fz={24}>
               Log in to Navyfragen
             </Title>
-            <Text size="sm" c="white" opacity={0.65} mt={4}>
+            <Text size="sm" c="dimmed" mt={4}>
               Enter your Bluesky handle to continue
             </Text>
           </Box>
@@ -109,7 +100,6 @@ export default function Login() {
               withCloseButton
               onClose={() => setError(null)}
               role="alert"
-              styles={errorAlertStyles}
             >
               {error}
             </Alert>
@@ -125,7 +115,6 @@ export default function Login() {
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
-              styles={darkInputStyles}
             />
             <Button
               type="submit"
