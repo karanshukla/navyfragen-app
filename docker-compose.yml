@@ -42,10 +42,11 @@ services:
 
   # ── Application services ────────────────────────────────────────────────────
 
-  # React SPA served by nginx
+  # React SPA served by serve
   client:
     build:
-      context: ./client
+      context: .
+      dockerfile: client/Dockerfile
       args:
         # /api is stripped by Caddy before forwarding to the server
         VITE_API_URL: /api
@@ -55,7 +56,9 @@ services:
 
   # Express API
   server:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     environment:
       NODE_ENV: production
       PORT: 3000
