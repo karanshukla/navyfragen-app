@@ -1,4 +1,4 @@
-FROM node:24-alpine AS builder
+FROM node:24-alpine
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -14,8 +14,7 @@ ENV VITE_SHORTLINK_URL=$VITE_SHORTLINK_URL
 
 RUN npm run build
 
-# ── Runtime ──────────────────────────────────────────────────────────────────
-FROM caddy:alpine
-COPY --from=builder /app/dist /srv
-COPY Caddyfile /etc/caddy/Caddyfile
-EXPOSE 80
+EXPOSE 4173
+
+# --host binds to 0.0.0.0 so Caddy can reach this container
+CMD ["npm", "run", "preview", "--", "--host"]
