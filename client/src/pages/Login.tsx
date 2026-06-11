@@ -78,7 +78,7 @@ export default function Login() {
         radius="lg"
         p="xl"
         style={{
-          background: "var(--nf-grad-dark)",
+          background: "var(--nf-grad-mark)",
           border: "1px solid var(--mantine-color-default-border)",
           color: "var(--mantine-white)",
           position: "relative",

@@ -21,12 +21,8 @@ import { useSyncMessages } from "../api/messageService";
 import { WinkMark } from "../components/WinkMark";
 import { surfaceBg } from "../styles/tokens";
 
-// Gradient text — reused for the page title and the greeting name span
 const gradientTextStyle = {
-  background: "var(--nf-grad-hero)",
-  WebkitBackgroundClip: "text",
-  WebkitTextFillColor: "transparent",
-  backgroundClip: "text",
+  color: "var(--nf-royal)",
 } as const;
 
 function ShortcutHint({ label, hint }: { label: string; hint: string }) {
