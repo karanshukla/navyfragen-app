@@ -15,7 +15,7 @@ ENV VITE_SHORTLINK_URL=$VITE_SHORTLINK_URL
 RUN npm run build
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM caddy:alpine
+COPY --from=builder /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile
 EXPOSE 80
