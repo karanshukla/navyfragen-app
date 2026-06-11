@@ -42,9 +42,9 @@ body {
   --nf-dur-base: 200ms;
 
   /* Nav active state — default (dark mode) */
-  --nf-nav-active-bg:     linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%);
+  --nf-nav-active-bg:     rgba(107, 63, 212, 0.22);
   --nf-nav-active-color:  #FDF8FF;
-  --nf-nav-active-shadow: 0 4px 12px -6px rgba(107,63,212,0.45);
+  --nf-nav-active-shadow: none;
 
   /* Promo card (Spread the word) — light mode */
   --nf-promo-bg:     #F2EBFF;

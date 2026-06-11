@@ -187,7 +187,7 @@ export default function PublicProfile() {
           style={{
             borderRadius: 18,
             padding: 28,
-            background: "var(--nf-grad-dark)",
+            background: "var(--nf-grad-mark)",
             border: "2px solid var(--mantine-color-default-border)",
           }}
         >
@@ -301,7 +301,7 @@ export default function PublicProfile() {
                 height: 160,
                 background: profile.banner
                   ? `url(${profile.banner}) center/cover no-repeat`
-                  : "var(--nf-grad-dark)",
+                  : "var(--nf-grad-mark)",
                 position: "relative",
               }}
             >
@@ -369,7 +369,7 @@ export default function PublicProfile() {
             style={{
               borderRadius: 18,
               padding: 28,
-              background: "var(--nf-grad-dark)",
+              background: "var(--nf-grad-mark)",
               border: "2px solid var(--mantine-color-default-border)",
               cursor: "text",
               position: "relative",

@@ -52,7 +52,7 @@ export default function OAuthCallback() {
         radius="lg"
         p="xl"
         style={{
-          background: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)",
+          background: "var(--nf-grad-mark)",
           border: "1px solid rgba(255,255,255,0.08)",
           color: "#FDF8FF",
           position: "relative",
