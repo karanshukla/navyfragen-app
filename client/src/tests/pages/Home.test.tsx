@@ -79,4 +79,46 @@ describe("Home page", () => {
     renderWithProviders(<Home />);
     expect(screen.getByText("karan.bsky.social")).toBeInTheDocument();
   });
+
+  it("renders avatar image when profile has an avatar URL", () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: {
+          displayName: "Karan",
+          handle: "karan.bsky.social",
+          avatar: "https://cdn.bsky.app/avatar.jpg",
+        },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    const img = screen.getByRole("img", { name: /karan/i });
+    expect(img).toHaveAttribute("src", "https://cdn.bsky.app/avatar.jpg");
+  });
+
+  it("shows Copy Link and Share buttons when logged in", () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: { displayName: "Karan", handle: "karan.bsky.social" },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument();
+  });
+
+  it("Copy Link and Share buttons are not shown when logged out", () => {
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false, profile: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    expect(screen.queryByRole("button", { name: /copy link/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /share/i })).toBeNull();
+  });
 });

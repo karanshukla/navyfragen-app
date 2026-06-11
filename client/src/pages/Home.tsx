@@ -1,18 +1,22 @@
 import {
+  Avatar,
   Button,
+  CopyButton,
+  Divider,
+  Group,
   List,
-  Text,
-  Title,
   Paper,
+  SimpleGrid,
+  Skeleton,
   Stack,
   Center,
   Box,
-  Skeleton,
-  SimpleGrid,
+  Text,
+  Title,
+  Tooltip,
   useComputedColorScheme,
-  Divider,
 } from "@mantine/core";
-import { IconBrandGithub, IconButterfly } from "@tabler/icons-react";
+import { IconBrandGithub, IconButterfly, IconClipboard, IconShare } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -21,8 +25,14 @@ import { useSyncMessages } from "../api/messageService";
 import { WinkMark } from "../components/WinkMark";
 import { surfaceBg } from "../styles/tokens";
 
+const shortlinkurl =
+  import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
+
 const gradientTextStyle = {
-  color: "var(--nf-royal)",
+  background: "var(--nf-grad-hero)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text",
 } as const;
 
 function ShortcutHint({ label, hint }: { label: string; hint: string }) {
@@ -101,11 +111,15 @@ export default function Home() {
           />
           <Stack gap="md" style={{ position: "relative" }}>
             <Center>
-              <WinkMark
-                size={64}
-                sparkle
-                style={{ borderRadius: 16, boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }}
-              />
+              <Avatar
+                src={sessionData.profile.avatar ?? undefined}
+                alt={sessionData.profile.displayName || sessionData.profile.handle}
+                size={84}
+                radius="xl"
+                style={{ border: "3px solid rgba(255,255,255,0.25)", boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }}
+              >
+                <WinkMark size={60} sparkle={false} aria-hidden />
+              </Avatar>
             </Center>
             <Center>
               <Text
@@ -122,16 +136,48 @@ export default function Home() {
             </Center>
           </Stack>
           <Center mt="xl" style={{ position: "relative" }}>
-            <Button
-              component={Link}
-              to="/messages"
-              size="lg"
-              radius="md"
-              variant="gradient"
-              gradient={{ from: "royal", to: "purple", deg: 135 }}
-            >
-              View Your Messages
-            </Button>
+            <Group gap="xs" align="center" wrap="wrap" justify="center">
+              <Button
+                component={Link}
+                to="/messages"
+                size="lg"
+                radius="md"
+                style={{ background: "var(--nf-grad-hero)", color: "white", border: "none" }}
+              >
+                View Your Messages
+              </Button>
+              <CopyButton value={`https://${shortlinkurl}/${sessionData.profile.handle}`}>
+                {({ copied, copy }) => (
+                  <Tooltip label={copied ? "Copied!" : "Copy profile link"} withArrow>
+                    <Button
+                      onClick={copy}
+                      size="sm"
+                      radius="xl"
+                      variant="light"
+                      leftSection={<IconClipboard size={14} />}
+                    >
+                      {copied ? "Copied!" : "Copy Link"}
+                    </Button>
+                  </Tooltip>
+                )}
+              </CopyButton>
+              <Button
+                size="sm"
+                radius="xl"
+                variant="light"
+                leftSection={<IconShare size={14} />}
+                onClick={async () => {
+                  const url = `https://${shortlinkurl}/${sessionData.profile!.handle}`;
+                  if (navigator.share) {
+                    try { await navigator.share({ title: "Send me anonymous messages on Navyfragen!", url }); } catch { /* v8 ignore next */ }
+                  } else if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(url);
+                  }
+                }}
+              >
+                Share
+              </Button>
+            </Group>
           </Center>
         </Paper>
       ) : (

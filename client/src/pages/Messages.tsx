@@ -40,7 +40,6 @@ import {
 import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
-import { WinkMark } from "../components/WinkMark";
 import { themes } from "../lib/themes";
 import { surfaceBg } from "../styles/tokens";
 
@@ -713,25 +712,13 @@ export default function Messages() {
             p="lg"
             style={{
               borderRadius: 18,
-              background: "var(--nf-grad-mark)",
+              background: "var(--nf-grad-dark)",
               position: "relative",
               overflow: "hidden",
               boxShadow: "0 18px 40px -18px rgba(107,63,212,0.6)",
             }}
           >
-            {/* WinkMark watermark */}
-            <Box
-              style={{
-                position: "absolute",
-                right: -24,
-                top: -24,
-                opacity: 0.1,
-                pointerEvents: "none",
-              }}
-            >
-              <WinkMark size={160} sparkle={false} aria-hidden />
-            </Box>
-            <Group
+<Group
               align="center"
               gap="md"
               wrap="wrap"
@@ -1077,7 +1064,7 @@ export default function Messages() {
                       }}
                       style={{
                         borderRadius: 18,
-                        background: useGradients ? "var(--nf-grad-mark)" : surfaceBg(isDark),
+                        background: useGradients ? "var(--nf-grad-dark)" : surfaceBg(isDark),
                         border: isFocused
                           ? "2px solid var(--nf-purple)"
                           : "2px solid rgba(255,255,255,0.06)",
