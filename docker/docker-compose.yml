@@ -4,7 +4,7 @@ services:
 
   # Bot-protection WAF.  Main app entry point — http://localhost:8080
   anubis:
-    build: ./anubis
+    build: ../anubis
     ports:
       - "8080:8080"
     environment:
@@ -28,7 +28,7 @@ services:
 
   # Routes /*  →  client,  /api/*  →  server (strips /api prefix)
   caddy:
-    build: ./caddy
+    build: ../caddy
     environment:
       PORT: 80
       FRONTEND_DOMAIN: client
@@ -45,7 +45,7 @@ services:
   # React SPA served by serve
   client:
     build:
-      context: .
+      context: ..
       dockerfile: client/Dockerfile
       args:
         # /api is stripped by Caddy before forwarding to the server
@@ -57,7 +57,7 @@ services:
   # Express API
   server:
     build:
-      context: .
+      context: ..
       dockerfile: server/Dockerfile
     environment:
       NODE_ENV: production
@@ -80,7 +80,7 @@ services:
 
   # Puppeteer image renderer
   html-to-image:
-    build: ./html-to-image
+    build: ../html-to-image
     # Chromium needs a larger /dev/shm than Docker's default 64 MB
     shm_size: "256m"
     restart: unless-stopped

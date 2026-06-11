@@ -22,19 +22,19 @@ jobs:
         run: |
           printf 'OAUTH_TOKEN_SECRET=%s\nCOOKIE_SECRET=%s\n' \
             "$(openssl rand -hex 32)" \
-            "$(openssl rand -hex 32)" > .env
+            "$(openssl rand -hex 32)" > docker/.env
 
       - name: Build images
-        run: docker compose build
+        run: docker compose -f docker/docker-compose.yml build
 
       - name: Start services
-        run: docker compose up -d
+        run: docker compose -f docker/docker-compose.yml up -d
 
       - name: Wait for postgres to be healthy
         run: |
           for i in $(seq 1 30); do
             STATUS=$(docker inspect --format='{{.State.Health.Status}}' \
-              "$(docker compose ps -q postgres)" 2>/dev/null || echo "unknown")
+              "$(docker compose -f docker/docker-compose.yml ps -q postgres)" 2>/dev/null || echo "unknown")
             if [ "$STATUS" = "healthy" ]; then
               echo "Postgres is healthy"
               break
@@ -48,11 +48,11 @@ jobs:
 
       - name: Check no containers have crashed
         run: |
-          EXITED=$(docker compose ps -a | grep -iE '\bExit' || true)
+          EXITED=$(docker compose -f docker/docker-compose.yml ps -a | grep -iE '\bExit' || true)
           if [ -n "$EXITED" ]; then
             echo "The following containers exited unexpectedly:"
             echo "$EXITED"
-            docker compose logs --tail=50
+            docker compose -f docker/docker-compose.yml logs --tail=50
             exit 1
           fi
           echo "All containers are running"
@@ -80,4 +80,4 @@ jobs:
 
       - name: Dump container logs on failure
         if: failure()
-        run: docker compose logs --tail=100
+        run: docker compose -f docker/docker-compose.yml logs --tail=100
