@@ -111,13 +111,13 @@ describe("ProfileController", () => {
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 401);
     });
 
-    test("returns friends on success", async () => {
-      const svc = makeService({ getFriendsOnApp: mock.fn(async () => [{ did: "did:bar" }]) });
+    test("returns moots, following, and oomfs on success", async () => {
+      const svc = makeService({ getFriendsOnApp: mock.fn(async () => ({ moots: [{ did: "did:bar" }], following: [], oomfs: [] })) });
       const ctx = makeCtx();
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
       await controller.getFriends(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { friends: [{ did: "did:bar" }] });
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { moots: [{ did: "did:bar" }], following: [], oomfs: [] });
     });
 
     test("returns 500 on error", async () => {

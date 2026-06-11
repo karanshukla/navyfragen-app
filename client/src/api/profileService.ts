@@ -36,7 +36,9 @@ export interface Friend {
 }
 
 export interface FriendsResponse {
-  friends: Friend[];
+  moots: Friend[];
+  following: Friend[];
+  oomfs: Friend[];
 }
 
 export interface BotFollowResponse {
@@ -111,7 +113,7 @@ export function useUserExists(did: string | null) {
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
 function getFriendsCacheKey(did: string) {
-  return `navyfragen_friends_cache_${did}`;
+  return `navyfragen_friends_v3_cache_${did}`;
 }
 
 function getCachedFriends(did: string): { data: FriendsResponse; timestamp: number } | null {
