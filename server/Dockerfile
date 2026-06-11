@@ -17,7 +17,7 @@ COPY server/ ./server/
 RUN npm run build --workspace=server
 
 # Strip devDependencies before copying to the runtime image
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev --ignore-scripts
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
 FROM node:24-alpine
