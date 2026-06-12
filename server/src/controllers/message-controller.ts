@@ -145,6 +145,8 @@ export class MessageController {
     try {
       const result = await this.messageService.sendMessage(recipient, message);
       this.logger.info({ recipient }, "Anonymous message sent");
+      // TODO: trigger web push notification to recipient when enabled
+      // await notificationService.sendNewMessageNotification(recipient);
       return res.json(result);
     } catch (err: any) {
       this.logger.error({ err, recipient }, "Failed to send message");
