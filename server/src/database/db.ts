@@ -20,6 +20,7 @@ export type DatabaseSchema = {
   user_profile: UserProfile; // Add user_profile table
   sessions: Sessions; // NOT USED, to remove later
   user_settings: UserSettings; // Add user_settings table
+  push_subscription: PushSubscription; // Web push subscriptions
 };
 
 // Unused, to remove later
@@ -65,6 +66,16 @@ export type Sessions = {
   sid: string; // Session ID
   sess: string; // Session data (JSON)
   expire: string; // Expiration timestamp
+};
+
+// Web push subscription row — one row per browser/device per user
+export type PushSubscription = {
+  id: number;       // auto-increment surrogate key (serial in Postgres, integer in SQLite)
+  did: string;      // owner DID
+  endpoint: string; // push service endpoint URL (unique per subscription)
+  p256dh: string;   // client public key
+  auth: string;     // client auth secret
+  createdAt: string;
 };
 
 type AuthStateJson = string;
@@ -197,6 +208,30 @@ migrations["006"] = {
   },
   async down(db: Kysely<any>) {
     await db.schema.alterTable("user_settings").dropColumn("imageTheme").execute();
+  },
+};
+
+migrations["007"] = {
+  async up(db: Kysely<any>) {
+    await db.schema
+      .createTable("push_subscription")
+      .addColumn("id", "serial", (col) => col.primaryKey())
+      .addColumn("did", "varchar", (col) => col.notNull())
+      .addColumn("endpoint", "varchar", (col) => col.notNull().unique())
+      .addColumn("p256dh", "varchar", (col) => col.notNull())
+      .addColumn("auth", "varchar", (col) => col.notNull())
+      .addColumn("createdAt", "varchar", (col) => col.notNull())
+      .execute();
+    // Index so lookups by recipient DID (on new message) are fast
+    await db.schema
+      .createIndex("push_subscription_did_idx")
+      .on("push_subscription")
+      .column("did")
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.dropIndex("push_subscription_did_idx").execute();
+    await db.schema.dropTable("push_subscription").ifExists().execute();
   },
 };
 

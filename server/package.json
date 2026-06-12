@@ -20,8 +20,13 @@
     "test:coverage": "c8 node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts"
   },
   "c8": {
-    "reporter": ["text", "lcov"],
-    "include": ["src/**"],
+    "reporter": [
+      "text",
+      "lcov"
+    ],
+    "include": [
+      "src/**"
+    ],
     "exclude": [
       "src/lexicon/**",
       "src/index.ts",
@@ -48,6 +53,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/cookie-session": "^2.0.49",
     "@types/cryptr": "^4.0.3",
+    "@types/web-push": "^3.6.4",
     "better-sqlite3": "^11.10.0",
     "cookie-parser": "^1.4.7",
     "cookie-session": "^2.1.1",
@@ -64,7 +70,8 @@
     "pg": "^8.21.0",
     "pino": "^9.14.0",
     "sharp": "^0.34.5",
-    "uhtml": "^4.7.1"
+    "uhtml": "^4.7.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@atproto/lex-cli": "^0.9.9",

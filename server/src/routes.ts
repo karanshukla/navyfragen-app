@@ -5,6 +5,7 @@ import { messageRoutes } from "./routes/message-routes";
 import { profileRoutes } from "./routes/profile-routes";
 import type { AppContext } from "#/index";
 import { settingsRoutes } from "./routes/settings-routes";
+import { notificationRoutes } from "./routes/notification-routes";
 
 // Helper function for defining routes
 const handler =
@@ -42,5 +43,6 @@ export const createRouter = (ctx: AppContext) => {
   router.use(messageRoutes(ctx, handler, checkValidation));
   router.use(profileRoutes(ctx, handler, checkValidation));
   router.use(settingsRoutes(ctx, handler, checkValidation));
+  router.use(notificationRoutes(ctx, handler, checkValidation));
   return router;
 };

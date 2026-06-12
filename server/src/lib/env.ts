@@ -27,4 +27,9 @@ export const env = cleanEnv(process.env, {
   }),
   AXIOM_TOKEN: str({ default: "" }),
   AXIOM_DATASET: str({ default: "" }),
+  // Web push (VAPID) — generate a key pair with: npx web-push generate-vapid-keys
+  // Leave empty to keep web push disabled (feature is stubbed out, not yet active).
+  VAPID_PUBLIC_KEY: str({ default: "" }),
+  VAPID_PRIVATE_KEY: str({ default: "" }),
+  VAPID_SUBJECT: str({ default: "" }), // mailto: or https: URL identifying the sender
 });
