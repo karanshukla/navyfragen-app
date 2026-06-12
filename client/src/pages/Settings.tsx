@@ -16,6 +16,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 
+import { useHaptic } from "use-haptic";
 import { apiClient, ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import { useBotFollow } from "../api/profileService";
@@ -66,7 +67,10 @@ export default function Settings() {
     Boolean(session?.isLoggedIn),
   );
 
+  const { triggerHaptic } = useHaptic(1);
+
   const handleInstallClick = async () => {
+    triggerHaptic();
     if (!installPrompt) return;
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
@@ -297,7 +301,7 @@ export default function Settings() {
                   fw={700}
                   color="red"
                   variant="filled"
-                  onClick={() => setDeleteModalOpened(true)}
+                  onClick={() => { triggerHaptic(); setDeleteModalOpened(true); }}
                 >
                   Delete my Data
                 </Button>

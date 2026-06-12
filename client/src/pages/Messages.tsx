@@ -28,6 +28,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useState, useRef } from "react";
 
+import { useHaptic } from "use-haptic";
 import { ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import {
@@ -361,6 +362,7 @@ export default function Messages() {
   const [imageThemeOpen, setImageThemeOpen] = useState(true);
   const messageCardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
+  const { triggerHaptic } = useHaptic(1);
 
   const [appendProfileLink, setAppendProfileLink] = useLocalStorage({
     key: "appendProfileLink",
@@ -750,7 +752,7 @@ export default function Messages() {
                   {({ copied, copy }) => (
                     <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
                       <Button
-                        onClick={copy}
+                        onClick={() => { triggerHaptic(); copy(); }}
                         size="sm"
                         radius="xl"
                         variant="transparent"
@@ -806,7 +808,7 @@ export default function Messages() {
                       alignItems: "center",
                       userSelect: "none",
                     }}
-                    onClick={() => setPostingPrefsOpen((o) => !o)}
+                    onClick={() => { triggerHaptic(); setPostingPrefsOpen((o) => !o); }}
                   >
                     <Text fw={700} fz={15}>
                       Posting preferences
@@ -926,7 +928,7 @@ export default function Messages() {
                       alignItems: "center",
                       userSelect: "none",
                     }}
-                    onClick={() => setImageThemeOpen((o) => !o)}
+                    onClick={() => { triggerHaptic(); setImageThemeOpen((o) => !o); }}
                   >
                     <Text fw={700} fz={15}>
                       Image theme
@@ -1079,6 +1081,7 @@ export default function Messages() {
                         flexDirection: "column",
                       }}
                       onClick={() => {
+                        triggerHaptic();
                         if (isExpanded) {
                           setRespondingTid(null);
                         } else {
@@ -1106,6 +1109,7 @@ export default function Messages() {
                             aria-label="Delete message"
                             onClick={(e) => {
                               e.stopPropagation();
+                              triggerHaptic();
                               handleDeleteRequest(msg.tid);
                             }}
                             variant="transparent"
@@ -1200,7 +1204,7 @@ export default function Messages() {
                               </Group>
                               <Button
                                 size="xs"
-                                onClick={() => handleSendResponse(msg)}
+                                onClick={() => { triggerHaptic(); handleSendResponse(msg); }}
                                 loading={respondLoading}
                                 variant="gradient"
                                 gradient={{
@@ -1217,7 +1221,7 @@ export default function Messages() {
                         ) : (
                           <Box mt={4} onClick={(e) => e.stopPropagation()}>
                             <Button
-                              onClick={() => handlePrepareResponse(msg.tid)}
+                              onClick={() => { triggerHaptic(); handlePrepareResponse(msg.tid); }}
                               fullWidth
                               radius="xl"
                               color="sunshine"
@@ -1242,7 +1246,7 @@ export default function Messages() {
                 receive anonymous questions.
               </Text>
               <Button
-                onClick={handleAddExampleMessages}
+                onClick={() => { triggerHaptic(); handleAddExampleMessages(); }}
                 loading={examplesLoading}
                 size="xs"
                 radius="xl"

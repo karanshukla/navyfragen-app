@@ -22,6 +22,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useHaptic } from "use-haptic";
 
 import { useFriends, Friend } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
@@ -67,7 +68,8 @@ export function Navigation({
   );
   const { data: userStats } = useUserStats();
 
-  const handleClick = () => onLinkClick?.();
+  const { triggerHaptic } = useHaptic(1);
+  const handleClick = () => { triggerHaptic(); onLinkClick?.(); };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -290,8 +292,10 @@ function FriendSection({
   onLinkClick: () => void;
 }) {
   const [opened, { toggle }] = useDisclosure(getSectionOpen(label));
+  const { triggerHaptic } = useHaptic(1);
 
   const handleToggle = () => {
+    triggerHaptic();
     setSectionOpen(label, !opened);
     toggle();
   };

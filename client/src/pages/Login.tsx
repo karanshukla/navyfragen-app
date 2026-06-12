@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { z } from "zod";
 
+import { useHaptic } from "use-haptic";
 import { useLogin } from "../api/authService";
 import { WinkMark } from "../components/WinkMark";
 import { surfaceBg } from "../styles/tokens";
@@ -25,6 +26,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const location = useLocation();
   const { mutate: login, isPending } = useLogin();
+  const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function Login() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    triggerHaptic();
     setError(null);
     const result = handleSchema.safeParse(handle);
     if (!result.success) {

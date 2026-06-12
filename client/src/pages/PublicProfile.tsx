@@ -20,6 +20,7 @@ import { IconSend, IconX, IconWorld, IconClipboard, IconShare } from "@tabler/ic
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
+import { useHaptic } from "use-haptic";
 import { useSendMessage } from "../api/messageService";
 import { useResolveHandle, usePublicProfile } from "../api/profileService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
@@ -72,6 +73,7 @@ export default function PublicProfile() {
   const profile = profileData?.profile || null;
 
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
+  const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   const handleSend = () => {
@@ -248,7 +250,7 @@ export default function PublicProfile() {
                 {({ copied, copy }) => (
                   <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
                     <ActionIcon
-                      onClick={copy}
+                      onClick={() => { triggerHaptic(); copy(); }}
                       variant="subtle"
                       radius="xl"
                       size="md"
@@ -268,6 +270,7 @@ export default function PublicProfile() {
               {navigator.share && (
                 <ActionIcon
                   onClick={async () => {
+                    triggerHaptic();
                     try {
                       await navigator.share({
                         title: `Send ${profile.displayName || profile.handle} an anonymous message`,
@@ -436,7 +439,7 @@ export default function PublicProfile() {
               />
               <Group justify="flex-end" gap="xs">
                 <ActionIcon
-                  onClick={(e) => { e.stopPropagation(); setMessage(""); }}
+                  onClick={(e) => { e.stopPropagation(); triggerHaptic(); setMessage(""); }}
                   variant="subtle"
                   color="white"
                   size="lg"
@@ -446,7 +449,7 @@ export default function PublicProfile() {
                   <IconX size={18} />
                 </ActionIcon>
                 <Button
-                  onClick={(e) => { e.stopPropagation(); handleSend(); }}
+                  onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSend(); }}
                   loading={sendLoading}
                   radius="xl"
                   leftSection={<IconSend size={16} />}

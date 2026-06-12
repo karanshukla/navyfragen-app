@@ -52,6 +52,7 @@
     "@types/react-router-dom": "^5.3.3",
     "react-router-dom": "^7.16.0",
     "serve": "^14.2.6",
+    "use-haptic": "^1.1.13",
     "zod": "^4.4.3"
   }
 }

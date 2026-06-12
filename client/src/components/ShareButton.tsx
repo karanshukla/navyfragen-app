@@ -2,6 +2,7 @@ import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconShare } from "@tabler/icons-react";
 import React from "react";
+import { useHaptic } from "use-haptic";
 
 interface ShareButtonProps {
   shareData: {
@@ -15,7 +16,9 @@ interface ShareButtonProps {
 }
 
 const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
+  const { triggerHaptic } = useHaptic(1);
   const handleClick = async () => {
+    triggerHaptic();
     if (navigator.share) {
       try {
         await navigator.share(shareData);
