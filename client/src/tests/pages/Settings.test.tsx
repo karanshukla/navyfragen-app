@@ -160,7 +160,8 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThanOrEqual(4);
+    // Bluesky stat is hardcoded to "bsky.app" — never shows a dash, so 3 dashes expected
+    expect(dashes.length).toBeGreaterThanOrEqual(3);
   });
 
   it("calls updateSettings when the PDS sync switch is toggled", async () => {
