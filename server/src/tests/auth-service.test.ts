@@ -157,7 +157,13 @@ describe("AuthService", () => {
   describe("createOrConfirmUserProfile", () => {
     test("calls insertInto user_profile with did and createdAt", async () => {
       const executesMock = mock.fn(async () => ({}));
-      const onConflictMock = mock.fn(function (this: any) { return this as any; });
+      const onConflictMock = mock.fn(function (this: any, cb?: (oc: any) => any) {
+        if (typeof cb === "function") {
+          const oc = { column: (_col: string) => ({ doNothing: () => this }) };
+          cb(oc);
+        }
+        return this as any;
+      });
       const valuesMock = mock.fn(function (this: any) {
         (this as any).execute = executesMock;
         (this as any).onConflict = onConflictMock;

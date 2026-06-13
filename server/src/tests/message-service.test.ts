@@ -664,4 +664,19 @@ describe("MessageService", () => {
       /Failed to delete message from PDS/
     );
   });
+
+  test("deleteMessage outer catch uses fallback when db.execute throws non-Error", async () => {
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
+      async () => ({ tid: "t1", recipient: "did:foo" })
+    );
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => ({}));
+    mockDb.deleteFrom = mock.fn(() => ({
+      where: mock.fn(function (this: any) { return this; }),
+      execute: mock.fn(async () => { throw "db-non-error"; }),
+    }));
+    await assert.rejects(
+      () => messageService.deleteMessage("t1", "did:foo", mockAgent),
+      /Failed to delete message/
+    );
+  });
 });
