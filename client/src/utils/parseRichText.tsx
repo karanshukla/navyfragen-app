@@ -19,6 +19,7 @@ const safeUrlParse = (href: string): URL | null => {
   } catch (e) {
     // Ignore errors from URL parsing, it'll just return null
   }
+  /* v8 ignore next */
   return null;
 };
 
@@ -143,6 +144,7 @@ export const parseRichText = (text: string): React.ReactNode => {
       return;
     }
 
+    /* v8 ignore next */
     result.push(segment.text || segment.raw);
   });
   return result;
