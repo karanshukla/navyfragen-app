@@ -469,5 +469,55 @@ describe("ProfileService", () => {
       assert.strictEqual(result.following.length, 0);
       assert.strictEqual(result.oomfs.length, 0);
     });
+
+    it("should stop fetching after 5 pages when cursor never clears (max page limit)", async () => {
+      let followsCallCount = 0;
+      const paginatedAgent = {
+        app: {
+          bsky: {
+            graph: {
+              getFollows: mock.fn(async () => {
+                followsCallCount++;
+                return {
+                  success: true,
+                  data: {
+                    follows: [{ did: `did:user:page${followsCallCount}`, handle: `u${followsCallCount}.bsky.app`, displayName: undefined, avatar: undefined }],
+                    cursor: `page${followsCallCount + 1}`,
+                  },
+                };
+              }),
+            },
+          },
+        },
+      };
+      setPublicAgentFollowers([]);
+      mockSelectBuilder.execute = async () => [];
+
+      await profileService.getFriendsOnApp("did:owner:1", paginatedAgent as any);
+
+      assert.strictEqual(followsCallCount, 5);
+    });
+
+    it("should use empty array fallback when fetchPages response has neither follows nor followers", async () => {
+      const agentWithEmptyData = {
+        app: {
+          bsky: {
+            graph: {
+              getFollows: mock.fn(async () => ({
+                success: true,
+                data: { cursor: undefined },
+              })),
+            },
+          },
+        },
+      };
+      setPublicAgentFollowers([]);
+
+      const result = await profileService.getFriendsOnApp("did:owner:1", agentWithEmptyData as any);
+
+      assert.strictEqual(result.moots.length, 0);
+      assert.strictEqual(result.following.length, 0);
+      assert.strictEqual(result.oomfs.length, 0);
+    });
   });
 });
