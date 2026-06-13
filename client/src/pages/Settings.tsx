@@ -9,7 +9,6 @@ import {
   Alert,
   Skeleton,
   Loader,
-  Select,
   Stack,
   useComputedColorScheme,
 } from "@mantine/core";
@@ -28,7 +27,6 @@ import {
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { useInstallPrompt } from "../components/InstallPromptContext";
 import { SettingsCard } from "../components/SettingsCard";
-import { themes } from "../lib/themes";
 
 // Stat display sizes — intentionally different to create visual hierarchy
 const STAT_SIZE_LARGE = 32;
@@ -142,10 +140,10 @@ export default function Settings() {
                       size={STAT_SIZE_MEDIUM}
                     />
                     <StatItem
-                      value={pdsInfo?.pdsUrl ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "") : "—"}
-                      label="PDS"
+                      value="bsky.app"
+                      label="App View"
                       size={STAT_SIZE_SMALL}
-                      truncate
+                      href={session?.did ? `https://bsky.app/profile/${session.did}` : undefined}
                     />
                   </SimpleGrid>
                 )}
@@ -205,29 +203,13 @@ export default function Settings() {
 
             <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
-                title="Image Theme"
-                description="Select a theme for the generated question images. By default, Navyfragen will use a blue gradient similar to the NGL Application. Note that this setting is not retroactive, and will only apply to future responses."
+                title="Push Notifications"
+                description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option."
                 isDark={isDark}
               >
-                {settingsLoading ? (
-                  <Loader size="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <Select
-                    data={Object.entries(themes).map(([value, label]) => ({ value, label }))}
-                    value={userSettings?.imageTheme || "default"}
-                    onChange={(value) => {
-                      if (value) {
-                        updateSettings.mutate({
-                          imageTheme: value,
-                          pdsSyncEnabled: Boolean(userSettings?.pdsSyncEnabled),
-                        });
-                      }
-                    }}
-                    disabled={updateSettings.isPending}
-                  />
-                )}
+                <Button fullWidth disabled variant="outline">
+                  Coming Soon
+                </Button>
               </SettingsCard>
             </Grid.Col>
 
@@ -334,18 +316,19 @@ interface StatItemProps {
   value: string | number;
   label: string;
   size: number;
-  truncate?: boolean;
+  href?: string;
 }
 
-function StatItem({ value, label, size, truncate }: StatItemProps) {
+function StatItem({ value, label, size, href }: StatItemProps) {
   return (
-    <Stack gap={2} style={truncate ? { minWidth: 0 } : undefined}>
+    <Stack gap={2}>
       <Text
         fw={800}
         variant="gradient"
         gradient={{ from: "royal", to: "purple", deg: 135 }}
-        truncate={truncate}
-        style={{ fontSize: size, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+        component={href ? "a" : "span"}
+        {...(href ? { href, target: "_blank", rel: "noopener noreferrer" } : {})}
+        style={{ fontSize: size, letterSpacing: "-0.02em", lineHeight: 1.1, textDecoration: "none" }}
       >
         {value}
       </Text>
