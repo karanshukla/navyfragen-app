@@ -141,7 +141,7 @@ export default function Settings() {
                     />
                     <StatItem
                       value="bsky.app"
-                      label="App View"
+                      label="Bluesky"
                       size={STAT_SIZE_SMALL}
                       href={session?.did ? `https://bsky.app/profile/${session.did}` : undefined}
                     />
