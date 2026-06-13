@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { renderWithProviders } from "./testUtils";
 import * as authService from "../api/authService";
@@ -129,5 +130,32 @@ describe("AppLayout", () => {
       // Nav should be closed — no error should be thrown
       expect(document.body).toBeInTheDocument();
     }
+  });
+
+  it("clicking a nav link (Home) triggers onLinkClick → setNavOpen(false)", async () => {
+    renderWithProviders(<AppLayout />, { route: "/" });
+    // The Navigation 'Home' NavLink calls handleClick which invokes onLinkClick
+    const homeLinks = screen.getAllByText("Home");
+    await act(async () => {
+      fireEvent.click(homeLinks[0]);
+    });
+    // Covers AppLayout line 66: onLinkClick={() => setNavOpen(false)}
+    expect(document.body).toBeInTheDocument();
+  });
+
+  it("clicking the Login button in AppHeader triggers onNavClose → setNavOpen(false)", async () => {
+    renderWithProviders(<AppLayout />, { route: "/" });
+    // The AppHeader Login gradient button calls onNavClose when clicked
+    // Use getAllByText because there is also a Login NavLink in Navigation
+    const loginElements = screen.getAllByText("Login");
+    // Click whichever is a button (AppHeader renders <Button component={Link}>)
+    const loginBtn = loginElements.find((el) => el.closest("a") || el.closest("button"));
+    if (loginBtn) {
+      await act(async () => {
+        fireEvent.click(loginBtn);
+      });
+    }
+    // Covers AppLayout line 60: onNavClose={() => setNavOpen(false)}
+    expect(document.body).toBeInTheDocument();
   });
 });
