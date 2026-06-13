@@ -307,7 +307,17 @@ function FriendSection({
         mt="lg"
         mb="xs"
         px={2}
-        style={{ display: "flex", alignItems: "center", gap: 4, width: "100%", cursor: "pointer" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          width: "100%",
+          cursor: "pointer",
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          background: "var(--mantine-color-body)",
+        }}
       >
         <Text
           size="xs"
