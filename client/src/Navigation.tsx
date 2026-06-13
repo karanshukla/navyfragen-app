@@ -304,7 +304,6 @@ function FriendSection({
     <>
       <UnstyledButton
         onClick={handleToggle}
-        mt="lg"
         mb="xs"
         px={2}
         style={{
@@ -317,6 +316,7 @@ function FriendSection({
           top: 0,
           zIndex: 1,
           background: "var(--mantine-color-body)",
+          paddingTop: "var(--mantine-spacing-lg)",
         }}
       >
         <Text
