@@ -137,9 +137,9 @@ describe("Settings page", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("Answers on PDS")).toBeInTheDocument();
     expect(screen.getByText("Active since")).toBeInTheDocument();
-    // Bluesky app view link (hardcoded)
-    expect(screen.getByText("bsky.app")).toBeInTheDocument();
-    expect(screen.getByText("Bluesky")).toBeInTheDocument();
+    // PDS URL with https:// stripped
+    expect(screen.getByText("bsky.social")).toBeInTheDocument();
+    expect(screen.getByText("PDS")).toBeInTheDocument();
   });
 
   it("shows em-dash placeholders when stats are absent", () => {
@@ -160,8 +160,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     const dashes = screen.getAllByText("—");
-    // Bluesky stat is hardcoded to "bsky.app" — never shows a dash, so 3 dashes expected
-    expect(dashes.length).toBeGreaterThanOrEqual(3);
+    expect(dashes.length).toBeGreaterThanOrEqual(4);
   });
 
   it("calls updateSettings when the PDS sync switch is toggled", async () => {

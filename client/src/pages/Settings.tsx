@@ -140,10 +140,10 @@ export default function Settings() {
                       size={STAT_SIZE_MEDIUM}
                     />
                     <StatItem
-                      value="bsky.app"
-                      label="Bluesky"
+                      value={pdsInfo?.pdsUrl ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "") : "—"}
+                      label="PDS"
                       size={STAT_SIZE_SMALL}
-                      href={session?.did ? `https://bsky.app/profile/${session.did}` : undefined}
+                      truncate
                     />
                   </SimpleGrid>
                 )}
@@ -316,19 +316,18 @@ interface StatItemProps {
   value: string | number;
   label: string;
   size: number;
-  href?: string;
+  truncate?: boolean;
 }
 
-function StatItem({ value, label, size, href }: StatItemProps) {
+function StatItem({ value, label, size, truncate }: StatItemProps) {
   return (
-    <Stack gap={2}>
+    <Stack gap={2} style={truncate ? { minWidth: 0 } : undefined}>
       <Text
         fw={800}
         variant="gradient"
         gradient={{ from: "royal", to: "purple", deg: 135 }}
-        component={href ? "a" : "span"}
-        {...(href ? { href, target: "_blank", rel: "noopener noreferrer" } : {})}
-        style={{ fontSize: size, letterSpacing: "-0.02em", lineHeight: 1.1, textDecoration: "none" }}
+        truncate={truncate}
+        style={{ fontSize: size, letterSpacing: "-0.02em", lineHeight: 1.1 }}
       >
         {value}
       </Text>
