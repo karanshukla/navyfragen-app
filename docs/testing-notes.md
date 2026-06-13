@@ -36,6 +36,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Call `refetch()` on the hook rendered with a null argument; React Query v5 will then invoke `queryFn` regardless of `enabled`. (This was attempted but the disabled-query refetch behaviour is inconsistent across React Query versions, so the branches are ignored instead.)
 
+### `server/src/services/auth-service.ts` — `if (!secret)` guards in `encryptDid` and `decryptDid`
+
+**Lines:** `if (!secret) throw new Error("OAUTH_TOKEN_SECRET is not set")` in both `encryptDid` (line 70) and `decryptDid` (line 78).
+
+**Why ignored:** `env.OAUTH_TOKEN_SECRET` is resolved by `envalid.cleanEnv()` at module load time and cached as a module-level constant. `test-bootstrap.js` sets `process.env.OAUTH_TOKEN_SECRET` before any test file imports `auth-service.ts`, so the cached value is always a non-empty string for the lifetime of the test process. The `!secret` truthy branch is structurally unreachable in tests.
+
+**What it would take to test:** Restructure the module to read `process.env.OAUTH_TOKEN_SECRET` at call time (not module load), or use `mock.module()` with a dynamic import to replace the `env` object.
+
 ### `server/src/lib/image-generator.ts` — outer `catch` block in `generateQuestionImage`
 
 **Lines:** the top-level `catch (imgErr)` in `generateQuestionImage`.

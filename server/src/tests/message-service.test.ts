@@ -607,6 +607,29 @@ describe("MessageService", () => {
     );
   });
 
+  test("respondToMessage with image uses default theme when user_settings is null", async () => {
+    mockDb.selectFrom = mock.fn((table: string) => {
+      if (table === "user_settings") {
+        return {
+          selectAll: mock.fn(() => ({
+            where: mock.fn(() => ({
+              executeTakeFirst: mock.fn(async () => undefined),
+            })),
+          })),
+        };
+      }
+      return mockSelectBuilder;
+    });
+    const result = await messageService.respondToMessage(
+      "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+    );
+    assert.strictEqual(result.success, true);
+    assert.deepStrictEqual(
+      (generateQuestionImageMock.mock.calls[0].arguments as any[])[3],
+      "default"
+    );
+  });
+
   test("sendMessage uses generic message when err is not an Error instance", async () => {
     mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({ did: "did:foo" }));
     mockInsertBuilder.execute.mock.mockImplementationOnce(async () => {

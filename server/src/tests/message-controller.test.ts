@@ -126,6 +126,37 @@ describe("MessageController", () => {
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
     });
 
+    test("passes includeQuestionAsImage=true to service when present in body", async () => {
+      const svc = makeService();
+      const ctx = makeCtx();
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, ctx);
+      const res = makeRes();
+      await controller.respondToMessage(
+        makeReq({ body: { tid: "t1", recipient: "did:foo", response: "hi", original: "question", includeQuestionAsImage: true } }),
+        res
+      );
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
+      const callArgs = (svc.respondToMessage as any).mock.calls[0].arguments;
+      assert.strictEqual(callArgs[5], true);
+    });
+
+    test("returns 500 with error message when service throws with non-empty message", async () => {
+      const svc = makeService({
+        respondToMessage: mock.fn(async () => { throw new Error(""); }),
+      });
+      const ctx = makeCtx();
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, ctx);
+      const res = makeRes();
+      await controller.respondToMessage(
+        makeReq({ body: { tid: "t1", recipient: "did:foo", response: "hi" } }),
+        res
+      );
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.json.mock.calls[0].arguments[0].error, "Failed to post to Bluesky");
+    });
+
     test("returns 500 when service throws", async () => {
       const svc = makeService({
         respondToMessage: mock.fn(async () => { throw new Error("bluesky error"); }),
@@ -181,6 +212,17 @@ describe("MessageController", () => {
       const res = makeRes();
       await controller.sendMessage(makeReq({ body: { recipient: "did:foo", message: "hi" } }), res);
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+
+    test("returns 500 with fallback message when error has empty message string", async () => {
+      const err = new Error("");
+      const svc = makeService({ sendMessage: mock.fn(async () => { throw err; }) });
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx());
+      const res = makeRes();
+      await controller.sendMessage(makeReq({ body: { recipient: "did:foo", message: "hi" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.json.mock.calls[0].arguments[0].error, "Failed to send message");
     });
   });
 
@@ -299,6 +341,17 @@ describe("MessageController", () => {
       await controller.deleteMessage(makeReq({ params: { tid: "t1" } }), res);
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
     });
+
+    test("returns 500 with fallback message when error has empty message string", async () => {
+      const err = new Error("");
+      const svc = makeService({ deleteMessage: mock.fn(async () => { throw err; }) });
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx());
+      const res = makeRes();
+      await controller.deleteMessage(makeReq({ params: { tid: "t1" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.json.mock.calls[0].arguments[0].error, "Failed to delete message");
+    });
   });
 
   describe("deleteAccount", () => {
@@ -342,6 +395,17 @@ describe("MessageController", () => {
       const res = makeRes();
       await controller.deleteAccount(makeReq(), res);
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+
+    test("returns 500 with fallback message when error has empty message string", async () => {
+      const err = new Error("");
+      const svc = makeService({ deleteUserData: mock.fn(async () => { throw err; }) });
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx());
+      const res = makeRes();
+      await controller.deleteAccount(makeReq(), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.json.mock.calls[0].arguments[0].error, "Failed to delete account data");
     });
   });
 

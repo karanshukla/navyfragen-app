@@ -137,6 +137,21 @@ describe("AuthService", () => {
       const result = await service.checkSession("did:foo", { session: { did: "did:foo" } });
       assert.strictEqual(result, null);
     });
+
+    test("throws when agent exists but getProfile call fails (covers !agent=false branch)", async () => {
+      ctx.db.selectFrom = mock.fn(() => ({
+        selectAll: mock.fn(function (this: any) { return this as any; }),
+        where: mock.fn(function (this: any) { return this as any; }),
+        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+      }));
+      // Restore returns a non-null object so initializeAgentFromSession creates a real Agent
+      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
+      // The real Agent has no valid network session so getProfile will throw
+      await assert.rejects(
+        () => service.checkSession("did:foo", { session: { did: "did:foo" } }),
+        /.+/
+      );
+    });
   });
 
   describe("createOrConfirmUserProfile", () => {

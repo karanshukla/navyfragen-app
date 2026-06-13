@@ -68,6 +68,13 @@ describe("AuthController", () => {
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
     });
 
+    test("returns 400 when body is undefined (req.body?.handle is undefined)", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.login(makeReq({ body: undefined }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
     test("returns redirectUrl on success", async () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
