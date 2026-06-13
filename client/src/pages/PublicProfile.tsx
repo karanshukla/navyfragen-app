@@ -82,10 +82,12 @@ export default function PublicProfile() {
       setFormError("Message cannot be empty.");
       return;
     }
+    /* v8 ignore start */
     if (message.length > MAX_MESSAGE_LENGTH) {
       setFormError(`Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`);
       return;
     }
+    /* v8 ignore stop */
     setModalOpened(true);
   };
 

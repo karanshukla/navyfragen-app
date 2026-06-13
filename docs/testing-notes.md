@@ -52,6 +52,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Mock the `fs.readFileSync` call at module load time to return an empty buffer (so `LOGO_DATA_URL` becomes `""`), then re-import the module. This requires `mock.module` wrapping the Node.js `fs` module before the dynamic import of `image-generator.ts`.
 
+### `client/src/pages/PublicProfile.tsx` — defensive max-length guard in `handleSend`
+
+**Lines:** lines 86–89 (`if (message.length > MAX_MESSAGE_LENGTH) { setFormError(...); return; }`).
+
+**Why ignored:** The `<Textarea>` component's `onChange` handler unconditionally rejects any value longer than `MAX_MESSAGE_LENGTH` (`if (e.target.value.length <= MAX_MESSAGE_LENGTH) setMessage(...)`). As a result, the React `message` state can never exceed the limit through the UI, making the `handleSend` guard permanently unreachable in practice.
+
+**What it would take to test:** Export `handleSend` for direct unit testing, or access the component's internal state setter to bypass the `onChange` guard. Neither is practical without refactoring the component.
+
 ## TypeScript Transpilation Artifacts (tsx source-map gaps)
 
 The following "uncovered" lines are not executable TypeScript — they are blank lines, type annotations, or closing punctuation of multi-line expressions that tsx maps back to the wrong source position. The underlying code **is** executed and tested; only V8's source-map alignment is imprecise.

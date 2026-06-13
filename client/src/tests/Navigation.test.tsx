@@ -272,6 +272,43 @@ describe("Navigation", () => {
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(onLinkClick).toHaveBeenCalled();
     });
+
+    it("keyDown without altKey does nothing (covers altKey=false branch)", () => {
+      renderWithProviders(
+        <>
+          <Navigation isLoggedIn={true} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
+      );
+      fireEvent.keyDown(document, { key: "M", altKey: false });
+      // No navigation should happen
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
+    it("Alt+S when logged out does not navigate to settings", () => {
+      renderWithProviders(
+        <>
+          <Navigation isLoggedIn={false} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
+      );
+      fireEvent.keyDown(document, { key: "S", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
+    it("Alt+L when logged in does not navigate to login", () => {
+      renderWithProviders(
+        <>
+          <Navigation isLoggedIn={true} />
+          <LocationDisplay />
+        </>,
+        { route: "/" },
+      );
+      fireEvent.keyDown(document, { key: "L", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
   });
 
   describe("viewingHandle box", () => {
@@ -318,6 +355,57 @@ describe("Navigation", () => {
         route: "/messages",
       });
       expect(screen.queryByText("5")).toBeNull();
+    });
+  });
+
+  describe("FriendSection toggle (getSectionOpen / setSectionOpen)", () => {
+    const SECTION_KEY = "navyfragen_friends_sections_open";
+
+    beforeEach(() => {
+      localStorage.clear();
+      mockUseFriends.mockReturnValue({
+        data: { moots: [], following: [], oomfs: [] },
+        isLoading: false,
+      } as any);
+    });
+
+    it("reads section state from localStorage when it contains a value", () => {
+      // Pre-populate localStorage so getSectionOpen takes the JSON.parse branch
+      localStorage.setItem(SECTION_KEY, JSON.stringify({ Moots: false }));
+      renderWithProviders(<Navigation isLoggedIn={true} />);
+      // The Moots section header is still rendered (it's a toggle, not removed)
+      expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
+    });
+
+    it("falls back to open=true when localStorage contains invalid JSON", () => {
+      localStorage.setItem(SECTION_KEY, "{{invalid}}");
+      // Should not throw, getSectionOpen returns true from catch
+      expect(() =>
+        renderWithProviders(<Navigation isLoggedIn={true} />),
+      ).not.toThrow();
+      expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
+    });
+
+    it("clicking a FriendSection header toggles it and persists to localStorage", () => {
+      renderWithProviders(<Navigation isLoggedIn={true} />);
+      const mootsHeader = screen.getByText(/^moots$/i);
+      // Click the header — triggers handleToggle → setSectionOpen → localStorage.setItem
+      fireEvent.click(mootsHeader);
+      const stored = localStorage.getItem(SECTION_KEY);
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(typeof parsed).toBe("object");
+    });
+
+    it("setSectionOpen merges into existing localStorage data", () => {
+      localStorage.setItem(SECTION_KEY, JSON.stringify({ Following: false }));
+      renderWithProviders(<Navigation isLoggedIn={true} />);
+      const mootsHeader = screen.getByText(/^moots$/i);
+      fireEvent.click(mootsHeader);
+      const stored = localStorage.getItem(SECTION_KEY);
+      const parsed = JSON.parse(stored!);
+      // Pre-existing Following key must still be present
+      expect(parsed.Following).toBe(false);
     });
   });
 });

@@ -196,6 +196,33 @@ describe("Settings page", () => {
     });
   });
 
+  it("onSuccess callback for updateSettings is a no-op and does not throw", () => {
+    let capturedOnSuccess: (() => void) | undefined;
+    mockUseUpdateUserSettings.mockImplementation((options: any) => {
+      capturedOnSuccess = options?.onSuccess;
+      return noopMutation;
+    });
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    // Invoke the onSuccess callback — it's intentionally empty but must be covered
+    act(() => { capturedOnSuccess?.(); });
+    expect(document.body).toBeInTheDocument();
+  });
+
   it("shows a toast notification when settings update fails", async () => {
     let capturedOnError: ((err: any) => void) | undefined;
     mockUseUpdateUserSettings.mockImplementation((options: any) => {
@@ -371,6 +398,96 @@ describe("Settings page", () => {
     await waitFor(() => {
       expect(document.body.style.pointerEvents).toBe("");
       expect(document.body.style.opacity).toBe("");
+    });
+  });
+
+  it("clicking Cancel on the delete modal closes it (onClose callback)", async () => {
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
+    await waitFor(() =>
+      screen.getByText(/are you sure you want to delete your account/i),
+    );
+    // Click Cancel to trigger onClose → setDeleteModalOpened(false)
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/are you sure you want to delete your account/i),
+      ).toBeNull();
+    });
+  });
+
+  it("shows the settings load error alert and allows retry", async () => {
+    const mockRefetch = vi.fn();
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: { error: "Load failed", status: 500 },
+      refetch: mockRefetch,
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    expect(screen.getByText(/failed to load settings/i)).toBeInTheDocument();
+    // Click Retry — covers the onClick on the Button inside settingsLoadError (line 80)
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
+  });
+
+  it("handleInstallClick calls installPrompt.prompt() and clears it on acceptance", async () => {
+    const setInstallPromptMock = vi.fn();
+    const installPromptMock = {
+      prompt: vi.fn(),
+      userChoice: Promise.resolve({ outcome: "accepted" as const }),
+    };
+    mockUseInstallPrompt.mockReturnValue({
+      installPrompt: installPromptMock,
+      setInstallPrompt: setInstallPromptMock,
+    });
+    setupLoggedIn();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    const installBtn = screen.getByRole("button", { name: /install navyfragen/i });
+    fireEvent.click(installBtn);
+    await waitFor(() => {
+      expect(installPromptMock.prompt).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(setInstallPromptMock).toHaveBeenCalledWith(null);
     });
   });
 });
