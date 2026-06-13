@@ -253,12 +253,7 @@ describe("Settings page", () => {
     expect(screen.getByText(/notifications enabled/i)).toBeInTheDocument();
   });
 
-  it("calls updateSettings when image theme is changed", async () => {
-    const mockMutate = vi.fn();
-    mockUseUpdateUserSettings.mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-    } as any);
+  it("renders the push notifications coming soon card", () => {
     setupLoggedIn();
     mockUseUserSettings.mockReturnValue({
       data: { pdsSyncEnabled: 1, imageTheme: "default" },
@@ -276,19 +271,10 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    const select = document.querySelector("select, [role='combobox']");
-    if (select) {
-      fireEvent.change(select, { target: { value: "compressed" } });
-      await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
-          expect.objectContaining({ imageTheme: "compressed" }),
-        );
-      });
-    } else {
-      // Mantine Select — click to open then pick an option
-      const combobox = screen.getByRole("textbox", { hidden: true });
-      expect(combobox).toBeInTheDocument();
-    }
+    expect(screen.getByText(/push notifications/i)).toBeInTheDocument();
+    const comingSoon = screen.getByRole("button", { name: /coming soon/i });
+    expect(comingSoon).toBeInTheDocument();
+    expect(comingSoon).toBeDisabled();
   });
 
   it("opens delete account modal when 'Delete my Data' is clicked", async () => {

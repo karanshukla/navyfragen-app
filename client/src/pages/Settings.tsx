@@ -9,7 +9,6 @@ import {
   Alert,
   Skeleton,
   Loader,
-  Select,
   Stack,
   useComputedColorScheme,
 } from "@mantine/core";
@@ -29,7 +28,6 @@ import {
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { useInstallPrompt } from "../components/InstallPromptContext";
 import { SettingsCard } from "../components/SettingsCard";
-import { themes } from "../lib/themes";
 
 // Stat display sizes — intentionally different to create visual hierarchy
 const STAT_SIZE_LARGE = 32;
@@ -209,29 +207,13 @@ export default function Settings() {
 
             <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
-                title="Image Theme"
-                description="Select a theme for the generated question images. By default, Navyfragen will use a blue gradient similar to the NGL Application. Note that this setting is not retroactive, and will only apply to future responses."
+                title="Push Notifications"
+                description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option."
                 isDark={isDark}
               >
-                {settingsLoading ? (
-                  <Loader size="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <Select
-                    data={Object.entries(themes).map(([value, label]) => ({ value, label }))}
-                    value={userSettings?.imageTheme || "default"}
-                    onChange={(value) => {
-                      if (value) {
-                        updateSettings.mutate({
-                          imageTheme: value,
-                          pdsSyncEnabled: Boolean(userSettings?.pdsSyncEnabled),
-                        });
-                      }
-                    }}
-                    disabled={updateSettings.isPending}
-                  />
-                )}
+                <Button fullWidth disabled variant="outline">
+                  Coming Soon
+                </Button>
               </SettingsCard>
             </Grid.Col>
 
