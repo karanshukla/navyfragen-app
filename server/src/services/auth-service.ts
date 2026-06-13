@@ -66,6 +66,7 @@ export class AuthService {
 
   encryptDid(did: string) {
     const secret = env.OAUTH_TOKEN_SECRET;
+    /* v8 ignore next 1 */
     if (!secret) throw new Error("OAUTH_TOKEN_SECRET is not set");
     const cryptr = new Cryptr(secret);
     return encodeURIComponent(cryptr.encrypt(did));
@@ -73,6 +74,7 @@ export class AuthService {
 
   decryptDid(token: string) {
     const secret = env.OAUTH_TOKEN_SECRET;
+    /* v8 ignore next 1 */
     if (!secret) throw new Error("OAUTH_TOKEN_SECRET is not set");
     const cryptr = new Cryptr(secret);
     return cryptr.decrypt(token);

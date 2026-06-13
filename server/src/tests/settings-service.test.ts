@@ -18,7 +18,10 @@ describe("SettingsService", () => {
     selectAll() {
       return this;
     },
-    select() {
+    select(fnOrFields?: any) {
+      if (typeof fnOrFields === "function") {
+        fnOrFields({ fn: { countAll: () => ({ as: () => ({}) }) } });
+      }
       return this;
     },
     where() {
@@ -370,6 +373,55 @@ describe("SettingsService", () => {
 
       assert.strictEqual(result.recordCount, 3);
       assert.strictEqual(callCount, 2);
+    });
+
+    it("should return null pdsUrl when idResolver returns null pds (non-throwing)", async () => {
+      const agent = makeAgent([]);
+      const idResolver = makeIdResolver(null, false);
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, null);
+      assert.strictEqual(result.recordCount, 0);
+    });
+
+    it("should return null pdsUrl when resolveAtprotoData returns null (optional chain short-circuits)", async () => {
+      const agent = makeAgent([]);
+      const idResolver = {
+        did: {
+          resolveAtprotoData: mock.fn(async () => null),
+        },
+      };
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(result.pdsUrl, null);
+      assert.strictEqual(result.recordCount, 0);
+    });
+
+    it("should stop fetching after 10 pages (max page limit)", async () => {
+      let callCount = 0;
+      const agent = {
+        com: {
+          atproto: {
+            repo: {
+              listRecords: mock.fn(async () => {
+                callCount++;
+                return {
+                  success: true,
+                  data: { records: [{ cid: `c${callCount}` }], cursor: `page${callCount + 1}` },
+                };
+              }),
+            },
+          },
+        },
+      };
+      const idResolver = makeIdResolver("https://pds.example.com");
+
+      const result = await settingsService.getPdsInfo("user123", agent as any, idResolver as any);
+
+      assert.strictEqual(callCount, 10);
+      assert.strictEqual(result.recordCount, 10);
     });
   });
 
