@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
@@ -110,6 +110,43 @@ describe("Home page", () => {
     renderWithProviders(<Home />);
     expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument();
+  });
+
+  it("clicking Share invokes navigator.share when available", async () => {
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", { value: shareMock, configurable: true });
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: { displayName: "Karan", handle: "karan.bsky.social" },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /share/i }));
+    await waitFor(() => expect(shareMock).toHaveBeenCalled());
+    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+  });
+
+  it("clicking Share falls back to navigator.clipboard when share is unavailable", async () => {
+    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: { displayName: "Karan", handle: "karan.bsky.social" },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /share/i }));
+    await waitFor(() => expect(writeTextMock).toHaveBeenCalled());
   });
 
   it("Copy Link and Share buttons are not shown when logged out", () => {

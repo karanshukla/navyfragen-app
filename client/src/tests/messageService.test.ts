@@ -223,6 +223,15 @@ describe("message hooks", () => {
     expect(typeof result.current.mutate).toBe("function");
   });
 
+  it("useSendMessage.mutationFn calls messageService.sendMessage", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ success: true });
+    const { result } = renderHook(() => useSendMessage(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient: "did:example:1", message: "Test" });
+    });
+    expect(apiClient.post).toHaveBeenCalledWith("/messages/send", expect.any(Object));
+  });
+
   it("useDeleteMessage.onSuccess invalidates messages and stats", async () => {
     vi.mocked(apiClient.delete).mockResolvedValueOnce({ success: true });
     const { result } = renderHook(() => useDeleteMessage(), { wrapper: makeWrapper() });

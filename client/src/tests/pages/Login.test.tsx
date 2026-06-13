@@ -87,6 +87,18 @@ describe("Login page", () => {
     expect(button).toBeDisabled();
   });
 
+  it("closing the error alert clears the error", async () => {
+    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<Login />, { route: "/login?error=oauth_failed" });
+    expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+    const alertEl = screen.getByRole("alert");
+    const closeBtn = alertEl.querySelector("button");
+    if (closeBtn) fireEvent.click(closeBtn);
+    await waitFor(() => {
+      expect(screen.queryByText(/login failed. please try again/i)).toBeNull();
+    });
+  });
+
   it("redirects to redirectUrl and sets newLogin flag on successful login", async () => {
     let capturedCallbacks: any;
     const mockMutate = vi.fn((_data: any, callbacks: any) => {

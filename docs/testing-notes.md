@@ -52,6 +52,30 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Mock the `fs.readFileSync` call at module load time to return an empty buffer (so `LOGO_DATA_URL` becomes `""`), then re-import the module. This requires `mock.module` wrapping the Node.js `fs` module before the dynamic import of `image-generator.ts`.
 
+### `client/src/utils/parseRichText.tsx` — `safeUrlParse` null return after catch
+
+**Line:** the `return null;` statement that follows the try-catch in `safeUrlParse`.
+
+**Why ignored:** `return null` is reachable only if `new URL(fullHref)` throws an exception inside the try block. In practice, `toShortUrl` is always called with hrefs that have already been prefixed with `https://` by the calling code in `parseRichText`, so the URL constructor never throws. A URL with a non-http/https protocol also cannot reach this return — the code prepends `https://` for any non-http/https input, ensuring the parsed protocol is always `https:`.
+
+**What it would take to test:** Export `toShortUrl` and call it directly with a string that causes `new URL` to throw (e.g., a string containing whitespace after the https:// prefix).
+
+### `client/src/utils/parseRichText.tsx` — unknown segment type fallback in `parseRichText`
+
+**Line:** the `result.push(segment.text || segment.raw)` fallback at the end of the `forEach` loop.
+
+**Why ignored:** The `@atcute/bluesky-richtext-parser` tokenizer only produces `text`, `mention`, and `link` segment types per the AT Protocol spec. The three explicit `if` branches above it cover all reachable segment types, making this fallback structurally dead code.
+
+**What it would take to test:** Mock the `tokenize` function to inject a fake segment with an unknown type.
+
+### `client/src/api/messageService.ts` — disabled-query reject branch in `useMessages`
+
+**Line:** the `Promise.reject("No DID provided")` inside `useMessages`'s `queryFn`.
+
+**Why ignored:** Same pattern as `profileService.ts` — `enabled: !!did` prevents React Query from calling `queryFn` when `did` is null. This reject branch is a structural guard that can never fire through normal React Query flow.
+
+**What it would take to test:** Same approach as `profileService.ts` — call `refetch()` on the hook rendered with a null argument; React Query v5 invokes `queryFn` regardless of `enabled` on explicit refetch.
+
 ### `client/src/pages/PublicProfile.tsx` — defensive max-length guard in `handleSend`
 
 **Lines:** lines 86–89 (`if (message.length > MAX_MESSAGE_LENGTH) { setFormError(...); return; }`).

@@ -101,8 +101,10 @@ export function useMessages(
 ): UseQueryResult<MessagesResponse, ApiError> {
   return useQuery<MessagesResponse, ApiError>({
     queryKey: did ? messageKeys.detail(did) : messageKeys.all,
-    queryFn: () =>
-      did ? messageService.getMessages(did) : Promise.reject("No DID provided"),
+    queryFn: () => {
+      /* v8 ignore next */
+      return did ? messageService.getMessages(did) : Promise.reject("No DID provided");
+    },
     enabled: !!did, // Only run if DID is provided
     ...(options || {}),
   });
