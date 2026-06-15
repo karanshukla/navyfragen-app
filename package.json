@@ -14,5 +14,8 @@
     "dependencies": {
         "@types/ws": "^8.18.1",
         "ws": "^8.21.0"
+    },
+    "overrides": {
+        "esbuild": ">=0.28.1"
     }
 }
