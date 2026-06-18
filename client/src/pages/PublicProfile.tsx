@@ -16,7 +16,13 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconSend, IconX, IconWorld, IconClipboard, IconShare } from "@tabler/icons-react";
+import {
+  IconSend,
+  IconX,
+  IconWorld,
+  IconClipboard,
+  IconShare,
+} from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
@@ -46,7 +52,16 @@ const askCardTextareaStyles = {
 // Reusable SVG icon for "open in new tab" links
 function ExternalLinkIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M18 2h3v3" />
       <path d="M21 2L10 13" />
       <path d="M21 12v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h6" />
@@ -69,12 +84,15 @@ export default function PublicProfile() {
   } = useResolveHandle(handle || null);
 
   const did = handleData?.did || null;
-  const { data: profileData, isLoading: profileLoading } = usePublicProfile(did);
+  const { data: profileData, isLoading: profileLoading } =
+    usePublicProfile(did);
   const profile = profileData?.profile || null;
 
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
   const { triggerHaptic } = useHaptic(1);
-  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
+  const isDark =
+    useComputedColorScheme("light", { getInitialValueInEffect: true }) ===
+    "dark";
 
   const handleSend = () => {
     setFormError(null);
@@ -84,7 +102,9 @@ export default function PublicProfile() {
     }
     /* v8 ignore start */
     if (message.length > MAX_MESSAGE_LENGTH) {
-      setFormError(`Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`);
+      setFormError(
+        `Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`,
+      );
       return;
     }
     /* v8 ignore stop */
@@ -93,7 +113,11 @@ export default function PublicProfile() {
 
   const handleConfirmSend = () => {
     if (!profileData?.profile?.did) {
-      notifications.show({ title: "Error", message: "Cannot send message: User DID not found.", color: "red" });
+      notifications.show({
+        title: "Error",
+        message: "Cannot send message: User DID not found.",
+        color: "red",
+      });
       setModalOpened(false);
       return;
     }
@@ -101,7 +125,11 @@ export default function PublicProfile() {
       { recipient: profileData.profile.did, message },
       {
         onSuccess: () => {
-          notifications.show({ title: "Message sent!", message: "Your anonymous message is on its way.", color: "green" });
+          notifications.show({
+            title: "Message sent!",
+            message: "Your anonymous message is on its way.",
+            color: "green",
+          });
           setMessage("");
           setModalOpened(false);
         },
@@ -109,9 +137,10 @@ export default function PublicProfile() {
           const e = err as Record<string, unknown>;
           notifications.show({
             title: "Failed to send",
-            message: (typeof e?.message === "string" ? e.message : undefined)
-              ?? (typeof e?.error === "string" ? e.error : undefined)
-              ?? "Failed to send message. Please try again.",
+            message:
+              (typeof e?.message === "string" ? e.message : undefined) ??
+              (typeof e?.error === "string" ? e.error : undefined) ??
+              "Failed to send message. Please try again.",
             color: "red",
           });
           setModalOpened(false);
@@ -126,7 +155,8 @@ export default function PublicProfile() {
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    const handleFocus = () => el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const handleFocus = () =>
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.addEventListener("focus", handleFocus);
     return () => el.removeEventListener("focus", handleFocus);
   }, []);
@@ -136,17 +166,24 @@ export default function PublicProfile() {
     if (!isLoading && profile && askCardRef.current) {
       const rect = askCardRef.current.getBoundingClientRect();
       if (rect.bottom > window.innerHeight) {
-        askCardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        askCardRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
       }
     }
   }, [isLoading, profile]);
 
   if (handleError) {
-    const errObj = typeof handleError === "object" && handleError !== null ? handleError as unknown as Record<string, unknown> : null;
+    const errObj =
+      typeof handleError === "object" && handleError !== null
+        ? (handleError as unknown as Record<string, unknown>)
+        : null;
     const is404 = errObj !== null && errObj["status"] === 404;
-    const errMessage = errObj !== null && typeof errObj["error"] === "string"
-      ? errObj["error"]
-      : "Failed to resolve handle. The handle may not exist.";
+    const errMessage =
+      errObj !== null && typeof errObj["error"] === "string"
+        ? errObj["error"]
+        : "Failed to resolve handle. The handle may not exist.";
     return (
       <Container>
         <Paper p="md" withBorder>
@@ -154,9 +191,14 @@ export default function PublicProfile() {
             {is404 ? "No Bluesky account found" : "Error"}
           </Text>
           <Text>
-            {is404
-              ? <><strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check the handle and try again.</>
-              : errMessage}
+            {is404 ? (
+              <>
+                <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check
+                the handle and try again.
+              </>
+            ) : (
+              errMessage
+            )}
           </Text>
         </Paper>
       </Container>
@@ -167,14 +209,23 @@ export default function PublicProfile() {
     return (
       <Container>
         <Skeleton height={28} width={180} radius={999} mb="sm" />
-        <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
+        <Paper
+          mb="lg"
+          withBorder
+          style={{ borderRadius: 16, overflow: "hidden" }}
+        >
           <Skeleton height={160} radius={0} />
           <Box style={{ padding: "0 24px 18px", position: "relative" }}>
             <Skeleton
               circle
               height={84}
               width={84}
-              style={{ position: "absolute", top: -42, left: 16, border: "4px solid var(--mantine-color-body)" }}
+              style={{
+                position: "absolute",
+                top: -42,
+                left: 16,
+                border: "4px solid var(--mantine-color-body)",
+              }}
             />
             <Group justify="space-between" align="flex-start" pt={52}>
               <Box>
@@ -210,9 +261,12 @@ export default function PublicProfile() {
     return (
       <Container>
         <Paper p="md" withBorder>
-          <Text c="yellow" fw={700}>Not on Navyfragen</Text>
+          <Text c="yellow" fw={700}>
+            Not on Navyfragen
+          </Text>
           <Text>
-            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up their Navyfragen inbox yet.
+            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set
+            up their Navyfragen inbox yet.
           </Text>
         </Paper>
       </Container>
@@ -242,7 +296,11 @@ export default function PublicProfile() {
             >
               <IconWorld size={12} />
               fragen.navy/
-              <Text component="span" inherit style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}>
+              <Text
+                component="span"
+                inherit
+                style={{ color: "var(--mantine-color-text)", fontWeight: 600 }}
+              >
                 {profile.handle}
               </Text>
             </Box>
@@ -252,7 +310,10 @@ export default function PublicProfile() {
                 {({ copied, copy }) => (
                   <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
                     <ActionIcon
-                      onClick={() => { triggerHaptic(); copy(); }}
+                      onClick={() => {
+                        triggerHaptic();
+                        copy();
+                      }}
                       variant="subtle"
                       radius="xl"
                       size="md"
@@ -279,8 +340,13 @@ export default function PublicProfile() {
                         url: `https://fragen.navy/${profile.handle}`,
                       });
                     } catch (e) {
-                      if (e instanceof DOMException && e.name === "AbortError") return;
-                      notifications.show({ color: "red", title: "Share failed", message: "Could not share link." });
+                      if (e instanceof DOMException && e.name === "AbortError")
+                        return;
+                      notifications.show({
+                        color: "red",
+                        title: "Share failed",
+                        message: "Could not share link.",
+                      });
                     }
                   }}
                   variant="subtle"
@@ -300,7 +366,11 @@ export default function PublicProfile() {
           </Group>
 
           {/* Bluesky-style profile card */}
-          <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
+          <Paper
+            mb="lg"
+            withBorder
+            style={{ borderRadius: 16, overflow: "hidden" }}
+          >
             <Box
               style={{
                 height: 160,
@@ -312,7 +382,13 @@ export default function PublicProfile() {
             >
               {/* Subtle overlay on custom banners for readability */}
               {profile.banner && (
-                <Box style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.2)" }} />
+                <Box
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "rgba(0,0,0,0.2)",
+                  }}
+                />
               )}
             </Box>
 
@@ -329,7 +405,12 @@ export default function PublicProfile() {
                 alt={profile.displayName || profile.handle || "User"}
                 size={84}
                 radius="xl"
-                style={{ border: "4px solid var(--mantine-color-body)", position: "absolute", top: -42, left: 16 }}
+                style={{
+                  border: "4px solid var(--mantine-color-body)",
+                  position: "absolute",
+                  top: -42,
+                  left: 16,
+                }}
               >
                 <WinkMark size={60} sparkle={false} aria-hidden />
               </Avatar>
@@ -337,7 +418,11 @@ export default function PublicProfile() {
               {/* Name row — top-padded to clear the overlapping avatar */}
               <Group justify="space-between" align="flex-start" pt={48}>
                 <Box>
-                  <Text fw={800} fz={24} style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+                  <Text
+                    fw={800}
+                    fz={24}
+                    style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}
+                  >
                     {profile.displayName}
                   </Text>
                   <Text ff="monospace" c="dimmed" mt={2} fz={13}>
@@ -352,7 +437,11 @@ export default function PublicProfile() {
                   variant="outline"
                   size="xs"
                   radius="xl"
-                  style={{ flexShrink: 0, borderColor: "var(--mantine-color-default-border)", color: "var(--mantine-color-text)" }}
+                  style={{
+                    flexShrink: 0,
+                    borderColor: "var(--mantine-color-default-border)",
+                    color: "var(--mantine-color-text)",
+                  }}
                   leftSection={<ExternalLinkIcon />}
                 >
                   View on Bluesky
@@ -360,7 +449,15 @@ export default function PublicProfile() {
               </Group>
 
               {profile.description && (
-                <Text mt="sm" fz={14} style={{ lineHeight: 1.5, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
+                <Text
+                  mt="sm"
+                  fz={14}
+                  style={{
+                    lineHeight: 1.5,
+                    wordBreak: "break-word",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
                   {parseRichText(profile.description)}
                 </Text>
               )}
@@ -382,9 +479,6 @@ export default function PublicProfile() {
             }}
           >
             {/* WinkMark watermark */}
-            <Box style={{ position: "absolute", right: -30, top: -30, opacity: 0.12, pointerEvents: "none" }}>
-              <WinkMark size={220} sparkle={false} aria-hidden />
-            </Box>
 
             <Text
               fw={700}
@@ -405,7 +499,10 @@ export default function PublicProfile() {
                   onClose={() => setFormError(null)}
                   role="alert"
                   styles={{
-                    root: { background: "rgba(220,38,38,0.18)", border: "1px solid rgba(220,38,38,0.35)" },
+                    root: {
+                      background: "rgba(220,38,38,0.18)",
+                      border: "1px solid rgba(220,38,38,0.35)",
+                    },
                     message: { color: "#FCA5A5" },
                     closeButton: { color: "#FCA5A5" },
                   }}
@@ -429,7 +526,10 @@ export default function PublicProfile() {
                 description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
                 onKeyDown={(e) => {
                   if (
-                    (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey) ||
+                    (e.key === "Enter" &&
+                      !e.shiftKey &&
+                      !e.altKey &&
+                      !e.metaKey) ||
                     (e.key === "Enter" && e.ctrlKey)
                   ) {
                     e.preventDefault();
@@ -441,7 +541,11 @@ export default function PublicProfile() {
               />
               <Group justify="flex-end" gap="xs">
                 <ActionIcon
-                  onClick={(e) => { e.stopPropagation(); triggerHaptic(); setMessage(""); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic();
+                    setMessage("");
+                  }}
                   variant="subtle"
                   color="white"
                   size="lg"
@@ -451,7 +555,11 @@ export default function PublicProfile() {
                   <IconX size={18} />
                 </ActionIcon>
                 <Button
-                  onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSend(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic();
+                    handleSend();
+                  }}
                   loading={sendLoading}
                   radius="xl"
                   leftSection={<IconSend size={16} />}
@@ -476,11 +584,16 @@ export default function PublicProfile() {
             gap="xs"
             mt="md"
             align="flex-start"
-            style={{ background: ghostBg(isDark), borderRadius: 12, padding: "12px 14px" }}
+            style={{
+              background: ghostBg(isDark),
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
           >
             <Text size="xs" c="dimmed">
-              Your message will be sent anonymously to the user. They may post it publicly on Bluesky,
-              so please don&apos;t share any personal information or passwords. Be curious, but respectful and kind!
+              Your message will be sent anonymously to the user. They may post
+              it publicly on Bluesky, so please don&apos;t share any personal
+              information or passwords. Be curious, but respectful and kind!
             </Text>
           </Group>
 
@@ -496,7 +609,9 @@ export default function PublicProfile() {
         </>
       ) : (
         <Paper p="md" withBorder>
-          <Text c="red" fw={700}>Error</Text>
+          <Text c="red" fw={700}>
+            Error
+          </Text>
           <Text>Failed to load profile information.</Text>
         </Paper>
       )}

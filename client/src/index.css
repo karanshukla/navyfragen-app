@@ -32,8 +32,8 @@ body {
   --nf-surface-d: #15192B;
   --nf-text-muted: #5B5680;
   --nf-border:     #E6DDFF;
-  --nf-grad-hero:  linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%);
-  --nf-grad-mark:  linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%);
+  --nf-grad-hero:  linear-gradient(135deg, #3B5BFF 0%, #6626fc 55%, #491bff 100%);
+  --nf-grad-mark:  linear-gradient(135deg, #3349E0 0%, #5322c5 55%, #4F1FA6 100%);
   --nf-grad-dark:  linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%);
   --nf-font-sans: 'Inter', system-ui, sans-serif;
   --nf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
