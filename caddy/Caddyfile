@@ -4,7 +4,7 @@
 	persist_config off # storage isn't persistent anyway
 	auto_https off # railway handles https termination, so we don't need to
 	log {
-		format json # set runtime log format to json mode 
+		format json # set runtime log format to json mode
 	}
 	# server options
 	servers {
@@ -26,11 +26,69 @@
 	unhealthy_request_count 200
 }
 
+(backend_proxy) {
+	import lb_settings
+	import passive_health_checks
+	header_up Host {upstream_hostport}
+	header_up X-Forwarded-Proto {scheme}
+	header_up X-Forwarded-For {remote_host}
+	header_up X-Forwarded-Host {host}
+}
+
 # site block, listens on the $PORT environment variable, automatically assigned by railway
 :{$PORT} {
 	# access logs
 	log {
 		format json # set access log format to json mode
+	}
+
+	# Vite builds content-hashed filenames under /assets/ — cache forever
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# Everything else (index.html, manifest, etc.) must revalidate on every load
+	@non_assets {
+		not path /assets/*
+		not path /api/*
+	}
+	header @non_assets Cache-Control "no-cache, no-store, must-revalidate"
+
+	# the handle_path directive WILL strip /api/ from the path before proxying
+	# use `handle` instead of `handle_path` if you dont want to strip the /api/ path
+	# this is needed if your backend's api routes don't start with /api/
+	# change paths as needed
+	handle_path {$BACKEND_PATH:/api}/* {
+		# Route requests to the NA backend when the nf-region cookie is "us".
+		# The cookie is set after OAuth completes, based on the user's PDS location.
+		# Requests without the cookie (first login, pre-auth) fall through to the EU backend.
+		@us_user header Cookie *nf-region=us*
+
+		handle @us_user {
+			reverse_proxy {
+				dynamic a {
+					name {$BACKEND_NA_DOMAIN}
+					port {$BACKEND_NA_PORT:3000}
+					refresh 1s
+					dial_timeout 30s
+					versions ipv4 ipv6
+				}
+				import backend_proxy
+			}
+		}
+
+		handle {
+			reverse_proxy {
+				# for private networking replicas are exposed as multiple dns results, use those dns results as the upstreams
+				dynamic a {
+					name {$BACKEND_EU_DOMAIN}
+					port {$BACKEND_EU_PORT:3000}
+					refresh 1s
+					dial_timeout 30s
+					versions ipv4 ipv6
+				}
+				import backend_proxy
+			}
+		}
 	}
 
 	# proxy all requests for /* to the frontend, configure these variables in the service settings
@@ -52,37 +110,5 @@
 
 		# sets the Host header to the header to the dynamic name and port options
 		header_up Host {upstream_hostport}
-	}
-
-	# the handle_path directive WILL strip /api/ from the path before proxying
-	# use `handle` instead of `handle_path` if you dont want to strip the /api/ path
-	# this is needed if your backend's api routes don't start with /api/
-	# change paths as needed
-	handle_path {$BACKEND_PATH:/api}/* {
-		# the /api/ prefix WILL be stripped from the uri sent to the proxy host
-		#
-		# proxy all requests for /api/* to the backend, configure this variable in the service settings
-		reverse_proxy {
-			# for private networking replicas are exposed as multiple dns results, use those dns results as the upstreams
-			dynamic a {
-				name {$BACKEND_DOMAIN}
-				port {$BACKEND_PORT}
-				refresh 1s
-				dial_timeout 30s
-				versions ipv4 ipv6
-			}
-
-			# configure load balancing settings
-			import lb_settings
-
-			# configure passive health checks
-			import passive_health_checks
-
-			# sets the Host header to the header to the dynamic name and port options
-			header_up Host {upstream_hostport}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Host {host}
-		}
 	}
 }

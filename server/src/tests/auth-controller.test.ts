@@ -13,6 +13,11 @@ describe("AuthController", () => {
         clientMetadata: { client_id: "test-client" },
         callback: mock.fn(async () => ({ session: { did: "did:foo" } })),
       },
+      idResolver: {
+        did: {
+          resolveAtprotoData: mock.fn(async () => ({ pds: "https://bsky.social" })),
+        },
+      },
       logger: {
         info: mock.fn(),
         error: mock.fn(),
@@ -37,6 +42,8 @@ describe("AuthController", () => {
     res.status = mock.fn(() => res);
     res.json = mock.fn(() => res);
     res.redirect = mock.fn(() => res);
+    res.cookie = mock.fn(() => res);
+    res.clearCookie = mock.fn(() => res);
     return res;
   }
 
@@ -110,7 +117,7 @@ describe("AuthController", () => {
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
     });
 
-    test("returns 200 and clears session on success", async () => {
+    test("returns 200, clears session, and clears nf-region cookie on success", async () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService();
@@ -121,6 +128,8 @@ describe("AuthController", () => {
 
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 200);
       assert.strictEqual(req.session, null);
+      assert.strictEqual(res.clearCookie.mock.calls.length, 1);
+      assert.strictEqual(res.clearCookie.mock.calls[0].arguments[0], "nf-region");
     });
 
     test("returns 500 when revokeSession throws", async () => {
@@ -311,7 +320,7 @@ describe("AuthController", () => {
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 404);
     });
 
-    test("returns 200 and sets session on success", async () => {
+    test("returns 200, sets session, and sets nf-region cookie based on PDS", async () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService();
@@ -322,6 +331,46 @@ describe("AuthController", () => {
 
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
       assert.deepStrictEqual(req.session, { did: "did:foo" });
+      assert.strictEqual(res.cookie.mock.calls.length, 1);
+      assert.strictEqual(res.cookie.mock.calls[0].arguments[0], "nf-region");
+      assert.strictEqual(res.cookie.mock.calls[0].arguments[1], "us");
+    });
+
+    test("returns 200 and sets eu cookie for non-bsky PDS", async () => {
+      const ctx = makeCtx({
+        idResolver: {
+          did: {
+            resolveAtprotoData: mock.fn(async () => ({ pds: "https://my-pds.example.com" })),
+          },
+        },
+      });
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const req = makeReq({ body: { oauth_token: "token" }, session: {} });
+      const res = makeRes();
+
+      await controller.oauthConsume(req, res);
+
+      assert.strictEqual(res.cookie.mock.calls[0].arguments[1], "eu");
+    });
+
+    test("returns 200 even when PDS resolution fails", async () => {
+      const ctx = makeCtx({
+        idResolver: {
+          did: {
+            resolveAtprotoData: mock.fn(async () => { throw new Error("dns failure"); }),
+          },
+        },
+      });
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const req = makeReq({ body: { oauth_token: "token" }, session: {} });
+      const res = makeRes();
+
+      await controller.oauthConsume(req, res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
+      assert.strictEqual(res.cookie.mock.calls.length, 0);
     });
 
     test("returns 400 when findUserByDid throws", async () => {

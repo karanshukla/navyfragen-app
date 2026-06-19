@@ -3,6 +3,7 @@ import { isValidHandle } from "@atproto/syntax";
 import { env } from "../lib/env";
 import type { AppContext } from "../index";
 import { AuthService } from "../services/auth-service";
+import { pdsRegion } from "../lib/pds-region";
 
 export class AuthController {
   private service: AuthService;
@@ -42,6 +43,7 @@ export class AuthController {
       return res.status(500).json({ error: "Failed to log out" });
     }
     req.session = null;
+    res.clearCookie("nf-region", { path: "/" });
     return res.status(200).json({ message: "Logged out successfully" });
   }
 
@@ -133,6 +135,24 @@ export class AuthController {
       }
       req.session = { did };
       this.ctx.logger.info({ did }, "Session set from oauth_token");
+
+      // Set a routing hint cookie so Caddy can forward subsequent requests to
+      // the backend closest to the user's PDS (minimises PDS↔backend latency).
+      // Non-fatal: missing cookie means Caddy falls back to the EU backend.
+      try {
+        const atData = await this.ctx.idResolver.did.resolveAtprotoData(did);
+        const region = pdsRegion(atData.pds);
+        res.cookie("nf-region", region, {
+          maxAge: 14 * 24 * 60 * 60 * 1000,
+          httpOnly: false,
+          sameSite: "lax",
+          path: "/",
+        });
+        this.ctx.logger.info({ did, pds: atData.pds, region }, "PDS region resolved");
+      } catch (regionErr) {
+        this.ctx.logger.warn({ err: regionErr, did }, "PDS region resolution failed, skipping nf-region cookie");
+      }
+
       return res.json({ success: true });
     } catch (err) {
       this.ctx.logger.error({ err }, "Failed to consume oauth_token");
