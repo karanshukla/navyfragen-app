@@ -64,6 +64,8 @@
 		@us_user header Cookie *nf-region=us*
 
 		handle @us_user {
+			log_append backend_region "na"
+			header X-Backend-Region "na"
 			reverse_proxy {
 				dynamic a {
 					name {$BACKEND_NA_DOMAIN}
@@ -77,6 +79,8 @@
 		}
 
 		handle {
+			log_append backend_region "eu"
+			header X-Backend-Region "eu"
 			reverse_proxy {
 				# for private networking replicas are exposed as multiple dns results, use those dns results as the upstreams
 				dynamic a {
