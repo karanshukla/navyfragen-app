@@ -26,4 +26,8 @@ describe("pdsRegion", () => {
   test("does not match partial bsky.social hostname", () => {
     assert.strictEqual(pdsRegion("https://notbsky.social"), "eu");
   });
+
+  test("returns us for bsky.network base domain itself", () => {
+    assert.strictEqual(pdsRegion("https://bsky.network"), "us");
+  });
 });
