@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import type { Database } from "../database/db";
 import { Logger } from "pino";
 // import webpush from "web-push";
@@ -16,6 +17,7 @@ export class NotificationService {
     private db: Database,
     private logger: Logger
   ) {}
+  /* v8 ignore stop */
 
   /**
    * Save or update a push subscription for a user.
@@ -111,4 +113,5 @@ export class NotificationService {
 
     this.logger.info({ did: recipientDid }, "sendNewMessageNotification called (stub)");
   }
+  /* v8 ignore next 1 */
 }

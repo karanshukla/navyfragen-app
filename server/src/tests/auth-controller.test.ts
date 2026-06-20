@@ -107,6 +107,20 @@ describe("AuthController", () => {
 
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
     });
+
+    test("returns fallback error message when thrown error has empty message", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        getOAuthRedirectUrl: mock.fn(async () => { throw new Error(""); }),
+      });
+      const res = makeRes();
+
+      await controller.login(makeReq({ body: { handle: "foo.bsky.social" } }), res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.json.mock.calls[0].arguments[0].error, "couldn't initiate login");
+    });
   });
 
   describe("logout", () => {
@@ -273,6 +287,42 @@ describe("AuthController", () => {
         oauthClient: {
           clientMetadata: { client_id: "test-client" },
           callback: mock.fn(async () => { throw new Error("oauth error"); }),
+        },
+      });
+      const controller = new AuthController(ctx);
+      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      const res = makeRes();
+
+      await controller.oauthCallback(req, res);
+
+      const redirectUrl: string = res.redirect.mock.calls[0].arguments[0];
+      assert.ok(redirectUrl.includes("error=oauth_failed"));
+    });
+
+    test("redirects with error=oauth_failed when callback throws a non-Error value", async () => {
+      const ctx = makeCtx({
+        oauthClient: {
+          clientMetadata: { client_id: "test-client" },
+          callback: mock.fn(async () => { throw "oauth string error"; }),
+        },
+      });
+      const controller = new AuthController(ctx);
+      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      const res = makeRes();
+
+      await controller.oauthCallback(req, res);
+
+      const redirectUrl: string = res.redirect.mock.calls[0].arguments[0];
+      assert.ok(redirectUrl.includes("error=oauth_failed"));
+    });
+
+    test("redirects with error=oauth_failed when callback throws Error with no stack", async () => {
+      const errWithNoStack = new Error("no stack error");
+      errWithNoStack.stack = "";
+      const ctx = makeCtx({
+        oauthClient: {
+          clientMetadata: { client_id: "test-client" },
+          callback: mock.fn(async () => { throw errWithNoStack; }),
         },
       });
       const controller = new AuthController(ctx);
