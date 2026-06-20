@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import { fixupConfigRules, fixupPluginRules } from "@eslint/compat";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -12,17 +13,17 @@ export default [
   // TypeScript — flat/recommended covers .ts/.tsx and sets the parser
   ...tseslint.configs["flat/recommended"],
 
-  // React flat config
-  react.configs.flat.recommended,
+  // React flat config — wrapped for ESLint 10 context API compat
+  ...fixupConfigRules([react.configs.flat.recommended]),
 
-  // React hooks flat config (v5+ format)
-  reactHooks.configs["recommended-latest"],
+  // React hooks flat config (v7 flat config format)
+  reactHooks.configs.flat["recommended-latest"],
 
   // Per-file overrides: browser globals, import plugin, project-specific rules
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
-      import: importPlugin,
+      import: fixupPluginRules(importPlugin),
     },
     languageOptions: {
       globals: Object.fromEntries(
