@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Auto-fix staged files with Prettier and ESLint
+npx lint-staged
+
+# TypeScript type check — catches errors auto-fix can't resolve
+echo "TypeScript: client..."
+npm run typecheck -w client
+
+echo "TypeScript: server..."
+npm run typecheck -w server
