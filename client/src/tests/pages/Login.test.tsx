@@ -43,7 +43,10 @@ describe("Login page", () => {
 
   it("calls login mutation with the typed handle", async () => {
     const mockMutate = vi.fn();
-    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseLogin.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Login />);
 
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
@@ -52,10 +55,7 @@ describe("Login page", () => {
     fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        { handle: "karan.bsky.social" },
-        expect.any(Object)
-      );
+      expect(mockMutate).toHaveBeenCalledWith({ handle: "karan.bsky.social" }, expect.any(Object));
     });
   });
 
@@ -64,7 +64,10 @@ describe("Login page", () => {
     const mockMutate = vi.fn((_data, callbacks) => {
       capturedCallbacks = callbacks;
     });
-    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseLogin.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Login />);
 
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
@@ -83,7 +86,9 @@ describe("Login page", () => {
   it("shows loading state on the button while mutation is pending", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
     renderWithProviders(<Login />);
-    const button = screen.getByRole("button", { name: /continue with bluesky/i });
+    const button = screen.getByRole("button", {
+      name: /continue with bluesky/i,
+    });
     expect(button).toBeDisabled();
   });
 
@@ -104,7 +109,10 @@ describe("Login page", () => {
     const mockMutate = vi.fn((_data: any, callbacks: any) => {
       capturedCallbacks = callbacks;
     });
-    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseLogin.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Login />);
 
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
@@ -115,7 +123,9 @@ describe("Login page", () => {
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
     act(() => {
-      capturedCallbacks.onSuccess({ redirectUrl: "https://bsky.app/oauth/authorize" });
+      capturedCallbacks.onSuccess({
+        redirectUrl: "https://bsky.app/oauth/authorize",
+      });
     });
 
     expect(sessionStorage.getItem("newLogin")).toBe("true");
@@ -127,7 +137,10 @@ describe("Login page", () => {
     const mockMutate = vi.fn((_data: any, callbacks: any) => {
       capturedCallbacks = callbacks;
     });
-    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseLogin.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Login />);
 
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
@@ -150,7 +163,10 @@ describe("Login page", () => {
     const mockMutate = vi.fn((_data: any, callbacks: any) => {
       capturedCallbacks = callbacks;
     });
-    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseLogin.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Login />);
 
     fireEvent.change(screen.getByLabelText(/bluesky handle/i), {

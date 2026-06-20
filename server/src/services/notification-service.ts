@@ -1,6 +1,7 @@
 /* v8 ignore start */
-import type { Database } from "../database/db";
 import { Logger } from "pino";
+
+import type { Database } from "../database/db";
 // import webpush from "web-push";
 
 // Placeholder types matching what would be stored in the DB

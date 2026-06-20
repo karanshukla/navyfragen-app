@@ -16,12 +16,7 @@ import {
   Tooltip,
   useComputedColorScheme,
 } from "@mantine/core";
-import {
-  IconBrandGithub,
-  IconButterfly,
-  IconClipboard,
-  IconShare,
-} from "@tabler/icons-react";
+import { IconBrandGithub, IconButterfly, IconClipboard, IconShare } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -30,8 +25,7 @@ import { useSyncMessages } from "../api/messageService";
 import { WinkMark } from "../components/WinkMark";
 import { surfaceBg } from "../styles/tokens";
 
-const shortlinkurl =
-  import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
+const shortlinkurl = import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
 const gradientTextStyle = {
   background: "var(--nf-grad-hero)",
@@ -60,15 +54,14 @@ function ShortcutHint({ label, hint }: { label: string; hint: string }) {
 export default function Home() {
   const { data: sessionData, isLoading } = useSession();
   const syncMessagesMutation = useSyncMessages();
-  const isDark =
-    useComputedColorScheme("light", { getInitialValueInEffect: true }) ===
-    "dark";
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
   const isLoggedIn = !!sessionData?.isLoggedIn;
 
   React.useEffect(() => {
     if (sessionData?.did) {
       syncMessagesMutation.mutate();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionData?.did]);
 
   return (
@@ -126,9 +119,7 @@ export default function Home() {
             <Center>
               <Avatar
                 src={sessionData.profile.avatar ?? undefined}
-                alt={
-                  sessionData.profile.displayName || sessionData.profile.handle
-                }
+                alt={sessionData.profile.displayName || sessionData.profile.handle}
                 size={84}
                 radius="xl"
                 style={{
@@ -143,8 +134,7 @@ export default function Home() {
               <Text fw={800} fz={26} style={{ letterSpacing: "-0.025em" }}>
                 Good to see you again,{" "}
                 <span style={gradientTextStyle}>
-                  {sessionData.profile.displayName ||
-                    sessionData.profile.handle}
+                  {sessionData.profile.displayName || sessionData.profile.handle}
                 </span>
                 !
               </Text>
@@ -165,14 +155,9 @@ export default function Home() {
               >
                 View Your Messages
               </Button>
-              <CopyButton
-                value={`https://${shortlinkurl}/${sessionData.profile.handle}`}
-              >
+              <CopyButton value={`https://${shortlinkurl}/${sessionData.profile.handle}`}>
                 {({ copied, copy }) => (
-                  <Tooltip
-                    label={copied ? "Copied!" : "Copy profile link"}
-                    withArrow
-                  >
+                  <Tooltip label={copied ? "Copied!" : "Copy profile link"} withArrow>
                     <Button
                       onClick={copy}
                       size="sm"
@@ -212,31 +197,23 @@ export default function Home() {
           </Center>
         </Paper>
       ) : (
-        <Paper
-          p="xl"
-          radius="lg"
-          withBorder
-          style={{ background: surfaceBg(isDark) }}
-        >
+        <Paper p="xl" radius="lg" withBorder style={{ background: surfaceBg(isDark) }}>
           <List spacing="md" size="md">
             <List.Item>
               <Text fw={500}>Fast and free</Text>
               <Text c="dimmed">
-                No downloads required, just log in with your Bluesky credentials
-                and share your inbox link
+                No downloads required, just log in with your Bluesky credentials and share your
+                inbox link
               </Text>
             </List.Item>
             <List.Item>
               <Text fw={500}>Spam protection, without captchas</Text>
-              <Text c="dimmed">
-                Protected by Anubis, a powerful bot detection service
-              </Text>
+              <Text c="dimmed">Protected by Anubis, a powerful bot detection service</Text>
             </List.Item>
             <List.Item>
               <Text fw={500}>Open source</Text>
               <Text c="dimmed">
-                Contribute directly to the project, or host your own version if
-                you want!
+                Contribute directly to the project, or host your own version if you want!
               </Text>
             </List.Item>
           </List>
@@ -256,12 +233,7 @@ export default function Home() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
-        <Paper
-          p="lg"
-          radius="md"
-          withBorder
-          style={{ background: surfaceBg(isDark) }}
-        >
+        <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
           <Text
             fw={700}
             mb="sm"
@@ -287,12 +259,7 @@ export default function Home() {
           </Stack>
         </Paper>
 
-        <Paper
-          p="lg"
-          radius="md"
-          withBorder
-          style={{ background: surfaceBg(isDark) }}
-        >
+        <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
           <Text
             fw={700}
             mb="sm"
@@ -346,8 +313,8 @@ export default function Home() {
             </div>
             <Divider />
             <Text fz={13}>
-              Disclaimer: Please follow Bluesky&apos;s ToS. Cookies are used to
-              keep you logged in. This app does not include any moderation.
+              Disclaimer: Please follow Bluesky&apos;s ToS. Cookies are used to keep you logged in.
+              This app does not include any moderation.
             </Text>
           </Stack>
         </Paper>

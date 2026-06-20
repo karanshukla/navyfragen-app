@@ -1,7 +1,9 @@
 #!/bin/sh
 
-# Auto-fix staged files with Prettier and ESLint
-npx lint-staged
+# Auto-fix staged files with Prettier and ESLint.
+# Run per-workspace so each picks up its own ESLint v10 config.
+(cd client && npx lint-staged --allow-empty)
+(cd server && npx lint-staged --allow-empty)
 
 # TypeScript type check — catches errors auto-fix can't resolve
 echo "TypeScript: client..."

@@ -2,20 +2,16 @@ const CACHE = "nf-static-v1";
 
 // Pre-cache the app shell on install
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) =>
-      cache.addAll(["/", "/index.html"])
-    )
-  );
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/", "/index.html"])));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   // Remove old cache versions
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
   );
   self.clients.claim();
 });
@@ -30,22 +26,22 @@ self.addEventListener("fetch", (event) => {
 
   // Navigation requests: network-first so fresh HTML is served, fall back to cache for offline
   if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match("/index.html"))
-    );
+    event.respondWith(fetch(event.request).catch(() => caches.match("/index.html")));
     return;
   }
 
   // Static assets (JS, CSS, fonts, images): cache-first
   event.respondWith(
     caches.match(event.request).then(
-      (cached) => cached || fetch(event.request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
+      (cached) =>
+        cached ||
+        fetch(event.request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
     )
   );
 });

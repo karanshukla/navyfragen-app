@@ -1,5 +1,6 @@
-import { test, describe, beforeEach, mock } from "node:test";
 import assert from "node:assert";
+import { test, describe, beforeEach, mock } from "node:test";
+
 import { NotificationService } from "../services/notification-service";
 
 describe("NotificationService", () => {
@@ -19,7 +20,12 @@ describe("NotificationService", () => {
   });
 
   test("saveSubscription logs info (stub)", async () => {
-    await service.saveSubscription("did:foo", "https://push.example.com/sub", "p256dh-key", "auth-key");
+    await service.saveSubscription(
+      "did:foo",
+      "https://push.example.com/sub",
+      "p256dh-key",
+      "auth-key"
+    );
     assert.strictEqual(mockLogger.info.mock.calls.length, 1);
     const logArg = mockLogger.info.mock.calls[0].arguments[0];
     assert.strictEqual(logArg.did, "did:foo");

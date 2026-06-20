@@ -14,8 +14,8 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
-
 import { useHaptic } from "use-haptic";
+
 import { apiClient, ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import { useBotFollow } from "../api/profileService";
@@ -62,7 +62,7 @@ export default function Settings() {
   const { data: pdsInfo, isLoading: pdsLoading } = usePdsInfo();
   const { installPrompt, setInstallPrompt } = useInstallPrompt();
   const { data: botFollowData, isLoading: botFollowLoading } = useBotFollow(
-    Boolean(session?.isLoggedIn),
+    Boolean(session?.isLoggedIn)
   );
 
   const { triggerHaptic } = useHaptic(1);
@@ -79,12 +79,7 @@ export default function Settings() {
 
   const settingsLoadError = (
     <Alert color="red" title="Failed to load settings" withCloseButton={false}>
-      <Button
-        size="xs"
-        onClick={() => refetchSettings()}
-        variant="light"
-        mt="xs"
-      >
+      <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
         Retry
       </Button>
     </Alert>
@@ -144,25 +139,18 @@ export default function Settings() {
                     <StatItem
                       value={
                         userStats?.memberSince
-                          ? new Date(userStats.memberSince).toLocaleDateString(
-                              undefined,
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )
+                          ? new Date(userStats.memberSince).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
                           : "—"
                       }
                       label="Active since"
                       size={STAT_SIZE_MEDIUM}
                     />
                     <StatItem
-                      value={
-                        pdsInfo?.pdsUrl
-                          ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "")
-                          : "—"
-                      }
+                      value={pdsInfo?.pdsUrl ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "") : "—"}
                       label="PDS"
                       size={STAT_SIZE_SMALL}
                       truncate
@@ -172,10 +160,7 @@ export default function Settings() {
               </Paper>
             </Grid.Col>
 
-            <Grid.Col
-              span={{ base: 12, md: 6, lg: 4 }}
-              style={{ display: "flex" }}
-            >
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Install Application"
                 description="Install the app for faster access. Works with almost any device you own, including tablets and laptops. Uninstall the app anytime. On iOS or Android, it will be added to your home screen and run with the same browser."
@@ -185,19 +170,14 @@ export default function Settings() {
                   onClick={handleInstallClick}
                   fullWidth
                   disabled={!installPrompt}
-                  title={
-                    !installPrompt ? "Refresh the page to enable install" : ""
-                  }
+                  title={!installPrompt ? "Refresh the page to enable install" : ""}
                 >
                   Install Navyfragen
                 </Button>
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col
-              span={{ base: 12, md: 6, lg: 4 }}
-              style={{ display: "flex" }}
-            >
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="PDS Sync"
                 description="By default, Navyfragen syncs your anonymous messages with your Bluesky PDS (Personal Data Server). Disable this if you wish to keep your data on Navyfragen's servers. Will not change your ability to post to Bluesky directly."
@@ -229,10 +209,7 @@ export default function Settings() {
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col
-              span={{ base: 12, md: 6, lg: 4 }}
-              style={{ display: "flex" }}
-            >
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Push Notifications"
                 description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option."
@@ -244,10 +221,7 @@ export default function Settings() {
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col
-              span={{ base: 12, md: 6, lg: 4 }}
-              style={{ display: "flex" }}
-            >
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Navyfragen Feed"
                 description="Browse anonymous questions and answers posted by everyone on Navyfragen worldwide. This feed may contain content intended for adults. View at your own discretion."
@@ -266,10 +240,7 @@ export default function Settings() {
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col
-              span={{ base: 12, md: 6, lg: 4 }}
-              style={{ display: "flex" }}
-            >
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Daily Notifications"
                 description="Follow the Navyfragen notification bot on Bluesky to receive a daily alert when you have new messages in your inbox."
@@ -304,10 +275,7 @@ export default function Settings() {
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col
-              span={{ base: 12, md: 6, lg: 4 }}
-              style={{ display: "flex" }}
-            >
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Delete my Data"
                 description="Permanently remove all your data from the Navyfragen servers, and Bluesky PDS. This also disables your inbox so you will no longer receive messages. You can always log back in to reregister automatically."
@@ -374,12 +342,7 @@ function StatItem({ value, label, size, truncate }: StatItemProps) {
       >
         {value}
       </Text>
-      <Text
-        size="xs"
-        c="dimmed"
-        tt="uppercase"
-        style={{ letterSpacing: "0.08em" }}
-      >
+      <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.08em" }}>
         {label}
       </Text>
     </Stack>

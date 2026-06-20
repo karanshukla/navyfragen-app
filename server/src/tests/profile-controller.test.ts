@@ -1,5 +1,6 @@
-import { test, describe, mock, afterEach } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock, afterEach } from "node:test";
+
 import { ProfileController } from "../controllers/profile-controller";
 
 describe("ProfileController", () => {
@@ -13,7 +14,10 @@ describe("ProfileController", () => {
         restore: mock.fn(async () => ({ sub: "did:foo" })),
       },
       logger: {
-        info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn(),
+        info: mock.fn(),
+        error: mock.fn(),
+        warn: mock.fn(),
+        debug: mock.fn(),
       },
     };
   }
@@ -52,7 +56,9 @@ describe("ProfileController", () => {
     test("returns 404 when service throws 'Profile not found'", async () => {
       const ctx = makeCtx();
       const svc = makeService({
-        getPublicProfile: mock.fn(async () => { throw new Error("Profile not found"); }),
+        getPublicProfile: mock.fn(async () => {
+          throw new Error("Profile not found");
+        }),
       });
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
@@ -63,7 +69,9 @@ describe("ProfileController", () => {
     test("returns 500 on other error", async () => {
       const ctx = makeCtx();
       const svc = makeService({
-        getPublicProfile: mock.fn(async () => { throw new Error("db error"); }),
+        getPublicProfile: mock.fn(async () => {
+          throw new Error("db error");
+        }),
       });
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
@@ -84,7 +92,9 @@ describe("ProfileController", () => {
     test("returns 500 on error", async () => {
       const ctx = makeCtx();
       const svc = makeService({
-        checkUserExists: mock.fn(async () => { throw new Error("db error"); }),
+        checkUserExists: mock.fn(async () => {
+          throw new Error("db error");
+        }),
       });
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
@@ -112,16 +122,30 @@ describe("ProfileController", () => {
     });
 
     test("returns moots, following, and oomfs on success", async () => {
-      const svc = makeService({ getFriendsOnApp: mock.fn(async () => ({ moots: [{ did: "did:bar" }], following: [], oomfs: [] })) });
+      const svc = makeService({
+        getFriendsOnApp: mock.fn(async () => ({
+          moots: [{ did: "did:bar" }],
+          following: [],
+          oomfs: [],
+        })),
+      });
       const ctx = makeCtx();
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
       await controller.getFriends(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { moots: [{ did: "did:bar" }], following: [], oomfs: [] });
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        moots: [{ did: "did:bar" }],
+        following: [],
+        oomfs: [],
+      });
     });
 
     test("returns 500 on error", async () => {
-      const svc = makeService({ getFriendsOnApp: mock.fn(async () => { throw new Error("err"); }) });
+      const svc = makeService({
+        getFriendsOnApp: mock.fn(async () => {
+          throw new Error("err");
+        }),
+      });
       const ctx = makeCtx();
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
@@ -158,7 +182,11 @@ describe("ProfileController", () => {
     });
 
     test("returns 500 on error", async () => {
-      const svc = makeService({ checkFollowsBot: mock.fn(async () => { throw new Error("err"); }) });
+      const svc = makeService({
+        checkFollowsBot: mock.fn(async () => {
+          throw new Error("err");
+        }),
+      });
       const ctx = makeCtx();
       const controller = new ProfileController(svc, ctx.logger, ctx);
       const res = makeRes();
@@ -178,7 +206,9 @@ describe("ProfileController", () => {
 
     test("returns 404 when service throws 'Handle not found'", async () => {
       const svc = makeService({
-        resolveHandleToDid: mock.fn(async () => { throw new Error("Handle not found"); }),
+        resolveHandleToDid: mock.fn(async () => {
+          throw new Error("Handle not found");
+        }),
       });
       const ctx = makeCtx();
       const controller = new ProfileController(svc, ctx.logger, ctx);
@@ -189,7 +219,9 @@ describe("ProfileController", () => {
 
     test("returns 500 on other error", async () => {
       const svc = makeService({
-        resolveHandleToDid: mock.fn(async () => { throw new Error("network"); }),
+        resolveHandleToDid: mock.fn(async () => {
+          throw new Error("network");
+        }),
       });
       const ctx = makeCtx();
       const controller = new ProfileController(svc, ctx.logger, ctx);

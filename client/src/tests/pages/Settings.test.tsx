@@ -14,8 +14,7 @@ vi.mock("../../api/authService", async (importOriginal) => {
 });
 
 vi.mock("../../api/settingsService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/settingsService")>();
+  const actual = await importOriginal<typeof import("../../api/settingsService")>();
   return {
     ...actual,
     useUserSettings: vi.fn(),
@@ -26,24 +25,18 @@ vi.mock("../../api/settingsService", async (importOriginal) => {
 });
 
 vi.mock("../../api/profileService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/profileService")>();
+  const actual = await importOriginal<typeof import("../../api/profileService")>();
   return { ...actual, useBotFollow: vi.fn() };
 });
 
 vi.mock("../../components/InstallPromptContext", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("../../components/InstallPromptContext")
-    >();
+  const actual = await importOriginal<typeof import("../../components/InstallPromptContext")>();
   return { ...actual, useInstallPrompt: vi.fn() };
 });
 
 const mockUseSession = vi.mocked(authService.useSession);
 const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
-const mockUseUpdateUserSettings = vi.mocked(
-  settingsService.useUpdateUserSettings,
-);
+const mockUseUpdateUserSettings = vi.mocked(settingsService.useUpdateUserSettings);
 const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 const mockUsePdsInfo = vi.mocked(settingsService.usePdsInfo);
 const mockUseBotFollow = vi.mocked(profileService.useBotFollow);
@@ -90,9 +83,7 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    expect(
-      screen.getByText(/cannot access this page without logging in/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/cannot access this page without logging in/i)).toBeInTheDocument();
   });
 
   it("shows skeleton placeholders while stats are loading", () => {
@@ -190,9 +181,7 @@ describe("Settings page", () => {
     fireEvent.click(screen.getByLabelText(/enable pds sync/i));
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({ pdsSyncEnabled: false }),
-      );
+      expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ pdsSyncEnabled: false }));
     });
   });
 
@@ -219,7 +208,9 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     // Invoke the onSuccess callback — it's intentionally empty but must be covered
-    act(() => { capturedOnSuccess?.(); });
+    act(() => {
+      capturedOnSuccess?.();
+    });
     expect(document.body).toBeInTheDocument();
   });
 
@@ -323,9 +314,7 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
     fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
     await waitFor(() => {
-      expect(
-        screen.getByText(/are you sure you want to delete your account/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/are you sure you want to delete your account/i)).toBeInTheDocument();
     });
   });
 
@@ -354,15 +343,13 @@ describe("Settings page", () => {
 
     renderWithProviders(<Settings />);
     fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
-    await waitFor(() =>
-      screen.getByText(/are you sure you want to delete your account/i),
-    );
+    await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
     fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining("/delete-account"),
-        expect.objectContaining({ method: "DELETE" }),
+        expect.objectContaining({ method: "DELETE" })
       );
     });
   });
@@ -384,15 +371,11 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
 
-    window.fetch = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Network error")) as any;
+    window.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")) as any;
 
     renderWithProviders(<Settings />);
     fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
-    await waitFor(() =>
-      screen.getByText(/are you sure you want to delete your account/i),
-    );
+    await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
     fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => {
@@ -419,15 +402,11 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
-    await waitFor(() =>
-      screen.getByText(/are you sure you want to delete your account/i),
-    );
+    await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
     // Click Cancel to trigger onClose → setDeleteModalOpened(false)
     fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
     await waitFor(() => {
-      expect(
-        screen.queryByText(/are you sure you want to delete your account/i),
-      ).toBeNull();
+      expect(screen.queryByText(/are you sure you want to delete your account/i)).toBeNull();
     });
   });
 
@@ -481,7 +460,9 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    const installBtn = screen.getByRole("button", { name: /install navyfragen/i });
+    const installBtn = screen.getByRole("button", {
+      name: /install navyfragen/i,
+    });
     fireEvent.click(installBtn);
     await waitFor(() => {
       expect(installPromptMock.prompt).toHaveBeenCalled();
@@ -524,8 +505,14 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
 
     act(() => {
@@ -534,7 +521,9 @@ describe("Settings page", () => {
 
     await waitFor(() => {
       // The fallback message (unique to this test — no error.error property)
-      expect(screen.getByText(/failed to update settings\. please try again\./i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/failed to update settings\. please try again\./i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -547,8 +536,14 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
 
     // fireEvent.click dispatches even on disabled buttons in JSDOM
@@ -575,8 +570,14 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
 
     fireEvent.click(screen.getByRole("button", { name: /install navyfragen/i }));
@@ -592,7 +593,10 @@ describe("Settings page", () => {
 
   it("uses 'default' imageTheme fallback when userSettings.imageTheme is falsy", async () => {
     const mockMutate = vi.fn();
-    mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     setupLoggedIn();
     mockUseUserSettings.mockReturnValue({
       data: { pdsSyncEnabled: 1, imageTheme: null },
@@ -600,21 +604,28 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
 
     fireEvent.click(screen.getByLabelText(/enable pds sync/i));
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({ imageTheme: "default" }),
-      );
+      expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ imageTheme: "default" }));
     });
   });
 
   it("renders PDS sync switch with reduced opacity when updateSettings is pending", () => {
-    mockUseUpdateUserSettings.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+    } as any);
     setupLoggedIn();
     mockUseUserSettings.mockReturnValue({
       data: { pdsSyncEnabled: 1, imageTheme: "default" },
@@ -622,8 +633,14 @@ describe("Settings page", () => {
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
     // isPending=true covers the 0.7 opacity ternary branches in the Switch styles
     expect(screen.getByLabelText(/enable pds sync/i)).toBeInTheDocument();
@@ -631,15 +648,24 @@ describe("Settings page", () => {
 
   it("shows skeleton for daily notifications card while bot-follow status is loading", () => {
     setupLoggedIn();
-    mockUseBotFollow.mockReturnValue({ data: undefined, isLoading: true } as any);
+    mockUseBotFollow.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as any);
     mockUseUserSettings.mockReturnValue({
       data: { pdsSyncEnabled: 1, imageTheme: "default" },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     } as any);
-    mockUseUserStats.mockReturnValue({ data: { messageCount: 0, memberSince: null }, isLoading: false } as any);
-    mockUsePdsInfo.mockReturnValue({ data: { recordCount: 0, pdsUrl: null }, isLoading: false } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Settings />);
     // botFollowLoading=true → covers the sessionLoading||botFollowLoading true branch
     expect(screen.getByText(/daily notifications/i)).toBeInTheDocument();

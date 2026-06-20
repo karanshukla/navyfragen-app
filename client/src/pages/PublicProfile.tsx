@@ -16,17 +16,11 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import {
-  IconSend,
-  IconX,
-  IconWorld,
-  IconClipboard,
-  IconShare,
-} from "@tabler/icons-react";
+import { IconSend, IconX, IconWorld, IconClipboard, IconShare } from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
-
 import { useHaptic } from "use-haptic";
+
 import { useSendMessage } from "../api/messageService";
 import { useResolveHandle, usePublicProfile } from "../api/profileService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
@@ -84,15 +78,12 @@ export default function PublicProfile() {
   } = useResolveHandle(handle || null);
 
   const did = handleData?.did || null;
-  const { data: profileData, isLoading: profileLoading } =
-    usePublicProfile(did);
+  const { data: profileData, isLoading: profileLoading } = usePublicProfile(did);
   const profile = profileData?.profile || null;
 
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
   const { triggerHaptic } = useHaptic(1);
-  const isDark =
-    useComputedColorScheme("light", { getInitialValueInEffect: true }) ===
-    "dark";
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   const handleSend = () => {
     setFormError(null);
@@ -102,9 +93,7 @@ export default function PublicProfile() {
     }
     /* v8 ignore start */
     if (message.length > MAX_MESSAGE_LENGTH) {
-      setFormError(
-        `Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`,
-      );
+      setFormError(`Message cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`);
       return;
     }
     /* v8 ignore stop */
@@ -145,7 +134,7 @@ export default function PublicProfile() {
           });
           setModalOpened(false);
         },
-      },
+      }
     );
   };
 
@@ -155,8 +144,7 @@ export default function PublicProfile() {
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    const handleFocus = () =>
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const handleFocus = () => el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.addEventListener("focus", handleFocus);
     return () => el.removeEventListener("focus", handleFocus);
   }, []);
@@ -193,8 +181,8 @@ export default function PublicProfile() {
           <Text>
             {is404 ? (
               <>
-                <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check
-                the handle and try again.
+                <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check the handle and try
+                again.
               </>
             ) : (
               errMessage
@@ -209,11 +197,7 @@ export default function PublicProfile() {
     return (
       <Container>
         <Skeleton height={28} width={180} radius={999} mb="sm" />
-        <Paper
-          mb="lg"
-          withBorder
-          style={{ borderRadius: 16, overflow: "hidden" }}
-        >
+        <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
           <Skeleton height={160} radius={0} />
           <Box style={{ padding: "0 24px 18px", position: "relative" }}>
             <Skeleton
@@ -265,8 +249,8 @@ export default function PublicProfile() {
             Not on Navyfragen
           </Text>
           <Text>
-            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set
-            up their Navyfragen inbox yet.
+            <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up their Navyfragen
+            inbox yet.
           </Text>
         </Paper>
       </Container>
@@ -340,8 +324,7 @@ export default function PublicProfile() {
                         url: `https://fragen.navy/${profile.handle}`,
                       });
                     } catch (e) {
-                      if (e instanceof DOMException && e.name === "AbortError")
-                        return;
+                      if (e instanceof DOMException && e.name === "AbortError") return;
                       notifications.show({
                         color: "red",
                         title: "Share failed",
@@ -366,11 +349,7 @@ export default function PublicProfile() {
           </Group>
 
           {/* Bluesky-style profile card */}
-          <Paper
-            mb="lg"
-            withBorder
-            style={{ borderRadius: 16, overflow: "hidden" }}
-          >
+          <Paper mb="lg" withBorder style={{ borderRadius: 16, overflow: "hidden" }}>
             <Box
               style={{
                 height: 160,
@@ -418,11 +397,7 @@ export default function PublicProfile() {
               {/* Name row — top-padded to clear the overlapping avatar */}
               <Group justify="space-between" align="flex-start" pt={48}>
                 <Box>
-                  <Text
-                    fw={800}
-                    fz={24}
-                    style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}
-                  >
+                  <Text fw={800} fz={24} style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                     {profile.displayName}
                   </Text>
                   <Text c="dimmed" mt={2} fz={13}>
@@ -526,10 +501,7 @@ export default function PublicProfile() {
                 description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
                 onKeyDown={(e) => {
                   if (
-                    (e.key === "Enter" &&
-                      !e.shiftKey &&
-                      !e.altKey &&
-                      !e.metaKey) ||
+                    (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey) ||
                     (e.key === "Enter" && e.ctrlKey)
                   ) {
                     e.preventDefault();
@@ -591,9 +563,9 @@ export default function PublicProfile() {
             }}
           >
             <Text size="xs" c="dimmed">
-              Your message will be sent anonymously to the user. They may post
-              it publicly on Bluesky, so please don&apos;t share any personal
-              information or passwords. Be curious, but respectful and kind!
+              Your message will be sent anonymously to the user. They may post it publicly on
+              Bluesky, so please don&apos;t share any personal information or passwords. Be curious,
+              but respectful and kind!
             </Text>
           </Group>
 

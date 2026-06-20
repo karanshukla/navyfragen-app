@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as mantineCore from "@mantine/core";
 import { screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { renderWithProviders } from "../testUtils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import * as authService from "../../api/authService";
-import * as mantineCore from "@mantine/core";
+// eslint-disable-next-line import/order
+import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
@@ -21,6 +23,7 @@ vi.mock("@mantine/core", async (importOriginal) => {
 });
 
 // Imported after mocks are registered
+// eslint-disable-next-line import/order
 import { AppHeader } from "../../components/AppHeader";
 
 const mockUseSession = vi.mocked(authService.useSession);
@@ -63,7 +66,11 @@ describe("AppHeader", () => {
     mockUseSession.mockReturnValue({
       data: {
         isLoggedIn: true,
-        profile: { handle: "foo.bsky.social", displayName: "Foo Bar", avatar: null },
+        profile: {
+          handle: "foo.bsky.social",
+          displayName: "Foo Bar",
+          avatar: null,
+        },
       },
       isLoading: false,
     } as any);
@@ -74,7 +81,10 @@ describe("AppHeader", () => {
 
   it("shows sun icon in dark mode", () => {
     mockUseComputedColorScheme.mockReturnValue("dark" as any);
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false },
+      isLoading: false,
+    } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
     // Sun icon has aria-label or is findable; just check render doesn't crash
     const toggleBtn = screen.getByLabelText("Toggle color scheme");
@@ -83,7 +93,10 @@ describe("AppHeader", () => {
 
   it("shows moon icon in light mode", () => {
     mockUseComputedColorScheme.mockReturnValue("light" as any);
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false },
+      isLoading: false,
+    } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
     const toggleBtn = screen.getByLabelText("Toggle color scheme");
     expect(toggleBtn).toBeInTheDocument();
@@ -91,7 +104,10 @@ describe("AppHeader", () => {
 
   it("calls onBurgerToggle when burger is clicked", async () => {
     const onBurgerToggle = vi.fn();
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false },
+      isLoading: false,
+    } as any);
     renderWithProviders(<AppHeader {...defaultProps} onBurgerToggle={onBurgerToggle} />);
     // Burger button from Mantine has aria-label with "open navigation"
     const burgers = document.querySelectorAll("button");
@@ -111,7 +127,11 @@ describe("AppHeader", () => {
     mockUseSession.mockReturnValue({
       data: {
         isLoggedIn: true,
-        profile: { handle: "foo.bsky.social", displayName: "Foo", avatar: null },
+        profile: {
+          handle: "foo.bsky.social",
+          displayName: "Foo",
+          avatar: null,
+        },
       },
       isLoading: false,
     } as any);
@@ -131,7 +151,10 @@ describe("AppHeader", () => {
     vi.mocked(mantineCore.useMantineColorScheme).mockReturnValue({
       toggleColorScheme: toggleMock,
     } as any);
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false },
+      isLoading: false,
+    } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
     const toggleBtn = screen.getByLabelText("Toggle color scheme");
     fireEvent.click(toggleBtn);
@@ -156,7 +179,11 @@ describe("AppHeader", () => {
     mockUseSession.mockReturnValue({
       data: {
         isLoggedIn: true,
-        profile: { handle: "foo.bsky.social", displayName: "Foo", avatar: null },
+        profile: {
+          handle: "foo.bsky.social",
+          displayName: "Foo",
+          avatar: null,
+        },
       },
       isLoading: false,
     } as any);
@@ -187,12 +214,18 @@ describe("AppHeader", () => {
   });
 
   it("covers catch block when logout throws synchronously", async () => {
-    const logoutMock = vi.fn(() => { throw new Error("Logout failed"); });
+    const logoutMock = vi.fn(() => {
+      throw new Error("Logout failed");
+    });
     mockUseLogout.mockReturnValue({ mutate: logoutMock } as any);
     mockUseSession.mockReturnValue({
       data: {
         isLoggedIn: true,
-        profile: { handle: "foo.bsky.social", displayName: "Foo", avatar: null },
+        profile: {
+          handle: "foo.bsky.social",
+          displayName: "Foo",
+          avatar: null,
+        },
       },
       isLoading: false,
     } as any);

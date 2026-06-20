@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
 
 import { apiClient, ApiError } from "./apiClient";
 import { queryClient } from "./queryClient";
@@ -50,19 +45,12 @@ export const messageKeys = {
 export const messageService = {
   // Get messages for user
   getMessages: (did: string): Promise<MessagesResponse> => {
-    return apiClient.get<MessagesResponse>(
-      `/messages/${encodeURIComponent(did)}`
-    );
+    return apiClient.get<MessagesResponse>(`/messages/${encodeURIComponent(did)}`);
   },
 
   // Send anonymous message
-  sendMessage: async (
-    data: SendMessageRequest
-  ): Promise<{ success: boolean }> => {
-    return apiClient.post<{ success: boolean }, SendMessageRequest>(
-      "/messages/send",
-      data
-    );
+  sendMessage: async (data: SendMessageRequest): Promise<{ success: boolean }> => {
+    return apiClient.post<{ success: boolean }, SendMessageRequest>("/messages/send", data);
   },
 
   // Delete a message
@@ -71,9 +59,7 @@ export const messageService = {
   },
 
   // Respond to a message
-  respondToMessage: async (
-    data: ResponseMessageRequest
-  ): Promise<ResponseMessageResponse> => {
+  respondToMessage: async (data: ResponseMessageRequest): Promise<ResponseMessageResponse> => {
     return apiClient.post<ResponseMessageResponse, ResponseMessageRequest>(
       "/messages/respond",
       data
@@ -94,15 +80,14 @@ export const messageService = {
 // React Query hooks
 export function useMessages(
   did: string | null,
-  options?: Omit<
-    UseQueryOptions<MessagesResponse, ApiError>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<MessagesResponse, ApiError>, "queryKey" | "queryFn">
 ): UseQueryResult<MessagesResponse, ApiError> {
   return useQuery<MessagesResponse, ApiError>({
     queryKey: did ? messageKeys.detail(did) : messageKeys.all,
     queryFn: () =>
-      did ? messageService.getMessages(did) : /* v8 ignore next */ Promise.reject("No DID provided"),
+      did
+        ? messageService.getMessages(did)
+        : /* v8 ignore next */ Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
     ...(options || {}),
   });
@@ -126,8 +111,7 @@ export function useDeleteMessage() {
 
 export function useRespondToMessage() {
   return useMutation({
-    mutationFn: (data: ResponseMessageRequest) =>
-      messageService.respondToMessage(data),
+    mutationFn: (data: ResponseMessageRequest) => messageService.respondToMessage(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messageKeys.all });
       queryClient.invalidateQueries({ queryKey: settingsKeys.stats() });
@@ -137,8 +121,7 @@ export function useRespondToMessage() {
 
 export function useAddExampleMessages() {
   return useMutation({
-    mutationFn: (recipient: string) =>
-      messageService.addExampleMessages(recipient),
+    mutationFn: (recipient: string) => messageService.addExampleMessages(recipient),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messageKeys.all });
       queryClient.invalidateQueries({ queryKey: settingsKeys.stats() });

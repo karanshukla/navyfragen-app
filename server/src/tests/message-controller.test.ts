@@ -1,5 +1,6 @@
-import { test, describe, mock, afterEach } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock, afterEach } from "node:test";
+
 import { MessageController } from "../controllers/message-controller";
 
 describe("MessageController", () => {
@@ -14,13 +15,20 @@ describe("MessageController", () => {
       },
       db: {
         selectFrom: mock.fn(() => ({
-          selectAll: mock.fn(function (this: any) { return this as any; }),
-          where: mock.fn(function (this: any) { return this as any; }),
+          selectAll: mock.fn(function (this: any) {
+            return this as any;
+          }),
+          where: mock.fn(function (this: any) {
+            return this as any;
+          }),
           executeTakeFirst: mock.fn(async () => dbResult),
         })),
       },
       logger: {
-        info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn(),
+        info: mock.fn(),
+        error: mock.fn(),
+        warn: mock.fn(),
+        debug: mock.fn(),
       },
     };
   }
@@ -66,7 +74,11 @@ describe("MessageController", () => {
     });
 
     test("returns 500 when service throws", async () => {
-      const svc = makeService({ addExampleMessages: mock.fn(async () => { throw new Error("db"); }) });
+      const svc = makeService({
+        addExampleMessages: mock.fn(async () => {
+          throw new Error("db");
+        }),
+      });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
       const res = makeRes();
@@ -81,7 +93,10 @@ describe("MessageController", () => {
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
       const res = makeRes();
-      await controller.respondToMessage(makeReq({ body: { tid: null, recipient: null, response: null } }), res);
+      await controller.respondToMessage(
+        makeReq({ body: { tid: null, recipient: null, response: null } }),
+        res
+      );
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
     });
 
@@ -109,7 +124,9 @@ describe("MessageController", () => {
         res
       );
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
-        isLoggedIn: false, profile: null, did: null,
+        isLoggedIn: false,
+        profile: null,
+        did: null,
       });
     });
 
@@ -120,7 +137,9 @@ describe("MessageController", () => {
       const controller = new MessageController(svc, logger, ctx);
       const res = makeRes();
       await controller.respondToMessage(
-        makeReq({ body: { tid: "t1", recipient: "did:foo", response: "hi", original: "question" } }),
+        makeReq({
+          body: { tid: "t1", recipient: "did:foo", response: "hi", original: "question" },
+        }),
         res
       );
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
@@ -133,7 +152,15 @@ describe("MessageController", () => {
       const controller = new MessageController(svc, logger, ctx);
       const res = makeRes();
       await controller.respondToMessage(
-        makeReq({ body: { tid: "t1", recipient: "did:foo", response: "hi", original: "question", includeQuestionAsImage: true } }),
+        makeReq({
+          body: {
+            tid: "t1",
+            recipient: "did:foo",
+            response: "hi",
+            original: "question",
+            includeQuestionAsImage: true,
+          },
+        }),
         res
       );
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
@@ -143,7 +170,9 @@ describe("MessageController", () => {
 
     test("returns 500 with error message when service throws with non-empty message", async () => {
       const svc = makeService({
-        respondToMessage: mock.fn(async () => { throw new Error(""); }),
+        respondToMessage: mock.fn(async () => {
+          throw new Error("");
+        }),
       });
       const ctx = makeCtx();
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
@@ -159,7 +188,9 @@ describe("MessageController", () => {
 
     test("returns 500 when service throws", async () => {
       const svc = makeService({
-        respondToMessage: mock.fn(async () => { throw new Error("bluesky error"); }),
+        respondToMessage: mock.fn(async () => {
+          throw new Error("bluesky error");
+        }),
       });
       const ctx = makeCtx();
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
@@ -188,13 +219,18 @@ describe("MessageController", () => {
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
       const res = makeRes();
-      await controller.sendMessage(makeReq({ body: { recipient: "did:foo", message: "hello" } }), res);
+      await controller.sendMessage(
+        makeReq({ body: { recipient: "did:foo", message: "hello" } }),
+        res
+      );
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { tid: "t2" });
     });
 
     test("returns 404 when service throws with 'not found'", async () => {
       const svc = makeService({
-        sendMessage: mock.fn(async () => { throw new Error("User not found"); }),
+        sendMessage: mock.fn(async () => {
+          throw new Error("User not found");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -205,7 +241,9 @@ describe("MessageController", () => {
 
     test("returns 500 when service throws other error", async () => {
       const svc = makeService({
-        sendMessage: mock.fn(async () => { throw new Error("db exploded"); }),
+        sendMessage: mock.fn(async () => {
+          throw new Error("db exploded");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -216,7 +254,11 @@ describe("MessageController", () => {
 
     test("returns 500 with fallback message when error has empty message string", async () => {
       const err = new Error("");
-      const svc = makeService({ sendMessage: mock.fn(async () => { throw err; }) });
+      const svc = makeService({
+        sendMessage: mock.fn(async () => {
+          throw err;
+        }),
+      });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
       const res = makeRes();
@@ -247,7 +289,9 @@ describe("MessageController", () => {
 
     test("returns 404 when service throws with 'not exist'", async () => {
       const svc = makeService({
-        getMessages: mock.fn(async () => { throw new Error("Profile does not exist"); }),
+        getMessages: mock.fn(async () => {
+          throw new Error("Profile does not exist");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -258,7 +302,9 @@ describe("MessageController", () => {
 
     test("returns 500 on other error", async () => {
       const svc = makeService({
-        getMessages: mock.fn(async () => { throw new Error("db error"); }),
+        getMessages: mock.fn(async () => {
+          throw new Error("db error");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -296,7 +342,9 @@ describe("MessageController", () => {
       const res = makeRes();
       await controller.deleteMessage(makeReq({ params: { tid: "t1" } }), res);
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
-        isLoggedIn: false, profile: null, did: null,
+        isLoggedIn: false,
+        profile: null,
+        did: null,
       });
     });
 
@@ -311,7 +359,9 @@ describe("MessageController", () => {
 
     test("returns 404 when service throws 'not found'", async () => {
       const svc = makeService({
-        deleteMessage: mock.fn(async () => { throw new Error("Message not found"); }),
+        deleteMessage: mock.fn(async () => {
+          throw new Error("Message not found");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -322,7 +372,9 @@ describe("MessageController", () => {
 
     test("returns 403 when service throws 'Not authorized'", async () => {
       const svc = makeService({
-        deleteMessage: mock.fn(async () => { throw new Error("Not authorized"); }),
+        deleteMessage: mock.fn(async () => {
+          throw new Error("Not authorized");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -333,7 +385,9 @@ describe("MessageController", () => {
 
     test("returns 500 on other error", async () => {
       const svc = makeService({
-        deleteMessage: mock.fn(async () => { throw new Error("db exploded"); }),
+        deleteMessage: mock.fn(async () => {
+          throw new Error("db exploded");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -344,7 +398,11 @@ describe("MessageController", () => {
 
     test("returns 500 with fallback message when error has empty message string", async () => {
       const err = new Error("");
-      const svc = makeService({ deleteMessage: mock.fn(async () => { throw err; }) });
+      const svc = makeService({
+        deleteMessage: mock.fn(async () => {
+          throw err;
+        }),
+      });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
       const res = makeRes();
@@ -388,7 +446,9 @@ describe("MessageController", () => {
 
     test("returns 500 when service throws", async () => {
       const svc = makeService({
-        deleteUserData: mock.fn(async () => { throw new Error("delete failed"); }),
+        deleteUserData: mock.fn(async () => {
+          throw new Error("delete failed");
+        }),
       });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
@@ -399,13 +459,20 @@ describe("MessageController", () => {
 
     test("returns 500 with fallback message when error has empty message string", async () => {
       const err = new Error("");
-      const svc = makeService({ deleteUserData: mock.fn(async () => { throw err; }) });
+      const svc = makeService({
+        deleteUserData: mock.fn(async () => {
+          throw err;
+        }),
+      });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
       const controller = new MessageController(svc, logger, makeCtx());
       const res = makeRes();
       await controller.deleteAccount(makeReq(), res);
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
-      assert.strictEqual(res.json.mock.calls[0].arguments[0].error, "Failed to delete account data");
+      assert.strictEqual(
+        res.json.mock.calls[0].arguments[0].error,
+        "Failed to delete account data"
+      );
     });
   });
 
@@ -468,7 +535,9 @@ describe("MessageController", () => {
 
     test("returns 500 when syncMessages throws", async () => {
       const svc = makeService({
-        syncMessages: mock.fn(async () => { throw new Error("sync failed"); }),
+        syncMessages: mock.fn(async () => {
+          throw new Error("sync failed");
+        }),
       });
       const ctx = makeCtx({ pdsSyncEnabled: true });
       const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };

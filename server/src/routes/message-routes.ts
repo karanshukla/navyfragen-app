@@ -1,20 +1,14 @@
 import express from "express";
-import type { AppContext } from "../index";
+
 import { MessageController } from "../controllers/message-controller";
 import { MessageService } from "../services/message-service";
 
-export function messageRoutes(
-  ctx: AppContext,
-  handler: any,
-  checkValidation: any
-) {
+import type { AppContext } from "../index";
+
+export function messageRoutes(ctx: AppContext, handler: any, checkValidation: any) {
   // Initialize service and controller
   const messageService = new MessageService(ctx.db, ctx.resolver, ctx.logger);
-  const messageController = new MessageController(
-    messageService,
-    ctx.logger,
-    ctx
-  );
+  const messageController = new MessageController(messageService, ctx.logger, ctx);
 
   const router = express.Router();
 

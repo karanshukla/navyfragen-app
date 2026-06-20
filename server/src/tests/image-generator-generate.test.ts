@@ -1,6 +1,8 @@
-import { test, describe, mock, before, afterEach } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock, before, afterEach } from "node:test";
+
 import sharp from "sharp";
+
 import { generateQuestionImage } from "../lib/image-generator";
 
 describe("generateQuestionImage", () => {
@@ -17,7 +19,11 @@ describe("generateQuestionImage", () => {
 
   afterEach(() => {
     mock.restoreAll();
-    try { mock.timers.reset(); } catch { /* not enabled */ }
+    try {
+      mock.timers.reset();
+    } catch {
+      /* not enabled */
+    }
   });
 
   function makeLogger() {
@@ -77,5 +83,4 @@ describe("generateQuestionImage", () => {
     const result = await generateQuestionImage("Hello", makeLogger());
     assert.deepStrictEqual(result, {});
   });
-
 });

@@ -43,7 +43,9 @@ const combobox = useCombobox({
   <Combobox.Dropdown>
     <Combobox.Options>
       {options.map((item) => (
-        <Combobox.Option value={item} key={item}>{item}</Combobox.Option>
+        <Combobox.Option value={item} key={item}>
+          {item}
+        </Combobox.Option>
       ))}
     </Combobox.Options>
   </Combobox.Dropdown>
@@ -61,10 +63,10 @@ const handleSubmit = (val: string) => {
 
 ## Target Types
 
-| Scenario | Use |
-|---|---|
-| Button trigger (no text input) | `<Combobox.Target targetType="button">` |
-| Input trigger | `<Combobox.Target>` (default) |
+| Scenario                              | Use                                                     |
+| ------------------------------------- | ------------------------------------------------------- |
+| Button trigger (no text input)        | `<Combobox.Target targetType="button">`                 |
+| Input trigger                         | `<Combobox.Target>` (default)                           |
 | Pills + separate input (multi-select) | `<Combobox.DropdownTarget>` + `<Combobox.EventsTarget>` |
 
 ## References

@@ -1,0 +1,2 @@
+# Ensure hook scripts always have Unix line endings
+.husky/* text eol=lf

@@ -2,6 +2,7 @@
 import express from "express";
 import { body } from "express-validator";
 import { Logger } from "pino";
+
 import { NotificationService } from "../services/notification-service";
 // import webpush from "web-push";
 
@@ -46,10 +47,7 @@ export class NotificationController {
    * POST /notifications/subscribe
    * Body: { endpoint: string; keys: { p256dh: string; auth: string } }
    */
-  subscribe = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  subscribe = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const did = req.session?.did;
     if (!did) {
       return res.status(403).json({ error: "Not authenticated" });
@@ -75,9 +73,7 @@ export class NotificationController {
   /**
    * Validation rules for DELETE /notifications/subscribe
    */
-  validateUnsubscribe = [
-    body("endpoint").isURL().withMessage("endpoint must be a valid URL"),
-  ];
+  validateUnsubscribe = [body("endpoint").isURL().withMessage("endpoint must be a valid URL")];
 
   /**
    * Remove a push subscription for the authenticated user.
@@ -85,10 +81,7 @@ export class NotificationController {
    * DELETE /notifications/subscribe
    * Body: { endpoint: string }
    */
-  unsubscribe = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  unsubscribe = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const did = req.session?.did;
     if (!did) {
       return res.status(403).json({ error: "Not authenticated" });

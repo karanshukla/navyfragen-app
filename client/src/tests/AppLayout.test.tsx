@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { renderWithProviders } from "./testUtils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// eslint-disable-next-line import/order
 import * as authService from "../api/authService";
 
 vi.mock("../api/authService", async (importOriginal) => {
@@ -33,6 +34,8 @@ vi.mock("../api/settingsService", () => ({
 }));
 
 import { AppLayout } from "../AppLayout";
+
+import { renderWithProviders } from "./testUtils";
 
 const mockUseSession = vi.mocked(authService.useSession);
 
@@ -100,7 +103,11 @@ describe("AppLayout", () => {
     mockUseSession.mockReturnValue({
       data: {
         isLoggedIn: true,
-        profile: { did: "did:example:123", handle: "user.bsky.social", displayName: "Test User" },
+        profile: {
+          did: "did:example:123",
+          handle: "user.bsky.social",
+          displayName: "Test User",
+        },
         did: "did:example:123",
       },
       isLoading: false,

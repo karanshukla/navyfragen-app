@@ -1,10 +1,12 @@
 /* v8 ignore start */
-import { Request, Response } from "express";
 import { isValidHandle } from "@atproto/syntax";
+import { Request, Response } from "express";
+
 import { env } from "../lib/env";
-import type { AppContext } from "../index";
-import { AuthService } from "../services/auth-service";
 import { pdsRegion } from "../lib/pds-region";
+import { AuthService } from "../services/auth-service";
+
+import type { AppContext } from "../index";
 
 export class AuthController {
   private service: AuthService;
@@ -24,9 +26,7 @@ export class AuthController {
       this.ctx.logger.info({ redirectUrl }, "OAuth authorize succeeded");
       return res.json({ redirectUrl });
     } catch (err: any) {
-      return res
-        .status(500)
-        .json({ error: err.message || "couldn't initiate login" });
+      return res.status(500).json({ error: err.message || "couldn't initiate login" });
     }
   }
 
@@ -38,10 +38,7 @@ export class AuthController {
       await this.service.revokeSession(req.session.did);
       this.ctx.logger.info({ did: req.session.did }, "OAuth session revoked");
     } catch (err) {
-      this.ctx.logger.error(
-        { err, did: req.session.did },
-        "Failed to revoke OAuth session"
-      );
+      this.ctx.logger.error({ err, did: req.session.did }, "Failed to revoke OAuth session");
       return res.status(500).json({ error: "Failed to log out" });
     }
     req.session = null;
@@ -81,10 +78,7 @@ export class AuthController {
       const did = callbackResult.session.did;
       try {
         await this.service.createOrConfirmUserProfile(did);
-        this.ctx.logger.info(
-          { did },
-          "User profile entry created or confirmed."
-        );
+        this.ctx.logger.info({ did }, "User profile entry created or confirmed.");
       } catch (dbErr) {
         this.ctx.logger.error(
           { err: dbErr, did },
@@ -92,10 +86,7 @@ export class AuthController {
         );
       }
       req.session = { did };
-      this.ctx.logger.info(
-        { did },
-        "OAuth callback successful, session created"
-      );
+      this.ctx.logger.info({ did }, "OAuth callback successful, session created");
       let token: string;
       try {
         token = this.service.encryptDid(did);
@@ -103,9 +94,7 @@ export class AuthController {
         this.ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
         return res.redirect(`${env.CLIENT_URL}/login?error=server_config`);
       }
-      return res.redirect(
-        `${env.CLIENT_URL}/oauth_callback?oauth_token=${token}`
-      );
+      return res.redirect(`${env.CLIENT_URL}/oauth_callback?oauth_token=${token}`);
     } catch (err) {
       this.ctx.logger.error(
         {
@@ -152,7 +141,10 @@ export class AuthController {
         });
         this.ctx.logger.info({ did, pds: atData.pds, region }, "PDS region resolved");
       } catch (regionErr) {
-        this.ctx.logger.warn({ err: regionErr, did }, "PDS region resolution failed, skipping nf-region cookie");
+        this.ctx.logger.warn(
+          { err: regionErr, did },
+          "PDS region resolution failed, skipping nf-region cookie"
+        );
       }
 
       return res.json({ success: true });

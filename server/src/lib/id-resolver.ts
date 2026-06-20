@@ -30,25 +30,19 @@ export function createBidirectionalResolver(resolver: IdResolver) {
           if (resolvedHandle) return resolvedHandle;
           return did;
         }
-        const resolvedHandleFromDoc = await resolver.handle.resolve(
-          didDoc.handle,
-        );
+        const resolvedHandleFromDoc = await resolver.handle.resolve(didDoc.handle);
         if (resolvedHandleFromDoc === did) {
           return didDoc.handle;
         }
         return resolvedHandleFromDoc || didDoc.handle;
-      } catch (error) {
+      } catch {
         return did;
       }
     },
 
-    async resolveDidsToHandles(
-      dids: string[],
-    ): Promise<Record<string, string>> {
+    async resolveDidsToHandles(dids: string[]): Promise<Record<string, string>> {
       const didHandleMap: Record<string, string> = {};
-      const results = await Promise.allSettled(
-        dids.map((did) => this.resolveDidToHandle(did)),
-      );
+      const results = await Promise.allSettled(dids.map((did) => this.resolveDidToHandle(did)));
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
           didHandleMap[dids[index]] = result.value;
@@ -70,7 +64,7 @@ export function createBidirectionalResolver(resolver: IdResolver) {
         const did = await resolver.handle.resolve(handle);
         handleCache.set(handle, { did, expiresAt: now + HOUR });
         return did;
-      } catch (error) {
+      } catch {
         return undefined;
       }
     },

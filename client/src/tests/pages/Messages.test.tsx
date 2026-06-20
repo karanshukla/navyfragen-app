@@ -1,6 +1,6 @@
+import { notifications } from "@mantine/notifications";
 import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { notifications } from "@mantine/notifications";
 
 import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
@@ -14,8 +14,7 @@ vi.mock("../../api/authService", async (importOriginal) => {
 });
 
 vi.mock("../../api/messageService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/messageService")>();
+  const actual = await importOriginal<typeof import("../../api/messageService")>();
   return {
     ...actual,
     useMessages: vi.fn(),
@@ -26,8 +25,7 @@ vi.mock("../../api/messageService", async (importOriginal) => {
 });
 
 vi.mock("../../api/settingsService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/settingsService")>();
+  const actual = await importOriginal<typeof import("../../api/settingsService")>();
   return {
     ...actual,
     useUserSettings: vi.fn(),
@@ -39,13 +37,9 @@ const mockUseSession = vi.mocked(authService.useSession);
 const mockUseMessages = vi.mocked(messageService.useMessages);
 const mockUseDeleteMessage = vi.mocked(messageService.useDeleteMessage);
 const mockUseRespondToMessage = vi.mocked(messageService.useRespondToMessage);
-const mockUseAddExampleMessages = vi.mocked(
-  messageService.useAddExampleMessages,
-);
+const mockUseAddExampleMessages = vi.mocked(messageService.useAddExampleMessages);
 const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
-const mockUseUpdateUserSettings = vi.mocked(
-  settingsService.useUpdateUserSettings,
-);
+const mockUseUpdateUserSettings = vi.mocked(settingsService.useUpdateUserSettings);
 
 const SESSION = {
   isLoggedIn: true,
@@ -95,9 +89,7 @@ describe("formatTimestamp", () => {
   });
 
   it("includes hours and zero-padded minutes", () => {
-    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toMatch(
-      /\d{1,2}:\d{2}/,
-    );
+    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toMatch(/\d{1,2}:\d{2}/);
   });
 
   it("includes a timezone abbreviation", () => {
@@ -173,9 +165,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
     expect(screen.getByText("Hello?")).toBeInTheDocument();
-    expect(
-      screen.getByText("What is your favorite color?"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
   });
 
   it("renders timestamps containing the year (not relative time)", () => {
@@ -188,17 +178,13 @@ describe("Messages page", () => {
   it("clicking 'Posting preferences' header does not throw", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(() =>
-      fireEvent.click(screen.getByText(/posting preferences/i)),
-    ).not.toThrow();
+    expect(() => fireEvent.click(screen.getByText(/posting preferences/i))).not.toThrow();
   });
 
   it("clicking 'Image theme' header does not throw", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(() =>
-      fireEvent.click(screen.getByText(/image theme/i)),
-    ).not.toThrow();
+    expect(() => fireEvent.click(screen.getByText(/image theme/i))).not.toThrow();
   });
 
   it("renders Auto-scroll to messages switch in the preferences panel", () => {
@@ -214,9 +200,7 @@ describe("Messages page", () => {
   });
 
   it("calls scrollIntoView with block:nearest when messages first load", async () => {
-    const scrollSpy = vi
-      .spyOn(Element.prototype, "scrollIntoView")
-      .mockImplementation(() => {});
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     setupMocks();
     renderWithProviders(<Messages />);
     await waitFor(() => {
@@ -230,9 +214,7 @@ describe("Messages page", () => {
 
   it("does not call scrollIntoView when auto-scroll preference is off", async () => {
     localStorage.setItem("autoScrollToMessages", JSON.stringify(false));
-    const scrollSpy = vi
-      .spyOn(Element.prototype, "scrollIntoView")
-      .mockImplementation(() => {});
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
 
     // Start with no messages so the initial mount cannot trigger the scroll
     setupMocks([]);
@@ -317,17 +299,13 @@ describe("Messages page", () => {
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
-    await waitFor(() =>
-      screen.getByRole("textbox", { name: /your response/i }),
-    );
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
     fireEvent.keyDown(screen.getByRole("textbox", { name: /your response/i }), {
       key: "Escape",
     });
 
     await waitFor(() => {
-      expect(
-        screen.queryByRole("textbox", { name: /your response/i }),
-      ).toBeNull();
+      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
     });
   });
 
@@ -344,9 +322,7 @@ describe("Messages page", () => {
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
-    await waitFor(() =>
-      screen.getByRole("textbox", { name: /your response/i }),
-    );
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
     const textarea = screen.getByRole("textbox", { name: /your response/i });
     fireEvent.change(textarea, { target: { value: "My answer!" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
@@ -356,40 +332,70 @@ describe("Messages page", () => {
 
   it("clicking 'Add example messages' calls addExamples; onSuccess calls refetch", async () => {
     let capturedCallbacks: any;
-    const mockAddMutate = vi.fn((_did: string, callbacks: any) => { capturedCallbacks = callbacks; });
+    const mockAddMutate = vi.fn((_did: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
     const refetchMock = vi.fn().mockResolvedValue(undefined);
-    mockUseAddExampleMessages.mockReturnValue({ mutate: mockAddMutate, isPending: false } as any);
+    mockUseAddExampleMessages.mockReturnValue({
+      mutate: mockAddMutate,
+      isPending: false,
+    } as any);
     mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
-    mockUseMessages.mockReturnValue({ data: { messages: [] }, isLoading: false, refetch: refetchMock } as any);
+    mockUseMessages.mockReturnValue({
+      data: { messages: [] },
+      isLoading: false,
+      refetch: refetchMock,
+    } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
-    mockUseUserSettings.mockReturnValue({ data: { pdsSyncEnabled: false, imageTheme: "default" }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default" },
+      isLoading: false,
+    } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
     fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
-    await waitFor(() => expect(mockAddMutate).toHaveBeenCalledWith(SESSION.did, expect.any(Object)));
+    await waitFor(() =>
+      expect(mockAddMutate).toHaveBeenCalledWith(SESSION.did, expect.any(Object))
+    );
 
-    act(() => { capturedCallbacks.onSuccess(); });
+    act(() => {
+      capturedCallbacks.onSuccess();
+    });
     expect(refetchMock).toHaveBeenCalled();
   });
 
   it("addExampleMessages onError shows error toast", async () => {
     let capturedCallbacks: any;
-    const mockAddMutate = vi.fn((_did: string, callbacks: any) => { capturedCallbacks = callbacks; });
-    mockUseAddExampleMessages.mockReturnValue({ mutate: mockAddMutate, isPending: false } as any);
+    const mockAddMutate = vi.fn((_did: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseAddExampleMessages.mockReturnValue({
+      mutate: mockAddMutate,
+      isPending: false,
+    } as any);
     mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
-    mockUseMessages.mockReturnValue({ data: { messages: [] }, isLoading: false, refetch: vi.fn() } as any);
+    mockUseMessages.mockReturnValue({
+      data: { messages: [] },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
-    mockUseUserSettings.mockReturnValue({ data: { pdsSyncEnabled: false, imageTheme: "default" }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default" },
+      isLoading: false,
+    } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
     fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
     await waitFor(() => expect(mockAddMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onError({ error: "Server error" }); });
+    act(() => {
+      capturedCallbacks.onError({ error: "Server error" });
+    });
     await waitFor(() => {
       expect(screen.getByText(/error adding examples/i)).toBeInTheDocument();
     });
@@ -401,7 +407,9 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const deleteButtons = screen.getAllByRole("button", { name: /delete message/i });
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /delete message/i,
+    });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => {
       expect(screen.getByText(/confirm deletion/i)).toBeInTheDocument();
@@ -411,9 +419,14 @@ describe("Messages page", () => {
   it("confirming delete from modal calls performDelete with fromModal=true; onSuccess closes modal", async () => {
     localStorage.setItem("confirmBeforeDelete", JSON.stringify(true));
     let capturedCallbacks: any;
-    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => { capturedCallbacks = callbacks; });
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
     setupMocks();
-    mockUseDeleteMessage.mockReturnValue({ mutate: mockDeleteMutate, isPending: false } as any);
+    mockUseDeleteMessage.mockReturnValue({
+      mutate: mockDeleteMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
     await act(async () => {});
 
@@ -423,7 +436,9 @@ describe("Messages page", () => {
     fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onSuccess(); });
+    act(() => {
+      capturedCallbacks.onSuccess();
+    });
     await waitFor(() => {
       expect(screen.queryByText(/confirm deletion/i)).toBeNull();
     });
@@ -432,9 +447,14 @@ describe("Messages page", () => {
   it("performDelete from modal onError closes modal and shows toast", async () => {
     localStorage.setItem("confirmBeforeDelete", JSON.stringify(true));
     let capturedCallbacks: any;
-    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => { capturedCallbacks = callbacks; });
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
     setupMocks();
-    mockUseDeleteMessage.mockReturnValue({ mutate: mockDeleteMutate, isPending: false } as any);
+    mockUseDeleteMessage.mockReturnValue({
+      mutate: mockDeleteMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
     await act(async () => {});
 
@@ -444,7 +464,9 @@ describe("Messages page", () => {
     fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onError({ error: "Delete failed" }); });
+    act(() => {
+      capturedCallbacks.onError({ error: "Delete failed" });
+    });
     await waitFor(() => {
       expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
       expect(screen.queryByText(/confirm deletion/i)).toBeNull();
@@ -468,9 +490,14 @@ describe("Messages page", () => {
 
   it("performDelete onSuccess with respondingTid === tid clears the responding state", async () => {
     let capturedCallbacks: any;
-    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => { capturedCallbacks = callbacks; });
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
     setupMocks();
-    mockUseDeleteMessage.mockReturnValue({ mutate: mockDeleteMutate, isPending: false } as any);
+    mockUseDeleteMessage.mockReturnValue({
+      mutate: mockDeleteMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
     // Expand msg-1 via the "↩ Reply" button
@@ -480,11 +507,15 @@ describe("Messages page", () => {
     await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
 
     // Delete the same expanded card (msg-1 is first)
-    const deleteButtons = screen.getAllByRole("button", { name: /delete message/i });
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /delete message/i,
+    });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onSuccess(); });
+    act(() => {
+      capturedCallbacks.onSuccess();
+    });
     await waitFor(() => {
       expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
     });
@@ -508,15 +539,22 @@ describe("Messages page", () => {
   it("handleSendResponse with appendProfileLink=true appends the profile link", async () => {
     localStorage.setItem("appendProfileLink", JSON.stringify(true));
     let capturedData: any;
-    const mockRespondMutate = vi.fn((data: any, _callbacks: any) => { capturedData = data; });
+    const mockRespondMutate = vi.fn((data: any, _callbacks: any) => {
+      capturedData = data;
+    });
     setupMocks();
-    mockUseRespondToMessage.mockReturnValue({ mutate: mockRespondMutate, isPending: false } as any);
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
     const replyButtons = screen.getAllByRole("button", { name: /reply/i });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), { target: { value: "Great answer!" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "Great answer!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
 
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
@@ -526,19 +564,30 @@ describe("Messages page", () => {
 
   it("handleSendResponse onSuccess with data.link shows link in notification", async () => {
     let capturedCallbacks: any;
-    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => { capturedCallbacks = callbacks; });
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
     setupMocks();
-    mockUseRespondToMessage.mockReturnValue({ mutate: mockRespondMutate, isPending: false } as any);
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
     const replyButtons = screen.getAllByRole("button", { name: /reply/i });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), { target: { value: "My answer!" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "My answer!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onSuccess({ link: "https://bsky.app/profile/user/post/123" }); });
+    act(() => {
+      capturedCallbacks.onSuccess({
+        link: "https://bsky.app/profile/user/post/123",
+      });
+    });
     await waitFor(() => {
       expect(screen.getByText(/response sent/i)).toBeInTheDocument();
       expect(screen.getByText("https://bsky.app/profile/user/post/123")).toBeInTheDocument();
@@ -547,19 +596,28 @@ describe("Messages page", () => {
 
   it("handleSendResponse onSuccess without data.link shows plain success message", async () => {
     let capturedCallbacks: any;
-    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => { capturedCallbacks = callbacks; });
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
     setupMocks();
-    mockUseRespondToMessage.mockReturnValue({ mutate: mockRespondMutate, isPending: false } as any);
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
     const replyButtons = screen.getAllByRole("button", { name: /reply/i });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), { target: { value: "My answer!" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "My answer!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onSuccess({}); });
+    act(() => {
+      capturedCallbacks.onSuccess({});
+    });
     await waitFor(() => {
       expect(screen.getByText(/response sent/i)).toBeInTheDocument();
       expect(screen.getByText(/your response has been posted/i)).toBeInTheDocument();
@@ -652,7 +710,9 @@ describe("Messages page", () => {
     });
     renderWithProviders(<Messages />);
 
-    act(() => { capturedOnError({ error: "Theme update failed" }); });
+    act(() => {
+      capturedOnError({ error: "Theme update failed" });
+    });
     await waitFor(() => {
       expect(screen.getByText(/error updating theme/i)).toBeInTheDocument();
     });
@@ -660,15 +720,25 @@ describe("Messages page", () => {
 
   it("handleAddExampleMessages returns early when session has no did", () => {
     const mockAddMutate = vi.fn();
-    mockUseAddExampleMessages.mockReturnValue({ mutate: mockAddMutate, isPending: false } as any);
+    mockUseAddExampleMessages.mockReturnValue({
+      mutate: mockAddMutate,
+      isPending: false,
+    } as any);
     mockUseSession.mockReturnValue({
       data: { isLoggedIn: true, did: null, profile: null },
       isLoading: false,
     } as any);
-    mockUseMessages.mockReturnValue({ data: { messages: [] }, isLoading: false, refetch: vi.fn() } as any);
+    mockUseMessages.mockReturnValue({
+      data: { messages: [] },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
-    mockUseUserSettings.mockReturnValue({ data: { pdsSyncEnabled: false, imageTheme: "default" }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default" },
+      isLoading: false,
+    } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
@@ -686,13 +756,19 @@ describe("Messages page", () => {
   it("clicking a ThemeCard calls updateSettings.mutate when not loading", () => {
     const mockMutate = vi.fn();
     setupMocks();
-    mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<Messages />);
 
     const defaultThemeBtn = screen.getByRole("button", { name: /^default$/i });
     fireEvent.click(defaultThemeBtn);
 
-    expect(mockMutate).toHaveBeenCalledWith({ imageTheme: "default", pdsSyncEnabled: false });
+    expect(mockMutate).toHaveBeenCalledWith({
+      imageTheme: "default",
+      pdsSyncEnabled: false,
+    });
   });
 
   it("keyboard Alt+R shortcut is ignored when an input element has focus", () => {
@@ -761,9 +837,7 @@ describe("Messages page", () => {
     fireEvent.click(openReplyBtn!);
 
     // Wait for the response textarea to appear
-    await waitFor(() =>
-      screen.getByRole("textbox", { name: /your response/i }),
-    );
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
     fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
       target: { value: "Great question!" },
     });

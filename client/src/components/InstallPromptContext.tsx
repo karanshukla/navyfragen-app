@@ -5,13 +5,9 @@ interface InstallPromptContextType {
   setInstallPrompt: React.Dispatch<React.SetStateAction<any | null>>;
 }
 
-const InstallPromptContext = createContext<
-  InstallPromptContextType | undefined
->(undefined);
+const InstallPromptContext = createContext<InstallPromptContextType | undefined>(undefined);
 
-export const InstallPromptProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const InstallPromptProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [installPrompt, setInstallPrompt] = useState<any | null>(null);
 
   useEffect(() => {
@@ -25,10 +21,7 @@ export const InstallPromptProvider: React.FC<{ children: React.ReactNode }> = ({
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
@@ -43,9 +36,7 @@ export const InstallPromptProvider: React.FC<{ children: React.ReactNode }> = ({
 export function useInstallPrompt() {
   const context = useContext(InstallPromptContext);
   if (!context) {
-    throw new Error(
-      "useInstallPrompt must be used within an InstallPromptProvider"
-    );
+    throw new Error("useInstallPrompt must be used within an InstallPromptProvider");
   }
   return context;
 }

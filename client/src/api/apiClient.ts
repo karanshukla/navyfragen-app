@@ -17,9 +17,7 @@ export const apiClient = {
     });
 
     if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ error: "Unknown error" }));
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
       throw { ...error, status: response.status } as ApiError;
     }
     return response.json() as Promise<T>;
@@ -37,9 +35,7 @@ export const apiClient = {
       body: data ? JSON.stringify(data) : undefined,
     });
     if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ error: "Unknown error" }));
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
       throw { ...error, status: response.status } as ApiError;
     }
     return response.json() as Promise<T>;
@@ -57,9 +53,7 @@ export const apiClient = {
       body: data ? JSON.stringify(data) : undefined,
     });
     if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ error: "Unknown error" }));
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
       throw { ...error, status: response.status } as ApiError;
     }
     return response.json() as Promise<T>;

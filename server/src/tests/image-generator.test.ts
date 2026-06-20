@@ -1,5 +1,6 @@
-import { test, describe, mock, afterEach } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock, afterEach } from "node:test";
+
 import {
   fetchWithRetry,
   wrapLines,
@@ -43,10 +44,7 @@ describe("fetchWithRetry", () => {
       throw networkError;
     });
 
-    await assert.rejects(
-      () => fetchWithRetry("http://test/", {}, 50),
-      networkError
-    );
+    await assert.rejects(() => fetchWithRetry("http://test/", {}, 50), networkError);
   });
 
   test("does not retry on HTTP error responses", async () => {
@@ -198,13 +196,24 @@ describe("generateThemeSpecificHtml", () => {
   });
 
   test("twitter theme with handle includes mention", () => {
-    const result = generateThemeSpecificHtml("twitter", "hello", "fragen.navy/myhandle", "hello", "myhandle");
+    const result = generateThemeSpecificHtml(
+      "twitter",
+      "hello",
+      "fragen.navy/myhandle",
+      "hello",
+      "myhandle"
+    );
     assert.ok(result.html.includes("@myhandle"));
   });
 
   test("emoji message produces same height as equal-length ascii message", () => {
     // 5 emojis == 5 visible characters; should produce same layout as 5 ascii chars
-    const emojiResult = generateThemeSpecificHtml("default", "👋👋👋👋👋", "navyfragen.app", "👋👋👋👋👋");
+    const emojiResult = generateThemeSpecificHtml(
+      "default",
+      "👋👋👋👋👋",
+      "navyfragen.app",
+      "👋👋👋👋👋"
+    );
     const asciiResult = generateThemeSpecificHtml("default", "hello", "navyfragen.app", "hello");
     assert.strictEqual(emojiResult.height, asciiResult.height);
   });

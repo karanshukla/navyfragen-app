@@ -1,7 +1,10 @@
 import { NodeOAuthClient } from "@atproto/oauth-client-node";
-import type { Database } from "#/database/db";
-import { env } from "#/lib/env";
+
 import { SessionStore, StateStore } from "./storage";
+
+import type { Database } from "#/database/db";
+
+import { env } from "#/lib/env";
 
 export const createClient = async (db: Database) => {
   const publicUrl = env.PUBLIC_URL;
@@ -24,7 +27,8 @@ export const createClient = async (db: Database) => {
         : `http://localhost?redirect_uri=${enc(`${urlWithAPI}/oauth/callback`)}&scope=${enc("atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*")}`,
       client_uri: url,
       redirect_uris: [`${urlWithAPI}/oauth/callback`],
-      scope: "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
+      scope:
+        "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       application_type: "web",

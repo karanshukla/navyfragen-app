@@ -1,9 +1,12 @@
 /* v8 ignore start */
 import express from "express";
 import { body } from "express-validator";
-import { SettingsService } from "../services/settings-service";
 import { Logger } from "pino";
+
+import { SettingsService } from "../services/settings-service";
+
 import type { AppContext } from "../index";
+
 import { initializeAgentFromSession } from "#/auth/session-agent";
 
 export class SettingsController {
@@ -17,10 +20,7 @@ export class SettingsController {
   /**
    * Get the user's settings or create default ones if they don't exist
    */
-  getSettings = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  getSettings = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const userSessionDid = req.session?.did;
 
     if (!userSessionDid) {
@@ -28,21 +28,16 @@ export class SettingsController {
     }
 
     try {
-      let userSettings =
-        await this.settingsService.getUserSettings(userSessionDid);
+      let userSettings = await this.settingsService.getUserSettings(userSessionDid);
 
       if (!userSettings) {
         // Create default settings if they don't exist
-        userSettings =
-          await this.settingsService.createDefaultSettings(userSessionDid);
+        userSettings = await this.settingsService.createDefaultSettings(userSessionDid);
       }
 
       return res.json(userSettings);
     } catch (err) {
-      this.logger.error(
-        { err, did: userSessionDid },
-        "Failed to fetch user settings"
-      );
+      this.logger.error({ err, did: userSessionDid }, "Failed to fetch user settings");
       return res.status(500).json({ error: "Failed to fetch user settings" });
     }
   };
@@ -50,10 +45,7 @@ export class SettingsController {
   /**
    * Get account stats for the logged-in user
    */
-  getStats = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  getStats = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const userSessionDid = req.session?.did;
 
     if (!userSessionDid) {
@@ -72,10 +64,7 @@ export class SettingsController {
   /**
    * Get PDS URL and navyfragen record count for the logged-in user
    */
-  getPdsInfo = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  getPdsInfo = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const userDid = req.session?.did;
     if (!userDid) {
       return res.status(403).json({ error: "Not authenticated" });
@@ -98,10 +87,8 @@ export class SettingsController {
   /**
    * Validate request for updating settings
    */
-    validateUpdateSettings = [
-    body("pdsSyncEnabled")
-      .isBoolean()
-      .withMessage("pdsSyncEnabled must be a boolean value"),
+  validateUpdateSettings = [
+    body("pdsSyncEnabled").isBoolean().withMessage("pdsSyncEnabled must be a boolean value"),
     body("imageTheme")
       .isString()
       .withMessage("imageTheme must be a string")
@@ -132,10 +119,7 @@ export class SettingsController {
       this.logger.info({ did: userSessionDid, pdsSyncEnabled, imageTheme }, "Settings updated");
       return res.json(updatedSettings);
     } catch (err) {
-      this.logger.error(
-        { err, did: userSessionDid },
-        "Failed to update user settings"
-      );
+      this.logger.error({ err, did: userSessionDid }, "Failed to update user settings");
       return res.status(500).json({ error: "Failed to update user settings" });
     }
   };

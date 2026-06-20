@@ -6,8 +6,6 @@ import {
   Stack,
   Avatar,
   Group,
-  Button,
-  CopyButton,
   Collapse,
   UnstyledButton,
 } from "@mantine/core";
@@ -27,9 +25,6 @@ import { useHaptic } from "use-haptic";
 import { useFriends, Friend } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
 import { WinkMark } from "./components/WinkMark";
-
-const shortlinkurl =
-  import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
 interface NavigationProps {
   onLinkClick?: () => void;
@@ -55,21 +50,19 @@ const friendNavLinkStyles = {
   root: { borderRadius: 10, transition: "background 120ms ease" },
 };
 
-export function Navigation({
-  onLinkClick,
-  isLoggedIn,
-  handle,
-  did,
-}: NavigationProps) {
+export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: friendsData, isLoading: friendsLoading } = useFriends(
-    isLoggedIn ? (did ?? null) : null,
+    isLoggedIn ? (did ?? null) : null
   );
   const { data: userStats } = useUserStats();
 
   const { triggerHaptic } = useHaptic(1);
-  const handleClick = () => { triggerHaptic(); onLinkClick?.(); };
+  const handleClick = () => {
+    triggerHaptic();
+    onLinkClick?.();
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -185,18 +178,9 @@ export function Navigation({
               gap: 8,
             }}
           >
-            <IconUser
-              size={13}
-              stroke={1.5}
-              style={{ opacity: 0.5, flexShrink: 0 }}
-            />
+            <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
             <Box style={{ minWidth: 0 }}>
-              <Text
-                fz={9}
-                tt="uppercase"
-                c="dimmed"
-                style={{ letterSpacing: "0.08em" }}
-              >
+              <Text fz={9} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.08em" }}>
                 Viewing profile
               </Text>
               <Text fz={12} fw={600} truncate>
@@ -345,7 +329,12 @@ function FriendSection({
                 key={friend.did}
                 label={
                   <Group gap={10} wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                    <Avatar size={28} radius="xl" src={friend.avatar || undefined} style={{ flexShrink: 0 }}>
+                    <Avatar
+                      size={28}
+                      radius="xl"
+                      src={friend.avatar || undefined}
+                      style={{ flexShrink: 0 }}
+                    >
                       <WinkMark size={22} sparkle={false} aria-hidden />
                     </Avatar>
                     <Box style={{ flex: 1, minWidth: 0 }}>

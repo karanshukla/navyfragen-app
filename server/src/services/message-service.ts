@@ -1,7 +1,8 @@
 /* v8 ignore start */
-import { type Database } from "../database/db";
-import { Logger } from "pino";
 import { RichText, Agent } from "@atproto/api";
+import { Logger } from "pino";
+
+import { type Database } from "../database/db";
 import { ids } from "../lexicon/lexicons";
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message";
 import { imageGenerator } from "../lib/image-generator";
@@ -103,10 +104,7 @@ export class MessageService {
    * @param message The message content
    * @returns Success status
    */
-  async sendMessage(
-    recipient: string,
-    message: string
-  ): Promise<{ success: boolean }> {
+  async sendMessage(recipient: string, message: string): Promise<{ success: boolean }> {
     try {
       // Check if recipient exists in user_profile table
       const userProfileExists = await this.db
@@ -137,9 +135,7 @@ export class MessageService {
       return { success: true };
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to send message");
-      throw new Error(
-        err instanceof Error ? err.message : "Failed to send message"
-      );
+      throw new Error(err instanceof Error ? err.message : "Failed to send message");
     }
   }
 
@@ -187,9 +183,7 @@ export class MessageService {
       return { success: true };
     } catch (err) {
       this.logger.error({ err, tid, userDid }, "Failed to delete message");
-      throw new Error(
-        err instanceof Error ? err.message : "Failed to delete message"
-      );
+      throw new Error(err instanceof Error ? err.message : "Failed to delete message");
     }
   }
 
@@ -223,12 +217,7 @@ export class MessageService {
         const imageTheme = userSettings?.imageTheme ?? "default";
 
         const { imageBlob, imageAltText, width, height } =
-          await imageGenerator.generateQuestionImage(
-            original,
-            this.logger,
-            handle,
-            imageTheme
-          );
+          await imageGenerator.generateQuestionImage(original, this.logger, handle, imageTheme);
 
         if (!imageBlob) {
           throw new Error(
@@ -262,9 +251,7 @@ export class MessageService {
       this.logger.info({ tid, did, uri: postRes.uri }, "Response posted to Bluesky");
       let webUrl = null;
       let profileName = null;
-      const match = postRes.uri.match(
-        /^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/
-      );
+      const match = postRes.uri.match(/^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/);
 
       if (match) {
         const did = match[1];
@@ -289,18 +276,12 @@ export class MessageService {
         link: webUrl || undefined,
       };
     } catch (err) {
-      this.logger.error(
-        { err, tid, did },
-        "Error while trying to post response to Bluesky"
-      );
+      this.logger.error({ err, tid, did }, "Error while trying to post response to Bluesky");
       throw new Error(err instanceof Error ? err.message : "Failed to post to Bluesky");
     }
   }
 
-  async deleteUserData(
-    userDid: string,
-    agent: Agent
-  ): Promise<{ success: boolean }> {
+  async deleteUserData(userDid: string, agent: Agent): Promise<{ success: boolean }> {
     try {
       // Delete from PDS
       try {
@@ -312,10 +293,7 @@ export class MessageService {
           .execute();
 
         if (rkeys.length === 0) {
-          this.logger.info(
-            { did: userDid },
-            "No messages found for deletion in PDS"
-          );
+          this.logger.info({ did: userDid }, "No messages found for deletion in PDS");
         }
 
         for (const rkey of rkeys) {
@@ -326,33 +304,16 @@ export class MessageService {
           });
         }
 
-        this.logger.info(
-          { did: userDid },
-          "Successfully deleted all messages from PDS"
-        );
+        this.logger.info({ did: userDid }, "Successfully deleted all messages from PDS");
       } catch (err) {
-        this.logger.error(
-          { error: err, did: userDid },
-          "Failed to delete messages from PDS"
-        );
-        throw new Error(
-          "Failed to delete messages from PDS, but data deleted in the DB"
-        );
+        this.logger.error({ error: err, did: userDid }, "Failed to delete messages from PDS");
+        throw new Error("Failed to delete messages from PDS, but data deleted in the DB");
       }
 
       // Delete all messages, user profile, and user settings for this DID
-      await this.db
-        .deleteFrom("message")
-        .where("recipient", "=", userDid)
-        .execute();
-      await this.db
-        .deleteFrom("user_profile")
-        .where("did", "=", userDid)
-        .execute();
-      await this.db
-        .deleteFrom("user_settings")
-        .where("did", "=", userDid)
-        .execute();
+      await this.db.deleteFrom("message").where("recipient", "=", userDid).execute();
+      await this.db.deleteFrom("user_profile").where("did", "=", userDid).execute();
+      await this.db.deleteFrom("user_settings").where("did", "=", userDid).execute();
 
       return { success: true };
     } catch (err) {
@@ -473,10 +434,7 @@ export class MessageService {
         errors: syncErrors,
       };
     } catch (err: any) {
-      this.logger.error(
-        { did: userDid, error: err },
-        "Error during message sync process"
-      );
+      this.logger.error({ did: userDid, error: err }, "Error during message sync process");
       throw new Error("Failed to sync messages to PDS");
     }
   }

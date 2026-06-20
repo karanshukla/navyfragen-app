@@ -32,7 +32,11 @@ const mockUseSendMessage = vi.mocked(messageService.useSendMessage);
 const TEST_DID = "did:example:karan";
 
 function setupProfile() {
-  mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
+  mockUseResolveHandle.mockReturnValue({
+    data: { did: TEST_DID },
+    isLoading: false,
+    error: null,
+  } as any);
   mockUsePublicProfile.mockReturnValue({
     data: {
       exists: true,
@@ -46,7 +50,10 @@ function setupProfile() {
     isLoading: false,
     error: null,
   } as any);
-  mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+  mockUseSendMessage.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  } as any);
 }
 
 describe("PublicProfile page", () => {
@@ -59,9 +66,20 @@ describe("PublicProfile page", () => {
   });
 
   it("shows loading indicator while handle is resolving", () => {
-    mockUseResolveHandle.mockReturnValue({ data: undefined, isLoading: true, error: null } as any);
-    mockUsePublicProfile.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
-    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    mockUseResolveHandle.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
     expect(screen.queryByRole("textbox")).toBeNull();
   });
@@ -72,8 +90,15 @@ describe("PublicProfile page", () => {
       isLoading: false,
       error: { status: 404 },
     } as any);
-    mockUsePublicProfile.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
-    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
     expect(screen.getByText(/no bluesky account found/i)).toBeInTheDocument();
     expect(screen.getByText(/karan\.bsky\.social/i)).toBeInTheDocument();
@@ -135,11 +160,18 @@ describe("PublicProfile page", () => {
   it("shows a toast notification on successful message send", async () => {
     let capturedCallbacks: any;
     setupProfile();
-    const mockMutate = vi.fn((_data: any, callbacks: any) => { capturedCallbacks = callbacks; });
-    mockUseSendMessage.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseSendMessage.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello there!" } });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Hello there!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
     await waitFor(() => screen.getByText(/are you sure/i));
 
@@ -147,7 +179,9 @@ describe("PublicProfile page", () => {
     fireEvent.click(screen.getByRole("button", { name: /send message/i }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onSuccess(); });
+    act(() => {
+      capturedCallbacks.onSuccess();
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/message sent/i)).toBeInTheDocument();
@@ -157,18 +191,27 @@ describe("PublicProfile page", () => {
   it("shows a toast notification when message send fails", async () => {
     let capturedCallbacks: any;
     setupProfile();
-    const mockMutate = vi.fn((_data: any, callbacks: any) => { capturedCallbacks = callbacks; });
-    mockUseSendMessage.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseSendMessage.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
 
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello there!" } });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Hello there!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
     await waitFor(() => screen.getByText(/are you sure/i));
 
     fireEvent.click(screen.getByRole("button", { name: /send message/i }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
-    act(() => { capturedCallbacks.onError({ error: "Rate limited" }); });
+    act(() => {
+      capturedCallbacks.onError({ error: "Rate limited" });
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/failed to send/i)).toBeInTheDocument();
@@ -177,13 +220,20 @@ describe("PublicProfile page", () => {
   });
 
   it("shows 'Not on Navyfragen' when user exists on Bluesky but has no inbox", () => {
-    mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
     mockUsePublicProfile.mockReturnValue({
       data: { exists: false, profile: null },
       isLoading: false,
       error: null,
     } as any);
-    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
     expect(screen.getByText(/not on navyfragen/i)).toBeInTheDocument();
   });
@@ -194,20 +244,34 @@ describe("PublicProfile page", () => {
       isLoading: false,
       error: { status: 500, error: "Internal server error" },
     } as any);
-    mockUsePublicProfile.mockReturnValue({ data: undefined, isLoading: false, error: null } as any);
-    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
     expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
   });
 
   it("shows profile error fallback when profile exists but data is null", () => {
-    mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
     mockUsePublicProfile.mockReturnValue({
       data: { exists: true, profile: null },
       isLoading: false,
       error: null,
     } as any);
-    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
     expect(screen.getByText(/failed to load profile information/i)).toBeInTheDocument();
   });
@@ -217,7 +281,12 @@ describe("PublicProfile page", () => {
     renderWithProviders(<PublicProfile />);
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Hello!" } });
-    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false, altKey: false, metaKey: false });
+    fireEvent.keyDown(textarea, {
+      key: "Enter",
+      shiftKey: false,
+      altKey: false,
+      metaKey: false,
+    });
     await waitFor(() => {
       expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
     });
@@ -246,9 +315,7 @@ describe("PublicProfile page", () => {
   });
 
   it("calls scrollIntoView with block:nearest when ask card is below the viewport", async () => {
-    const scrollSpy = vi
-      .spyOn(Element.prototype, "scrollIntoView")
-      .mockImplementation(() => {});
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
       bottom: 9999,
       top: 0,
@@ -265,22 +332,41 @@ describe("PublicProfile page", () => {
     renderWithProviders(<PublicProfile />);
 
     await waitFor(() => {
-      expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+      expect(scrollSpy).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "nearest",
+      });
     });
   });
 
   it("shows error toast when handleConfirmSend is called without a profile DID", async () => {
-    mockUseResolveHandle.mockReturnValue({ data: { did: TEST_DID }, isLoading: false, error: null } as any);
-    mockUsePublicProfile.mockReturnValue({
-      data: { exists: true, profile: { did: null, handle: "karan.bsky.social", displayName: "Karan" } },
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
       isLoading: false,
       error: null,
     } as any);
-    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: {
+        exists: true,
+        profile: {
+          did: null,
+          handle: "karan.bsky.social",
+          displayName: "Karan",
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
     renderWithProviders(<PublicProfile />);
 
     // Open the modal first via handleSend with valid message
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello!" } });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Hello!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
     await waitFor(() => screen.getByText(/are you sure/i));
 
@@ -323,7 +409,9 @@ describe("PublicProfile page", () => {
   it("closing the confirmation modal via Cancel button resets modal state", async () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello!" } });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Hello!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
     await waitFor(() => screen.getByText(/are you sure/i));
     // Click Cancel (calls onClose → setModalOpened(false))
@@ -348,11 +436,16 @@ describe("PublicProfile page", () => {
     });
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    const shareBtn = screen.getByRole("button", { name: /share profile link/i });
+    const shareBtn = screen.getByRole("button", {
+      name: /share profile link/i,
+    });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     // Restore
-    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
   });
 
   it("navigator.share abort error is silently swallowed", async () => {
@@ -364,12 +457,17 @@ describe("PublicProfile page", () => {
     });
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    const shareBtn = screen.getByRole("button", { name: /share profile link/i });
+    const shareBtn = screen.getByRole("button", {
+      name: /share profile link/i,
+    });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     // No error toast for AbortError
     expect(screen.queryByText(/share failed/i)).toBeNull();
-    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
   });
 
   it("navigator.share non-abort error shows a toast notification", async () => {
@@ -381,12 +479,17 @@ describe("PublicProfile page", () => {
     });
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    const shareBtn = screen.getByRole("button", { name: /share profile link/i });
+    const shareBtn = screen.getByRole("button", {
+      name: /share profile link/i,
+    });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     await waitFor(() => {
       expect(screen.getByText(/share failed/i)).toBeInTheDocument();
     });
-    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
   });
 });

@@ -1,6 +1,5 @@
 import {
   Box,
-  Center,
   Loader,
   Stack,
   Text,
@@ -11,8 +10,8 @@ import {
 } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { apiClient } from "../api/apiClient";
 import { authKeys } from "../api/authService";
@@ -23,18 +22,15 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const token = new URLSearchParams(location.search).get("oauth_token");
+  const [error, setError] = useState<string | null>(
+    !token ? "Missing OAuth token in callback URL." : null
+  );
+  const [loading, setLoading] = useState(!!token);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const token = params.get("oauth_token");
-    if (!token) {
-      setError("Missing OAuth token in callback URL.");
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
     apiClient
       .post<{ success: boolean }, { oauth_token: string }>("/oauth/consume", {
         oauth_token: token,
@@ -47,7 +43,7 @@ export default function OAuthCallback() {
         setError(err.error || err.message || "Failed to complete OAuth login.");
         setLoading(false);
       });
-  }, [location, navigate, queryClient]);
+  }, [token, navigate, queryClient]);
 
   return (
     <Box maw={480} mx="auto" mt="xl">
@@ -73,7 +69,14 @@ export default function OAuthCallback() {
         />
 
         <Stack gap="md" align="center" style={{ position: "relative" }}>
-          <WinkMark size={60} sparkle={loading} style={{ borderRadius: 16, boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)" }} />
+          <WinkMark
+            size={60}
+            sparkle={loading}
+            style={{
+              borderRadius: 16,
+              boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)",
+            }}
+          />
 
           {loading ? (
             <>

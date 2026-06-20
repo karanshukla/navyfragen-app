@@ -1,5 +1,6 @@
 /* v8 ignore start */
 import { Agent } from "@atproto/api";
+
 import type { AppContext } from "../index";
 
 /**
@@ -23,10 +24,7 @@ export async function initializeAgentFromSession(
 
     return new Agent(oauthSession);
   } catch (err) {
-    ctx.logger.warn(
-      { err, did: req.session.did },
-      "Failed to initialize agent from session"
-    );
+    ctx.logger.warn({ err, did: req.session.did }, "Failed to initialize agent from session");
     return null;
   }
 }

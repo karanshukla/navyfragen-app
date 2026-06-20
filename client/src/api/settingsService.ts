@@ -37,13 +37,8 @@ export const settingsService = {
   },
 
   // Update user settings
-  updateUserSettings: async (
-    settings: Partial<UserSettings>
-  ): Promise<UserSettings> => {
-    return apiClient.post<UserSettings, Partial<UserSettings>>(
-      "/settings",
-      settings
-    );
+  updateUserSettings: async (settings: Partial<UserSettings>): Promise<UserSettings> => {
+    return apiClient.post<UserSettings, Partial<UserSettings>>("/settings", settings);
   },
 
   // Get account stats (message count, member since)
@@ -64,11 +59,7 @@ export function useUserSettings() {
     queryFn: () => settingsService.getUserSettings(),
     retry: (failureCount, error) => {
       // Don't retry on 404 (not found) or 401/403 (authentication) errors
-      if (
-        error.status === 404 ||
-        error.status === 401 ||
-        error.status === 403
-      ) {
+      if (error.status === 404 || error.status === 401 || error.status === 403) {
         return false;
       }
       // Otherwise retry up to 3 times
@@ -109,8 +100,7 @@ export function useUpdateUserSettings(options?: {
   onError?: (error: ApiError) => void;
 }) {
   return useMutation({
-    mutationFn: (settings: Partial<UserSettings>) =>
-      settingsService.updateUserSettings(settings),
+    mutationFn: (settings: Partial<UserSettings>) => settingsService.updateUserSettings(settings),
     onSuccess: () => {
       // Invalidate the settings query to refetch updated settings
       queryClient.invalidateQueries({ queryKey: settingsKeys.all });

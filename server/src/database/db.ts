@@ -8,6 +8,7 @@ import {
   PostgresDialect,
 } from "kysely";
 import { Pool } from "pg";
+
 import { env } from "#/lib/env";
 
 // Types
@@ -70,11 +71,11 @@ export type Sessions = {
 
 // Web push subscription row — one row per browser/device per user
 export type PushSubscription = {
-  id: number;       // auto-increment surrogate key (serial in Postgres, integer in SQLite)
-  did: string;      // owner DID
+  id: number; // auto-increment surrogate key (serial in Postgres, integer in SQLite)
+  did: string; // owner DID
   endpoint: string; // push service endpoint URL (unique per subscription)
-  p256dh: string;   // client public key
-  auth: string;     // client auth secret
+  p256dh: string; // client public key
+  auth: string; // client auth secret
   createdAt: string;
 };
 
@@ -176,9 +177,7 @@ migrations["005"] = {
     await db.schema
       .createTable("user_settings")
       .addColumn("did", "varchar", (col) => col.primaryKey())
-      .addColumn("pdsSyncEnabled", "boolean", (col) =>
-        col.notNull().defaultTo(true)
-      )
+      .addColumn("pdsSyncEnabled", "boolean", (col) => col.notNull().defaultTo(true))
       .addColumn("createdAt", "varchar", (col) => col.notNull())
       .execute();
 
@@ -186,9 +185,7 @@ migrations["005"] = {
       .insertInto("user_settings")
       .columns(["did", "createdAt"])
       .expression((eb) =>
-        eb
-          .selectFrom("user_profile")
-          .select(["user_profile.did", "user_profile.createdAt"])
+        eb.selectFrom("user_profile").select(["user_profile.did", "user_profile.createdAt"])
       )
       .execute();
   },
@@ -201,9 +198,7 @@ migrations["006"] = {
   async up(db: Kysely<any>) {
     await db.schema
       .alterTable("user_settings")
-      .addColumn("imageTheme", "varchar", (col) =>
-        col.notNull().defaultTo("default")
-      )
+      .addColumn("imageTheme", "varchar", (col) => col.notNull().defaultTo("default"))
       .execute();
   },
   async down(db: Kysely<any>) {

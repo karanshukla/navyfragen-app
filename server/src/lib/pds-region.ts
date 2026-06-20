@@ -8,6 +8,8 @@ export function pdsRegion(pdsUrl: string): "us" | "eu" {
     if (host === "bsky.social" || host === "bsky.network" || host.endsWith(".bsky.network")) {
       return "us";
     }
-  } catch {}
+  } catch {
+    /* invalid URL — default to eu */
+  }
   return "eu";
 }

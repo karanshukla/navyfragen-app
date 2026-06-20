@@ -1,13 +1,11 @@
 import express from "express";
-import type { AppContext } from "../index";
+
 import { ProfileController } from "../controllers/profile-controller";
 import { ProfileService } from "../services/profile-service";
 
-export function profileRoutes(
-  ctx: AppContext,
-  handler: any,
-  checkValidation: any
-) {
+import type { AppContext } from "../index";
+
+export function profileRoutes(ctx: AppContext, handler: any, checkValidation: any) {
   // Initialize service and controller
   const profileService = new ProfileService(ctx.db, ctx.resolver, ctx.logger);
   const profileController = new ProfileController(profileService, ctx.logger, ctx);

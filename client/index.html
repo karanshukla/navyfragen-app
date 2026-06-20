@@ -1,60 +1,69 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
-  <link rel="icon" type="image/x-icon" href="/navyfragen.ico?v=2" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
-    rel="stylesheet">
-  <meta property="og:title" content="Navyfragen App" />
-  <meta property="og:description" content="Navyfragen - Anonymous questions and answers on Bluesky" />
-  <meta property="og:url" content="https://navyfragen.app" />
-  <meta property="og:image" content="https://navyfragen.app/navyfragen-og.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual" />
-  <!-- Chrome address bar matches light/dark scheme -->
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FDF8FF" />
-  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0B0A24" />
-  <title>Navyfragen - Anonymous Messages</title>
-  <link rel="manifest" href="/site.webmanifest">
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Navyfragen",
-      "description": "Anonymous questions and answers on Bluesky",
-      "url": "https://navyfragen.app",
-      "applicationCategory": "SocialNetworking",
-      "offers": {
-        "@type": "Offer",
-        "price": "0"
-      },
-      "operatingSystem": "All",
-      "author": {
-        "@type": "Person",
-        "name": "Navyfragen Developer"
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <link rel="icon" type="image/x-icon" href="/navyfragen.ico?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <meta property="og:title" content="Navyfragen App" />
+    <meta
+      property="og:description"
+      content="Navyfragen - Anonymous questions and answers on Bluesky"
+    />
+    <meta property="og:url" content="https://navyfragen.app" />
+    <meta property="og:image" content="https://navyfragen.app/navyfragen-og.png" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual"
+    />
+    <!-- Chrome address bar matches light/dark scheme -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FDF8FF" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0A24" />
+    <title>Navyfragen - Anonymous Messages</title>
+    <link rel="manifest" href="/site.webmanifest" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Navyfragen",
+        "description": "Anonymous questions and answers on Bluesky",
+        "url": "https://navyfragen.app",
+        "applicationCategory": "SocialNetworking",
+        "offers": {
+          "@type": "Offer",
+          "price": "0"
+        },
+        "operatingSystem": "All",
+        "author": {
+          "@type": "Person",
+          "name": "Navyfragen Developer"
+        }
       }
-    }
-  </script>
-</head>
+    </script>
+  </head>
 
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(registration => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }, err => {
-          console.log('ServiceWorker registration failed: ', err);
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").then(
+            (registration) => {
+              console.log("ServiceWorker registration successful with scope: ", registration.scope);
+            },
+            (err) => {
+              console.log("ServiceWorker registration failed: ", err);
+            }
+          );
         });
-      });
-    }
-  </script>
-</body>
-
+      }
+    </script>
+  </body>
 </html>

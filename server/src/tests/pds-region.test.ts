@@ -1,5 +1,6 @@
-import { test, describe } from "node:test";
 import assert from "node:assert";
+import { test, describe } from "node:test";
+
 import { pdsRegion } from "../lib/pds-region";
 
 describe("pdsRegion", () => {

@@ -1,5 +1,6 @@
-import { test, describe, mock, before, afterEach } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock, before, afterEach } from "node:test";
+
 import { AuthController } from "../controllers/auth-controller";
 
 describe("AuthController", () => {
@@ -99,7 +100,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        getOAuthRedirectUrl: mock.fn(async () => { throw new Error("network"); }),
+        getOAuthRedirectUrl: mock.fn(async () => {
+          throw new Error("network");
+        }),
       });
       const res = makeRes();
 
@@ -112,7 +115,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        getOAuthRedirectUrl: mock.fn(async () => { throw new Error(""); }),
+        getOAuthRedirectUrl: mock.fn(async () => {
+          throw new Error("");
+        }),
       });
       const res = makeRes();
 
@@ -150,7 +155,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        revokeSession: mock.fn(async () => { throw new Error("revoke failed"); }),
+        revokeSession: mock.fn(async () => {
+          throw new Error("revoke failed");
+        }),
       });
       const res = makeRes();
 
@@ -211,7 +218,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        checkSession: mock.fn(async () => { throw new Error("session error"); }),
+        checkSession: mock.fn(async () => {
+          throw new Error("session error");
+        }),
       });
       const res = makeRes();
 
@@ -256,7 +265,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        createOrConfirmUserProfile: mock.fn(async () => { throw new Error("db error"); }),
+        createOrConfirmUserProfile: mock.fn(async () => {
+          throw new Error("db error");
+        }),
       });
       const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
       const res = makeRes();
@@ -271,7 +282,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        encryptDid: mock.fn(() => { throw new Error("no secret"); }),
+        encryptDid: mock.fn(() => {
+          throw new Error("no secret");
+        }),
       });
       const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
       const res = makeRes();
@@ -286,7 +299,9 @@ describe("AuthController", () => {
       const ctx = makeCtx({
         oauthClient: {
           clientMetadata: { client_id: "test-client" },
-          callback: mock.fn(async () => { throw new Error("oauth error"); }),
+          callback: mock.fn(async () => {
+            throw new Error("oauth error");
+          }),
         },
       });
       const controller = new AuthController(ctx);
@@ -303,7 +318,9 @@ describe("AuthController", () => {
       const ctx = makeCtx({
         oauthClient: {
           clientMetadata: { client_id: "test-client" },
-          callback: mock.fn(async () => { throw "oauth string error"; }),
+          callback: mock.fn(async () => {
+            throw "oauth string error";
+          }),
         },
       });
       const controller = new AuthController(ctx);
@@ -322,7 +339,9 @@ describe("AuthController", () => {
       const ctx = makeCtx({
         oauthClient: {
           clientMetadata: { client_id: "test-client" },
-          callback: mock.fn(async () => { throw errWithNoStack; }),
+          callback: mock.fn(async () => {
+            throw errWithNoStack;
+          }),
         },
       });
       const controller = new AuthController(ctx);
@@ -348,7 +367,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        decryptDid: mock.fn(() => { throw new Error("bad secret"); }),
+        decryptDid: mock.fn(() => {
+          throw new Error("bad secret");
+        }),
       });
       const res = makeRes();
 
@@ -408,7 +429,9 @@ describe("AuthController", () => {
       const ctx = makeCtx({
         idResolver: {
           did: {
-            resolveAtprotoData: mock.fn(async () => { throw new Error("dns failure"); }),
+            resolveAtprotoData: mock.fn(async () => {
+              throw new Error("dns failure");
+            }),
           },
         },
       });
@@ -427,7 +450,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService({
-        findUserByDid: mock.fn(async () => { throw new Error("db error"); }),
+        findUserByDid: mock.fn(async () => {
+          throw new Error("db error");
+        }),
       });
       const res = makeRes();
 

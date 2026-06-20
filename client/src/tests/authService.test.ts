@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { apiClient } from "../api/apiClient";
 import {
@@ -18,8 +18,9 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+  return Wrapper;
 }
 
 vi.mock("../api/apiClient", () => ({
@@ -96,9 +97,7 @@ describe("authService", () => {
       const mockError = { error: "Invalid handle", status: 400 };
       vi.mocked(apiClient.post).mockRejectedValueOnce(mockError);
 
-      await expect(authService.login(mockLoginRequest)).rejects.toEqual(
-        mockError,
-      );
+      await expect(authService.login(mockLoginRequest)).rejects.toEqual(mockError);
     });
   });
   describe("logout", () => {
@@ -120,7 +119,9 @@ describe("auth hooks", () => {
       profile: { did: "did:example:123", handle: "user.example.com" },
       did: "did:example:123",
     });
-    const { result } = renderHook(() => useSession(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useSession(), {
+      wrapper: makeWrapper(),
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.isLoggedIn).toBe(true);
   });
@@ -131,12 +132,16 @@ describe("auth hooks", () => {
   });
 
   it("useLogin executes the mutationFn with the provided data", async () => {
-    vi.mocked(apiClient.post).mockResolvedValueOnce({ redirectUrl: "https://example.com/auth" });
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      redirectUrl: "https://example.com/auth",
+    });
     const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
     await act(async () => {
       await result.current.mutateAsync({ handle: "user.example.com" });
     });
-    expect(apiClient.post).toHaveBeenCalledWith("/login", { handle: "user.example.com" });
+    expect(apiClient.post).toHaveBeenCalledWith("/login", {
+      handle: "user.example.com",
+    });
   });
 
   it("useLogout returns a mutation object", () => {

@@ -1,6 +1,8 @@
-import { test, describe, mock } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock } from "node:test";
+
 import { Agent } from "@atproto/api";
+
 import { initializeAgentFromSession } from "../auth/session-agent";
 
 describe("initializeAgentFromSession", () => {
@@ -26,7 +28,11 @@ describe("initializeAgentFromSession", () => {
   test("returns null and logs warn when restore throws", async () => {
     const warnMock = mock.fn();
     const ctx: any = {
-      oauthClient: { restore: mock.fn(async () => { throw new Error("restore failed"); }) },
+      oauthClient: {
+        restore: mock.fn(async () => {
+          throw new Error("restore failed");
+        }),
+      },
       logger: { warn: warnMock },
     };
     const result = await initializeAgentFromSession({ session: { did: "did:foo" } } as any, ctx);

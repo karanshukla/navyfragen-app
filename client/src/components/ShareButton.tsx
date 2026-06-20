@@ -62,7 +62,13 @@ const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
       radius="xl"
       variant="transparent"
       leftSection={<IconShare size={14} />}
-      style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", "--button-color": "var(--mantine-white)" } as React.CSSProperties}
+      style={
+        {
+          background: "rgba(255,255,255,0.15)",
+          border: "1px solid rgba(255,255,255,0.2)",
+          "--button-color": "var(--mantine-white)",
+        } as React.CSSProperties
+      }
     >
       Share
     </Button>

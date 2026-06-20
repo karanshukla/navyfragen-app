@@ -84,7 +84,10 @@ export class ProfileService {
     type FriendEntry = { did: string; handle: string; displayName?: string; avatar?: string };
 
     async function fetchPages(
-      fetcher: (cursor: string | undefined) => Promise<{ success: boolean; data: { follows?: FriendEntry[]; followers?: FriendEntry[]; cursor?: string } }>
+      fetcher: (cursor: string | undefined) => Promise<{
+        success: boolean;
+        data: { follows?: FriendEntry[]; followers?: FriendEntry[]; cursor?: string };
+      }>
     ): Promise<Map<string, FriendEntry>> {
       const map = new Map<string, FriendEntry>();
       let cursor: string | undefined;
@@ -93,7 +96,12 @@ export class ProfileService {
         if (!res.success) break;
         const items = res.data.follows ?? res.data.followers ?? [];
         for (const f of items) {
-          map.set(f.did, { did: f.did, handle: f.handle, displayName: f.displayName, avatar: f.avatar });
+          map.set(f.did, {
+            did: f.did,
+            handle: f.handle,
+            displayName: f.displayName,
+            avatar: f.avatar,
+          });
         }
         cursor = res.data.cursor;
         if (!cursor) break;
@@ -102,8 +110,12 @@ export class ProfileService {
     }
 
     const [followingMap, followersMap] = await Promise.all([
-      fetchPages((cursor) => agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor })),
-      fetchPages((cursor) => this.agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })),
+      fetchPages((cursor) =>
+        agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor })
+      ),
+      fetchPages((cursor) =>
+        this.agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })
+      ),
     ]);
 
     const allDids = new Set([...followingMap.keys(), ...followersMap.keys()]);

@@ -13,5 +13,4 @@ export const surfaceBg = (isDark: boolean): string =>
  * Used for the URL breadcrumb pill, share/copy icon buttons,
  * and the profile card content area below the banner.
  */
-export const ghostBg = (isDark: boolean): string =>
-  isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF";
+export const ghostBg = (isDark: boolean): string => (isDark ? "rgba(255,255,255,0.03)" : "#FAF7FF");

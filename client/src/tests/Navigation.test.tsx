@@ -1,7 +1,7 @@
 import { screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useLocation } from "react-router-dom";
 import React from "react";
+import { useLocation } from "react-router-dom";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as profileService from "../api/profileService";
 import * as settingsService from "../api/settingsService";
@@ -20,8 +20,7 @@ vi.mock("../api/profileService", async (importOriginal) => {
 });
 
 vi.mock("../api/settingsService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../api/settingsService")>();
+  const actual = await importOriginal<typeof import("../api/settingsService")>();
   return { ...actual, useUserStats: vi.fn() };
 });
 
@@ -195,7 +194,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={true} />
           <LocationDisplay />
         </>,
-        { route: "/messages" },
+        { route: "/messages" }
       );
       fireEvent.keyDown(document, { key: "H", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/");
@@ -207,7 +206,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={true} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/messages");
@@ -219,7 +218,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={true} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "S", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/settings");
@@ -231,7 +230,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={false} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "L", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/login");
@@ -243,7 +242,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={false} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/");
@@ -256,7 +255,7 @@ describe("Navigation", () => {
           <LocationDisplay />
           <input data-testid="inp" />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       const inp = screen.getByTestId("inp");
       fireEvent.keyDown(inp, { key: "H", altKey: true });
@@ -265,10 +264,9 @@ describe("Navigation", () => {
 
     it("calls onLinkClick when a keyboard shortcut fires", () => {
       const onLinkClick = vi.fn();
-      renderWithProviders(
-        <Navigation isLoggedIn={true} onLinkClick={onLinkClick} />,
-        { route: "/" },
-      );
+      renderWithProviders(<Navigation isLoggedIn={true} onLinkClick={onLinkClick} />, {
+        route: "/",
+      });
       fireEvent.keyDown(document, { key: "M", altKey: true });
       expect(onLinkClick).toHaveBeenCalled();
     });
@@ -279,7 +277,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={true} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "M", altKey: false });
       // No navigation should happen
@@ -292,7 +290,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={false} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "S", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/");
@@ -304,7 +302,7 @@ describe("Navigation", () => {
           <Navigation isLoggedIn={true} />
           <LocationDisplay />
         </>,
-        { route: "/" },
+        { route: "/" }
       );
       fireEvent.keyDown(document, { key: "L", altKey: true });
       expect(screen.getByTestId("location")).toHaveTextContent("/");
@@ -380,9 +378,7 @@ describe("Navigation", () => {
     it("falls back to open=true when localStorage contains invalid JSON", () => {
       localStorage.setItem(SECTION_KEY, "{{invalid}}");
       // Should not throw, getSectionOpen returns true from catch
-      expect(() =>
-        renderWithProviders(<Navigation isLoggedIn={true} />),
-      ).not.toThrow();
+      expect(() => renderWithProviders(<Navigation isLoggedIn={true} />)).not.toThrow();
       expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
     });
 

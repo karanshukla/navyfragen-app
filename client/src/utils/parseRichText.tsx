@@ -27,9 +27,8 @@ const toShortUrl = (href: string): string => {
   const url = safeUrlParse(href);
   if (url !== null) {
     const host =
-      (url.username
-        ? url.username + (url.password ? ":" + url.password : "") + "@"
-        : "") + url.host.replace(TRIM_HOST_RE, "");
+      (url.username ? url.username + (url.password ? ":" + url.password : "") + "@" : "") +
+      url.host.replace(TRIM_HOST_RE, "");
     const path =
       (url.pathname === "/" ? "" : url.pathname) +
       (url.search.length > 1 ? url.search : "") +
@@ -102,8 +101,7 @@ export const parseRichText = (text: string): React.ReactNode => {
 
     if (segment.type === "text") {
       // Regex to match domains/short links
-      const domainRegex =
-        /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
+      const domainRegex = /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
       let lastIndex = 0;
       let match;
       const text = segment.text;

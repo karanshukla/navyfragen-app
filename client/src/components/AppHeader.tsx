@@ -15,8 +15,8 @@ import {
 import { IconLogout, IconMoon, IconSun, IconUser } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
-
 import { useHaptic } from "use-haptic";
+
 import { useSession, useLogout } from "../api/authService";
 import { surfaceBg } from "../styles/tokens";
 
@@ -30,12 +30,7 @@ interface AppHeaderProps {
   onNavClose: () => void;
 }
 
-export function AppHeader({
-  opened,
-  onBurgerToggle,
-  burgerRef,
-  onNavClose,
-}: AppHeaderProps) {
+export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: AppHeaderProps) {
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
@@ -53,7 +48,10 @@ export function AppHeader({
       <Burger
         ref={burgerRef}
         opened={opened}
-        onClick={() => { triggerHaptic(); onBurgerToggle(); }}
+        onClick={() => {
+          triggerHaptic();
+          onBurgerToggle();
+        }}
         hiddenFrom="sm"
         size="sm"
       />
@@ -71,7 +69,10 @@ export function AppHeader({
 
       <Flex gap="sm" justify="flex-end" align="center" style={{ flexGrow: 1 }}>
         <ActionIcon
-          onClick={() => { triggerHaptic(); toggleColorScheme(); }}
+          onClick={() => {
+            triggerHaptic();
+            toggleColorScheme();
+          }}
           aria-label="Toggle color scheme"
           size={36}
           radius="xl"
@@ -95,7 +96,7 @@ export function AppHeader({
                 document.body.style.pointerEvents = "none";
                 document.body.style.opacity = "0.5";
                 logout();
-              /* v8 ignore next 4 */
+                /* v8 ignore next 4 */
               } catch {
                 document.body.style.pointerEvents = "";
                 document.body.style.opacity = "";
@@ -111,7 +112,10 @@ export function AppHeader({
             variant="gradient"
             gradient={{ from: "royal", to: "purple", deg: 135 }}
             size="xs"
-            onClick={() => { triggerHaptic(); onNavClose(); }}
+            onClick={() => {
+              triggerHaptic();
+              onNavClose();
+            }}
           >
             Login
           </Button>
@@ -132,12 +136,7 @@ interface UserMenuProps {
   onNavigate: () => void;
 }
 
-function UserMenu({
-  userProfile,
-  isDark,
-  onLogout,
-  onNavigate,
-}: UserMenuProps) {
+function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) {
   const { triggerHaptic } = useHaptic(1);
   return (
     <Menu
@@ -183,13 +182,19 @@ function UserMenu({
         <Menu.Item
           component={Link}
           to={`/profile/${userProfile.handle}`}
-          onClick={() => { triggerHaptic(); onNavigate(); }}
+          onClick={() => {
+            triggerHaptic();
+            onNavigate();
+          }}
           leftSection={<IconUser size="1.2rem" stroke={1.5} />}
         >
           View Profile
         </Menu.Item>
         <Menu.Item
-          onClick={() => { triggerHaptic(); onLogout(); }}
+          onClick={() => {
+            triggerHaptic();
+            onLogout();
+          }}
           leftSection={<IconLogout size="1.2rem" stroke={1.5} />}
         >
           Logout

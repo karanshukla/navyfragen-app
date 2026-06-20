@@ -1,28 +1,32 @@
 import dns from "node:dns";
 import events from "node:events";
+
+import cookieSession from "cookie-session";
+import cors from "cors";
+import express, { type Express } from "express";
+import { rateLimit } from "express-rate-limit";
+import pino from "pino";
+
+import { createDb, migrateToLatest } from "./database/db";
+import {
+  createBidirectionalResolver,
+  createIdResolver,
+  BidirectionalResolver,
+} from "./lib/id-resolver";
+
+import type { Database } from "./database/db";
+import type { IdResolver } from "@atproto/identity";
+import type { OAuthClient } from "@atproto/oauth-client-node";
 import type http from "node:http";
 
 // Node.js on Windows hangs on DNS TXT record lookups via the system resolver.
 // Force the built-in dns module to use public nameservers before any resolver
 // or OAuth client is created.
 dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
-import express, { type Express } from "express";
-import { pino } from "pino";
-import type { OAuthClient } from "@atproto/oauth-client-node";
-import { rateLimit } from "express-rate-limit";
-import cors from "cors";
-import { createDb, migrateToLatest } from "./database/db";
+
+import { createClient } from "#/auth/client";
 import { env } from "#/lib/env";
 import { createRouter } from "#/routes";
-import { createClient } from "#/auth/client";
-import {
-  createBidirectionalResolver,
-  createIdResolver,
-  BidirectionalResolver,
-} from "./lib/id-resolver";
-import type { IdResolver } from "@atproto/identity";
-import type { Database } from "./database/db";
-import cookieSession from "cookie-session";
 
 function createLogger(): pino.Logger {
   const { AXIOM_TOKEN, AXIOM_DATASET } = env;
@@ -59,7 +63,7 @@ export class Server {
   constructor(
     public app: express.Application,
     public server: http.Server,
-    public ctx: AppContext,
+    public ctx: AppContext
   ) {}
 
   static async create() {
@@ -91,7 +95,7 @@ export class Server {
       cors({
         origin: env.CLIENT_URL,
         credentials: true,
-      }),
+      })
     );
 
     // Enable cookie-session
@@ -100,7 +104,7 @@ export class Server {
         name: "navyfragen",
         keys: [env.COOKIE_SECRET],
         maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
-      }),
+      })
     );
 
     app.use(express.json());
@@ -110,7 +114,7 @@ export class Server {
         windowMs: 60 * 1000, // 1 minute
         max: 100,
         message: "Too many requests, please try again later.",
-      }),
+      })
     );
 
     const router = createRouter(ctx);

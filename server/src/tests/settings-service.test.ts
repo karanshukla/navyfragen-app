@@ -1,5 +1,6 @@
-import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
+import { describe, it, beforeEach, mock } from "node:test";
+
 import { SettingsService, UserSettings } from "../services/settings-service";
 
 interface MockDB {
@@ -69,8 +70,7 @@ describe("SettingsService", () => {
     mockDb.updateTable.mock.resetCalls();
 
     executeTakeFirstQueue = [];
-    mockSelectBuilder.executeTakeFirst = async () =>
-      executeTakeFirstQueue.shift();
+    mockSelectBuilder.executeTakeFirst = async () => executeTakeFirstQueue.shift();
     mockInsertBuilder.execute = async () => ({});
     mockUpdateBuilder.execute = async () => ({});
     lastValuesArg = undefined;
@@ -95,9 +95,7 @@ describe("SettingsService", () => {
       // Assert
       assert.deepStrictEqual(result, mockUserSettings);
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
-      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0].arguments, [
-        "user_settings",
-      ]);
+      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0].arguments, ["user_settings"]);
     });
 
     it("should throw an error when the database query fails", async () => {
@@ -108,10 +106,9 @@ describe("SettingsService", () => {
       };
 
       // Act & Assert
-      await assert.rejects(
-        async () => await settingsService.getUserSettings("user123"),
-        { message: "Failed to fetch user settings" }
-      );
+      await assert.rejects(async () => await settingsService.getUserSettings("user123"), {
+        message: "Failed to fetch user settings",
+      });
 
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
@@ -136,9 +133,7 @@ describe("SettingsService", () => {
         `createdAt (${result.createdAt}) should be between ${beforeDate} and ${afterDate}`
       );
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
-      assert.deepStrictEqual(mockDb.insertInto.mock.calls[0].arguments, [
-        "user_settings",
-      ]);
+      assert.deepStrictEqual(mockDb.insertInto.mock.calls[0].arguments, ["user_settings"]);
       assert.strictEqual(lastValuesArg.did, "user123");
       assert.strictEqual(lastValuesArg.pdsSyncEnabled, 1);
     });
@@ -154,10 +149,7 @@ describe("SettingsService", () => {
       await assert.rejects(
         async () => await settingsService.createDefaultSettings("user123"),
         (err: any) => {
-          assert.strictEqual(
-            err.message,
-            "Failed to create default user settings"
-          );
+          assert.strictEqual(err.message, "Failed to create default user settings");
           return true;
         }
       );
@@ -331,7 +323,9 @@ describe("SettingsService", () => {
         com: {
           atproto: {
             repo: {
-              listRecords: mock.fn(async () => { throw new Error("list failed"); }),
+              listRecords: mock.fn(async () => {
+                throw new Error("list failed");
+              }),
             },
           },
         },
@@ -462,10 +456,9 @@ describe("SettingsService", () => {
         throw new Error("Database query failed");
       };
 
-      await assert.rejects(
-        async () => await settingsService.getStats("user123"),
-        { message: "Failed to fetch user stats" }
-      );
+      await assert.rejects(async () => await settingsService.getStats("user123"), {
+        message: "Failed to fetch user stats",
+      });
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
   });

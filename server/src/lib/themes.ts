@@ -43,8 +43,7 @@ export const themes: { [key: string]: Theme } = {
     messagePadding: "15px",
     messageBorderRadius: "6px",
     footerTextColor: "#868E96",
-    fontFamily:
-      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     imageMargin: "15px",
   },
   twitter: {

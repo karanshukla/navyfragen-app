@@ -8,6 +8,16 @@ import prettier from "eslint-config-prettier";
 import globals from "globals";
 
 export default [
+  // Non-TS config/infra files need their own env globals
+  {
+    files: ["postcss.config.cjs"],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    files: ["public/sw.js"],
+    languageOptions: { globals: globals.serviceworker },
+  },
+
   js.configs.recommended,
 
   // TypeScript — flat/recommended covers .ts/.tsx and sets the parser
@@ -27,9 +37,7 @@ export default [
     },
     languageOptions: {
       globals: Object.fromEntries(
-        Object.entries({ ...globals.browser, ...globals.es2021 }).map(
-          ([k, v]) => [k.trim(), v]
-        )
+        Object.entries({ ...globals.browser, ...globals.es2021 }).map(([k, v]) => [k.trim(), v])
       ),
     },
     settings: {
@@ -55,10 +63,7 @@ export default [
           alphabetize: { order: "asc", caseInsensitive: true },
         },
       ],
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_" },
-      ],
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/explicit-module-boundary-types": "off",
     },

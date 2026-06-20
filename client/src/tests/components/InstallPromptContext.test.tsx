@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi } from "vitest";
+
 import { InstallPromptProvider, useInstallPrompt } from "../../components/InstallPromptContext";
 
 function TestConsumer() {
@@ -50,7 +51,11 @@ describe("InstallPromptProvider", () => {
     );
 
     act(() => {
-      window.dispatchEvent(Object.assign(new Event("beforeinstallprompt"), { preventDefault: vi.fn() }));
+      window.dispatchEvent(
+        Object.assign(new Event("beforeinstallprompt"), {
+          preventDefault: vi.fn(),
+        })
+      );
     });
     expect(screen.getByTestId("prompt").textContent).toBe("has-prompt");
 

@@ -21,64 +21,64 @@ body {
 
 /* Brand CSS tokens */
 :root {
-  --nf-midnight:  #1E1B4B;
-  --nf-royal:     #3B5BFF;
-  --nf-purple:    #8B5CF6;
-  --nf-lavender:  #C4B5FD;
-  --nf-paper:     #FDF8FF;
-  --nf-paper-2:   #F2EBFF;
-  --nf-sunshine:  #FACC15;
-  --nf-void:      #0B0A24;
-  --nf-surface-d: #15192B;
-  --nf-text-muted: #5B5680;
-  --nf-border:     #E6DDFF;
-  --nf-grad-hero:  linear-gradient(135deg, #3B5BFF 0%, #6626fc 55%, #491bff 100%);
-  --nf-grad-mark:  linear-gradient(135deg, #3349E0 0%, #5322c5 55%, #4F1FA6 100%);
-  --nf-grad-dark:  linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%);
-  --nf-font-sans: 'Inter', system-ui, sans-serif;
-  --nf-ease:     cubic-bezier(.2,.7,.2,1);
+  --nf-midnight: #1e1b4b;
+  --nf-royal: #3b5bff;
+  --nf-purple: #8b5cf6;
+  --nf-lavender: #c4b5fd;
+  --nf-paper: #fdf8ff;
+  --nf-paper-2: #f2ebff;
+  --nf-sunshine: #facc15;
+  --nf-void: #0b0a24;
+  --nf-surface-d: #15192b;
+  --nf-text-muted: #5b5680;
+  --nf-border: #e6ddff;
+  --nf-grad-hero: linear-gradient(135deg, #3b5bff 0%, #6626fc 55%, #491bff 100%);
+  --nf-grad-mark: linear-gradient(135deg, #3349e0 0%, #5322c5 55%, #4f1fa6 100%);
+  --nf-grad-dark: linear-gradient(135deg, #1e1b4b 0%, #3b2e78 50%, #6b3fd4 100%);
+  --nf-font-sans: "Inter", system-ui, sans-serif;
+  --nf-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --nf-dur-fast: 120ms;
   --nf-dur-base: 200ms;
 
   /* Nav active state — default (dark mode) */
-  --nf-nav-active-bg:     rgba(107, 63, 212, 0.22);
-  --nf-nav-active-color:  #FDF8FF;
+  --nf-nav-active-bg: rgba(107, 63, 212, 0.22);
+  --nf-nav-active-color: #fdf8ff;
   --nf-nav-active-shadow: none;
 }
 
 /* ── Light mode: white cards on cream page background ── */
 [data-mantine-color-scheme="light"] {
-  --mantine-color-body:           #FDF8FF;
-  --mantine-color-default:        #FFFFFF;
-  --mantine-color-default-border: #E6DDFF;
+  --mantine-color-body: #fdf8ff;
+  --mantine-color-default: #ffffff;
+  --mantine-color-default-border: #e6ddff;
 
   /* Nav active state — light mode: subtle tint with dark text for accessibility */
-  --nf-nav-active-bg:     #EDE9FF;
-  --nf-nav-active-color:  #1E1B4B;
+  --nf-nav-active-bg: #ede9ff;
+  --nf-nav-active-color: #1e1b4b;
   --nf-nav-active-shadow: none;
 }
 
 /* ── Dark mode ── */
 [data-mantine-color-scheme="dark"] {
-  --nf-bg:         #0B0A24;
-  --nf-surface:    #15192B;
-  --nf-surface-subtle: #1A1F35;
-  --nf-text:       var(--nf-paper);
-  --nf-text-muted: rgba(253,248,255,0.55);
-  --nf-border:     rgba(255,255,255,0.06);
+  --nf-bg: #0b0a24;
+  --nf-surface: #15192b;
+  --nf-surface-subtle: #1a1f35;
+  --nf-text: var(--nf-paper);
+  --nf-text-muted: rgba(253, 248, 255, 0.55);
+  --nf-border: rgba(255, 255, 255, 0.06);
 
   /* Mantine card/border overrides for dark mode */
-  --mantine-color-default-border: rgba(255,255,255,0.08);
+  --mantine-color-default-border: rgba(255, 255, 255, 0.08);
 
   /* Promo card — dark mode */
-  --nf-promo-bg:     rgba(139,92,246,0.10);
-  --nf-promo-border: rgba(139,92,246,0.25);
+  --nf-promo-bg: rgba(139, 92, 246, 0.1);
+  --nf-promo-border: rgba(139, 92, 246, 0.25);
 }
 
 /* Delete button hover */
 .nf-delete-btn:hover,
 .nf-delete-btn:focus-visible {
-  color: #FCA5A5 !important;
+  color: #fca5a5 !important;
   background: rgba(220, 38, 38, 0.18) !important;
 }
 
@@ -90,8 +90,13 @@ body {
 /* Sunshine "new" pulse animation */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes nf-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,0.5); }
-    50%       { box-shadow: 0 0 0 5px rgba(250,204,21,0); }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 0 5px rgba(250, 204, 21, 0);
+    }
   }
   .nf-pulse-dot {
     animation: nf-pulse 1.8s ease-in-out infinite;

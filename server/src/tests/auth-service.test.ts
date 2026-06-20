@@ -1,7 +1,9 @@
-import { AuthService } from "../services/auth-service";
-import { test, describe, beforeEach, mock } from "node:test";
 import assert from "node:assert";
+import { test, describe, beforeEach, mock } from "node:test";
+
 import { OAuthResolverError } from "@atproto/oauth-client-node";
+
+import { AuthService } from "../services/auth-service";
 
 describe("AuthService", () => {
   let ctx: any;
@@ -52,10 +54,7 @@ describe("AuthService", () => {
   });
 
   test("getOAuthRedirectUrl throws for invalid handle", async () => {
-    await assert.rejects(
-      () => service.getOAuthRedirectUrl(""),
-      /invalid handle/
-    );
+    await assert.rejects(() => service.getOAuthRedirectUrl(""), /invalid handle/);
   });
 
   test("getOAuthRedirectUrl returns URL for valid handle", async () => {
@@ -119,8 +118,12 @@ describe("AuthService", () => {
   describe("checkSession", () => {
     test("returns null when no db session exists", async () => {
       ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) { return this as any; }),
-        where: mock.fn(function (this: any) { return this as any; }),
+        selectAll: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        where: mock.fn(function (this: any) {
+          return this as any;
+        }),
         executeTakeFirst: mock.fn(async () => undefined),
       }));
       const result = await service.checkSession("did:foo", { session: { did: "did:foo" } });
@@ -129,8 +132,12 @@ describe("AuthService", () => {
 
     test("returns null when oauthClient.restore returns null (no agent)", async () => {
       ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) { return this as any; }),
-        where: mock.fn(function (this: any) { return this as any; }),
+        selectAll: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        where: mock.fn(function (this: any) {
+          return this as any;
+        }),
         executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
       }));
       ctx.oauthClient.restore = mock.fn(async () => null);
@@ -140,8 +147,12 @@ describe("AuthService", () => {
 
     test("throws when agent exists but getProfile call fails (covers !agent=false branch)", async () => {
       ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) { return this as any; }),
-        where: mock.fn(function (this: any) { return this as any; }),
+        selectAll: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        where: mock.fn(function (this: any) {
+          return this as any;
+        }),
         executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
       }));
       // Restore returns a non-null object so initializeAgentFromSession creates a real Agent
@@ -187,7 +198,6 @@ describe("AuthService", () => {
   describe("getOAuthRedirectUrl with non-Error thrown", () => {
     test("covers err?.message and err?.stack optional chains when err is null", async () => {
       ctx.oauthClient.authorize = mock.fn(async () => {
-        // eslint-disable-next-line no-throw-literal
         throw null;
       });
       await assert.rejects(
@@ -199,7 +209,6 @@ describe("AuthService", () => {
 
     test("covers err?.message when err is a plain string", async () => {
       ctx.oauthClient.authorize = mock.fn(async () => {
-        // eslint-disable-next-line no-throw-literal
         throw "authorize failed";
       });
       await assert.rejects(

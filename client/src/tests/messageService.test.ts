@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, act } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { apiClient } from "../api/apiClient";
 import {
@@ -20,8 +20,9 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+  return Wrapper;
 }
 
 vi.mock("../api/apiClient", () => ({
@@ -98,18 +99,14 @@ describe("messageService", () => {
       const result = await messageService.getMessages(mockDid);
 
       expect(result).toEqual(mockMessagesResponse);
-      expect(apiClient.get).toHaveBeenCalledWith(
-        `/messages/${encodeURIComponent(mockDid)}`
-      );
+      expect(apiClient.get).toHaveBeenCalledWith(`/messages/${encodeURIComponent(mockDid)}`);
     });
 
     it("should handle errors", async () => {
       const mockError = { error: "Not found", status: 404 };
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
-      await expect(messageService.getMessages(mockDid)).rejects.toEqual(
-        mockError
-      );
+      await expect(messageService.getMessages(mockDid)).rejects.toEqual(mockError);
     });
   });
 
@@ -120,10 +117,7 @@ describe("messageService", () => {
       const result = await messageService.sendMessage(mockSendMessageRequest);
 
       expect(result).toEqual(mockSendMessageResponse);
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/messages/send",
-        mockSendMessageRequest
-      );
+      expect(apiClient.post).toHaveBeenCalledWith("/messages/send", mockSendMessageRequest);
     });
   });
 
@@ -141,9 +135,7 @@ describe("messageService", () => {
 
   describe("respondToMessage", () => {
     it("should call apiClient.post with the correct endpoint and data when includeQuestionAsImage is true", async () => {
-      vi.mocked(apiClient.post).mockResolvedValueOnce(
-        mockResponseMessageResponse
-      );
+      vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponseMessageResponse);
 
       const requestWithImage = {
         ...mockResponseMessageRequest,
@@ -152,16 +144,11 @@ describe("messageService", () => {
       const result = await messageService.respondToMessage(requestWithImage);
 
       expect(result).toEqual(mockResponseMessageResponse);
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/messages/respond",
-        requestWithImage
-      );
+      expect(apiClient.post).toHaveBeenCalledWith("/messages/respond", requestWithImage);
     });
 
     it("should call apiClient.post with the correct endpoint and data when includeQuestionAsImage is false", async () => {
-      vi.mocked(apiClient.post).mockResolvedValueOnce(
-        mockResponseMessageResponse
-      );
+      vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponseMessageResponse);
 
       const requestWithoutImage = {
         ...mockResponseMessageRequest,
@@ -170,10 +157,7 @@ describe("messageService", () => {
       const result = await messageService.respondToMessage(requestWithoutImage);
 
       expect(result).toEqual(mockResponseMessageResponse);
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/messages/respond",
-        requestWithoutImage
-      );
+      expect(apiClient.post).toHaveBeenCalledWith("/messages/respond", requestWithoutImage);
     });
   });
 
@@ -209,63 +193,101 @@ describe("message hooks", () => {
 
   it("useMessages returns a query result", () => {
     vi.mocked(apiClient.get).mockResolvedValue({ messages: [] });
-    const { result } = renderHook(() => useMessages(mockDid), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useMessages(mockDid), {
+      wrapper: makeWrapper(),
+    });
     expect(typeof result.current.isLoading).toBe("boolean");
   });
 
   it("useMessages with null did returns a query result", () => {
-    const { result } = renderHook(() => useMessages(null), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useMessages(null), {
+      wrapper: makeWrapper(),
+    });
     expect(result.current.fetchStatus).toBe("idle");
   });
 
   it("useSendMessage returns a mutation object", () => {
-    const { result } = renderHook(() => useSendMessage(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useSendMessage(), {
+      wrapper: makeWrapper(),
+    });
     expect(typeof result.current.mutate).toBe("function");
   });
 
   it("useSendMessage.mutationFn calls messageService.sendMessage", async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({ success: true });
-    const { result } = renderHook(() => useSendMessage(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useSendMessage(), {
+      wrapper: makeWrapper(),
+    });
     await act(async () => {
-      await result.current.mutateAsync({ recipient: "did:example:1", message: "Test" });
+      await result.current.mutateAsync({
+        recipient: "did:example:1",
+        message: "Test",
+      });
     });
     expect(apiClient.post).toHaveBeenCalledWith("/messages/send", expect.any(Object));
   });
 
   it("useDeleteMessage.onSuccess invalidates messages and stats", async () => {
     vi.mocked(apiClient.delete).mockResolvedValueOnce({ success: true });
-    const { result } = renderHook(() => useDeleteMessage(), { wrapper: makeWrapper() });
-    await act(async () => { await result.current.mutateAsync("tid-1"); });
+    const { result } = renderHook(() => useDeleteMessage(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync("tid-1");
+    });
     const { queryClient: qc } = await import("../api/queryClient");
-    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
-    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: settingsKeys.stats() });
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: messageKeys.all,
+    });
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: settingsKeys.stats(),
+    });
   });
 
   it("useRespondToMessage.onSuccess invalidates messages and stats", async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({ success: true });
-    const { result } = renderHook(() => useRespondToMessage(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useRespondToMessage(), {
+      wrapper: makeWrapper(),
+    });
     await act(async () => {
       await result.current.mutateAsync({
-        tid: "t1", recipient: mockDid, original: "Q", response: "A",
+        tid: "t1",
+        recipient: mockDid,
+        original: "Q",
+        response: "A",
       });
     });
     const { queryClient: qc } = await import("../api/queryClient");
-    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: messageKeys.all,
+    });
   });
 
   it("useAddExampleMessages.onSuccess invalidates queries", async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({ messages: [] });
-    const { result } = renderHook(() => useAddExampleMessages(), { wrapper: makeWrapper() });
-    await act(async () => { await result.current.mutateAsync(mockDid); });
+    const { result } = renderHook(() => useAddExampleMessages(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync(mockDid);
+    });
     const { queryClient: qc } = await import("../api/queryClient");
-    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: messageKeys.all,
+    });
   });
 
   it("useSyncMessages.onSuccess invalidates queries", async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({ messages: [] });
-    const { result } = renderHook(() => useSyncMessages(), { wrapper: makeWrapper() });
-    await act(async () => { await result.current.mutateAsync(); });
+    const { result } = renderHook(() => useSyncMessages(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
     const { queryClient: qc } = await import("../api/queryClient");
-    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({ queryKey: messageKeys.all });
+    expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
+      queryKey: messageKeys.all,
+    });
   });
 });

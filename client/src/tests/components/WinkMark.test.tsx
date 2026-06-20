@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect } from "vitest";
+
 import { WinkMark } from "../../components/WinkMark";
 
 describe("WinkMark", () => {
@@ -21,18 +22,14 @@ describe("WinkMark", () => {
     const { container } = render(<WinkMark sparkle />);
     // The sparkle path is the only path with 'L133' in its d attribute
     const paths = container.querySelectorAll("path");
-    const sparklePath = Array.from(paths).find((p) =>
-      p.getAttribute("d")?.includes("L133")
-    );
+    const sparklePath = Array.from(paths).find((p) => p.getAttribute("d")?.includes("L133"));
     expect(sparklePath).not.toBeUndefined();
   });
 
   it("does not render sparkle path when sparkle is false", () => {
     const { container } = render(<WinkMark sparkle={false} />);
     const paths = container.querySelectorAll("path");
-    const sparklePath = Array.from(paths).find((p) =>
-      p.getAttribute("d")?.includes("L133")
-    );
+    const sparklePath = Array.from(paths).find((p) => p.getAttribute("d")?.includes("L133"));
     expect(sparklePath).toBeUndefined();
   });
 

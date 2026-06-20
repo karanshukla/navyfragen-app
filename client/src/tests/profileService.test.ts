@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { apiClient } from "../api/apiClient";
 import {
@@ -18,8 +18,9 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+  return Wrapper;
 }
 
 vi.mock("../api/apiClient", () => ({
@@ -69,18 +70,14 @@ describe("profileService", () => {
       const result = await profileService.getPublicProfile(mockDid);
 
       expect(result).toEqual(mockProfileResponse);
-      expect(apiClient.get).toHaveBeenCalledWith(
-        `/public-profile/${encodeURIComponent(mockDid)}`,
-      );
+      expect(apiClient.get).toHaveBeenCalledWith(`/public-profile/${encodeURIComponent(mockDid)}`);
     });
 
     it("should handle errors", async () => {
       const mockError = { error: "Profile not found", status: 404 };
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
-      await expect(profileService.getPublicProfile(mockDid)).rejects.toEqual(
-        mockError,
-      );
+      await expect(profileService.getPublicProfile(mockDid)).rejects.toEqual(mockError);
     });
   });
 
@@ -91,9 +88,7 @@ describe("profileService", () => {
       const result = await profileService.userExists(mockDid);
 
       expect(result).toEqual(mockUserExistsResponse);
-      expect(apiClient.get).toHaveBeenCalledWith(
-        `/user-exists/${encodeURIComponent(mockDid)}`,
-      );
+      expect(apiClient.get).toHaveBeenCalledWith(`/user-exists/${encodeURIComponent(mockDid)}`);
     });
 
     it("should handle non-existent users", async () => {
@@ -119,7 +114,7 @@ describe("profileService", () => {
 
       expect(result).toEqual(mockResolveHandleResponse);
       expect(apiClient.get).toHaveBeenCalledWith(
-        `/resolve-handle/${encodeURIComponent(mockHandle)}`,
+        `/resolve-handle/${encodeURIComponent(mockHandle)}`
       );
     });
 
@@ -127,9 +122,7 @@ describe("profileService", () => {
       const mockError = { error: "Handle not found", status: 404 };
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
-      await expect(profileService.resolveHandle(mockHandle)).rejects.toEqual(
-        mockError,
-      );
+      await expect(profileService.resolveHandle(mockHandle)).rejects.toEqual(mockError);
     });
   });
 
@@ -164,7 +157,11 @@ describe("profileService", () => {
     });
 
     it("should return empty arrays when user has no friends on app", async () => {
-      vi.mocked(apiClient.get).mockResolvedValueOnce({ moots: [], following: [], oomfs: [] });
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        moots: [],
+        following: [],
+        oomfs: [],
+      });
 
       const result = await profileService.getFriends();
 
@@ -273,18 +270,16 @@ describe("profile hooks", () => {
       wrapper: makeWrapper(),
     });
     await waitFor(() => result.current.isSuccess);
-    const cached = JSON.parse(
-      localStorage.getItem(`navyfragen_friends_v3_cache_${mockDid}`)!,
-    );
+    const cached = JSON.parse(localStorage.getItem(`navyfragen_friends_v3_cache_${mockDid}`)!);
     expect(cached.data).toEqual(friendsData);
   });
 
   it("useFriends reads initialData from localStorage when available", () => {
-    const cached = { data: { moots: [], following: [], oomfs: [] }, timestamp: Date.now() };
-    localStorage.setItem(
-      `navyfragen_friends_v3_cache_${mockDid}`,
-      JSON.stringify(cached),
-    );
+    const cached = {
+      data: { moots: [], following: [], oomfs: [] },
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(`navyfragen_friends_v3_cache_${mockDid}`, JSON.stringify(cached));
     const { result } = renderHook(() => useFriends(mockDid), {
       wrapper: makeWrapper(),
     });
@@ -293,7 +288,11 @@ describe("profile hooks", () => {
 
   it("useFriends returns undefined initialData when localStorage has invalid JSON", () => {
     localStorage.setItem(`navyfragen_friends_v3_cache_${mockDid}`, "not-json");
-    vi.mocked(apiClient.get).mockResolvedValue({ moots: [], following: [], oomfs: [] });
+    vi.mocked(apiClient.get).mockResolvedValue({
+      moots: [],
+      following: [],
+      oomfs: [],
+    });
     const { result } = renderHook(() => useFriends(mockDid), {
       wrapper: makeWrapper(),
     });

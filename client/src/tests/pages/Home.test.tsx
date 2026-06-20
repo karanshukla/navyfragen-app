@@ -36,7 +36,10 @@ describe("Home page", () => {
   });
 
   it("shows feature list and Get Started button when logged out", () => {
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false, profile: null }, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false, profile: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Home />);
     expect(screen.getByRole("link", { name: /get started/i })).toBeInTheDocument();
     expect(screen.getByText(/fast and free/i)).toBeInTheDocument();
@@ -59,7 +62,10 @@ describe("Home page", () => {
   });
 
   it("renders Bluesky and GitHub links in the feedback section", () => {
-    mockUseSession.mockReturnValue({ data: { isLoggedIn: false, profile: null }, isLoading: false } as any);
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: false, profile: null },
+      isLoading: false,
+    } as any);
     renderWithProviders(<Home />);
     const bskyLink = screen.getByRole("link", { name: /@navyfragen\.app/i });
     expect(bskyLink).toHaveAttribute("href", "https://bsky.app/profile/navyfragen.app");
@@ -114,7 +120,10 @@ describe("Home page", () => {
 
   it("clicking Share invokes navigator.share when available", async () => {
     const shareMock = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "share", { value: shareMock, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: shareMock,
+      configurable: true,
+    });
     mockUseSession.mockReturnValue({
       data: {
         isLoggedIn: true,
@@ -126,11 +135,17 @@ describe("Home page", () => {
     renderWithProviders(<Home />);
     fireEvent.click(screen.getByRole("button", { name: /share/i }));
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
-    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
   });
 
   it("clicking Share falls back to navigator.clipboard when share is unavailable", async () => {
-    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: writeTextMock },

@@ -6,7 +6,7 @@ import prettier from "eslint-config-prettier";
 import globals from "globals";
 
 export default [
-  { ignores: ["dist/**"] },
+  { ignores: ["dist/**", "src/lexicon/**"] },
 
   // Node globals for all files in this server package
   {
@@ -39,6 +39,7 @@ export default [
         },
       ],
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/explicit-module-boundary-types": "off",
     },
   },

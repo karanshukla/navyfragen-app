@@ -1,10 +1,13 @@
 /* v8 ignore start */
 import express from "express";
 import { body } from "express-validator";
-import { MessageService } from "../services/message-service";
 import { Logger } from "pino";
-import { initializeAgentFromSession } from "#/auth/session-agent";
+
+import { MessageService } from "../services/message-service";
+
 import type { AppContext } from "../index";
+
+import { initializeAgentFromSession } from "#/auth/session-agent";
 
 export class MessageController {
   constructor(
@@ -18,10 +21,7 @@ export class MessageController {
    * Validation for adding example messages
    */
   validateAddExampleMessages = [
-    body("recipient")
-      .isString()
-      .notEmpty()
-      .withMessage("Recipient DID required"),
+    body("recipient").isString().notEmpty().withMessage("Recipient DID required"),
   ];
 
   /**
@@ -50,14 +50,8 @@ export class MessageController {
    */
   validateRespondToMessage = [
     body("tid").isString().notEmpty().withMessage("Message TID required"),
-    body("recipient")
-      .isString()
-      .notEmpty()
-      .withMessage("Recipient DID required"),
-    body("original")
-      .isString()
-      .notEmpty()
-      .withMessage("Original message required"),
+    body("recipient").isString().notEmpty().withMessage("Recipient DID required"),
+    body("original").isString().notEmpty().withMessage("Original message required"),
     body("response")
       .isString()
       .isLength({ min: 1, max: 500 })
@@ -72,14 +66,10 @@ export class MessageController {
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
-    const { tid, recipient, original, response, includeQuestionAsImage } =
-      req.body;
+    const { tid, recipient, original, response, includeQuestionAsImage } = req.body;
 
     if (!tid || !recipient || !response) {
-      this.logger.warn(
-        { tid, recipient, response },
-        "Missing required fields in respond endpoint"
-      );
+      this.logger.warn({ tid, recipient, response }, "Missing required fields in respond endpoint");
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -111,9 +101,7 @@ export class MessageController {
         { err, tid, did },
         "Error in /messages/respond endpoint while trying to post to Bluesky"
       );
-      return res
-        .status(500)
-        .json({ error: err.message || "Failed to post to Bluesky" });
+      return res.status(500).json({ error: err.message || "Failed to post to Bluesky" });
     }
   };
 
@@ -121,10 +109,7 @@ export class MessageController {
    * Validation for sending a message
    */
   validateSendMessage = [
-    body("recipient")
-      .isString()
-      .notEmpty()
-      .withMessage("Recipient DID required"),
+    body("recipient").isString().notEmpty().withMessage("Recipient DID required"),
     body("message")
       .isString()
       .isLength({ min: 1, max: 500 })
@@ -134,10 +119,7 @@ export class MessageController {
   /**
    * Send an anonymous message
    */
-  sendMessage = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  sendMessage = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const { recipient, message } = req.body;
 
     if (!recipient || !message) {
@@ -161,10 +143,7 @@ export class MessageController {
   /**
    * Get messages for a user
    */
-  getMessages = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  getMessages = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const recipient = req.session?.did;
 
     if (!recipient) {
@@ -176,9 +155,7 @@ export class MessageController {
       return res.json({ messages });
     } catch (err: any) {
       if (err.message.includes("not exist")) {
-        return res
-          .status(404)
-          .json({ error: "User not found (user profile does not exist)" });
+        return res.status(404).json({ error: "User not found (user profile does not exist)" });
       }
       this.logger.error({ err, recipient }, "Failed to fetch messages");
       return res.status(500).json({ error: "Failed to fetch messages" });
@@ -205,10 +182,7 @@ export class MessageController {
 
     const agent = await initializeAgentFromSession(req, this.ctx);
     if (!agent) {
-      this.logger.warn(
-        { userSessionDid },
-        "No agent could be initialized from session"
-      );
+      this.logger.warn({ userSessionDid }, "No agent could be initialized from session");
       return res.json({ isLoggedIn: false, profile: null, did: null });
     }
 
@@ -222,9 +196,7 @@ export class MessageController {
           ? 403
           : 500;
 
-      return res
-        .status(status)
-        .json({ error: err.message || "Failed to delete message" });
+      return res.status(status).json({ error: err.message || "Failed to delete message" });
     }
   };
 
@@ -244,8 +216,7 @@ export class MessageController {
     const agent = await initializeAgentFromSession(req, this.ctx);
     if (!agent) {
       return res.status(401).json({
-        error:
-          "Authentication failed - could not initialize agent or retrieve user DID",
+        error: "Authentication failed - could not initialize agent or retrieve user DID",
       });
     }
 
@@ -256,19 +227,14 @@ export class MessageController {
       return res.json({ success: true });
     } catch (err: any) {
       this.logger.error({ err, did: userSessionDid }, "Failed to delete account data");
-      return res
-        .status(500)
-        .json({ error: err.message || "Failed to delete account data" });
+      return res.status(500).json({ error: err.message || "Failed to delete account data" });
     }
   };
 
   /**
    * Sync messages to PDS
    */
-  syncMessages = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  syncMessages = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const userSessionDid = req.session?.did;
 
     if (!userSessionDid) {
@@ -283,9 +249,7 @@ export class MessageController {
       .executeTakeFirst();
 
     if (!userSettings || !userSettings?.pdsSyncEnabled) {
-      return res
-        .status(200)
-        .json({ success: true, message: "PDS sync is disabled" });
+      return res.status(200).json({ success: true, message: "PDS sync is disabled" });
     }
 
     // Initialize the agent for the authenticated user session
@@ -298,10 +262,7 @@ export class MessageController {
     }
 
     try {
-      const syncResult = await this.messageService.syncMessages(
-        userSessionDid,
-        agent
-      );
+      const syncResult = await this.messageService.syncMessages(userSessionDid, agent);
       return res.json(syncResult);
     } catch (err: any) {
       this.logger.error({ err, did: userSessionDid }, "Failed to sync messages to PDS");

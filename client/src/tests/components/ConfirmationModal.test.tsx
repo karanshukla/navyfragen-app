@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { renderWithProviders } from "../testUtils";
+import { describe, it, expect, vi } from "vitest";
+
 import { ConfirmationModal } from "../../components/ConfirmationModal";
+import { renderWithProviders } from "../testUtils";
 
 describe("ConfirmationModal", () => {
   it("renders title and message", () => {
@@ -22,13 +23,7 @@ describe("ConfirmationModal", () => {
 
   it("shows default confirm/cancel labels when not provided", () => {
     renderWithProviders(
-      <ConfirmationModal
-        opened
-        onClose={vi.fn()}
-        onConfirm={vi.fn()}
-        title="T"
-        message="M"
-      />
+      <ConfirmationModal opened onClose={vi.fn()} onConfirm={vi.fn()} title="T" message="M" />
     );
     expect(screen.getByText("Confirm")).toBeInTheDocument();
     expect(screen.getByText("Cancel")).toBeInTheDocument();
@@ -53,13 +48,7 @@ describe("ConfirmationModal", () => {
   it("calls onClose when cancel button is clicked", async () => {
     const onClose = vi.fn();
     renderWithProviders(
-      <ConfirmationModal
-        opened
-        onClose={onClose}
-        onConfirm={vi.fn()}
-        title="T"
-        message="M"
-      />
+      <ConfirmationModal opened onClose={onClose} onConfirm={vi.fn()} title="T" message="M" />
     );
     await userEvent.click(screen.getByText("Cancel"));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -68,13 +57,7 @@ describe("ConfirmationModal", () => {
   it("calls onConfirm when confirm button is clicked", async () => {
     const onConfirm = vi.fn();
     renderWithProviders(
-      <ConfirmationModal
-        opened
-        onClose={vi.fn()}
-        onConfirm={onConfirm}
-        title="T"
-        message="M"
-      />
+      <ConfirmationModal opened onClose={vi.fn()} onConfirm={onConfirm} title="T" message="M" />
     );
     await userEvent.click(screen.getByText("Confirm"));
     expect(onConfirm).toHaveBeenCalledTimes(1);

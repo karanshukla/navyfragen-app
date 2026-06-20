@@ -1,7 +1,8 @@
 /* v8 ignore start */
-import type { Database } from "../database/db";
-import { Logger } from "pino";
 import { Agent } from "@atproto/api";
+import { Logger } from "pino";
+
+import type { Database } from "../database/db";
 import type { IdResolver } from "@atproto/identity";
 
 export interface UserSettings {
@@ -40,17 +41,11 @@ export class SettingsService {
     };
 
     try {
-      await this.db
-        .insertInto("user_settings")
-        .values(defaultSettings)
-        .execute();
+      await this.db.insertInto("user_settings").values(defaultSettings).execute();
 
       return defaultSettings;
     } catch (err) {
-      this.logger.error(
-        { err, did: userDid },
-        "Failed to create default user settings"
-      );
+      this.logger.error({ err, did: userDid }, "Failed to create default user settings");
       throw new Error("Failed to create default user settings");
     }
   }
@@ -151,10 +146,7 @@ export class SettingsService {
 
       return await this.getUserSettings(userDid);
     } catch (err) {
-      this.logger.error(
-        { err, did: userDid },
-        "Failed to update user settings"
-      );
+      this.logger.error({ err, did: userDid }, "Failed to update user settings");
       throw new Error("Failed to update user settings");
     }
   }

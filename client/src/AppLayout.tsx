@@ -92,8 +92,12 @@ function NotFoundPage() {
   return (
     <Container>
       <Paper p="xl" radius="md" withBorder shadow="xs">
-        <Title order={2} c="red">404 - Not Found</Title>
-        <Text c="dimmed" mt="md">The requested resource was not found.</Text>
+        <Title order={2} c="red">
+          404 - Not Found
+        </Title>
+        <Text c="dimmed" mt="md">
+          The requested resource was not found.
+        </Text>
       </Paper>
     </Container>
   );

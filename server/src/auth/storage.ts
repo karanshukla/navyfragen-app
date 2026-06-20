@@ -1,10 +1,10 @@
+import type { Database } from "#/database/db";
 import type {
   NodeSavedSession,
   NodeSavedSessionStore,
   NodeSavedState,
   NodeSavedStateStore,
 } from "@atproto/oauth-client-node";
-import type { Database } from "#/database/db";
 
 export class StateStore implements NodeSavedStateStore {
   constructor(private db: Database) {}

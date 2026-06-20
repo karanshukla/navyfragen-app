@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import React from "react";
-import { renderWithProviders } from "../testUtils";
+import { describe, it, expect } from "vitest";
+
 import { Wordmark } from "../../components/Wordmark";
+import { renderWithProviders } from "../testUtils";
 
 describe("Wordmark", () => {
   it("renders without crashing", () => {

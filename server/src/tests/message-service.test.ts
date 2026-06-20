@@ -1,14 +1,12 @@
-import { test, describe, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import {
-  MessageService,
-  type Message,
-  type ProfileResolver,
-} from "../services/message-service";
+import { test, describe, beforeEach, afterEach, mock } from "node:test";
+
 import { type Agent } from "@atproto/api";
 import { type Logger } from "pino";
+
 import { type Database } from "../database/db";
 import { imageGenerator } from "../lib/image-generator";
+import { MessageService, type Message, type ProfileResolver } from "../services/message-service";
 
 describe("MessageService", () => {
   let mockDb: any;
@@ -157,36 +155,25 @@ describe("MessageService", () => {
 
   test("getMessages returns messages if user exists", async () => {
     const did = "did:foo";
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ did })
-    );
-    const msgs: Message[] = [
-      { tid: "t", message: "hi", createdAt: "now", recipient: did },
-    ];
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({ did }));
+    const msgs: Message[] = [{ tid: "t", message: "hi", createdAt: "now", recipient: did }];
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => msgs);
     const result = await messageService.getMessages(did);
     assert.deepStrictEqual(result, msgs);
   });
 
   test("getMessages throws if user does not exist", async () => {
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => undefined
-    );
-    await assert.rejects(
-      () => messageService.getMessages("did:x"),
-      /Failed to fetch messages/
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => undefined);
+    await assert.rejects(() => messageService.getMessages("did:x"), /Failed to fetch messages/);
     assert.strictEqual((mockLogger.error as any).mock.calls.length, 1);
   });
 
   test("addExampleMessages adds and returns messages", async () => {
     mockInsertBuilder.execute.mock.mockImplementation(async () => ({}));
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ did: "did:foo" })
-    );
-    const msgs: Message[] = [
-      { tid: "t", message: "hi", createdAt: "now", recipient: "did:foo" },
-    ];
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    const msgs: Message[] = [{ tid: "t", message: "hi", createdAt: "now", recipient: "did:foo" }];
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => msgs);
     const result = await messageService.addExampleMessages("did:foo");
     assert.deepStrictEqual(result, msgs);
@@ -194,9 +181,9 @@ describe("MessageService", () => {
   });
 
   test("sendMessage inserts and returns success", async () => {
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ did: "did:foo" })
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
     mockInsertBuilder.execute.mock.mockImplementationOnce(async () => ({}));
     const result = await messageService.sendMessage("did:foo", "hi");
     assert.deepStrictEqual(result, { success: true });
@@ -204,25 +191,19 @@ describe("MessageService", () => {
   });
 
   test("sendMessage throws if user not found", async () => {
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => undefined
-    );
-    await assert.rejects(
-      () => messageService.sendMessage("did:x", "hi"),
-      /Recipient not found/
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => undefined);
+    await assert.rejects(() => messageService.sendMessage("did:x", "hi"), /Recipient not found/);
   });
 
   test("deleteMessage deletes from DB and fires PDS deletion in background", async () => {
     const tid = "tid";
     const did = "did:foo";
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ tid, recipient: did })
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      tid,
+      recipient: did,
+    }));
     mockDeleteBuilder.execute.mock.mockImplementationOnce(async () => ({}));
-    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(
-      async () => ({})
-    );
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => ({}));
     const result = await messageService.deleteMessage(tid, did, mockAgent);
     assert.deepStrictEqual(result, { success: true });
     assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 1);
@@ -233,13 +214,14 @@ describe("MessageService", () => {
   test("deleteMessage returns success and logs error when background PDS deletion fails", async () => {
     const tid = "tid";
     const did = "did:foo";
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ tid, recipient: did })
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      tid,
+      recipient: did,
+    }));
     mockDeleteBuilder.execute.mock.mockImplementationOnce(async () => ({}));
-    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(
-      async () => { throw new Error("PDS unavailable"); }
-    );
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => {
+      throw new Error("PDS unavailable");
+    });
     const result = await messageService.deleteMessage(tid, did, mockAgent);
     assert.deepStrictEqual(result, { success: true });
     // flush microtasks so the background .catch() fires
@@ -248,9 +230,7 @@ describe("MessageService", () => {
   });
 
   test("deleteMessage throws if not found", async () => {
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => undefined
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => undefined);
     await assert.rejects(
       () => messageService.deleteMessage("tid", "did", mockAgent),
       /Message not found/
@@ -258,9 +238,7 @@ describe("MessageService", () => {
   });
 
   test("respondToMessage with image", async () => {
-    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(
-      async () => "handle"
-    );
+    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(async () => "handle");
     const result = await messageService.respondToMessage(
       "tid",
       "did:example:user", // Use the DID that matches the mocked user_settings
@@ -274,13 +252,14 @@ describe("MessageService", () => {
     assert.ok(result.uri);
     assert.strictEqual(generateQuestionImageMock.mock.calls.length, 1);
     assert.strictEqual(mockAgent.uploadBlob.mock.calls.length, 1);
-    assert.deepStrictEqual((generateQuestionImageMock.mock.calls[0].arguments as any[])[3], "ocean-breeze");
+    assert.deepStrictEqual(
+      (generateQuestionImageMock.mock.calls[0].arguments as any[])[3],
+      "ocean-breeze"
+    );
   });
 
   test("respondToMessage with text", async () => {
-    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(
-      async () => "handle"
-    );
+    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(async () => "handle");
     const result = await messageService.respondToMessage(
       "tid",
       "did",
@@ -300,16 +279,11 @@ describe("MessageService", () => {
       { tid: "t1" },
       { tid: "t2" },
     ]);
-    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementation(
-      async () => ({})
-    );
+    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementation(async () => ({}));
     mockDeleteBuilder.execute.mock.mockImplementation(async () => ({}));
     const result = await messageService.deleteUserData("did", mockAgent);
     assert.deepStrictEqual(result, { success: true });
-    assert.strictEqual(
-      mockAgent.com.atproto.repo.deleteRecord.mock.calls.length,
-      2
-    );
+    assert.strictEqual(mockAgent.com.atproto.repo.deleteRecord.mock.calls.length, 2);
     assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 3);
   });
 
@@ -331,10 +305,12 @@ describe("MessageService", () => {
     mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
       success: true,
       data: {
-        records: [{
-          uri: "at://did:foo/app.navyfragen.message/pds-only",
-          value: { message: "from pds", createdAt: "now", recipient: "did:foo" },
-        }],
+        records: [
+          {
+            uri: "at://did:foo/app.navyfragen.message/pds-only",
+            value: { message: "from pds", createdAt: "now", recipient: "did:foo" },
+          },
+        ],
         cursor: undefined,
       },
     }));
@@ -352,10 +328,12 @@ describe("MessageService", () => {
     mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
       success: true,
       data: {
-        records: [{
-          uri: "at://did:foo/app.navyfragen.message/shared",
-          value: { message: "hello", createdAt: "now", recipient: "did:foo" },
-        }],
+        records: [
+          {
+            uri: "at://did:foo/app.navyfragen.message/shared",
+            value: { message: "hello", createdAt: "now", recipient: "did:foo" },
+          },
+        ],
         cursor: undefined,
       },
     }));
@@ -375,15 +353,21 @@ describe("MessageService", () => {
       success: true,
       data: {
         records: [
-          { uri: "at://did:foo/app.navyfragen.message/pds-only", value: { message: "p", createdAt: "now", recipient: "did:foo" } },
-          { uri: "at://did:foo/app.navyfragen.message/both",     value: { message: "b", createdAt: "now", recipient: "did:foo" } },
+          {
+            uri: "at://did:foo/app.navyfragen.message/pds-only",
+            value: { message: "p", createdAt: "now", recipient: "did:foo" },
+          },
+          {
+            uri: "at://did:foo/app.navyfragen.message/both",
+            value: { message: "b", createdAt: "now", recipient: "did:foo" },
+          },
         ],
         cursor: undefined,
       },
     }));
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
       { tid: "db-only", message: "d", createdAt: "now", recipient: "did:foo" },
-      { tid: "both",    message: "b", createdAt: "now", recipient: "did:foo" },
+      { tid: "both", message: "b", createdAt: "now", recipient: "did:foo" },
     ]);
     const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.syncedCount, 1);
@@ -397,15 +381,24 @@ describe("MessageService", () => {
     mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
       success: true,
       data: {
-        records: [{ uri: "at://did:foo/app.navyfragen.message/pds-only", value: { message: "p", createdAt: "now", recipient: "did:foo" } }],
+        records: [
+          {
+            uri: "at://did:foo/app.navyfragen.message/pds-only",
+            value: { message: "p", createdAt: "now", recipient: "did:foo" },
+          },
+        ],
         cursor: undefined,
       },
     }));
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
       { tid: "db-only", message: "d", createdAt: "now", recipient: "did:foo" },
     ]);
-    mockAgent.com.atproto.repo.createRecord.mock.mockImplementationOnce(async () => { throw new Error("push failed"); });
-    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => { throw new Error("import failed"); });
+    mockAgent.com.atproto.repo.createRecord.mock.mockImplementationOnce(async () => {
+      throw new Error("push failed");
+    });
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => {
+      throw new Error("import failed");
+    });
     const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.errorCount, 2);
     assert.strictEqual(result.syncedCount, 0);
@@ -422,7 +415,9 @@ describe("MessageService", () => {
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
       { tid: "db-only", message: "d", createdAt: "now", recipient: "did:foo" },
     ]);
-    mockAgent.com.atproto.repo.createRecord.mock.mockImplementationOnce(async () => { throw "non-Error string"; });
+    mockAgent.com.atproto.repo.createRecord.mock.mockImplementationOnce(async () => {
+      throw "non-Error string";
+    });
     const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.errorCount, 1);
     assert.ok(result.errors?.some((e) => e.error === "Unknown error during PDS record creation"));
@@ -432,12 +427,20 @@ describe("MessageService", () => {
     mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
       success: true,
       data: {
-        records: [{ uri: "at://did:foo/app.navyfragen.message/pds-only", rkey: "pds-only", value: { message: "p", createdAt: "now", recipient: "did:foo" } }],
+        records: [
+          {
+            uri: "at://did:foo/app.navyfragen.message/pds-only",
+            rkey: "pds-only",
+            value: { message: "p", createdAt: "now", recipient: "did:foo" },
+          },
+        ],
         cursor: undefined,
       },
     }));
     mockSelectBuilder.execute.mock.mockImplementationOnce(async () => []);
-    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => { throw "non-Error string"; });
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => {
+      throw "non-Error string";
+    });
     const result = await messageService.syncMessages("did:foo", mockAgent);
     assert.strictEqual(result.errorCount, 1);
     assert.ok(result.errors?.some((e) => e.error === "Unknown error during DB import"));
@@ -450,7 +453,12 @@ describe("MessageService", () => {
         return {
           success: true,
           data: {
-            records: [{ uri: "at://did:foo/app.navyfragen.message/p1", value: { message: "m", createdAt: "now", recipient: "did:foo" } }],
+            records: [
+              {
+                uri: "at://did:foo/app.navyfragen.message/p1",
+                value: { message: "m", createdAt: "now", recipient: "did:foo" },
+              },
+            ],
             cursor: "page2",
           },
         };
@@ -458,7 +466,12 @@ describe("MessageService", () => {
       return {
         success: true,
         data: {
-          records: [{ uri: "at://did:foo/app.navyfragen.message/p2", value: { message: "m2", createdAt: "now", recipient: "did:foo" } }],
+          records: [
+            {
+              uri: "at://did:foo/app.navyfragen.message/p2",
+              value: { message: "m2", createdAt: "now", recipient: "did:foo" },
+            },
+          ],
           cursor: undefined,
         },
       };
@@ -509,9 +522,10 @@ describe("MessageService", () => {
   test("deleteMessage throws when message belongs to different user", async () => {
     const tid = "tid";
     const did = "did:foo";
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ tid, recipient: "did:other" })
-    );
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      tid,
+      recipient: "did:other",
+    }));
     await assert.rejects(
       () => messageService.deleteMessage(tid, did, mockAgent),
       /Not authorized to delete this message/
@@ -522,9 +536,16 @@ describe("MessageService", () => {
   test("respondToMessage throws when image generation returns no blob", async () => {
     generateQuestionImageMock.mock.mockImplementationOnce(async () => ({ imageBlob: null }));
     await assert.rejects(
-      () => messageService.respondToMessage(
-        "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
-      ),
+      () =>
+        messageService.respondToMessage(
+          "tid",
+          "did:example:user",
+          "rec",
+          "orig",
+          "resp",
+          true,
+          mockAgent
+        ),
       /Image generation failed/
     );
   });
@@ -540,7 +561,13 @@ describe("MessageService", () => {
       uri: "at://did:foo/app.bsky.feed.post/rkey1",
     }));
     const result = await messageService.respondToMessage(
-      "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+      "tid",
+      "did:example:user",
+      "rec",
+      "orig",
+      "resp",
+      true,
+      mockAgent
     );
     assert.strictEqual(result.success, true);
     const postArg = mockAgent.post.mock.calls[0].arguments[0];
@@ -558,7 +585,13 @@ describe("MessageService", () => {
       uri: "at://did:foo/app.bsky.feed.post/rkey1",
     }));
     const result = await messageService.respondToMessage(
-      "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+      "tid",
+      "did:example:user",
+      "rec",
+      "orig",
+      "resp",
+      true,
+      mockAgent
     );
     assert.strictEqual(result.success, true);
     const postArg = mockAgent.post.mock.calls[0].arguments[0];
@@ -573,7 +606,13 @@ describe("MessageService", () => {
       throw new Error("profile fetch failed");
     });
     const result = await messageService.respondToMessage(
-      "tid", "did", "rec", "orig", "resp", false, mockAgent
+      "tid",
+      "did",
+      "rec",
+      "orig",
+      "resp",
+      false,
+      mockAgent
     );
     assert.strictEqual(result.success, true);
     assert.ok(result.link?.includes("did:foo"));
@@ -588,7 +627,13 @@ describe("MessageService", () => {
       data: { handle: null },
     }));
     const result = await messageService.respondToMessage(
-      "tid", "did", "rec", "orig", "resp", false, mockAgent
+      "tid",
+      "did",
+      "rec",
+      "orig",
+      "resp",
+      false,
+      mockAgent
     );
     assert.strictEqual(result.success, true);
     assert.ok(result.link?.includes("did:foo"));
@@ -599,7 +644,13 @@ describe("MessageService", () => {
       uri: "not-an-at-uri",
     }));
     const result = await messageService.respondToMessage(
-      "tid", "did", "rec", "orig", "resp", false, mockAgent
+      "tid",
+      "did",
+      "rec",
+      "orig",
+      "resp",
+      false,
+      mockAgent
     );
     assert.strictEqual(result.success, true);
     assert.strictEqual(result.link, undefined);
@@ -610,9 +661,7 @@ describe("MessageService", () => {
       throw new Error("post failed");
     });
     await assert.rejects(
-      () => messageService.respondToMessage(
-        "tid", "did", "rec", "orig", "resp", false, mockAgent
-      ),
+      () => messageService.respondToMessage("tid", "did", "rec", "orig", "resp", false, mockAgent),
       /post failed/
     );
   });
@@ -652,7 +701,13 @@ describe("MessageService", () => {
       return mockSelectBuilder;
     });
     const result = await messageService.respondToMessage(
-      "tid", "did:example:user", "rec", "orig", "resp", true, mockAgent
+      "tid",
+      "did:example:user",
+      "rec",
+      "orig",
+      "resp",
+      true,
+      mockAgent
     );
     assert.strictEqual(result.success, true);
     assert.deepStrictEqual(
@@ -662,7 +717,9 @@ describe("MessageService", () => {
   });
 
   test("sendMessage uses generic message when err is not an Error instance", async () => {
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({ did: "did:foo" }));
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
     mockInsertBuilder.execute.mock.mockImplementationOnce(async () => {
       throw "string error";
     });
@@ -688,8 +745,12 @@ describe("MessageService", () => {
       recipient: "did:foo",
     }));
     mockDb.deleteFrom = mock.fn(() => ({
-      where: mock.fn(function (this: any) { return this; }),
-      execute: mock.fn(async () => { throw "db-non-error"; }),
+      where: mock.fn(function (this: any) {
+        return this;
+      }),
+      execute: mock.fn(async () => {
+        throw "db-non-error";
+      }),
     }));
     await assert.rejects(
       () => messageService.deleteMessage("tid", "did:foo", mockAgent),

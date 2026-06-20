@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { apiClient } from "../api/apiClient";
+import { queryClient } from "../api/queryClient";
 import {
   settingsService,
   UserSettings,
@@ -14,22 +15,23 @@ import {
   useUpdateUserSettings,
   settingsKeys,
 } from "../api/settingsService";
-import { queryClient } from "../api/queryClient";
 
 function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+  return Wrapper;
 }
 
 function makeWrapperFastRetry() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retryDelay: 0 }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children);
+  return Wrapper;
 }
 
 vi.mock("../api/apiClient", () => ({
@@ -76,9 +78,7 @@ describe("settingsService", () => {
       const mockError = { error: "Settings not found", status: 404 };
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
-      await expect(settingsService.getUserSettings()).rejects.toEqual(
-        mockError,
-      );
+      await expect(settingsService.getUserSettings()).rejects.toEqual(mockError);
     });
   });
 
@@ -89,26 +89,22 @@ describe("settingsService", () => {
         pdsSyncEnabled: 0,
       });
 
-      const result =
-        await settingsService.updateUserSettings(mockUpdatedSettings);
+      const result = await settingsService.updateUserSettings(mockUpdatedSettings);
 
       expect(result).toEqual({
         ...mockUserSettings,
         pdsSyncEnabled: 0,
       });
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/settings",
-        mockUpdatedSettings,
-      );
+      expect(apiClient.post).toHaveBeenCalledWith("/settings", mockUpdatedSettings);
     });
 
     it("should handle errors", async () => {
       const mockError = { error: "Failed to update settings", status: 400 };
       vi.mocked(apiClient.post).mockRejectedValueOnce(mockError);
 
-      await expect(
-        settingsService.updateUserSettings(mockUpdatedSettings),
-      ).rejects.toEqual(mockError);
+      await expect(settingsService.updateUserSettings(mockUpdatedSettings)).rejects.toEqual(
+        mockError
+      );
     });
 
     it("should update imageTheme", async () => {
@@ -224,7 +220,10 @@ describe("settings hooks", () => {
   });
 
   it("useUserSettings does not retry on 403 errors", async () => {
-    vi.mocked(apiClient.get).mockRejectedValue({ status: 403, error: "Forbidden" });
+    vi.mocked(apiClient.get).mockRejectedValue({
+      status: 403,
+      error: "Forbidden",
+    });
     const { result } = renderHook(() => useUserSettings(), {
       wrapper: makeWrapperFastRetry(),
     });
@@ -245,10 +244,9 @@ describe("settings hooks", () => {
   it("useUpdateUserSettings onSuccess invalidates settings cache and calls options.onSuccess", async () => {
     const onSuccess = vi.fn();
     vi.mocked(apiClient.post).mockResolvedValueOnce(mockSettings);
-    const { result } = renderHook(
-      () => useUpdateUserSettings({ onSuccess }),
-      { wrapper: makeWrapper() }
-    );
+    const { result } = renderHook(() => useUpdateUserSettings({ onSuccess }), {
+      wrapper: makeWrapper(),
+    });
     await act(async () => {
       await result.current.mutateAsync({ pdsSyncEnabled: true });
     });

@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { parseRichText } from "../../utils/parseRichText";
-import React from "react";
 import { render } from "@testing-library/react";
+import React from "react";
+import { describe, it, expect } from "vitest";
+
+import { parseRichText } from "../../utils/parseRichText";
 
 describe("parseRichText", () => {
   it("returns null for empty string", () => {

@@ -2,11 +2,12 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "CommonJS",
-    "baseUrl": ".",
-    "paths": {
-      "#/*": ["src/*"]
-    },
     "moduleResolution": "Node10",
+    "ignoreDeprecations": "5.0",
+    "paths": {
+      "#/*": ["./src/*"]
+    },
+    "rootDir": "./src",
     "outDir": "dist",
     "importsNotUsedAsValues": "remove",
     "strict": true,

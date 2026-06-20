@@ -1,7 +1,9 @@
-import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
-import { ProfileService, ProfileResolver } from "../services/profile-service";
+import { describe, it, beforeEach, mock } from "node:test";
+
 import { Kysely } from "kysely";
+
+import { ProfileService, ProfileResolver } from "../services/profile-service";
 
 describe("ProfileService", () => {
   // Mock Logger
@@ -93,9 +95,7 @@ describe("ProfileService", () => {
         displayName: "Test User",
       });
       assert.strictEqual(mockGetProfile.mock.calls.length, 1);
-      assert.deepStrictEqual(mockGetProfile.mock.calls[0].arguments, [
-        { actor: testDid },
-      ]);
+      assert.deepStrictEqual(mockGetProfile.mock.calls[0].arguments, [{ actor: testDid }]);
       assert.strictEqual(mockResolver.resolveDidToHandle.mock.calls.length, 0);
     });
 
@@ -119,10 +119,9 @@ describe("ProfileService", () => {
       (profileService as any).agent.getProfile = tempMockGetProfile;
 
       // Act & Assert
-      await assert.rejects(
-        async () => await profileService.getPublicProfile(testDid),
-        { message: "Profile not found" }
-      );
+      await assert.rejects(async () => await profileService.getPublicProfile(testDid), {
+        message: "Profile not found",
+      });
     });
 
     it("should throw an error when the API call fails", async () => {
@@ -134,10 +133,9 @@ describe("ProfileService", () => {
       (profileService as any).agent.getProfile = tempMockGetProfile;
 
       // Act & Assert
-      await assert.rejects(
-        async () => await profileService.getPublicProfile(testDid),
-        { message: "Failed to fetch profile" }
-      );
+      await assert.rejects(async () => await profileService.getPublicProfile(testDid), {
+        message: "Failed to fetch profile",
+      });
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
   });
@@ -154,9 +152,7 @@ describe("ProfileService", () => {
       // Assert
       assert.strictEqual(result, true);
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
-      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0].arguments, [
-        "user_profile",
-      ]);
+      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0].arguments, ["user_profile"]);
     });
 
     it("should return false when user does not exist", async () => {
@@ -180,10 +176,9 @@ describe("ProfileService", () => {
       };
 
       // Act & Assert
-      await assert.rejects(
-        async () => await profileService.checkUserExists(testDid),
-        { message: "Failed to check user existence" }
-      );
+      await assert.rejects(async () => await profileService.checkUserExists(testDid), {
+        message: "Failed to check user existence",
+      });
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
   });
@@ -200,10 +195,7 @@ describe("ProfileService", () => {
       // Assert
       assert.strictEqual(result, expectedDid);
       assert.strictEqual(mockResolver.resolveHandleToDid.mock.calls.length, 1);
-      assert.deepStrictEqual(
-        mockResolver.resolveHandleToDid.mock.calls[0].arguments,
-        [testHandle]
-      );
+      assert.deepStrictEqual(mockResolver.resolveHandleToDid.mock.calls[0].arguments, [testHandle]);
     });
 
     it("should throw 'Handle not found' when resolver returns undefined", async () => {
@@ -211,10 +203,9 @@ describe("ProfileService", () => {
       const testHandle = "not-found"; // resolver mock returns undefined for this
 
       // Act & Assert
-      await assert.rejects(
-        async () => await profileService.resolveHandleToDid(testHandle),
-        { message: "Handle not found" }
-      );
+      await assert.rejects(async () => await profileService.resolveHandleToDid(testHandle), {
+        message: "Handle not found",
+      });
       // No error log — this is an expected 404, not an unexpected failure
       assert.strictEqual(mockLogger.error.mock.calls.length, 0);
     });
@@ -227,10 +218,9 @@ describe("ProfileService", () => {
       });
 
       // Act & Assert
-      await assert.rejects(
-        async () => await profileService.resolveHandleToDid(testHandle),
-        { message: "Failed to resolve handle" }
-      );
+      await assert.rejects(async () => await profileService.resolveHandleToDid(testHandle), {
+        message: "Failed to resolve handle",
+      });
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
     });
   });
@@ -274,7 +264,9 @@ describe("ProfileService", () => {
 
     it("should return false and log error when getProfile throws", async () => {
       const mockAgent = {
-        getProfile: mock.fn(async () => { throw new Error("network error"); }),
+        getProfile: mock.fn(async () => {
+          throw new Error("network error");
+        }),
       };
 
       const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
@@ -299,7 +291,12 @@ describe("ProfileService", () => {
 
   describe("getFriendsOnApp", () => {
     const sampleFollows = [
-      { did: "did:user:1", handle: "user1.bsky.app", displayName: "User One", avatar: "https://cdn.test/1.jpg" },
+      {
+        did: "did:user:1",
+        handle: "user1.bsky.app",
+        displayName: "User One",
+        avatar: "https://cdn.test/1.jpg",
+      },
       { did: "did:user:2", handle: "user2.bsky.app", displayName: "User Two", avatar: undefined },
       { did: "did:user:3", handle: "user3.bsky.app", displayName: undefined, avatar: undefined },
     ];
@@ -422,7 +419,14 @@ describe("ProfileService", () => {
                   return {
                     success: true,
                     data: {
-                      follows: [{ did: "did:user:1", handle: "user1.bsky.app", displayName: "Page1", avatar: undefined }],
+                      follows: [
+                        {
+                          did: "did:user:1",
+                          handle: "user1.bsky.app",
+                          displayName: "Page1",
+                          avatar: undefined,
+                        },
+                      ],
                       cursor: "page2-cursor",
                     },
                   };
@@ -430,7 +434,14 @@ describe("ProfileService", () => {
                 return {
                   success: true,
                   data: {
-                    follows: [{ did: "did:user:2", handle: "user2.bsky.app", displayName: "Page2", avatar: undefined }],
+                    follows: [
+                      {
+                        did: "did:user:2",
+                        handle: "user2.bsky.app",
+                        displayName: "Page2",
+                        avatar: undefined,
+                      },
+                    ],
                     cursor: undefined,
                   },
                 };
@@ -447,7 +458,8 @@ describe("ProfileService", () => {
       assert.strictEqual(followsCallCount, 2);
       assert.strictEqual(result.following.length, 2);
       // Verify cursor was forwarded on the second call
-      const secondCallArgs = (paginatedAgent.app.bsky.graph.getFollows as any).mock.calls[1].arguments[0];
+      const secondCallArgs = (paginatedAgent.app.bsky.graph.getFollows as any).mock.calls[1]
+        .arguments[0];
       assert.strictEqual(secondCallArgs.cursor, "page2-cursor");
     });
 
@@ -481,7 +493,14 @@ describe("ProfileService", () => {
                 return {
                   success: true,
                   data: {
-                    follows: [{ did: `did:user:page${followsCallCount}`, handle: `u${followsCallCount}.bsky.app`, displayName: undefined, avatar: undefined }],
+                    follows: [
+                      {
+                        did: `did:user:page${followsCallCount}`,
+                        handle: `u${followsCallCount}.bsky.app`,
+                        displayName: undefined,
+                        avatar: undefined,
+                      },
+                    ],
                     cursor: `page${followsCallCount + 1}`,
                   },
                 };

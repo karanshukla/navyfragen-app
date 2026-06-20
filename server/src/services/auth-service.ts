@@ -1,11 +1,13 @@
 /* v8 ignore start */
-import { isValidHandle } from "@atproto/syntax";
 import { OAuthResolverError } from "@atproto/oauth-client-node";
-import { env } from "../lib/env";
+import { isValidHandle } from "@atproto/syntax";
+import Cryptr from "cryptr";
+
 import { initializeAgentFromSession } from "../auth/session-agent";
+import { env } from "../lib/env";
+
 import type { AppContext } from "../index";
 import type { AppBskyActorDefs } from "@atproto/api";
-import Cryptr from "cryptr";
 
 export class AuthService {
   constructor(private ctx: AppContext) {}
@@ -17,7 +19,8 @@ export class AuthService {
     }
     try {
       const url = await this.ctx.oauthClient.authorize(handle, {
-        scope: "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
+        scope:
+          "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
       });
       return url.toString();
     } catch (err: any) {

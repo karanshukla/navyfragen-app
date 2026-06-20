@@ -186,6 +186,27 @@ cd server && npm run lexgen
 
 > **Windows users:** Run `lexgen` in WSL2. Running it natively on Windows may delete the generated files.
 
+### Pre-commit Hook
+
+The repo uses [Husky](https://typicode.github.io/husky/) to run checks automatically before every `git commit`. The hook runs on all platforms (macOS, Linux, Windows via Git Bash).
+
+**What it does:**
+
+| Step | Tool | Effect |
+|---|---|---|
+| Format staged files | Prettier | Auto-fixes formatting (quotes, indentation, trailing commas) |
+| Lint staged files | ESLint | Auto-fixes import order, unused vars, etc. |
+| Type check client | `tsc --noEmit` | Blocks commit if there are TypeScript errors |
+| Type check server | `tsc --noEmit` | Blocks commit if there are TypeScript errors |
+
+The hook is installed automatically when you run `npm install` (via the `prepare` script).
+
+To skip it in an emergency:
+
+```bash
+git commit --no-verify -m "your message"
+```
+
 ### Windows & Cookies
 
 Use `http://127.0.0.1` (not `localhost`) for both the app URL and any callback URLs in your `.env`. Cookie `SameSite` handling differs between the two on Windows.

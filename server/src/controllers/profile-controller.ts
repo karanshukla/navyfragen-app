@@ -1,10 +1,13 @@
 /* v8 ignore start */
 import express from "express";
 import { param } from "express-validator";
-import { ProfileService } from "../services/profile-service";
 import { Logger } from "pino";
-import { initializeAgentFromSession } from "#/auth/session-agent";
+
+import { ProfileService } from "../services/profile-service";
+
 import type { AppContext } from "../index";
+
+import { initializeAgentFromSession } from "#/auth/session-agent";
 
 const BOT_DID = "did:plc:3d4awubjiftylwrhhyp5vl7i";
 
@@ -19,9 +22,7 @@ export class ProfileController {
   /**
    * Validation for public profile request
    */
-  validateGetPublicProfile = [
-    param("did").isString().notEmpty().withMessage("DID required"),
-  ];
+  validateGetPublicProfile = [param("did").isString().notEmpty().withMessage("DID required")];
 
   /**
    * Get public profile for a DID
@@ -47,9 +48,7 @@ export class ProfileController {
   /**
    * Validation for checking if user exists
    */
-  validateUserExists = [
-    param("did").isString().notEmpty().withMessage("DID required"),
-  ];
+  validateUserExists = [param("did").isString().notEmpty().withMessage("DID required")];
 
   /**
    * Check if a user exists in the database
@@ -72,10 +71,7 @@ export class ProfileController {
   /**
    * Get the logged-in user's Bluesky follows who are also on Navyfragen
    */
-  getFriends = async (
-    req: express.Request,
-    res: express.Response
-  ): Promise<express.Response> => {
+  getFriends = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const userDid = req.session?.did;
     if (!userDid) {
       return res.status(403).json({ error: "Not authenticated" });
@@ -124,9 +120,7 @@ export class ProfileController {
   /**
    * Validation for handle resolution
    */
-  validateResolveHandle = [
-    param("handle").isString().notEmpty().withMessage("Handle required"),
-  ];
+  validateResolveHandle = [param("handle").isString().notEmpty().withMessage("Handle required")];
 
   /**
    * Resolve a handle to a DID

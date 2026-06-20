@@ -1,6 +1,7 @@
 # Combobox Implementation Patterns
 
 ## Table of Contents
+
 - [Basic select (button trigger)](#basic-select-button-trigger)
 - [Searchable select (input trigger)](#searchable-select-input-trigger)
 - [Multi-select with pills](#multi-select-with-pills)
@@ -66,7 +67,7 @@ Input acts as both trigger and search field. Filter options based on the typed v
 ```tsx
 function SearchableSelect({ data }: { data: string[] }) {
   const [value, setValue] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
@@ -78,11 +79,16 @@ function SearchableSelect({ data }: { data: string[] }) {
     ? data.filter((item) => item.toLowerCase().includes(search.toLowerCase().trim()))
     : data;
 
-  const options = filtered.length > 0
-    ? filtered.map((item) => (
-        <Combobox.Option value={item} key={item}>{item}</Combobox.Option>
+  const options =
+    filtered.length > 0 ? (
+      filtered.map((item) => (
+        <Combobox.Option value={item} key={item}>
+          {item}
+        </Combobox.Option>
       ))
-    : <Combobox.Empty>Nothing found</Combobox.Empty>;
+    ) : (
+      <Combobox.Empty>Nothing found</Combobox.Empty>
+    );
 
   return (
     <Combobox
@@ -106,7 +112,7 @@ function SearchableSelect({ data }: { data: string[] }) {
           onFocus={() => combobox.openDropdown()}
           onBlur={() => {
             combobox.closeDropdown();
-            setSearch(value || '');
+            setSearch(value || "");
           }}
           placeholder="Search value"
           rightSectionPointerEvents="none"
@@ -129,8 +135,10 @@ Use `Combobox.DropdownTarget` for the outer container and `Combobox.EventsTarget
 
 ```tsx
 function MultiSelect({ data }: { data: string[] }) {
-  const combobox = useCombobox({ onDropdownClose: () => combobox.resetSelectedOption() });
-  const [search, setSearch] = useState('');
+  const combobox = useCombobox({
+    onDropdownClose: () => combobox.resetSelectedOption(),
+  });
+  const [search, setSearch] = useState("");
   const [value, setValue] = useState<string[]>([]);
 
   const handleValueSelect = (val: string) =>
@@ -175,7 +183,7 @@ function MultiSelect({ data }: { data: string[] }) {
                   setSearch(e.currentTarget.value);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Backspace' && search.length === 0) {
+                  if (e.key === "Backspace" && search.length === 0) {
                     e.preventDefault();
                     handleValueRemove(value[value.length - 1]);
                   }
@@ -212,7 +220,7 @@ const groups = data.map((group) => (
 ));
 
 // Inside Combobox.Dropdown:
-<Combobox.Options>{groups}</Combobox.Options>
+<Combobox.Options>{groups}</Combobox.Options>;
 ```
 
 ---
@@ -228,7 +236,9 @@ const options = data.map((item) => (
       <Avatar src={item.avatar} size="sm" />
       <div>
         <Text size="sm">{item.label}</Text>
-        <Text size="xs" c="dimmed">{item.email}</Text>
+        <Text size="xs" c="dimmed">
+          {item.email}
+        </Text>
       </div>
     </Group>
   </Combobox.Option>
@@ -241,15 +251,17 @@ const options = data.map((item) => (
 
 ```tsx
 const rightSection = value ? (
-  <Combobox.ClearButton onClear={() => { setValue(null); setSearch(''); }} />
+  <Combobox.ClearButton
+    onClear={() => {
+      setValue(null);
+      setSearch("");
+    }}
+  />
 ) : (
   <Combobox.Chevron />
 );
 
-<InputBase
-  rightSection={rightSection}
-  rightSectionPointerEvents={value ? 'all' : 'none'}
-/>
+<InputBase rightSection={rightSection} rightSectionPointerEvents={value ? "all" : "none"} />;
 ```
 
 ---
@@ -271,9 +283,11 @@ const rightSection = value ? (
 ```tsx
 <Combobox.Dropdown>
   <Combobox.Options>
-    {filteredOptions.length > 0
-      ? filteredOptions
-      : <Combobox.Empty>Nothing found for "{search}"</Combobox.Empty>}
+    {filteredOptions.length > 0 ? (
+      filteredOptions
+    ) : (
+      <Combobox.Empty>Nothing found for "{search}"</Combobox.Empty>
+    )}
   </Combobox.Options>
 </Combobox.Dropdown>
 ```

@@ -1,20 +1,18 @@
 import express from "express";
 import { validationResult } from "express-validator";
+
 import { authRoutes } from "./routes/auth-routes";
 import { messageRoutes } from "./routes/message-routes";
-import { profileRoutes } from "./routes/profile-routes";
-import type { AppContext } from "#/index";
-import { settingsRoutes } from "./routes/settings-routes";
 import { notificationRoutes } from "./routes/notification-routes";
+import { profileRoutes } from "./routes/profile-routes";
+import { settingsRoutes } from "./routes/settings-routes";
+
+import type { AppContext } from "#/index";
 
 // Helper function for defining routes
 const handler =
   (fn: express.Handler) =>
-  async (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
+  async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
       await fn(req, res, next);
     } catch (err) {
@@ -23,11 +21,7 @@ const handler =
   };
 
 // Middleware for express-validator
-function checkValidation(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) {
+function checkValidation(req: express.Request, res: express.Response, next: express.NextFunction) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });

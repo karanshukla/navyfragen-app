@@ -1,5 +1,6 @@
-import { test, describe, mock, afterEach } from "node:test";
 import assert from "node:assert";
+import { test, describe, mock, afterEach } from "node:test";
+
 import { NotificationController } from "../controllers/notification-controller";
 
 describe("NotificationController", () => {

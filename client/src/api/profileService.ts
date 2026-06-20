@@ -50,8 +50,7 @@ export const profileKeys = {
   all: ["profiles"] as const,
   exists: (did: string) => [...profileKeys.all, "exists", did] as const,
   detail: (did: string) => [...profileKeys.all, did] as const,
-  resolveHandle: (handle: string) =>
-    [...profileKeys.all, "resolve", handle] as const,
+  resolveHandle: (handle: string) => [...profileKeys.all, "resolve", handle] as const,
   friends: (did: string) => [...profileKeys.all, "friends", did] as const,
   botFollow: () => [...profileKeys.all, "bot-follow"] as const,
 };
@@ -59,22 +58,16 @@ export const profileKeys = {
 // API Services
 export const profileService = {
   // Get follows who are on Navyfragen
-  getFriends: (): Promise<FriendsResponse> =>
-    apiClient.get<FriendsResponse>("/friends"),
-
+  getFriends: (): Promise<FriendsResponse> => apiClient.get<FriendsResponse>("/friends"),
 
   // Get public profile by DID
   getPublicProfile: (did: string): Promise<ProfileResponse> => {
-    return apiClient.get<ProfileResponse>(
-      `/public-profile/${encodeURIComponent(did)}`
-    );
+    return apiClient.get<ProfileResponse>(`/public-profile/${encodeURIComponent(did)}`);
   },
 
   // Check if user exists
   userExists: (did: string): Promise<UserExistsResponse> => {
-    return apiClient.get<UserExistsResponse>(
-      `/user-exists/${encodeURIComponent(did)}`
-    );
+    return apiClient.get<UserExistsResponse>(`/user-exists/${encodeURIComponent(did)}`);
   },
 
   // Check if the logged-in user follows the notification bot
@@ -83,9 +76,7 @@ export const profileService = {
 
   // Resolve handle to DID
   resolveHandle: (handle: string): Promise<ResolveHandleResponse> => {
-    return apiClient.get<ResolveHandleResponse>(
-      `/resolve-handle/${encodeURIComponent(handle)}`
-    );
+    return apiClient.get<ResolveHandleResponse>(`/resolve-handle/${encodeURIComponent(handle)}`);
   },
 };
 
@@ -106,9 +97,7 @@ export function useUserExists(did: string | null) {
   return useQuery({
     queryKey: did ? profileKeys.exists(did) : profileKeys.all,
     queryFn: () =>
-      did
-        ? profileService.userExists(did)
-        : /* v8 ignore next */ Promise.reject("No DID provided"),
+      did ? profileService.userExists(did) : /* v8 ignore next */ Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
   });
 }
@@ -140,7 +129,8 @@ export function useFriends(did: string | null) {
           JSON.stringify({ data, timestamp: Date.now() })
         );
       } catch {
-        /* v8 ignore next */ // localStorage unavailable (private browsing quota, etc.)
+        /* v8 ignore next */
+        // localStorage unavailable (private browsing quota, etc.)
       }
       return data;
     },

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { renderWithProviders } from "../testUtils";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import ShareButton from "../../components/ShareButton";
+import { renderWithProviders } from "../testUtils";
 
 describe("ShareButton", () => {
   const shareData = { title: "Test", url: "https://example.com" };
@@ -37,7 +38,9 @@ describe("ShareButton", () => {
         configurable: true,
         writable: true,
       });
-      renderWithProviders(<ShareButton shareData={shareData} onSuccess={onSuccess} onError={onError} />);
+      renderWithProviders(
+        <ShareButton shareData={shareData} onSuccess={onSuccess} onError={onError} />
+      );
       await userEvent.click(screen.getByText("Share"));
       expect(onSuccess).not.toHaveBeenCalled();
       expect(onError).not.toHaveBeenCalled();

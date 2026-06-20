@@ -17,9 +17,7 @@ export function Wordmark({ size = 22, showMark = true }: WordmarkProps) {
         textDecoration: "none",
       }}
     >
-      {showMark && (
-        <WinkMark size={size + 10} sparkle={false} aria-hidden />
-      )}
+      {showMark && <WinkMark size={size + 10} sparkle={false} aria-hidden />}
       <span
         style={{
           fontFamily: "Inter, sans-serif",

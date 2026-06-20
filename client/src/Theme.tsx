@@ -1,37 +1,69 @@
 import { Alert, Notification, createTheme, MantineColorsTuple } from "@mantine/core";
 
 const royal: MantineColorsTuple = [
-  "#EEF2FF", "#D9E0FF", "#B0BEFF", "#849BFF", "#6178FF",
-  "#4A65FF", "#3B5BFF", "#2A47E6", "#1F38C2", "#142899",
+  "#EEF2FF",
+  "#D9E0FF",
+  "#B0BEFF",
+  "#849BFF",
+  "#6178FF",
+  "#4A65FF",
+  "#3B5BFF",
+  "#2A47E6",
+  "#1F38C2",
+  "#142899",
 ];
 
 const purple: MantineColorsTuple = [
-  "#F3EEFF", "#E2D5FF", "#C7B0FE", "#AC8AFD", "#9C72FA",
-  "#9162F8", "#8B5CF6", "#7847E0", "#6638C4", "#522BA3",
+  "#F3EEFF",
+  "#E2D5FF",
+  "#C7B0FE",
+  "#AC8AFD",
+  "#9C72FA",
+  "#9162F8",
+  "#8B5CF6",
+  "#7847E0",
+  "#6638C4",
+  "#522BA3",
 ];
 
 const midnight: MantineColorsTuple = [
-  "#EDEBF7", "#D5D1EA", "#A8A2D0", "#7D74B6", "#594F9A",
-  "#3F367D", "#2E2A6B", "#1E1B4B", "#14123A", "#0B0A24",
+  "#EDEBF7",
+  "#D5D1EA",
+  "#A8A2D0",
+  "#7D74B6",
+  "#594F9A",
+  "#3F367D",
+  "#2E2A6B",
+  "#1E1B4B",
+  "#14123A",
+  "#0B0A24",
 ];
 
 const sunshine: MantineColorsTuple = [
-  "#FFF9E0", "#FFF1B8", "#FFE57A", "#FCD848", "#FBD129",
-  "#FACC15", "#E0B70F", "#B89409", "#8F7206", "#665104",
+  "#FFF9E0",
+  "#FFF1B8",
+  "#FFE57A",
+  "#FCD848",
+  "#FBD129",
+  "#FACC15",
+  "#E0B70F",
+  "#B89409",
+  "#8F7206",
+  "#665104",
 ];
 
 // Dark mode surface colors — body=#0B0A24 (void), Paper/card=#15192B
 const dark: MantineColorsTuple = [
-  "#C4C0DC",   // [0] light text
-  "#A9A5C8",   // [1]
-  "#8B87B5",   // [2] dimmed text
-  "#6E6A9E",   // [3] placeholder
-  "#3A3660",   // [4] subtle border
-  "#252040",   // [5] hover
-  "#15192B",   // [6] Paper / card bg
-  "#0B0A24",   // [7] body bg (void)
-  "#080718",   // [8]
-  "#050412",   // [9]
+  "#C4C0DC", // [0] light text
+  "#A9A5C8", // [1]
+  "#8B87B5", // [2] dimmed text
+  "#6E6A9E", // [3] placeholder
+  "#3A3660", // [4] subtle border
+  "#252040", // [5] hover
+  "#15192B", // [6] Paper / card bg
+  "#0B0A24", // [7] body bg (void)
+  "#080718", // [8]
+  "#050412", // [9]
 ];
 
 const navyfragenTheme = createTheme({
@@ -72,19 +104,19 @@ const navyfragenTheme = createTheme({
         // Map semantic colors to brand-consistent translucent backgrounds.
         // Keeps the semantic signal without clashing with the purple-dominant palette.
         const bg: Record<string, string> = {
-          red:    "rgba(220,38,38,0.09)",
-          green:  "rgba(34,197,94,0.09)",
+          red: "rgba(220,38,38,0.09)",
+          green: "rgba(34,197,94,0.09)",
           yellow: "rgba(250,204,21,0.09)",
-          royal:  "rgba(59,91,255,0.09)",
-          blue:   "rgba(59,91,255,0.09)",
+          royal: "rgba(59,91,255,0.09)",
+          blue: "rgba(59,91,255,0.09)",
           purple: "rgba(139,92,246,0.09)",
         };
         const bd: Record<string, string> = {
-          red:    "1px solid rgba(220,38,38,0.22)",
-          green:  "1px solid rgba(34,197,94,0.22)",
+          red: "1px solid rgba(220,38,38,0.22)",
+          green: "1px solid rgba(34,197,94,0.22)",
           yellow: "1px solid rgba(250,204,21,0.22)",
-          royal:  "1px solid rgba(59,91,255,0.22)",
-          blue:   "1px solid rgba(59,91,255,0.22)",
+          royal: "1px solid rgba(59,91,255,0.22)",
+          blue: "1px solid rgba(59,91,255,0.22)",
           purple: "1px solid rgba(139,92,246,0.22)",
         };
         const c = (props.color as string | undefined) ?? "royal";
