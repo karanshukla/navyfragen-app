@@ -111,4 +111,64 @@ describe("ShareButton", () => {
       expect(screen.getByText("Sharing unavailable")).toBeInTheDocument();
     });
   });
+
+  describe("optional callbacks are omitted", () => {
+    it("share succeeds with no onSuccess callback — no crash", async () => {
+      Object.defineProperty(navigator, "share", {
+        value: vi.fn().mockResolvedValue(undefined),
+        configurable: true,
+        writable: true,
+      });
+      // No onSuccess prop passed
+      renderWithProviders(<ShareButton shareData={shareData} />);
+      await userEvent.click(screen.getByText("Share"));
+      expect(document.body).toBeInTheDocument();
+    });
+
+    it("share fails with non-abort error and no onError callback — no crash", async () => {
+      Object.defineProperty(navigator, "share", {
+        value: vi.fn().mockRejectedValue(new Error("share failed")),
+        configurable: true,
+        writable: true,
+      });
+      // No onError prop passed
+      renderWithProviders(<ShareButton shareData={shareData} />);
+      await userEvent.click(screen.getByText("Share"));
+      expect(document.body).toBeInTheDocument();
+    });
+
+    it("clipboard copy succeeds with no onSuccess callback — no crash", async () => {
+      Object.defineProperty(navigator, "share", {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+        configurable: true,
+        writable: true,
+      });
+      // No onSuccess prop passed
+      renderWithProviders(<ShareButton shareData={shareData} />);
+      await userEvent.click(screen.getByText("Share"));
+      expect(document.body).toBeInTheDocument();
+    });
+
+    it("clipboard copy fails with no onError callback — no crash", async () => {
+      Object.defineProperty(navigator, "share", {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+        configurable: true,
+        writable: true,
+      });
+      // No onError prop passed
+      renderWithProviders(<ShareButton shareData={shareData} />);
+      await userEvent.click(screen.getByText("Share"));
+      expect(document.body).toBeInTheDocument();
+    });
+  });
 });
