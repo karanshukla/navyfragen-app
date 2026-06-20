@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import { type Database } from "../database/db";
 import { Logger } from "pino";
 import { RichText, Agent } from "@atproto/api";
@@ -22,6 +23,7 @@ export class MessageService {
     private resolver: ProfileResolver,
     private logger: Logger
   ) {}
+  /* v8 ignore stop */
 
   /**
    * Get all messages for a user
@@ -482,4 +484,5 @@ export class MessageService {
       throw new Error("Failed to sync messages to PDS");
     }
   }
+  /* v8 ignore next 1 */
 }

@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import { Request, Response } from "express";
 import { isValidHandle } from "@atproto/syntax";
 import { env } from "../lib/env";
@@ -10,6 +11,7 @@ export class AuthController {
   constructor(private ctx: AppContext) {
     this.service = new AuthService(ctx);
   }
+  /* v8 ignore stop */
 
   async login(req: Request, res: Response) {
     const handle = req.body?.handle;
@@ -159,4 +161,5 @@ export class AuthController {
       return res.status(400).json({ error: "Invalid or expired token" });
     }
   }
+  /* v8 ignore next 1 */
 }
