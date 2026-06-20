@@ -375,7 +375,6 @@ function StatItem({ value, label, size, truncate }: StatItemProps) {
         {value}
       </Text>
       <Text
-        ff="monospace"
         size="xs"
         c="dimmed"
         tt="uppercase"

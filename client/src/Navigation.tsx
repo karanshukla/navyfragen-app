@@ -192,7 +192,6 @@ export function Navigation({
             />
             <Box style={{ minWidth: 0 }}>
               <Text
-                ff="monospace"
                 fz={9}
                 tt="uppercase"
                 c="dimmed"
@@ -200,7 +199,7 @@ export function Navigation({
               >
                 Viewing profile
               </Text>
-              <Text ff="monospace" fz={12} fw={600} truncate>
+              <Text fz={12} fw={600} truncate>
                 @{viewingHandle}
               </Text>
             </Box>
@@ -324,7 +323,6 @@ function FriendSection({
           fw={700}
           c="dimmed"
           tt="uppercase"
-          ff="monospace"
           style={{ letterSpacing: "0.1em", flex: 1 }}
         >
           {label}
@@ -354,7 +352,7 @@ function FriendSection({
                       <Text fz={13} fw={600} truncate style={{ lineHeight: 1.3 }}>
                         {friend.displayName || friend.handle}
                       </Text>
-                      <Text ff="monospace" fz={10} c="dimmed" truncate style={{ lineHeight: 1.3 }}>
+                      <Text fz={10} c="dimmed" truncate style={{ lineHeight: 1.3 }}>
                         @{friend.handle}
                       </Text>
                     </Box>

@@ -699,7 +699,7 @@ export default function Messages() {
                 Messages
               </Title>
               {!messagesLoading && (
-                <Text ff="monospace" fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
+                <Text fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
                   {msgCount > 0 ? (
                     <><span style={{ color: "var(--nf-sunshine)" }}>●</span> {msgCount} new</>
                   ) : "no messages"}
@@ -728,7 +728,6 @@ export default function Messages() {
             >
               <Box style={{ flex: 1, minWidth: 200 }}>
                 <Text
-                  ff="monospace"
                   size="xs"
                   c="white"
                   opacity={0.85}
@@ -738,7 +737,6 @@ export default function Messages() {
                   your inbox link · publicly accessible
                 </Text>
                 <Text
-                  ff="monospace"
                   fw={700}
                   c="white"
                   fz={17}
@@ -816,7 +814,7 @@ export default function Messages() {
                     <span
                       style={{ display: "flex", alignItems: "center", gap: 6 }}
                     >
-                      <Text ff="monospace" size="xs" c="dimmed">
+                      <Text size="xs" c="dimmed">
                         {
                           [
                             appendProfileLink,
@@ -936,7 +934,7 @@ export default function Messages() {
                     <span
                       style={{ display: "flex", alignItems: "center", gap: 6 }}
                     >
-                      <Text ff="monospace" size="xs" c="dimmed">
+                      <Text size="xs" c="dimmed">
                         {
                           themes[
                             (settingsLoading
@@ -1005,7 +1003,6 @@ export default function Messages() {
                         }}
                       >
                         <Text
-                          ff="monospace"
                           fw={700}
                           tt="uppercase"
                           c="dimmed"
@@ -1025,7 +1022,7 @@ export default function Messages() {
                               style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}
                             >
                               <Text fz={12}>{label}</Text>
-                              <Text ff="monospace" fz={11} c="dimmed">
+                              <Text fz={11} c="dimmed">
                                 {hint.replace("Alt", "Alt/⌘")}
                               </Text>
                             </Box>
@@ -1094,7 +1091,6 @@ export default function Messages() {
                         <Group justify="space-between" align="center">
                           <Group gap={8} align="center">
                             <Text
-                              ff="monospace"
                               fz={10}
                               c="white"
                               opacity={0.8}
@@ -1198,7 +1194,7 @@ export default function Messages() {
                                   count={responseText.length}
                                   limit={characterLimit}
                                 />
-                                <Text ff="monospace" size="xs" c="dimmed">
+                                <Text size="xs" c="dimmed">
                                   {responseText.length}/{characterLimit}
                                 </Text>
                               </Group>

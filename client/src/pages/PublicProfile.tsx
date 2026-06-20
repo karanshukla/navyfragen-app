@@ -425,7 +425,7 @@ export default function PublicProfile() {
                   >
                     {profile.displayName}
                   </Text>
-                  <Text ff="monospace" c="dimmed" mt={2} fz={13}>
+                  <Text c="dimmed" mt={2} fz={13}>
                     @{profile.handle}
                   </Text>
                 </Box>

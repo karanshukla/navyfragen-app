@@ -50,7 +50,7 @@ function ShortcutHint({ label, hint }: { label: string; hint: string }) {
       }}
     >
       <Text fz={13}>{label}</Text>
-      <Text ff="monospace" fz={12} c="dimmed">
+      <Text fz={12} c="dimmed">
         {hint.replace("Alt", "Alt/Cmd")}
       </Text>
     </Box>
@@ -266,7 +266,6 @@ export default function Home() {
             fw={700}
             mb="sm"
             tt="uppercase"
-            ff="monospace"
             c="dimmed"
             fz={11}
             style={{ letterSpacing: "0.1em" }}
@@ -298,7 +297,6 @@ export default function Home() {
             fw={700}
             mb="sm"
             tt="uppercase"
-            ff="monospace"
             c="dimmed"
             fz={11}
             style={{ letterSpacing: "0.1em" }}
