@@ -840,7 +840,7 @@ export default function Messages() {
                       />
                     </span>
                   </Box>
-                  <Collapse in={postingPrefsOpen}>
+                  <Collapse expanded={postingPrefsOpen}>
                     <Box
                       px="md"
                       pb="sm"
@@ -958,7 +958,7 @@ export default function Messages() {
                       />
                     </span>
                   </Box>
-                  <Collapse in={imageThemeOpen}>
+                  <Collapse expanded={imageThemeOpen}>
                     <Box
                       px="md"
                       pb="md"

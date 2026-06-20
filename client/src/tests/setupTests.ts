@@ -6,3 +6,14 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
+
+// Mantine v9 Textarea autosize uses document.fonts (FontFaceSet); happy-dom doesn't implement it.
+if (!document.fonts) {
+  Object.defineProperty(document, "fonts", {
+    value: {
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      ready: Promise.resolve(),
+    },
+  });
+}

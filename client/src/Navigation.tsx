@@ -339,7 +339,7 @@ function FriendSection({
           }}
         />
       </UnstyledButton>
-      <Collapse in={opened}>
+      <Collapse expanded={opened}>
         {friends.length > 0 ? (
           <Box style={{ overflowX: "hidden" }}>
             {friends.map((friend) => (
