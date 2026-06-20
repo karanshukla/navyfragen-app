@@ -28,6 +28,30 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Not possible through React rendering — the branch requires `friendsLoading` to be simultaneously falsy (to skip the loading skeleton) and truthy (to skip the empty-state text).
 
+### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
+
+**Line:** `if (!installPrompt) return;` inside `handleInstallClick`.
+
+**Why ignored:** The Install button that calls `handleInstallClick` is rendered with `disabled={!installPrompt}`. Mantine's `<Button disabled>` does not invoke `onClick` in the browser (or in JSDOM via `fireEvent.click`), so `handleInstallClick` can only be called when `installPrompt` is non-null, making the `!installPrompt` guard permanently unreachable through the UI.
+
+**What it would take to test:** Call `handleInstallClick` directly (bypassing the button's disabled state) by exporting it or via a component ref, with `installPrompt` set to `null`.
+
+### `client/src/api/profileService.ts` — disabled-query reject branch in `useUserExists`
+
+**Line:** `Promise.reject("No DID provided")` inside `useUserExists`'s `queryFn`.
+
+**Why ignored:** Same pattern as `usePublicProfile` and `useResolveHandle` (already documented below). `enabled: !!did` prevents React Query from calling `queryFn` when `did` is null. The reject branch is a structural guard that cannot fire through normal React Query flow.
+
+**What it would take to test:** Same approach as the other disabled-query hooks — call `refetch()` on the hook rendered with a null argument; React Query v5 invokes `queryFn` regardless of `enabled` on explicit refetch.
+
+### `client/src/api/profileService.ts` — `initialDataUpdatedAt` unreachable branches in `useFriends`
+
+**Line:** `initialDataUpdatedAt: () => (did ? getCachedFriends(did)?.timestamp : undefined) ?? undefined`
+
+**Why ignored:** React Query only calls `initialDataUpdatedAt` when `initialData` returns a non-undefined value, which only happens when `did` is non-null and the localStorage cache is valid. In that scenario: (1) the ternary's false arm (`did` is null → `undefined`) is structurally unreachable; (2) `getCachedFriends(did)?.timestamp` always returns a number (the stored `Date.now()` timestamp), so the `?.` null path and the `?? undefined` right-hand side are also unreachable.
+
+**What it would take to test:** Mock `getCachedFriends` to return a partial object missing the `timestamp` field while still having `data`, so that `?.timestamp` returns `undefined` and the `?? undefined` fallback is exercised.
+
 ### `client/src/api/profileService.ts` — disabled-query reject branches in `usePublicProfile` and `useResolveHandle`
 
 **Lines:** `Promise.reject("No DID provided")` inside `usePublicProfile`'s `queryFn`, and `Promise.reject("No handle provided")` inside `useResolveHandle`'s `queryFn`.
