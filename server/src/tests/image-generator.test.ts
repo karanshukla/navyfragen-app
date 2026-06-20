@@ -62,6 +62,25 @@ describe("fetchWithRetry", () => {
     assert.strictEqual(callCount, 1);
   });
 
+  test("breaks without sleeping when deadline expires during a failed fetch attempt", async () => {
+    let fetchCallCount = 0;
+    mock.method(globalThis, "fetch", async () => {
+      fetchCallCount++;
+      // Simulate a fetch that takes 50ms — longer than the 10ms overall timeout
+      await new Promise((r) => setTimeout(r, 50));
+      throw new Error("slow connect error");
+    });
+
+    await assert.rejects(
+      () => fetchWithRetry("http://test/", {}, 10),
+      (err: unknown) => err instanceof Error && err.message === "slow connect error"
+    );
+
+    // Only one fetch attempt: deadline passed during the request, so the
+    // `if (remainingAfter <= 0) break` path exits without a retry sleep.
+    assert.strictEqual(fetchCallCount, 1);
+  });
+
   test("passes url and init options through to fetch, adding an AbortSignal", async () => {
     const mockResponse = new Response("ok", { status: 200 });
     const capturedArgs: any[] = [];
