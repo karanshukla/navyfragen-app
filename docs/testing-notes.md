@@ -48,9 +48,17 @@ This document explains coverage exclusions and hard-to-test code.
 
 **Lines:** the top-level `catch (imgErr)` in `generateQuestionImage`.
 
-**Why ignored:** This catch wraps the entire image generation pipeline. The inner operations (sharp, fetch) are individually testable and their failure paths are exercised in the test suite. The outer catch would only fire if something unexpected escaped all inner error handling — a structurally unlikely scenario given the current code paths are all covered.
+**Why ignored:** This catch wraps the entire image generation pipeline. The inner operations (sharp, fetch) are individually testable and their failure paths are exercised in the test suite. The outer catch would only fire if something unexpected escaped all inner error handling — a structurally unlikely scenario given the current code paths are all covered. The `/* v8 ignore next 4 */` annotation covers all four lines of the block (the `} catch {` opener, the `logger.error` call, the `return {}`, and the closing `}`).
 
 **What it would take to test:** Inject a mock for `sharp` that throws synchronously at the import level, or export an internal function whose throw can be observed before the outer catch suppresses it.
+
+### `server/src/lib/image-generator.ts` — `imageGenerator` exported object closing brace
+
+**Line:** the `};` closing of `export const imageGenerator = { generateQuestionImage, };`.
+
+**Why ignored:** V8 records an implicit branch for the "object literal not initialised" path at the last punctuation of a module-level `const` export. Since the module is always fully executed on import, this arm is never taken — the same JIT artifact as the class-closing-brace pattern in class-based modules, but manifesting on the exported object literal instead.
+
+**What it would take to test:** Not possible — this is a V8 JIT internal; no user-written test can exercise the "object not initialised" branch.
 
 ### `server/src/lib/image-generator.ts` — `LOGO_DATA_URL` ternary false branch in `generateTwitterHtml`
 
@@ -93,6 +101,12 @@ This document explains coverage exclusions and hard-to-test code.
 **What it would take to test:** Export `handleSend` for direct unit testing, or access the component's internal state setter to bypass the `onChange` guard. Neither is practical without refactoring the component.
 
 ## V8 JIT Module-Scope Artifacts
+
+### `server/src/lib/image-generator.ts` — module-scope artifact on import block
+
+**Lines:** 1–3 (the import statements).
+
+**Why suppressed with `/* v8 ignore start/stop */`:** The same V8 module-scope "not-initialized" artifact that affects every module maps to line 1 of this file. `image-generator.ts` has enough branches that the 2-artifact drop is otherwise below the rounding threshold, but after other uncovered branches in the file were fixed the artifact branch at line 1 became the sole uncovered branch and pushed the file below 100%. Wrapping the import block in `/* v8 ignore start/stop */` suppresses only the artifact; all function bodies are measured normally.
 
 ### `server/src/lib/pds-region.ts` — module-scope and function-declaration branches
 
