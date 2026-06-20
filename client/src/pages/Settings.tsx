@@ -100,7 +100,7 @@ export default function Settings() {
             Settings
           </Title>
 
-          <Grid gutter="md">
+          <Grid style={{ gap: "var(--mantine-spacing-md)" }}>
             {/* Account overview — full-width stats panel */}
             <Grid.Col span={12}>
               <Paper
