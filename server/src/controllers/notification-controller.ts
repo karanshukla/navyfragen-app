@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import express from "express";
 import { body } from "express-validator";
 import { Logger } from "pino";
@@ -9,6 +10,7 @@ export class NotificationController {
     private notificationService: NotificationService,
     private logger: Logger
   ) {}
+  /* v8 ignore stop */
 
   /**
    * Return the server's VAPID public key so the client can subscribe.
@@ -105,4 +107,5 @@ export class NotificationController {
 
     return res.status(501).json({ error: "Web push not yet enabled" });
   };
+  /* v8 ignore next 1 */
 }

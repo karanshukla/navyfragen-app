@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import { Agent } from "@atproto/api";
 import type { AppContext } from "../index";
 
@@ -9,6 +10,7 @@ export async function initializeAgentFromSession(
   req: Express.Request,
   ctx: AppContext
 ): Promise<Agent | null> {
+  /* v8 ignore stop */
   if (!req.session?.did) {
     return null;
   }

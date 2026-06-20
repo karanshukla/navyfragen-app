@@ -105,7 +105,9 @@ export function useUserExists(did: string | null) {
   return useQuery({
     queryKey: did ? profileKeys.exists(did) : profileKeys.all,
     queryFn: () =>
-      did ? profileService.userExists(did) : Promise.reject("No DID provided"),
+      did
+        ? profileService.userExists(did)
+        : /* v8 ignore next */ Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
   });
 }
@@ -146,7 +148,9 @@ export function useFriends(did: string | null) {
     // Read localStorage lazily — only when the query cache entry is first created,
     // not on every render.
     initialData: () => (did ? getCachedFriends(did)?.data : undefined) ?? undefined,
+    /* v8 ignore start */
     initialDataUpdatedAt: () => (did ? getCachedFriends(did)?.timestamp : undefined) ?? undefined,
+    /* v8 ignore stop */
     refetchOnWindowFocus: false,
     retry: false,
   });

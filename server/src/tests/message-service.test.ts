@@ -412,6 +412,35 @@ describe("MessageService", () => {
     assert.ok(result.errors?.some((e) => e.error === "import failed"));
   });
 
+  test("syncMessages: uses fallback error message when Phase 1 createRecord throws non-Error", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: { records: [], cursor: undefined },
+    }));
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => [
+      { tid: "db-only", message: "d", createdAt: "now", recipient: "did:foo" },
+    ]);
+    mockAgent.com.atproto.repo.createRecord.mock.mockImplementationOnce(async () => { throw "non-Error string"; });
+    const result = await messageService.syncMessages("did:foo", mockAgent);
+    assert.strictEqual(result.errorCount, 1);
+    assert.ok(result.errors?.some((e) => e.error === "Unknown error during PDS record creation"));
+  });
+
+  test("syncMessages: uses fallback error message when Phase 2 DB insert throws non-Error", async () => {
+    mockAgent.com.atproto.repo.listRecords.mock.mockImplementationOnce(async () => ({
+      success: true,
+      data: {
+        records: [{ uri: "at://did:foo/app.navyfragen.message/pds-only", rkey: "pds-only", value: { message: "p", createdAt: "now", recipient: "did:foo" } }],
+        cursor: undefined,
+      },
+    }));
+    mockSelectBuilder.execute.mock.mockImplementationOnce(async () => []);
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => { throw "non-Error string"; });
+    const result = await messageService.syncMessages("did:foo", mockAgent);
+    assert.strictEqual(result.errorCount, 1);
+    assert.ok(result.errors?.some((e) => e.error === "Unknown error during DB import"));
+  });
+
   test("syncMessages: paginates through multiple pages of PDS records", async () => {
     let pageCall = 0;
     mockAgent.com.atproto.repo.listRecords.mock.mockImplementation(async () => {

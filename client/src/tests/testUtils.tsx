@@ -7,11 +7,12 @@ import { MemoryRouter } from "react-router-dom";
 
 interface Options extends Omit<RenderOptions, "wrapper"> {
   route?: string;
+  colorScheme?: "light" | "dark";
 }
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  { route = "/", ...options }: Options = {}
+  { route = "/", colorScheme, ...options }: Options = {}
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -23,7 +24,7 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MantineProvider>
+        <MantineProvider forceColorScheme={colorScheme}>
           <Notifications />
           <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
         </MantineProvider>

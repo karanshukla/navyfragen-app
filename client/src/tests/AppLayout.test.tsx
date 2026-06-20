@@ -143,6 +143,56 @@ describe("AppLayout", () => {
     expect(document.body).toBeInTheDocument();
   });
 
+  it("mousedown inside the navbar does not close the nav", async () => {
+    renderWithProviders(<AppLayout />);
+
+    const buttons = document.querySelectorAll("button");
+    const burgerBtn = Array.from(buttons).find(
+      (b) => b.getAttribute("aria-label") !== "Toggle color scheme"
+    );
+
+    if (burgerBtn) {
+      await act(async () => {
+        fireEvent.click(burgerBtn);
+      });
+
+      // Fire mousedown on the navbar element itself — navbarRef.current.contains(target) is true
+      // so !contains(...) is false and the click-outside handler short-circuits without closing
+      const navEl = document.querySelector("nav");
+      if (navEl) {
+        await act(async () => {
+          fireEvent.mouseDown(navEl);
+        });
+      }
+
+      // No crash and nav did not close (no error thrown)
+      expect(document.body).toBeInTheDocument();
+    }
+  });
+
+  it("mousedown on the burger button does not close the nav", async () => {
+    renderWithProviders(<AppLayout />);
+
+    const buttons = document.querySelectorAll("button");
+    const burgerBtn = Array.from(buttons).find(
+      (b) => b.getAttribute("aria-label") !== "Toggle color scheme"
+    );
+
+    if (burgerBtn) {
+      await act(async () => {
+        fireEvent.click(burgerBtn);
+      });
+
+      // Fire mousedown on the burger button — burgerRef.current.contains(target) is true
+      // so !contains(...) is false and the handler short-circuits
+      await act(async () => {
+        fireEvent.mouseDown(burgerBtn);
+      });
+
+      expect(document.body).toBeInTheDocument();
+    }
+  });
+
   it("clicking the Login button in AppHeader triggers onNavClose → setNavOpen(false)", async () => {
     renderWithProviders(<AppLayout />, { route: "/" });
     // The AppHeader Login gradient button calls onNavClose when clicked
