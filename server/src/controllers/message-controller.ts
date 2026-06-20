@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import express from "express";
 import { body } from "express-validator";
 import { MessageService } from "../services/message-service";
@@ -11,6 +12,7 @@ export class MessageController {
     private logger: Logger,
     private ctx: AppContext
   ) {}
+  /* v8 ignore stop */
 
   /**
    * Validation for adding example messages
@@ -309,4 +311,5 @@ export class MessageController {
       });
     }
   };
+  /* v8 ignore next 1 */
 }

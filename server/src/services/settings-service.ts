@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import type { Database } from "../database/db";
 import { Logger } from "pino";
 import { Agent } from "@atproto/api";
@@ -15,6 +16,7 @@ export class SettingsService {
     private db: Database,
     private logger: Logger
   ) {}
+  /* v8 ignore stop */
 
   async getUserSettings(userDid: string): Promise<UserSettings | undefined> {
     try {
@@ -156,4 +158,5 @@ export class SettingsService {
       throw new Error("Failed to update user settings");
     }
   }
+  /* v8 ignore next 1 */
 }

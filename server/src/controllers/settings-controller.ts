@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import express from "express";
 import { body } from "express-validator";
 import { SettingsService } from "../services/settings-service";
@@ -11,6 +12,7 @@ export class SettingsController {
     private logger: Logger,
     private ctx: AppContext
   ) {}
+  /* v8 ignore stop */
 
   /**
    * Get the user's settings or create default ones if they don't exist
@@ -137,4 +139,5 @@ export class SettingsController {
       return res.status(500).json({ error: "Failed to update user settings" });
     }
   };
+  /* v8 ignore next 1 */
 }

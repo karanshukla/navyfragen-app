@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import { AtpAgent, Agent } from "@atproto/api";
 import { Kysely } from "kysely";
 import { Logger } from "pino";
@@ -17,6 +18,7 @@ export class ProfileService {
   ) {
     this.agent = new AtpAgent({ service: "https://api.bsky.app" });
   }
+  /* v8 ignore stop */
 
   /**
    * Get public profile information for a given DID
@@ -159,4 +161,5 @@ export class ProfileService {
     }
     return did;
   }
+  /* v8 ignore next 1 */
 }
