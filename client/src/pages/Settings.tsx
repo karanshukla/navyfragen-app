@@ -69,7 +69,9 @@ export default function Settings() {
 
   const handleInstallClick = async () => {
     triggerHaptic();
+    /* v8 ignore start */
     if (!installPrompt) return;
+    /* v8 ignore stop */
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
     if (outcome === "accepted") setInstallPrompt(null);

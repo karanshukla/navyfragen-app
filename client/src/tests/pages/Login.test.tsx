@@ -121,4 +121,55 @@ describe("Login page", () => {
     expect(sessionStorage.getItem("newLogin")).toBe("true");
     expect(window.location.href).toBe("https://bsky.app/oauth/authorize");
   });
+
+  it("does nothing when onSuccess is called without a redirectUrl", async () => {
+    let capturedCallbacks: any;
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+      target: { value: "karan.bsky.social" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onSuccess({});
+    });
+
+    // No redirect happened; component remains rendered without error
+    expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
+  });
+
+  it("shows fallback error message when err.error is absent", async () => {
+    let capturedCallbacks: any;
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+      target: { value: "karan.bsky.social" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onError({});
+    });
+
+    expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+  });
+
+  it("renders correctly in dark mode (covers dark-style branches)", () => {
+    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<Login />, { colorScheme: "dark" });
+    expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
+  });
 });

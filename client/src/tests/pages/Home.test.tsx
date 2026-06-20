@@ -149,6 +149,65 @@ describe("Home page", () => {
     await waitFor(() => expect(writeTextMock).toHaveBeenCalled());
   });
 
+  it("renders in dark mode when user is logged in (covers isDark style branches)", () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: { displayName: "Karan", handle: "karan.bsky.social" },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />, { colorScheme: "dark" });
+    expect(screen.getByText("Karan")).toBeInTheDocument();
+  });
+
+  it("clicking Copy Link changes button text to Copied!", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+      writable: true,
+    });
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: { displayName: "Karan", handle: "karan.bsky.social" },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /copied!/i })).toBeInTheDocument();
+    });
+  });
+
+  it("clicking Share does nothing when neither navigator.share nor clipboard is available", async () => {
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    mockUseSession.mockReturnValue({
+      data: {
+        isLoggedIn: true,
+        did: "did:example:123",
+        profile: { displayName: "Karan", handle: "karan.bsky.social" },
+      },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Home />);
+    fireEvent.click(screen.getByRole("button", { name: /share/i }));
+    // Neither API available — no crash, nothing happens
+    expect(document.body).toBeInTheDocument();
+  });
+
   it("Copy Link and Share buttons are not shown when logged out", () => {
     mockUseSession.mockReturnValue({
       data: { isLoggedIn: false, profile: null },

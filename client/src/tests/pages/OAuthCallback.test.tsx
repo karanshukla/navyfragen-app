@@ -58,4 +58,33 @@ describe("OAuthCallback page", () => {
       expect(screen.getByText(/token expired or invalid/i)).toBeInTheDocument();
     });
   });
+
+  it("shows err.message as fallback when err.error is absent", async () => {
+    mockPost.mockRejectedValue({ message: "Network connection failed" });
+    renderWithProviders(<OAuthCallback />, {
+      route: "/oauth_callback?oauth_token=badtoken",
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/network connection failed/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic fallback message when both err.error and err.message are absent", async () => {
+    mockPost.mockRejectedValue({});
+    renderWithProviders(<OAuthCallback />, {
+      route: "/oauth_callback?oauth_token=badtoken",
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/failed to complete oauth login/i)).toBeInTheDocument();
+    });
+  });
+
+  it("renders correctly in dark mode (covers dark-style branches)", async () => {
+    mockPost.mockReturnValue(new Promise(() => {})); // never resolves
+    renderWithProviders(<OAuthCallback />, {
+      route: "/oauth_callback?oauth_token=abc123",
+      colorScheme: "dark",
+    });
+    expect(screen.getByText(/logging you in/i)).toBeInTheDocument();
+  });
 });

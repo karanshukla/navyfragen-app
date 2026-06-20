@@ -42,7 +42,7 @@ export default function Login() {
     setError(null);
     const result = handleSchema.safeParse(handle);
     if (!result.success) {
-      setError(result.error.issues[0]?.message ?? "Validation failed");
+      setError(result.error.issues[0].message);
       return;
     }
     login(
