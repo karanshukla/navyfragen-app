@@ -132,7 +132,7 @@ These branches are V8 JIT internals; no user-written test can reach them. The sa
 
 ### Server class-based modules — module-scope and class-closing-brace artifacts
 
-**Files:** `server/src/auth/session-agent.ts`, `server/src/controllers/auth-controller.ts`, `server/src/controllers/notification-controller.ts`, `server/src/services/message-service.ts`, `server/src/services/notification-service.ts`
+**Files:** `server/src/services/auth-service.ts`, `server/src/controllers/message-controller.ts`, `server/src/controllers/profile-controller.ts`, `server/src/controllers/settings-controller.ts`, `server/src/services/profile-service.ts`, `server/src/services/settings-service.ts`
 
 **Lines:** line 1 (module-scope artifact) and the last `}` of the class (class-declaration artifact).
 

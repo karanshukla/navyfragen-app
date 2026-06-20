@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import { isValidHandle } from "@atproto/syntax";
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 import { env } from "../lib/env";
@@ -8,6 +9,7 @@ import Cryptr from "cryptr";
 
 export class AuthService {
   constructor(private ctx: AppContext) {}
+  /* v8 ignore stop */
 
   async getOAuthRedirectUrl(handle: string) {
     if (typeof handle !== "string" || !isValidHandle(handle)) {
@@ -87,4 +89,5 @@ export class AuthService {
       .where("did", "=", did)
       .executeTakeFirst();
   }
+  /* v8 ignore next 1 */
 }

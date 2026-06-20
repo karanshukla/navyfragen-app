@@ -1,3 +1,4 @@
+/* v8 ignore start */
 import express from "express";
 import { param } from "express-validator";
 import { ProfileService } from "../services/profile-service";
@@ -13,6 +14,7 @@ export class ProfileController {
     private logger: Logger,
     private ctx: AppContext
   ) {}
+  /* v8 ignore stop */
 
   /**
    * Validation for public profile request
@@ -146,4 +148,5 @@ export class ProfileController {
       return res.status(500).json({ error: "Failed to resolve handle" });
     }
   };
+  /* v8 ignore next 1 */
 }
