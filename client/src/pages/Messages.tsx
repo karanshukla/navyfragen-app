@@ -494,8 +494,7 @@ export default function Messages() {
           setDeleteModalOpened(false);
           setMessageIdToDelete(null);
         }
-        setDeletingTid(null);
-        refetchMessages();
+        refetchMessages().finally(() => setDeletingTid(null));
       },
       onError: (err: any) => {
         notifications.show({
@@ -736,14 +735,24 @@ export default function Messages() {
                 >
                   your inbox link · publicly accessible
                 </Text>
-                <Text
-                  fw={700}
-                  c="white"
-                  fz={17}
-                  mt={4}
+                <Box
+                  mt={6}
+                  style={{
+                    display: "inline-block",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    borderRadius: 8,
+                    padding: "4px 12px",
+                  }}
                 >
-                  {shortlinkurl}/{handle}
-                </Text>
+                  <Text
+                    fw={700}
+                    fz={17}
+                    style={{ color: "var(--nf-lavender)", letterSpacing: "0.01em" }}
+                  >
+                    {shortlinkurl}/{handle}
+                  </Text>
+                </Box>
               </Box>
               <Group gap="xs" wrap="wrap">
                 <CopyButton value={fullUrl}>

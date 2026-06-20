@@ -75,6 +75,9 @@ export function useUserSettings() {
       return failureCount < 3;
     },
     refetchOnWindowFocus: false,
+    // Mutations call invalidateQueries(settingsKeys.all) on every change,
+    // so background refetches between user actions add no value.
+    staleTime: Infinity,
   });
 }
 
@@ -84,6 +87,9 @@ export function useUserStats() {
     queryFn: () => settingsService.getStats(),
     retry: false,
     refetchOnWindowFocus: false,
+    // Invalidated by message mutations (delete, respond, sync) and settings
+    // mutations via settingsKeys.all, so independent refetches are redundant.
+    staleTime: Infinity,
   });
 }
 
@@ -93,6 +99,8 @@ export function usePdsInfo() {
     queryFn: () => settingsService.getPdsInfo(),
     retry: false,
     refetchOnWindowFocus: false,
+    // PDS URL is static per-user; invalidated by settings mutations.
+    staleTime: Infinity,
   });
 }
 

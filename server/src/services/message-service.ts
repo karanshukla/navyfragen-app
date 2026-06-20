@@ -170,23 +170,19 @@ export class MessageService {
         throw new Error("Not authorized to delete this message");
       }
 
-      // Delete from PDS first — if this fails, the DB record is preserved
-      // so the message won't be re-imported on the next bidirectional sync.
-      try {
-        await agent.com.atproto.repo.deleteRecord({
+      await this.db.deleteFrom("message").where("tid", "=", tid).execute();
+
+      // Fire-and-forget PDS deletion — DB is authoritative, so the message is
+      // already gone from the user's inbox. PDS cleanup is best-effort.
+      agent.com.atproto.repo
+        .deleteRecord({
           repo: userDid,
           collection: ids.AppNavyfragenMessage,
           rkey: tid,
+        })
+        .catch((err) => {
+          this.logger.error({ err, tid }, "Background PDS delete failed");
         });
-      } catch (err) {
-        this.logger.error(
-          { error: err, tid },
-          "Failed to delete message from PDS"
-        );
-        throw new Error("Failed to delete message from PDS");
-      }
-
-      await this.db.deleteFrom("message").where("tid", "=", tid).execute();
 
       return { success: true };
     } catch (err) {

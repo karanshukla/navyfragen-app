@@ -213,7 +213,7 @@ describe("MessageService", () => {
     );
   });
 
-  test("deleteMessage deletes from db and pds", async () => {
+  test("deleteMessage deletes from DB and fires PDS deletion in background", async () => {
     const tid = "tid";
     const did = "did:foo";
     mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
@@ -225,24 +225,26 @@ describe("MessageService", () => {
     );
     const result = await messageService.deleteMessage(tid, did, mockAgent);
     assert.deepStrictEqual(result, { success: true });
-    assert.strictEqual(mockAgent.com.atproto.repo.deleteRecord.mock.calls.length, 1);
     assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 1);
+    // PDS delete is fire-and-forget — synchronously invoked, resolves in background
+    assert.strictEqual(mockAgent.com.atproto.repo.deleteRecord.mock.calls.length, 1);
   });
 
-  test("deleteMessage does not delete from DB if PDS deletion fails", async () => {
+  test("deleteMessage returns success and logs error when background PDS deletion fails", async () => {
     const tid = "tid";
     const did = "did:foo";
     mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
       async () => ({ tid, recipient: did })
     );
+    mockDeleteBuilder.execute.mock.mockImplementationOnce(async () => ({}));
     mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(
       async () => { throw new Error("PDS unavailable"); }
     );
-    await assert.rejects(
-      () => messageService.deleteMessage(tid, did, mockAgent),
-      /Failed to delete message from PDS/
-    );
-    assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 0);
+    const result = await messageService.deleteMessage(tid, did, mockAgent);
+    assert.deepStrictEqual(result, { success: true });
+    // flush microtasks so the background .catch() fires
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.strictEqual((mockLogger.error as any).mock.calls.length, 1);
   });
 
   test("deleteMessage throws if not found", async () => {
@@ -680,31 +682,17 @@ describe("MessageService", () => {
     );
   });
 
-  test("deleteMessage uses generic message when err is not an Error instance", async () => {
+  test("deleteMessage uses generic fallback message when db.execute throws non-Error", async () => {
     mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
       tid: "tid",
       recipient: "did:foo",
     }));
-    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => {
-      throw "pds-string-error";
-    });
-    await assert.rejects(
-      () => messageService.deleteMessage("tid", "did:foo", mockAgent),
-      /Failed to delete message from PDS/
-    );
-  });
-
-  test("deleteMessage outer catch uses fallback when db.execute throws non-Error", async () => {
-    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(
-      async () => ({ tid: "t1", recipient: "did:foo" })
-    );
-    mockAgent.com.atproto.repo.deleteRecord.mock.mockImplementationOnce(async () => ({}));
     mockDb.deleteFrom = mock.fn(() => ({
       where: mock.fn(function (this: any) { return this; }),
       execute: mock.fn(async () => { throw "db-non-error"; }),
     }));
     await assert.rejects(
-      () => messageService.deleteMessage("t1", "did:foo", mockAgent),
+      () => messageService.deleteMessage("tid", "did:foo", mockAgent),
       /Failed to delete message/
     );
   });

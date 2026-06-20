@@ -317,7 +317,7 @@ export default function Settings() {
                   fullWidth
                   radius="xl"
                   fw={700}
-                  color="red"
+                  color="crimson"
                   variant="filled"
                   onClick={() => {
                     triggerHaptic();

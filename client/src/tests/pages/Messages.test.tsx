@@ -75,7 +75,7 @@ function setupMocks(messages = MESSAGES) {
   mockUseMessages.mockReturnValue({
     data: { messages },
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: vi.fn().mockResolvedValue(undefined),
   } as any);
   mockUseDeleteMessage.mockReturnValue(noopMutation);
   mockUseRespondToMessage.mockReturnValue(noopMutation);
@@ -126,7 +126,7 @@ describe("Messages page", () => {
     mockUseMessages.mockReturnValue({
       data: undefined,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: vi.fn().mockResolvedValue(undefined),
     } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
@@ -148,7 +148,7 @@ describe("Messages page", () => {
     mockUseMessages.mockReturnValue({
       data: undefined,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: vi.fn().mockResolvedValue(undefined),
     } as any);
     mockUseDeleteMessage.mockReturnValue(noopMutation);
     mockUseRespondToMessage.mockReturnValue(noopMutation);
@@ -249,7 +249,7 @@ describe("Messages page", () => {
     mockUseMessages.mockReturnValue({
       data: { messages: MESSAGES },
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: vi.fn().mockResolvedValue(undefined),
     } as any);
     rerender(<Messages />);
 
@@ -357,7 +357,7 @@ describe("Messages page", () => {
   it("clicking 'Add example messages' calls addExamples; onSuccess calls refetch", async () => {
     let capturedCallbacks: any;
     const mockAddMutate = vi.fn((_did: string, callbacks: any) => { capturedCallbacks = callbacks; });
-    const refetchMock = vi.fn();
+    const refetchMock = vi.fn().mockResolvedValue(undefined);
     mockUseAddExampleMessages.mockReturnValue({ mutate: mockAddMutate, isPending: false } as any);
     mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
     mockUseMessages.mockReturnValue({ data: { messages: [] }, isLoading: false, refetch: refetchMock } as any);

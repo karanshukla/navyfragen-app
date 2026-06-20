@@ -177,7 +177,7 @@ export default function Home() {
                       onClick={copy}
                       size="sm"
                       radius="xl"
-                      variant="light"
+                      variant="dark"
                       leftSection={<IconClipboard size={14} />}
                     >
                       {copied ? "Copied!" : "Copy Link"}
@@ -188,7 +188,7 @@ export default function Home() {
               <Button
                 size="sm"
                 radius="xl"
-                variant="light"
+                variant="dark"
                 leftSection={<IconShare size={14} />}
                 onClick={async () => {
                   const url = `https://${shortlinkurl}/${sessionData.profile!.handle}`;
@@ -317,7 +317,7 @@ export default function Home() {
                   alignItems: "center",
                   gap: 8,
                   fontSize: 15,
-                  color: "var(--nf-purple)",
+                  color: isDark ? "var(--nf-lavender)" : "var(--nf-purple)",
                   textDecoration: "none",
                 }}
               >
@@ -337,7 +337,7 @@ export default function Home() {
                   alignItems: "center",
                   gap: 8,
                   fontSize: 15,
-                  color: "var(--nf-purple)",
+                  color: isDark ? "var(--nf-lavender)" : "var(--nf-purple)",
                   textDecoration: "none",
                 }}
               >

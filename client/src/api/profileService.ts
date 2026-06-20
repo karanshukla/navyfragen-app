@@ -98,6 +98,7 @@ export function usePublicProfile(did: string | null) {
         ? profileService.getPublicProfile(did)
         : /* v8 ignore next */ Promise.reject("No DID provided"),
     enabled: !!did,
+    staleTime: 30 * 60 * 1000,
   });
 }
 
@@ -177,5 +178,6 @@ export function useResolveHandle(handle: string | null) {
         ? profileService.resolveHandle(handle)
         : /* v8 ignore next */ Promise.reject("No handle provided"),
     enabled: !!handle,
+    staleTime: Infinity,
   });
 }
