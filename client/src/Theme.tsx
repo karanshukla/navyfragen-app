@@ -42,7 +42,6 @@ const navyfragenTheme = createTheme({
   black: "#1E1B4B",
 
   fontFamily: "Inter, system-ui, sans-serif",
-  fontFamilyMonospace: "JetBrains Mono, ui-monospace, monospace",
 
   headings: {
     fontFamily: "Inter, system-ui, sans-serif",

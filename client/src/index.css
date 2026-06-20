@@ -36,7 +36,6 @@ body {
   --nf-grad-mark:  linear-gradient(135deg, #3349E0 0%, #5322c5 55%, #4F1FA6 100%);
   --nf-grad-dark:  linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%);
   --nf-font-sans: 'Inter', system-ui, sans-serif;
-  --nf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --nf-ease:     cubic-bezier(.2,.7,.2,1);
   --nf-dur-fast: 120ms;
   --nf-dur-base: 200ms;
