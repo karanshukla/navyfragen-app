@@ -81,7 +81,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "@atproto/lex-cli": "^0.9.9",
+    "@atproto/lex-cli": "^0.10.1",
     "@eslint/compat": "^2.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
