@@ -87,18 +87,3 @@ body {
   border-radius: 12px;
 }
 
-/* Sunshine "new" pulse animation */
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes nf-pulse {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.5);
-    }
-    50% {
-      box-shadow: 0 0 0 5px rgba(250, 204, 21, 0);
-    }
-  }
-  .nf-pulse-dot {
-    animation: nf-pulse 1.8s ease-in-out infinite;
-  }
-}

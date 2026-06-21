@@ -411,7 +411,7 @@ export default function PublicProfile() {
                   rel="noopener noreferrer"
                   variant="outline"
                   size="xs"
-                  radius="xl"
+                  radius="md"
                   style={{
                     flexShrink: 0,
                     borderColor: "var(--mantine-color-default-border)",
@@ -533,16 +533,13 @@ export default function PublicProfile() {
                     handleSend();
                   }}
                   loading={sendLoading}
-                  radius="xl"
+                  radius="md"
                   leftSection={<IconSend size={16} />}
                   color="sunshine"
                   variant="filled"
                   style={{
                     color: "var(--nf-midnight)",
-                    fontFamily: "var(--nf-font-mono)",
                     fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
                   }}
                 >
                   Send

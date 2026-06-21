@@ -258,7 +258,7 @@ export default function Settings() {
                     variant="gradient"
                     gradient={{ from: "royal", to: "purple", deg: 135 }}
                   >
-                    Notifications enabled ✓
+                    Notifications enabled
                   </Button>
                 ) : (
                   <Button
@@ -283,8 +283,8 @@ export default function Settings() {
               >
                 <Button
                   fullWidth
-                  radius="xl"
-                  fw={700}
+                  radius="md"
+                  fw={600}
                   color="crimson"
                   variant="filled"
                   onClick={() => {
@@ -335,14 +335,13 @@ function StatItem({ value, label, size, truncate }: StatItemProps) {
     <Stack gap={2} style={truncate ? { minWidth: 0 } : undefined}>
       <Text
         fw={800}
-        variant="gradient"
-        gradient={{ from: "royal", to: "purple", deg: 135 }}
+        c="royal"
         truncate={truncate}
         style={{ fontSize: size, letterSpacing: "-0.02em", lineHeight: 1.1 }}
       >
         {value}
       </Text>
-      <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.08em" }}>
+      <Text size="xs" c="dimmed">
         {label}
       </Text>
     </Stack>

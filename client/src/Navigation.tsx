@@ -180,7 +180,7 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
           >
             <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
             <Box style={{ minWidth: 0 }}>
-              <Text fz={9} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.08em" }}>
+              <Text fz={9} c="dimmed">
                 Viewing profile
               </Text>
               <Text fz={12} fw={600} truncate>
@@ -302,13 +302,7 @@ function FriendSection({
           paddingTop: "var(--mantine-spacing-lg)",
         }}
       >
-        <Text
-          size="xs"
-          fw={700}
-          c="dimmed"
-          tt="uppercase"
-          style={{ letterSpacing: "0.1em", flex: 1 }}
-        >
+        <Text size="xs" fw={600} c="dimmed" style={{ flex: 1 }}>
           {label}
         </Text>
         <IconChevronDown
@@ -369,7 +363,6 @@ function FriendSection({
 function MessageCountBadge({ count }: { count: number }) {
   return (
     <span
-      className="nf-pulse-dot"
       style={{
         background: "var(--nf-sunshine)",
         color: "var(--nf-midnight)",

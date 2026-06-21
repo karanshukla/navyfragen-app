@@ -27,13 +27,6 @@ import { surfaceBg } from "../styles/tokens";
 
 const shortlinkurl = import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
-const gradientTextStyle = {
-  background: "var(--nf-grad-hero)",
-  WebkitBackgroundClip: "text",
-  WebkitTextFillColor: "transparent",
-  backgroundClip: "text",
-} as const;
-
 function ShortcutHint({ label, hint }: { label: string; hint: string }) {
   return (
     <Box
@@ -66,15 +59,7 @@ export default function Home() {
 
   return (
     <>
-      <Title
-        order={1}
-        mb={6}
-        style={{
-          ...gradientTextStyle,
-          letterSpacing: "-0.03em",
-          paddingBottom: "0.05em",
-        }}
-      >
+      <Title order={1} mb={6} style={{ letterSpacing: "-0.03em" }}>
         Navyfragen - Anonymous questions and answers on Bluesky
       </Title>
       <Text mb="xl" fz={15} c="dimmed">
@@ -99,23 +84,10 @@ export default function Home() {
           style={{
             padding: "40px 24px",
             textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
             background: surfaceBg(isDark),
           }}
         >
-          {/* Subtle radial glow from top center */}
-          <Box
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: isDark
-                ? "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)"
-                : "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(196,181,253,0.4), transparent 70%)",
-              pointerEvents: "none",
-            }}
-          />
-          <Stack gap="md" style={{ position: "relative" }}>
+          <Stack gap="md">
             <Center>
               <Avatar
                 src={sessionData.profile.avatar ?? undefined}
@@ -124,7 +96,6 @@ export default function Home() {
                 radius="xl"
                 style={{
                   border: "3px solid rgba(255,255,255,0.25)",
-                  boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)",
                 }}
               >
                 <WinkMark size={60} sparkle={false} aria-hidden />
@@ -133,9 +104,9 @@ export default function Home() {
             <Center>
               <Text fw={800} fz={26} style={{ letterSpacing: "-0.025em" }}>
                 Good to see you again,{" "}
-                <span style={gradientTextStyle}>
+                <Text component="span" c="royal" fw={800} inherit>
                   {sessionData.profile.displayName || sessionData.profile.handle}
-                </span>
+                </Text>
                 !
               </Text>
             </Center>
@@ -234,14 +205,7 @@ export default function Home() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
         <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
-          <Text
-            fw={700}
-            mb="sm"
-            tt="uppercase"
-            c="dimmed"
-            fz={11}
-            style={{ letterSpacing: "0.1em" }}
-          >
+          <Text fw={600} mb="sm" c="dimmed" fz={12}>
             Keyboard Shortcuts
           </Text>
           <Stack gap={6}>
@@ -260,14 +224,7 @@ export default function Home() {
         </Paper>
 
         <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
-          <Text
-            fw={700}
-            mb="sm"
-            tt="uppercase"
-            c="dimmed"
-            fz={11}
-            style={{ letterSpacing: "0.1em" }}
-          >
+          <Text fw={600} mb="sm" c="dimmed" fz={12}>
             Questions? Feedback?
           </Text>
           <Stack gap="sm">

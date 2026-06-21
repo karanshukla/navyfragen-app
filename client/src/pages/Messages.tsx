@@ -454,6 +454,7 @@ export default function Messages() {
     if (!session?.did) return;
     addExamples(session.did, {
       onSuccess: () => refetchMessages(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onError: (err: any) => {
         notifications.show({
           title: "Error Adding Examples",
@@ -484,6 +485,7 @@ export default function Messages() {
         }
         refetchMessages().finally(() => setDeletingTid(null));
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onError: (err: any) => {
         notifications.show({
           title: "Error Deleting Message",
@@ -559,6 +561,7 @@ export default function Messages() {
           });
           refetchMessages();
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (err: any) => {
           notifications.show({
             title: "Response Error",
@@ -689,41 +692,16 @@ export default function Messages() {
               background: "var(--nf-grad-dark)",
               position: "relative",
               overflow: "hidden",
-              boxShadow: "0 18px 40px -18px rgba(107,63,212,0.6)",
             }}
           >
             <Group align="center" gap="md" wrap="wrap" style={{ position: "relative" }}>
               <Box style={{ flex: 1, minWidth: 200 }}>
-                <Text
-                  size="xs"
-                  c="white"
-                  opacity={0.85}
-                  fw={700}
-                  style={{ letterSpacing: "0.1em", textTransform: "uppercase" }}
-                >
-                  your inbox link · publicly accessible
+                <Text size="xs" c="white" opacity={0.7} fw={500} mb={6}>
+                  Your inbox link · publicly accessible
                 </Text>
-                <Box
-                  mt={6}
-                  style={{
-                    display: "inline-block",
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    borderRadius: 8,
-                    padding: "4px 12px",
-                  }}
-                >
-                  <Text
-                    fw={700}
-                    fz={17}
-                    style={{
-                      color: "var(--nf-lavender)",
-                      letterSpacing: "0.01em",
-                    }}
-                  >
-                    {shortlinkurl}/{handle}
-                  </Text>
-                </Box>
+                <Text fw={700} fz={17} style={{ color: "var(--nf-lavender)" }}>
+                  {shortlinkurl}/{handle}
+                </Text>
               </Box>
               <Group gap="xs" wrap="wrap">
                 <CopyButton value={fullUrl}>
@@ -978,13 +956,7 @@ export default function Messages() {
                           borderTop: "1px solid var(--mantine-color-default-border)",
                         }}
                       >
-                        <Text
-                          fw={700}
-                          tt="uppercase"
-                          c="dimmed"
-                          mb="xs"
-                          style={{ fontSize: 10, letterSpacing: "0.1em" }}
-                        >
+                        <Text fw={600} c="dimmed" mb="xs" fz={11}>
                           Keyboard Shortcuts
                         </Text>
                         <Stack gap={2}>
@@ -1047,11 +1019,9 @@ export default function Messages() {
                         border: isFocused
                           ? "2px solid var(--nf-purple)"
                           : "2px solid rgba(255,255,255,0.06)",
-                        boxShadow: isFocused
-                          ? "0 18px 40px -16px rgba(0,0,0,0.4), 0 0 0 3px rgba(139,92,246,0.35)"
-                          : "0 18px 40px -16px rgba(0,0,0,0.4)",
+                        boxShadow: "0 4px 16px -8px rgba(0,0,0,0.3)",
                         padding: "8px 20px 20px",
-                        transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                        transition: "border-color 0.15s ease",
                         cursor: "pointer",
                         display: "flex",
                         flexDirection: "column",
@@ -1199,7 +1169,7 @@ export default function Messages() {
                                 handlePrepareResponse(msg.tid);
                               }}
                               fullWidth
-                              radius="xl"
+                              radius="md"
                               color="sunshine"
                               variant="filled"
                               fw={700}
@@ -1228,7 +1198,7 @@ export default function Messages() {
                 }}
                 loading={examplesLoading}
                 size="xs"
-                radius="xl"
+                radius="md"
                 color="sunshine"
                 variant="filled"
                 style={{ color: "var(--nf-midnight)", fontWeight: 700 }}
