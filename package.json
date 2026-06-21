@@ -7,7 +7,7 @@
     ],
     "scripts": {
         "dev": "concurrently \"npm:dev --workspace=client\" \"npm:dev --workspace=server\"",
-        "prepare": "husky"
+        "prepare": "husky || true"
     },
     "devDependencies": {
         "concurrently": "^8.2.2",
