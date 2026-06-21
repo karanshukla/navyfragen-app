@@ -50,7 +50,7 @@
   "dependencies": {
     "@atproto/api": "^0.19.19",
     "@atproto/common": "^0.5.16",
-    "@atproto/identity": "^0.4.12",
+    "@atproto/identity": "^0.5.1",
     "@atproto/lexicon": "^0.6.2",
     "@atproto/oauth-client-node": "^0.3.17",
     "@atproto/sync": "^0.2.4",
