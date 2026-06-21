@@ -205,9 +205,9 @@ export default function Home() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
         <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
-          <Text fw={600} mb="sm" c="dimmed" fz={12}>
+          <Title order={2} fw={600} mb="sm" c="dimmed" fz={12}>
             Keyboard Shortcuts
-          </Text>
+          </Title>
           <Stack gap={6}>
             <ShortcutHint label="Home" hint="Alt+H" />
             {isLoggedIn ? (
@@ -224,9 +224,9 @@ export default function Home() {
         </Paper>
 
         <Paper p="lg" radius="md" withBorder style={{ background: surfaceBg(isDark) }}>
-          <Text fw={600} mb="sm" c="dimmed" fz={12}>
+          <Title order={2} fw={600} mb="sm" c="dimmed" fz={12}>
             Questions? Feedback?
-          </Text>
+          </Title>
           <Stack gap="sm">
             <div>
               <Text fz={15} mb={4}>

@@ -289,6 +289,8 @@ function FriendSection({
         onClick={handleToggle}
         mb="xs"
         px={2}
+        aria-expanded={opened}
+        aria-label={`${label} — ${opened ? "collapse" : "expand"}`}
         style={{
           display: "flex",
           alignItems: "center",
@@ -327,6 +329,7 @@ function FriendSection({
                       size={28}
                       radius="xl"
                       src={friend.avatar || undefined}
+                      alt={friend.displayName || friend.handle}
                       style={{ flexShrink: 0 }}
                     >
                       <WinkMark size={22} sparkle={false} aria-hidden />

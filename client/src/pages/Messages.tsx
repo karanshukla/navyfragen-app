@@ -1001,6 +1001,8 @@ export default function Messages() {
                       }}
                       key={msg.tid}
                       tabIndex={0}
+                      role="button"
+                      aria-expanded={isExpanded}
                       radius="lg"
                       onFocus={() => setFocusedCardIndex(index)}
                       onKeyDown={(e) => {

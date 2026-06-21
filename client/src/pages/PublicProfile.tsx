@@ -497,6 +497,7 @@ export default function PublicProfile() {
                 maxRows={4}
                 autosize
                 disabled={sendLoading}
+                aria-label={`Send ${profile.displayName || profile.handle} an anonymous message`}
                 placeholder="Ask something…"
                 description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
                 onKeyDown={(e) => {

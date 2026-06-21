@@ -96,7 +96,7 @@ export default function Login() {
             />
           </Center>
           <Box ta="center">
-            <Title order={2} fw={800} fz={24}>
+            <Title order={1} fw={800} fz={24}>
               Log in to Navyfragen
             </Title>
             <Text size="sm" c="dimmed" mt={4}>
