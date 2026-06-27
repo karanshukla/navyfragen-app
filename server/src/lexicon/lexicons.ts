@@ -199,6 +199,7 @@ export const schemaDict = {
             },
             recipient: {
               type: "string",
+              format: "did",
             },
           },
         },

@@ -24,7 +24,8 @@
             "format": "datetime"
           },
           "recipient": {
-            "type": "string"
+            "type": "string",
+            "format": "did"
           }
         }
       }
