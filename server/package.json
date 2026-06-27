@@ -18,7 +18,8 @@
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "test": "node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
     "test:watch": "node --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts",
-    "test:coverage": "c8 node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts"
+    "test:coverage": "c8 node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
+    "publish-lexicons": "tsx --tsconfig tsconfig.json src/scripts/publish-lexicons.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
@@ -44,7 +45,8 @@
       "src/lib/id-resolver.ts",
       "src/lib/env.ts",
       "src/routes.ts",
-      "src/routes/*.ts"
+      "src/routes/*.ts",
+      "src/scripts/**"
     ]
   },
   "dependencies": {
