@@ -127,6 +127,9 @@ describe("MessageService", () => {
               success: true,
               data: { records: [], cursor: undefined },
             })),
+            getRecord: mock.fn(async () => ({
+              data: { cid: "parent-cid-123" },
+            })),
           },
         },
       },
@@ -145,6 +148,7 @@ describe("MessageService", () => {
     mockAgent.com.atproto.repo.deleteRecord.mock.resetCalls();
     mockAgent.com.atproto.repo.createRecord.mock.resetCalls();
     mockAgent.com.atproto.repo.listRecords.mock.resetCalls();
+    mockAgent.com.atproto.repo.getRecord.mock.resetCalls();
     mockAgent.app.bsky.actor.getProfile.mock.resetCalls();
     messageService = new MessageService(mockDb, mockResolver, mockLogger);
   });
@@ -755,6 +759,68 @@ describe("MessageService", () => {
     await assert.rejects(
       () => messageService.deleteMessage("tid", "did:foo", mockAgent),
       /Failed to delete message/
+    );
+  });
+
+  test("respondToMessage with replyTo sets postRecord.reply from parent CID", async () => {
+    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(async () => "handle");
+    const replyTo = { uri: "at://did:example:user/app.bsky.feed.post/rkey123", cid: undefined };
+    const result = await messageService.respondToMessage(
+      "tid",
+      "did",
+      "rec",
+      "orig",
+      "resp",
+      false,
+      mockAgent,
+      replyTo
+    );
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(mockAgent.com.atproto.repo.getRecord.mock.calls.length, 1);
+    const getRecordArg = (mockAgent.com.atproto.repo.getRecord.mock.calls[0].arguments as any[])[0];
+    assert.strictEqual(getRecordArg.repo, "did:example:user");
+    assert.strictEqual(getRecordArg.collection, "app.bsky.feed.post");
+    assert.strictEqual(getRecordArg.rkey, "rkey123");
+  });
+
+  test("respondToMessage with replyTo throws when URI pattern is invalid", async () => {
+    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(async () => "handle");
+    const replyTo = { uri: "not-a-valid-at-uri" };
+    await assert.rejects(
+      () =>
+        messageService.respondToMessage(
+          "tid",
+          "did",
+          "rec",
+          "orig",
+          "resp",
+          false,
+          mockAgent,
+          replyTo
+        ),
+      /Invalid parent post URI/
+    );
+  });
+
+  test("respondToMessage with replyTo throws when parent record has no CID", async () => {
+    (mockResolver.resolveDidToHandle as any).mock.mockImplementationOnce(async () => "handle");
+    mockAgent.com.atproto.repo.getRecord.mock.mockImplementationOnce(async () => ({
+      data: { cid: undefined },
+    }));
+    const replyTo = { uri: "at://did:example:user/app.bsky.feed.post/rkey456" };
+    await assert.rejects(
+      () =>
+        messageService.respondToMessage(
+          "tid",
+          "did",
+          "rec",
+          "orig",
+          "resp",
+          false,
+          mockAgent,
+          replyTo
+        ),
+      /Could not resolve CID for parent post/
     );
   });
 });

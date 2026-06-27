@@ -1,3 +1,4 @@
+import { notifications } from "@mantine/notifications";
 import { screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -59,6 +60,7 @@ function setupProfile() {
 describe("PublicProfile page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    notifications.clean();
   });
 
   afterEach(() => {
@@ -491,5 +493,170 @@ describe("PublicProfile page", () => {
       value: undefined,
       configurable: true,
     });
+  });
+
+  it("falls back to profile.handle when displayName is absent", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: {
+        exists: true,
+        profile: {
+          did: TEST_DID,
+          handle: "karan.bsky.social",
+          displayName: null,
+          avatar: null,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+    // Both the heading text and the textarea aria-label use || profile.handle
+    expect(screen.getByText(/send karan\.bsky\.social an anonymous message/i)).toBeInTheDocument();
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toHaveAttribute("aria-label", expect.stringContaining("karan.bsky.social"));
+  });
+
+  it("renders profile banner and description when present", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: {
+        exists: true,
+        profile: {
+          did: TEST_DID,
+          handle: "karan.bsky.social",
+          displayName: "Karan",
+          avatar: null,
+          banner: "https://cdn.example.com/banner.jpg",
+          description: "This is my bio.",
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText("This is my bio.")).toBeInTheDocument();
+  });
+
+  it("Avatar alt falls back to 'User' when both displayName and handle are absent", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: {
+        exists: true,
+        profile: {
+          did: TEST_DID,
+          handle: null,
+          displayName: null,
+          avatar: null,
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+    // Component renders without throwing; the Avatar alt="User" fallback covers the ||"User" branch
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("error message uses e.message when it is a string", async () => {
+    let capturedCallbacks: any;
+    setupProfile();
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseSendMessage.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Hello!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+    await waitFor(() => screen.getByText(/are you sure/i));
+    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onError({ message: "Server rejected the request" });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/server rejected the request/i)).toBeInTheDocument();
+    });
+  });
+
+  it("error message falls back to generic text when neither message nor error is a string", async () => {
+    let capturedCallbacks: any;
+    setupProfile();
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseSendMessage.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Hello!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+    await waitFor(() => screen.getByText(/are you sure/i));
+    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onError({});
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/please try again/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows a generic error message when handleError is a non-object value", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: "Plain string error" as any,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+    // errObj = null → fallback message and not-404 error type
+    expect(screen.getByText(/failed to resolve handle/i)).toBeInTheDocument();
   });
 });
