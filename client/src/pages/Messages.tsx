@@ -20,7 +20,15 @@ import {
 } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { IconChevronDown, IconClipboard, IconSend2, IconTrash } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconClipboard,
+  IconExternalLink,
+  IconPin,
+  IconPinned,
+  IconSend2,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useHaptic } from "use-haptic";
 
@@ -53,6 +61,12 @@ const shortlinkurl = import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profi
 
 const MAX_BSKY_POST_LENGTH = 280;
 const GENERAL_BUFFER = 3;
+
+interface ThreadLinkData {
+  uri: string;
+  cid: string;
+  link?: string;
+}
 
 export function formatTimestamp(dateStr: string): string {
   return new Date(dateStr).toLocaleString(undefined, {
@@ -383,6 +397,17 @@ export default function Messages() {
     defaultValue: true,
     getInitialValueInEffect: true,
   });
+  const [threadRootTid, setThreadRootTid] = useLocalStorage<string | null>({
+    key: "threadRootTid",
+    defaultValue: null,
+    getInitialValueInEffect: true,
+  });
+  const [threadLinks, setThreadLinks] = useLocalStorage<Record<string, ThreadLinkData>>({
+    key: "threadLinks",
+    defaultValue: {},
+    getInitialValueInEffect: true,
+  });
+  const [justPinnedTid, setJustPinnedTid] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesTopRef = useRef<HTMLDivElement>(null);
@@ -438,6 +463,15 @@ export default function Messages() {
     messagesData,
   ]);
 
+  // Pinned card is always rendered first; new messages insert behind it
+  const sortedMessages = useMemo(() => {
+    const msgs = messagesData?.messages ?? [];
+    if (!threadRootTid) return msgs;
+    const idx = msgs.findIndex((m) => m.tid === threadRootTid);
+    if (idx <= 0) return msgs;
+    return [msgs[idx], ...msgs.slice(0, idx), ...msgs.slice(idx + 1)];
+  }, [messagesData, threadRootTid]);
+
   useEffect(() => {
     const isNewLogin = sessionStorage.getItem("newLogin");
     if (isNewLogin === "true") {
@@ -465,7 +499,19 @@ export default function Messages() {
     });
   };
 
+  const handleTogglePin = (tid: string) => {
+    triggerHaptic();
+    if (threadRootTid === tid) {
+      setThreadRootTid(null);
+    } else {
+      setThreadRootTid(tid);
+      setJustPinnedTid(tid);
+      setTimeout(() => setJustPinnedTid(null), 420);
+    }
+  };
+
   const handleDeleteRequest = (tid: string) => {
+    if (threadRootTid === tid) return;
     if (confirmBeforeDelete) {
       setMessageIdToDelete(tid);
       setDeleteModalOpened(true);
@@ -508,8 +554,8 @@ export default function Messages() {
   const handlePrepareResponse = (tid: string) => {
     setRespondingTid(tid);
     setResponseText("");
-    const idx = messagesData?.messages.findIndex((m) => m.tid === tid);
-    if (idx !== undefined && idx !== -1) setFocusedCardIndex(idx);
+    const idx = sortedMessages.findIndex((m) => m.tid === tid);
+    if (idx !== -1) setFocusedCardIndex(idx);
   };
 
   const handleSendResponse = (msg: Message) => {
@@ -526,6 +572,13 @@ export default function Messages() {
         ? responseText + ` ${shortlinkurl}/${session.profile.handle}`
         : responseText;
 
+    const isPinnedMsg = threadRootTid === msg.tid;
+    const rootData = threadRootTid ? threadLinks[threadRootTid] : undefined;
+    const replyTo =
+      !isPinnedMsg && rootData?.uri && rootData?.cid
+        ? { uri: rootData.uri, cid: rootData.cid }
+        : undefined;
+
     respondToMessage(
       {
         tid: msg.tid,
@@ -533,14 +586,21 @@ export default function Messages() {
         original: msg.message,
         response: text,
         includeQuestionAsImage,
+        replyTo,
       },
       {
         onSuccess: (data) => {
+          if (isPinnedMsg && data.uri && data.cid) {
+            setThreadLinks((prev) => ({
+              ...prev,
+              [msg.tid]: { uri: data.uri!, cid: data.cid!, link: data.link },
+            }));
+          }
           setRespondingTid(null);
           setResponseText("");
           const successMsg: React.ReactNode = data.link ? (
             <>
-              Your response has been posted.{" "}
+              {replyTo ? "Added to thread." : "Your response has been posted."}{" "}
               <a
                 href={data.link}
                 target="_blank"
@@ -550,11 +610,13 @@ export default function Messages() {
                 {data.link}
               </a>
             </>
+          ) : replyTo ? (
+            "Added to thread."
           ) : (
             "Your response has been posted."
           );
           notifications.show({
-            title: "Response Sent!",
+            title: replyTo ? "Added to thread!" : "Response Sent!",
             message: successMsg,
             color: "green",
             autoClose: 8000,
@@ -582,10 +644,8 @@ export default function Messages() {
   }, [respondingTid]);
 
   useEffect(() => {
-    if (messagesData?.messages) {
-      messageCardRefs.current = messagesData.messages.map(() => null);
-    }
-  }, [messagesData]);
+    messageCardRefs.current = sortedMessages.map(() => null);
+  }, [sortedMessages]);
 
   useEffect(() => {
     const messages = messagesData?.messages;
@@ -608,12 +668,9 @@ export default function Messages() {
     const handleKeyDown = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement)?.nodeName;
 
-      // Escape always collapses the expanded card, even from inside a textarea.
-      // The textarea's own onKeyDown fires first and calls stopPropagation, so
-      // Escape from the textarea is handled there — this catches other child elements.
       if (event.key === "Escape" && respondingTid) {
         event.preventDefault();
-        const idx = messagesData?.messages.findIndex((m) => m.tid === respondingTid) ?? -1;
+        const idx = sortedMessages.findIndex((m) => m.tid === respondingTid);
         setRespondingTid(null);
         if (idx !== -1) messageCardRefs.current[idx]?.focus();
         return;
@@ -623,21 +680,20 @@ export default function Messages() {
 
       if ((event.altKey || event.metaKey) && event.key.toUpperCase() === "R") {
         event.preventDefault();
-        if (messagesData?.messages?.length) {
+        if (sortedMessages.length) {
           const newIdx =
-            focusedCardIndex === -1 ? 0 : (focusedCardIndex + 1) % messagesData.messages.length;
+            focusedCardIndex === -1 ? 0 : (focusedCardIndex + 1) % sortedMessages.length;
           setFocusedCardIndex(newIdx);
           messageCardRefs.current[newIdx]?.focus();
         }
       }
       if (focusedCardIndex !== -1 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
         event.preventDefault();
-        if (messagesData?.messages?.length) {
+        if (sortedMessages.length) {
           const newIdx =
             event.key === "ArrowDown"
-              ? (focusedCardIndex + 1) % messagesData.messages.length
-              : (focusedCardIndex - 1 + messagesData.messages.length) %
-                messagesData.messages.length;
+              ? (focusedCardIndex + 1) % sortedMessages.length
+              : (focusedCardIndex - 1 + sortedMessages.length) % sortedMessages.length;
           setFocusedCardIndex(newIdx);
           messageCardRefs.current[newIdx]?.focus();
         }
@@ -645,7 +701,7 @@ export default function Messages() {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [focusedCardIndex, messagesData, respondingTid]);
+  }, [focusedCardIndex, sortedMessages, respondingTid]);
 
   const msgCount = messagesData?.messages?.length ?? 0;
   const handle = session?.profile?.handle ?? "";
@@ -989,9 +1045,11 @@ export default function Messages() {
               {/* ── Question cards grid ── */}
               <div ref={messagesTopRef} />
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-                {messagesData?.messages.map((msg: Message, index: number) => {
+                {sortedMessages.map((msg: Message, index: number) => {
                   const isExpanded = respondingTid === msg.tid;
                   const isFocused = focusedCardIndex === index;
+                  const isPinned = threadRootTid === msg.tid;
+                  const threadLinkData = isPinned ? threadLinks[msg.tid] : undefined;
 
                   return (
                     <Paper
@@ -1015,15 +1073,20 @@ export default function Messages() {
                           }
                         }
                       }}
+                      className={justPinnedTid === msg.tid ? "nf-pinned-card-enter" : undefined}
                       style={{
                         borderRadius: 18,
                         background: useGradients ? "var(--nf-grad-dark)" : surfaceBg(isDark),
-                        border: isFocused
-                          ? "2px solid var(--nf-purple)"
-                          : "2px solid rgba(255,255,255,0.06)",
-                        boxShadow: "0 4px 16px -8px rgba(0,0,0,0.3)",
+                        border: isPinned
+                          ? "2px solid var(--nf-royal)"
+                          : isFocused
+                            ? "2px solid var(--nf-purple)"
+                            : "2px solid rgba(255,255,255,0.06)",
+                        boxShadow: isPinned
+                          ? "0 4px 22px -4px rgba(59,91,255,0.38)"
+                          : "0 4px 16px -8px rgba(0,0,0,0.3)",
                         padding: "8px 20px 20px",
-                        transition: "border-color 0.15s ease",
+                        transition: "border-color 0.15s ease, box-shadow 0.15s ease",
                         cursor: "pointer",
                         display: "flex",
                         flexDirection: "column",
@@ -1038,9 +1101,22 @@ export default function Messages() {
                       }}
                     >
                       <Stack gap="sm" style={{ flex: 1 }}>
-                        {/* Timestamp row */}
+                        {/* Timestamp + action row */}
                         <Group justify="space-between" align="center">
-                          <Group gap={8} align="center">
+                          <Group gap={6} align="center">
+                            {isPinned && (
+                              <Text
+                                fz={9}
+                                fw={700}
+                                style={{
+                                  color: "var(--nf-lavender)",
+                                  letterSpacing: "0.12em",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                thread
+                              </Text>
+                            )}
                             <Text
                               fz={10}
                               c="white"
@@ -1053,25 +1129,62 @@ export default function Messages() {
                               {formatTimestamp(msg.createdAt)}
                             </Text>
                           </Group>
-                          <ActionIcon
-                            size="lg"
-                            className="nf-delete-btn"
-                            aria-label="Delete message"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              triggerHaptic();
-                              handleDeleteRequest(msg.tid);
-                            }}
-                            variant="transparent"
-                            radius="md"
-                            loading={deletingTid === msg.tid}
-                            style={{
-                              color: "rgba(253,248,255,0.5)",
-                              transition: "color 150ms ease, background 150ms ease",
-                            }}
-                          >
-                            <IconTrash size={18} />
-                          </ActionIcon>
+                          <Group gap={2} align="center">
+                            <Tooltip
+                              label={isPinned ? "Unpin thread" : "Pin as thread root"}
+                              withArrow
+                              position="left"
+                            >
+                              <ActionIcon
+                                size="lg"
+                                className={isPinned ? "nf-pin-btn--active" : "nf-pin-btn"}
+                                aria-label={isPinned ? "Unpin thread root" : "Set as thread root"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTogglePin(msg.tid);
+                                }}
+                                variant="transparent"
+                                radius="md"
+                                style={{
+                                  color: isPinned ? "var(--nf-royal)" : "rgba(253,248,255,0.4)",
+                                  transition: "color 150ms ease, background 150ms ease",
+                                }}
+                              >
+                                {isPinned ? <IconPinned size={18} /> : <IconPin size={18} />}
+                              </ActionIcon>
+                            </Tooltip>
+                            <Tooltip
+                              label={isPinned ? "Unpin thread first" : "Delete message"}
+                              withArrow
+                              position="left"
+                            >
+                              <ActionIcon
+                                size="lg"
+                                className={isPinned ? undefined : "nf-delete-btn"}
+                                aria-label={
+                                  isPinned ? "Cannot delete thread root" : "Delete message"
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isPinned) return;
+                                  triggerHaptic();
+                                  handleDeleteRequest(msg.tid);
+                                }}
+                                variant="transparent"
+                                radius="md"
+                                loading={deletingTid === msg.tid}
+                                style={{
+                                  color: isPinned
+                                    ? "rgba(253,248,255,0.2)"
+                                    : "rgba(253,248,255,0.5)",
+                                  cursor: isPinned ? "not-allowed" : "pointer",
+                                  transition: "color 150ms ease, background 150ms ease",
+                                }}
+                              >
+                                <IconTrash size={18} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
                         </Group>
 
                         {/* Message text */}
@@ -1101,6 +1214,38 @@ export default function Messages() {
                             {msg.message}
                           </Text>
                         </Box>
+
+                        {/* Thread parent link */}
+                        {threadLinkData?.link && (
+                          <Box>
+                            <a
+                              href={threadLinkData.link}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                color: "var(--nf-lavender)",
+                                textDecoration: "none",
+                                fontSize: 11,
+                                opacity: 0.75,
+                              }}
+                            >
+                              <IconExternalLink size={11} style={{ flexShrink: 0 }} />
+                              <span
+                                style={{
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {threadLinkData.link.replace("https://", "")}
+                              </span>
+                            </a>
+                          </Box>
+                        )}
 
                         {/* Action area */}
                         {isExpanded ? (
@@ -1159,7 +1304,9 @@ export default function Messages() {
                                 }}
                                 leftSection={<IconSend2 size={12} />}
                               >
-                                Reply
+                                {!isPinned && threadRootTid && threadLinks[threadRootTid]?.uri
+                                  ? "Reply to thread"
+                                  : "Reply"}
                               </Button>
                             </Group>
                           </Box>
@@ -1177,7 +1324,9 @@ export default function Messages() {
                               fw={700}
                               style={{ color: "var(--nf-midnight)" }}
                             >
-                              ↩ Reply
+                              {!isPinned && threadRootTid && threadLinks[threadRootTid]?.uri
+                                ? "↩ Reply to thread"
+                                : "↩ Reply"}
                             </Button>
                           </Box>
                         )}

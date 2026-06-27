@@ -54,7 +54,7 @@ export class MessageService {
       return messages;
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to fetch messages");
-      throw new Error("Failed to fetch messages");
+      throw new Error("Failed to fetch messages", { cause: err });
     }
   }
 
@@ -94,7 +94,7 @@ export class MessageService {
       return await this.getMessages(recipient);
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to add example messages");
-      throw new Error("Failed to add example messages");
+      throw new Error("Failed to add example messages", { cause: err });
     }
   }
 
@@ -135,7 +135,9 @@ export class MessageService {
       return { success: true };
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to send message");
-      throw new Error(err instanceof Error ? err.message : "Failed to send message");
+      throw new Error(err instanceof Error ? err.message : "Failed to send message", {
+        cause: err,
+      });
     }
   }
 
@@ -183,7 +185,9 @@ export class MessageService {
       return { success: true };
     } catch (err) {
       this.logger.error({ err, tid, userDid }, "Failed to delete message");
-      throw new Error(err instanceof Error ? err.message : "Failed to delete message");
+      throw new Error(err instanceof Error ? err.message : "Failed to delete message", {
+        cause: err,
+      });
     }
   }
 
@@ -194,8 +198,9 @@ export class MessageService {
     original: string,
     response: string,
     includeQuestionAsImage: boolean,
-    agent: Agent
-  ): Promise<{ success: boolean; uri: string; link?: string }> {
+    agent: Agent,
+    replyTo?: { uri: string; cid?: string }
+  ): Promise<{ success: boolean; uri: string; cid: string; link?: string }> {
     try {
       const handle = await this.resolver.resolveDidToHandle(did);
       const rt = new RichText({ text: response });
@@ -206,6 +211,18 @@ export class MessageService {
         facets: rt.facets || [],
         createdAt: new Date().toISOString(),
       };
+
+      if (replyTo) {
+        const uriParts = replyTo.uri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
+        if (!uriParts) throw new Error("Invalid parent post URI");
+        const [, repo, collection, rkey] = uriParts;
+        const parentRecord = await agent.com.atproto.repo.getRecord({ repo, collection, rkey });
+        if (!parentRecord.data.cid) throw new Error("Could not resolve CID for parent post");
+        postRecord.reply = {
+          root: { uri: replyTo.uri, cid: parentRecord.data.cid },
+          parent: { uri: replyTo.uri, cid: parentRecord.data.cid },
+        };
+      }
 
       if (includeQuestionAsImage) {
         const userSettings = await this.db
@@ -266,18 +283,21 @@ export class MessageService {
           } else {
             webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
           }
-        } catch (e) {
+        } catch {
           webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
         }
       }
       return {
         success: true,
         uri: postRes.uri,
+        cid: postRes.cid,
         link: webUrl || undefined,
       };
     } catch (err) {
       this.logger.error({ err, tid, did }, "Error while trying to post response to Bluesky");
-      throw new Error(err instanceof Error ? err.message : "Failed to post to Bluesky");
+      throw new Error(err instanceof Error ? err.message : "Failed to post to Bluesky", {
+        cause: err,
+      });
     }
   }
 
@@ -307,7 +327,9 @@ export class MessageService {
         this.logger.info({ did: userDid }, "Successfully deleted all messages from PDS");
       } catch (err) {
         this.logger.error({ error: err, did: userDid }, "Failed to delete messages from PDS");
-        throw new Error("Failed to delete messages from PDS, but data deleted in the DB");
+        throw new Error("Failed to delete messages from PDS, but data deleted in the DB", {
+          cause: err,
+        });
       }
 
       // Delete all messages, user profile, and user settings for this DID
@@ -318,7 +340,7 @@ export class MessageService {
       return { success: true };
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to delete user data");
-      throw new Error("Failed to delete user data");
+      throw new Error("Failed to delete user data", { cause: err });
     }
   }
 
@@ -435,7 +457,7 @@ export class MessageService {
       };
     } catch (err: any) {
       this.logger.error({ did: userDid, error: err }, "Error during message sync process");
-      throw new Error("Failed to sync messages to PDS");
+      throw new Error("Failed to sync messages to PDS", { cause: err });
     }
   }
   /* v8 ignore next 1 */

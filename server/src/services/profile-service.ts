@@ -39,7 +39,7 @@ export class ProfileService {
       ]);
     } catch (err) {
       this.logger.error({ err, did }, "Failed to fetch profile by DID");
-      throw new Error("Failed to fetch profile");
+      throw new Error("Failed to fetch profile", { cause: err });
     }
 
     if (!profileResponse.success) {
@@ -64,7 +64,7 @@ export class ProfileService {
       return !!userExists;
     } catch (err) {
       this.logger.error({ err, did }, "Failed to check user existence by DID");
-      throw new Error("Failed to check user existence");
+      throw new Error("Failed to check user existence", { cause: err });
     }
   }
 
@@ -166,7 +166,7 @@ export class ProfileService {
       did = await this.resolver.resolveHandleToDid(handle);
     } catch (err) {
       this.logger.error({ err, handle }, "Error during handle resolution");
-      throw new Error("Failed to resolve handle");
+      throw new Error("Failed to resolve handle", { cause: err });
     }
     if (!did) {
       throw new Error("Handle not found");

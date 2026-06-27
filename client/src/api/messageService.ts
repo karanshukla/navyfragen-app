@@ -27,11 +27,13 @@ export interface ResponseMessageRequest {
   original: string;
   response: string;
   includeQuestionAsImage?: boolean;
+  replyTo?: { uri: string; cid: string };
 }
 
 export interface ResponseMessageResponse {
   success: boolean;
   uri?: string;
+  cid?: string;
   link?: string;
 }
 

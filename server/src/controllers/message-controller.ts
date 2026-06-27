@@ -57,6 +57,9 @@ export class MessageController {
       .isLength({ min: 1, max: 500 })
       .withMessage("Response must be 1-500 chars"),
     body("includeQuestionAsImage").isBoolean().optional(),
+    body("replyTo").optional().isObject(),
+    body("replyTo.uri").optional().isString(),
+    body("replyTo.cid").optional().isString(),
   ];
 
   /**
@@ -66,7 +69,7 @@ export class MessageController {
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
-    const { tid, recipient, original, response, includeQuestionAsImage } = req.body;
+    const { tid, recipient, original, response, includeQuestionAsImage, replyTo } = req.body;
 
     if (!tid || !recipient || !response) {
       this.logger.warn({ tid, recipient, response }, "Missing required fields in respond endpoint");
@@ -93,7 +96,8 @@ export class MessageController {
         original,
         response,
         includeQuestionAsImage || false,
-        agent
+        agent,
+        replyTo
       );
       return res.json(result);
     } catch (err: any) {

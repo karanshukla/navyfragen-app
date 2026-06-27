@@ -28,8 +28,8 @@ export class AuthService {
         { handle, err: err?.message, stack: err?.stack },
         "[oauth] oauthClient.authorize threw"
       );
-      if (err instanceof OAuthResolverError) throw new Error(err.message);
-      throw new Error("couldn't initiate login");
+      if (err instanceof OAuthResolverError) throw new Error(err.message, { cause: err });
+      throw new Error("couldn't initiate login", { cause: err });
     }
   }
 

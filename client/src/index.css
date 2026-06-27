@@ -82,6 +82,36 @@ body {
   background: rgba(220, 38, 38, 0.18) !important;
 }
 
+/* Pin button hover */
+.nf-pin-btn:hover,
+.nf-pin-btn:focus-visible {
+  color: var(--nf-royal) !important;
+  background: rgba(59, 91, 255, 0.18) !important;
+}
+
+/* Pin button hover when already pinned (unpin action) */
+.nf-pin-btn--active:hover,
+.nf-pin-btn--active:focus-visible {
+  color: var(--nf-lavender) !important;
+  background: rgba(196, 181, 253, 0.15) !important;
+}
+
+/* Thread pin — card settle animation */
+@keyframes nf-pin-settle {
+  from {
+    opacity: 0.55;
+    transform: translateY(-14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.nf-pinned-card-enter {
+  animation: nf-pin-settle 0.38s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+
 /* Alert / notification brand radius */
 .mantine-Alert-root {
   border-radius: 12px;

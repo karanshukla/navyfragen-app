@@ -28,7 +28,7 @@ export class SettingsService {
         .executeTakeFirst();
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to fetch user settings");
-      throw new Error("Failed to fetch user settings");
+      throw new Error("Failed to fetch user settings", { cause: err });
     }
   }
 
@@ -46,7 +46,7 @@ export class SettingsService {
       return defaultSettings;
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to create default user settings");
-      throw new Error("Failed to create default user settings");
+      throw new Error("Failed to create default user settings", { cause: err });
     }
   }
 
@@ -73,7 +73,7 @@ export class SettingsService {
       };
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to fetch user stats");
-      throw new Error("Failed to fetch user stats");
+      throw new Error("Failed to fetch user stats", { cause: err });
     }
   }
 
@@ -147,7 +147,7 @@ export class SettingsService {
       return await this.getUserSettings(userDid);
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to update user settings");
-      throw new Error("Failed to update user settings");
+      throw new Error("Failed to update user settings", { cause: err });
     }
   }
   /* v8 ignore next 1 */
