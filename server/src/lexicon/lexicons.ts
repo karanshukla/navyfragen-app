@@ -183,7 +183,7 @@ export const schemaDict = {
     defs: {
       main: {
         type: "record",
-        key: "tid",
+        key: "any",
         record: {
           type: "object",
           required: ["message", "createdAt", "recipient"],
