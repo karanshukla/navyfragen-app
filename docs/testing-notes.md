@@ -124,6 +124,22 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Export `handleSend` for direct unit testing, or access the component's internal state setter to bypass the `onChange` guard. Neither is practical without refactoring the component.
 
+### `client/src/utils/parseRichText.tsx` — false branch of `if (!/^https?:\/\//.test(href))`
+
+**Line:** 117 (`if (!/^https?:\/\//.test(href)) { href = "https://" + href; }`) inside the `text` segment branch of the `forEach` loop.
+
+**Why uncovered:** This branch is entered when the regex matches a domain-like string in a plain-text segment (e.g., `example.com`). The domain regex `((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}...)` cannot match strings that start with `https?://` because the `://` breaks the allowed character set. So the `false` branch — "href already has https:// protocol, skip prepend" — is structurally unreachable: every domain match that enters this code path will always lack the protocol.
+
+**What it would take to test:** There is no DOM path to exercise the false branch because the tokenizer's domain regex logically excludes protocol-prefixed strings. Testing it would require either mocking the regex or exporting the inner text-processing logic.
+
+### `client/src/pages/Messages.tsx` — collapsed reply Box/Button handlers (lines 1314-1318)
+
+**Lines:** 1314 (`<Box ... onClick={(e) => e.stopPropagation()}>`) and 1315-1318 (the collapsed `↩ Reply` Button's `onClick` body: `triggerHaptic()` + `handlePrepareResponse(msg.tid)`).
+
+**Why uncovered:** These handlers live inside the `else` arm of the `{isExpanded ? (expanded view) : (collapsed view)}` JSX ternary. Vitest 4.1.9 with the v8 coverage provider has a persistent source-map alignment issue: arrow-function bodies nested inside the non-first branch of a JSX ternary are not attributed to their correct source lines. Tests that behaviorally prove both handlers execute correctly (a Box-click test confirms `stopPropagation` works; a `userEvent.click` test confirms the Reply button expands the card) exist and pass, but v8 does not increment line coverage for lines 1314-1318 regardless.
+
+**What it would take to fix the measurement:** Upgrade to a version of Vitest/v8 that correctly attributes ternary-branch arrow functions, or switch the affected file to Istanbul (`/* istanbul ignore */`) which uses AST-based instrumentation instead of source maps.
+
 ## V8 JIT Module-Scope Artifacts
 
 ### `server/src/lib/image-generator.ts` — module-scope artifact on import block
