@@ -1131,21 +1131,6 @@ export default function Messages() {
                             </Text>
                           </Group>
                           <Group gap={2} align="center">
-                            {isPinned && (
-                              <>
-                                <Text
-                                  fz={9}
-                                  fw={700}
-                                  style={{
-                                    color: "var(--nf-lavender)",
-                                    letterSpacing: "0.12em",
-                                    textTransform: "uppercase",
-                                  }}
-                                >
-                                  thread enabled
-                                </Text>
-                              </>
-                            )}
                             <Tooltip
                               label={isPinned ? "Unpin thread" : "Pin as thread root"}
                               withArrow
