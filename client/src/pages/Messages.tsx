@@ -464,13 +464,26 @@ export default function Messages() {
     messagesData,
   ]);
 
-  // Pinned card is always rendered first; new messages insert behind it
   const sortedMessages = useMemo(() => {
     const msgs = messagesData?.messages ?? [];
     if (!threadRootTid) return msgs;
     const idx = msgs.findIndex((m) => m.tid === threadRootTid);
     if (idx <= 0) return msgs;
     return [msgs[idx], ...msgs.slice(0, idx), ...msgs.slice(idx + 1)];
+  }, [messagesData, threadRootTid]);
+
+  useEffect(() => {
+    if (!messagesData || !threadRootTid) return;
+    const found = messagesData.messages.some((m) => m.tid === threadRootTid);
+    if (!found) {
+      setThreadLinks((prev) => {
+        const next = { ...prev };
+        delete next[threadRootTid];
+        return next;
+      });
+      setThreadRootTid(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messagesData, threadRootTid]);
 
   useEffect(() => {
@@ -1105,19 +1118,6 @@ export default function Messages() {
                         {/* Timestamp + action row */}
                         <Group justify="space-between" align="center">
                           <Group gap={6} align="center">
-                            {isPinned && (
-                              <Text
-                                fz={9}
-                                fw={700}
-                                style={{
-                                  color: "var(--nf-lavender)",
-                                  letterSpacing: "0.12em",
-                                  textTransform: "uppercase",
-                                }}
-                              >
-                                thread
-                              </Text>
-                            )}
                             <Text
                               fz={10}
                               c="white"
@@ -1131,6 +1131,21 @@ export default function Messages() {
                             </Text>
                           </Group>
                           <Group gap={2} align="center">
+                            {isPinned && (
+                              <>
+                                <Text
+                                  fz={9}
+                                  fw={700}
+                                  style={{
+                                    color: "var(--nf-lavender)",
+                                    letterSpacing: "0.12em",
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  thread enabled
+                                </Text>
+                              </>
+                            )}
                             <Tooltip
                               label={isPinned ? "Unpin thread" : "Pin as thread root"}
                               withArrow
@@ -1292,45 +1307,75 @@ export default function Messages() {
                                   {responseText.length}/{characterLimit}
                                 </Text>
                               </Group>
-                              <Button
-                                size="xs"
-                                onClick={() => {
-                                  triggerHaptic();
-                                  handleSendResponse(msg);
-                                }}
-                                loading={respondLoading}
-                                variant="gradient"
-                                gradient={{
-                                  from: "royal",
-                                  to: "purple",
-                                  deg: 135,
-                                }}
-                                leftSection={<IconSend2 size={12} />}
+                              <Tooltip
+                                label="Respond to the thread root first"
+                                disabled={
+                                  !(
+                                    !isPinned &&
+                                    !!threadRootTid &&
+                                    !threadLinks[threadRootTid]?.uri
+                                  )
+                                }
+                                withArrow
+                                openDelay={300}
                               >
-                                {!isPinned && threadRootTid && threadLinks[threadRootTid]?.uri
-                                  ? "Reply to thread"
-                                  : "Reply"}
-                              </Button>
+                                <Button
+                                  size="xs"
+                                  onClick={() => {
+                                    triggerHaptic();
+                                    handleSendResponse(msg);
+                                  }}
+                                  loading={respondLoading}
+                                  disabled={
+                                    !isPinned && !!threadRootTid && !threadLinks[threadRootTid]?.uri
+                                  }
+                                  variant="gradient"
+                                  gradient={{
+                                    from: "royal",
+                                    to: "purple",
+                                    deg: 135,
+                                  }}
+                                  leftSection={<IconSend2 size={12} />}
+                                >
+                                  {!isPinned && threadRootTid ? "Reply to thread" : "Reply"}
+                                </Button>
+                              </Tooltip>
                             </Group>
                           </Box>
                         ) : (
                           <Box mt={4} onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              onClick={() => {
-                                triggerHaptic();
-                                handlePrepareResponse(msg.tid);
-                              }}
-                              fullWidth
-                              radius="md"
-                              color="sunshine"
-                              variant="filled"
-                              fw={700}
-                              style={{ color: "var(--nf-midnight)" }}
-                            >
-                              {!isPinned && threadRootTid && threadLinks[threadRootTid]?.uri
-                                ? "↩ Reply to thread"
-                                : "↩ Reply"}
-                            </Button>
+                            {(() => {
+                              const blocked =
+                                !isPinned && !!threadRootTid && !threadLinks[threadRootTid]?.uri;
+                              return (
+                                <Tooltip
+                                  label="Respond to the thread root first"
+                                  disabled={!blocked}
+                                  withArrow
+                                  openDelay={300}
+                                >
+                                  <Button
+                                    onClick={() => {
+                                      if (blocked) return;
+                                      triggerHaptic();
+                                      handlePrepareResponse(msg.tid);
+                                    }}
+                                    fullWidth
+                                    radius="md"
+                                    color="sunshine"
+                                    variant="filled"
+                                    fw={700}
+                                    style={{
+                                      color: "var(--nf-midnight)",
+                                      opacity: blocked ? 0.45 : 1,
+                                      cursor: blocked ? "not-allowed" : undefined,
+                                    }}
+                                  >
+                                    {!isPinned && threadRootTid ? "↩ Reply to thread" : "↩ Reply"}
+                                  </Button>
+                                </Tooltip>
+                              );
+                            })()}
                           </Box>
                         )}
                       </Stack>

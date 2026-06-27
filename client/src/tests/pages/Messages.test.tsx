@@ -940,9 +940,9 @@ describe("Messages page", () => {
   });
 
   it("thread link is rendered and clickable when a thread response link exists", async () => {
-    localStorage.setItem("threadRootTid", JSON.stringify("msg-1"));
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-1"));
     localStorage.setItem(
-      "threadLinks",
+      "threadLinks-did:example:1",
       JSON.stringify({
         "msg-1": {
           uri: "at://did/app.bsky.feed.post/abc",
@@ -963,7 +963,7 @@ describe("Messages page", () => {
   });
 
   it("setThreadLinks is called after pinned message response succeeds with a link", async () => {
-    localStorage.setItem("threadRootTid", JSON.stringify("msg-1"));
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-1"));
     let capturedCallbacks: any;
     const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
       capturedCallbacks = callbacks;
@@ -1002,7 +1002,7 @@ describe("Messages page", () => {
       expect(screen.getByText(/response sent/i)).toBeInTheDocument();
     });
     // Verify localStorage threadLinks was updated
-    const stored = JSON.parse(localStorage.getItem("threadLinks") || "{}");
+    const stored = JSON.parse(localStorage.getItem("threadLinks-did:example:1") || "{}");
     expect(stored["msg-1"]?.uri).toBe("at://did/app.bsky.feed.post/xyz");
   });
 
