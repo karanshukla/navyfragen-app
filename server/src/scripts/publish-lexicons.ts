@@ -7,7 +7,10 @@
  * Usage:
  *   LEXICON_AUTHORITY_HANDLE=you.bsky.social \
  *   LEXICON_AUTHORITY_PASSWORD=your-app-password \
+ *   LEXICON_AUTHORITY_PDS=https://bsky.social \
  *   npm run publish-lexicons
+ *
+ * LEXICON_AUTHORITY_PDS defaults to https://bsky.social if not set.
  *
  * The DID printed by this script is what goes into the DNS TXT record.
  */
