@@ -397,13 +397,16 @@ export default function Messages() {
     defaultValue: true,
     getInitialValueInEffect: true,
   });
+
+  const { data: session, isLoading: sessionLoading } = useSession();
+
   const [threadRootTid, setThreadRootTid] = useLocalStorage<string | null>({
-    key: "threadRootTid",
+    key: `threadRootTid-${session?.did ?? ""}`,
     defaultValue: null,
     getInitialValueInEffect: true,
   });
   const [threadLinks, setThreadLinks] = useLocalStorage<Record<string, ThreadLinkData>>({
-    key: "threadLinks",
+    key: `threadLinks-${session?.did ?? ""}`,
     defaultValue: {},
     getInitialValueInEffect: true,
   });
@@ -415,8 +418,6 @@ export default function Messages() {
   const [deleteModalOpened, setDeleteModalOpened] = useState<boolean>(false);
   const [messageIdToDelete, setMessageIdToDelete] = useState<string | null>(null);
   const [deletingTid, setDeletingTid] = useState<string | null>(null);
-
-  const { data: session, isLoading: sessionLoading } = useSession();
 
   const {
     data: messagesData,
@@ -1134,6 +1135,7 @@ export default function Messages() {
                               label={isPinned ? "Unpin thread" : "Pin as thread root"}
                               withArrow
                               position="left"
+                              openDelay={500}
                             >
                               <ActionIcon
                                 size="lg"
@@ -1157,6 +1159,7 @@ export default function Messages() {
                               label={isPinned ? "Unpin thread first" : "Delete message"}
                               withArrow
                               position="left"
+                              openDelay={500}
                             >
                               <ActionIcon
                                 size="lg"

@@ -32,6 +32,7 @@ export default function Login() {
       ? "Login failed. Please try again."
       : null
   );
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const { mutate: login, isPending } = useLogin();
   const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
@@ -50,6 +51,7 @@ export default function Login() {
       {
         onSuccess: (data) => {
           if (data.redirectUrl) {
+            setIsRedirecting(true);
             sessionStorage.setItem("newLogin", "true");
             window.location.href = data.redirectUrl;
           }
@@ -125,7 +127,7 @@ export default function Login() {
               type="submit"
               mt="md"
               fullWidth
-              loading={isPending}
+              loading={isPending || isRedirecting}
               variant="gradient"
               gradient={{ from: "royal", to: "purple", deg: 135 }}
               size="md"
