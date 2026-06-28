@@ -21,7 +21,7 @@ services:
     ports:
       - "8081:8080"
     environment:
-      REDIRECT_TARGET: "${PUBLIC_URL:-http://localhost:8080}/profile"
+      REDIRECT_TARGET: "${PUBLIC_URL:-http://127.0.0.1:8080}/profile"
     restart: unless-stopped
 
   # ── Reverse proxy ───────────────────────────────────────────────────────────
@@ -68,8 +68,12 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOST: 0.0.0.0
-      PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8080}"
-      CLIENT_URL: "${PUBLIC_URL:-http://localhost:8080}"
+      # Leave PUBLIC_URL unset so the server uses the loopback OAuth client
+      # format (http://localhost?...) which is valid for local/CI testing.
+      # In production, pass PUBLIC_URL as an env var and it will be used here.
+      PUBLIC_URL: "${PUBLIC_URL:-}"
+      # CLIENT_URL is required by envalid in production; use the loopback host.
+      CLIENT_URL: "${PUBLIC_URL:-http://127.0.0.1:8080}"
       EXPORT_HTML_URL: http://html-to-image:3033/
       # DB_PATH is required by the env validator even when POSTGRESQL_URL is set
       DB_PATH: ""
