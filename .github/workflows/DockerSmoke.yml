@@ -80,17 +80,25 @@ jobs:
 
       - name: Run Nuclei security scan
         run: |
+          mkdir -p /tmp/nuclei-out
+          chmod 777 /tmp/nuclei-out
           docker run --rm \
             --network docker_default \
+            -v /tmp/nuclei-out:/output \
             projectdiscovery/nuclei:latest \
             -u http://caddy \
             -exclude-tags intrusive,dos,fuzzing,brute-force,token-spray \
             -severity medium,high,critical \
             -no-interactsh \
-            -stats \
             -timeout 10 \
             -retries 1 \
-            -exit-code
+            -o /output/findings.txt
+          if [ -s /tmp/nuclei-out/findings.txt ]; then
+            echo "Nuclei found medium+ severity security issues:"
+            cat /tmp/nuclei-out/findings.txt
+            exit 1
+          fi
+          echo "Nuclei: no medium+ severity findings"
 
       - name: Dump container logs on failure
         if: failure()
