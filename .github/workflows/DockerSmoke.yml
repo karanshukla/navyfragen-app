@@ -13,7 +13,7 @@ jobs:
   docker-smoke:
     name: Docker Smoke Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +77,28 @@ jobs:
             http://localhost:8081/)
           [ "$STATUS" != "000" ] || { echo "No response on port 8081"; exit 1; }
           echo "Port 8081 → HTTP $STATUS"
+
+      - name: Run Nuclei security scan
+        run: |
+          mkdir -p /tmp/nuclei-out
+          chmod 777 /tmp/nuclei-out
+          docker run --rm \
+            --network docker_default \
+            -v /tmp/nuclei-out:/output \
+            projectdiscovery/nuclei:latest \
+            -u http://caddy \
+            -exclude-tags intrusive,dos,fuzzing,brute-force,token-spray \
+            -severity medium,high,critical \
+            -no-interactsh \
+            -timeout 10 \
+            -retries 1 \
+            -o /output/findings.txt
+          if [ -s /tmp/nuclei-out/findings.txt ]; then
+            echo "Nuclei found medium+ severity security issues:"
+            cat /tmp/nuclei-out/findings.txt
+            exit 1
+          fi
+          echo "Nuclei: no medium+ severity findings"
 
       - name: Dump container logs on failure
         if: failure()
