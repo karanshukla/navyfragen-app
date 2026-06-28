@@ -31,6 +31,15 @@ export interface LoginResponse {
   redirectUrl: string;
 }
 
+export interface E2ELoginRequest {
+  identifier: string;
+  password: string;
+}
+
+export interface E2ELoginResponse {
+  success: boolean;
+}
+
 export const authKeys = {
   session: ["auth", "session"] as const,
 };
@@ -46,6 +55,10 @@ export const authService = {
 
   logout: async (): Promise<{ message: string }> => {
     return apiClient.post<{ message: string }>("/logout");
+  },
+
+  e2eLogin: async (data: E2ELoginRequest): Promise<E2ELoginResponse> => {
+    return apiClient.post<E2ELoginResponse, E2ELoginRequest>("/auth/e2e-login", data);
   },
 };
 
@@ -71,5 +84,11 @@ export function useLogout() {
       queryClient.invalidateQueries({ queryKey: authKeys.session });
       window.location.href = "/";
     },
+  });
+}
+
+export function useE2ELogin() {
+  return useMutation({
+    mutationFn: (data: E2ELoginRequest) => authService.e2eLogin(data),
   });
 }

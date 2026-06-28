@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { cleanEnv, host, port, str, testOnly } from "envalid";
+import { bool, cleanEnv, host, port, str, testOnly } from "envalid";
 
 dotenv.config();
 
@@ -32,4 +32,7 @@ export const env = cleanEnv(process.env, {
   VAPID_PUBLIC_KEY: str({ default: "" }),
   VAPID_PRIVATE_KEY: str({ default: "" }),
   VAPID_SUBJECT: str({ default: "" }), // mailto: or https: URL identifying the sender
+  // E2E testing — disabled by default; never set in production
+  E2E_TESTING: bool({ default: false }),
+  E2E_PDS_URL: str({ default: "" }),
 });

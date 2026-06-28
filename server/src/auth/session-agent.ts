@@ -1,12 +1,10 @@
 /* v8 ignore start */
 import { Agent } from "@atproto/api";
 
+import { getE2EAgent } from "./e2e-agent-store";
+
 import type { AppContext } from "../index";
 
-/**
- * Initialize an authenticated agent for the current user session
- * this could likely replace agent-initializer.ts
- */
 export async function initializeAgentFromSession(
   req: Express.Request,
   ctx: AppContext
@@ -14,6 +12,12 @@ export async function initializeAgentFromSession(
   /* v8 ignore stop */
   if (!req.session?.did) {
     return null;
+  }
+
+  // E2E sessions bypass OAuth — agent is stored in-process by the e2e login route.
+  const e2eAgent = getE2EAgent(req.session.did);
+  if (e2eAgent) {
+    return e2eAgent;
   }
 
   try {

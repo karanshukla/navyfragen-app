@@ -39,6 +39,7 @@
       "src/lexicon/**",
       "src/index.ts",
       "src/auth/client.ts",
+      "src/auth/e2e-agent-store.ts",
       "src/auth/storage.ts",
       "src/auth/session.ts",
       "src/database/db.ts",

@@ -114,9 +114,16 @@ navyfragen-app/
 
 Responding to a message with an image card requires the in-house `html-to-image` service (located in `html-to-image/` at the repo root). It renders HTML in a headless Chromium browser and returns a screenshot.
 
+`npm run dev` at the repo root starts it automatically alongside the client and server. To run it in isolation:
+
 ```bash
-docker build -t html-to-image ./html-to-image
-docker run --rm -p 3033:3033 html-to-image
+npm --prefix html-to-image start
+```
+
+For Docker (e.g. in CI or the full stack), use:
+
+```bash
+npm run html-to-image
 ```
 
 Set `EXPORT_HTML_URL=http://localhost:3033/` in `server/.env` (this is the default).

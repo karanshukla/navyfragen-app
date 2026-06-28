@@ -1,0 +1,113 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Create docker/.env with generated secrets
+        run: |
+          printf 'OAUTH_TOKEN_SECRET=%s\nCOOKIE_SECRET=%s\n' \
+            "$(openssl rand -hex 32)" \
+            "$(openssl rand -hex 32)" > docker/.env
+
+      - name: Build Docker images (e2e overlay)
+        run: |
+          docker compose \
+            -f docker/docker-compose.yml \
+            -f docker/docker-compose.e2e.yml \
+            build
+        env:
+          E2E_PDS_URL: https://bsky.social
+
+      - name: Start services
+        run: |
+          docker compose \
+            -f docker/docker-compose.yml \
+            -f docker/docker-compose.e2e.yml \
+            up -d
+        env:
+          E2E_PDS_URL: https://bsky.social
+
+      - name: Wait for postgres to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' \
+              "$(docker compose -f docker/docker-compose.yml ps -q postgres)" 2>/dev/null || echo "unknown")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Postgres is healthy"
+              break
+            fi
+            echo "Waiting for postgres ($i/30): $STATUS"
+            sleep 3
+          done
+
+      - name: Wait for remaining services to stabilise
+        run: sleep 30
+
+      - name: Check no containers have crashed
+        run: |
+          EXITED=$(docker compose -f docker/docker-compose.yml ps -a | grep -iE '\bExit' || true)
+          if [ -n "$EXITED" ]; then
+            echo "The following containers exited unexpectedly:"
+            echo "$EXITED"
+            docker compose -f docker/docker-compose.yml logs --tail=50
+            exit 1
+          fi
+          echo "All containers are running"
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          E2E_HANDLE: ${{ secrets.E2E_HANDLE }}
+          E2E_APP_PASSWORD: ${{ secrets.E2E_APP_PASSWORD }}
+          # Playwright connects to Caddy directly (port 8090), bypassing Anubis
+          PLAYWRIGHT_BASE_URL: http://localhost:8090
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: test-results/
+          retention-days: 7
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          docker compose \
+            -f docker/docker-compose.yml \
+            -f docker/docker-compose.e2e.yml \
+            logs --tail=100

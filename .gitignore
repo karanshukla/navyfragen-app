@@ -32,5 +32,10 @@ dist-ssr
 .claude
 settings.local.json
 
+# Playwright
+playwright-report/
+test-results/
+e2e/.auth/
+
 # Superpowers spec/design docs
 docs/superpowers/

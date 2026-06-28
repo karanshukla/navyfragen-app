@@ -1,6 +1,7 @@
 import {
   Alert,
   Button,
+  PasswordInput,
   TextInput,
   Title,
   Text,
@@ -11,11 +12,12 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useHaptic } from "use-haptic";
 import { z } from "zod";
 
-import { useLogin } from "../api/authService";
+import { authKeys, useE2ELogin, useLogin } from "../api/authService";
+import { queryClient } from "../api/queryClient";
 import { WinkMark } from "../components/WinkMark";
 import { surfaceBg } from "../styles/tokens";
 
@@ -24,7 +26,90 @@ const handleSchema = z
   .min(1, { error: "Handle is required" })
   .max(64, { error: "Handle too long" });
 
-export default function Login() {
+// Rendered only when VITE_E2E_TESTING=true is baked into the build.
+// Uses an AT Protocol app password to bypass the OAuth redirect, enabling
+// automated Playwright tests against a real account on a private PDS.
+function E2ELoginPanel() {
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { mutate: e2eLogin, isPending } = useE2ELogin();
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    e2eLogin(
+      { identifier, password },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: authKeys.session });
+          navigate("/messages");
+        },
+        onError: (err: any) => {
+          setError(err.error || "E2E login failed");
+        },
+      }
+    );
+  };
+
+  return (
+    <Box maw={480} mx="auto" mt="xl">
+      <Paper
+        radius="lg"
+        p="xl"
+        withBorder
+        style={{ borderColor: "var(--mantine-color-orange-5)", borderWidth: 2 }}
+      >
+        <Stack gap="md">
+          <Text fw={700} c="orange" size="sm">
+            E2E Test Mode - not for production use
+          </Text>
+          {error && (
+            <Alert color="red" withCloseButton onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+          <form onSubmit={onSubmit}>
+            <Stack gap="sm">
+              <TextInput
+                label="Identifier"
+                placeholder="handle.pds.example"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                required
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                data-testid="e2e-identifier"
+              />
+              <PasswordInput
+                label="App Password"
+                placeholder="xxxx-xxxx-xxxx-xxxx"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                data-testid="e2e-password"
+              />
+              <Button
+                type="submit"
+                loading={isPending}
+                fullWidth
+                color="orange"
+                mt="xs"
+                data-testid="e2e-submit"
+              >
+                Sign In (E2E)
+              </Button>
+            </Stack>
+          </form>
+        </Stack>
+      </Paper>
+    </Box>
+  );
+}
+
+function LoginForm() {
   const location = useLocation();
   const [handle, setHandle] = useState("");
   const [error, setError] = useState<string | null>(() =>
@@ -145,4 +230,14 @@ export default function Login() {
       </Text>
     </Box>
   );
+}
+
+// Dispatches to E2ELoginPanel (VITE_E2E_TESTING=true builds) or the normal
+// OAuth form. The build-time constant means exactly one branch is ever reachable
+// at runtime, so there is no conditional-hook issue.
+export default function Login() {
+  if (import.meta.env.VITE_E2E_TESTING === "true") {
+    return <E2ELoginPanel />;
+  }
+  return <LoginForm />;
 }
