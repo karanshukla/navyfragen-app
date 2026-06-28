@@ -1,6 +1,9 @@
 import {
   Alert,
+  Autocomplete,
+  Avatar,
   Button,
+  Group,
   PasswordInput,
   TextInput,
   Title,
@@ -11,7 +14,8 @@ import {
   Stack,
   useComputedColorScheme,
 } from "@mantine/core";
-import { useState } from "react";
+import { useDebouncedValue } from "@mantine/hooks";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHaptic } from "use-haptic";
 import { z } from "zod";
@@ -25,6 +29,13 @@ const handleSchema = z
   .string()
   .min(1, { error: "Handle is required" })
   .max(64, { error: "Handle too long" });
+
+interface BlueskyActor {
+  did: string;
+  handle: string;
+  displayName?: string;
+  avatar?: string;
+}
 
 // Rendered only when VITE_E2E_TESTING=true is baked into the build.
 // Uses an AT Protocol app password to bypass the OAuth redirect, enabling
@@ -112,6 +123,8 @@ function E2ELoginPanel() {
 function LoginForm() {
   const location = useLocation();
   const [handle, setHandle] = useState("");
+  const [actors, setActors] = useState<BlueskyActor[]>([]);
+  const [debouncedHandle] = useDebouncedValue(handle, 300);
   const [error, setError] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("error") === "oauth_failed"
       ? "Login failed. Please try again."
@@ -122,17 +135,38 @@ function LoginForm() {
   const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
+  useEffect(() => {
+    const query = debouncedHandle.replace(/^@/, "").trim();
+    if (query.length < 2) return;
+    const controller = new AbortController();
+    fetch(
+      `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(query)}&limit=8`,
+      { signal: controller.signal }
+    )
+      .then((res) => res.json())
+      .then((data: { actors?: BlueskyActor[] }) => {
+        if (data.actors) setActors(data.actors);
+      })
+      /* v8 ignore next */
+      .catch(() => {});
+    return () => controller.abort();
+  }, [debouncedHandle]);
+
+  const handleQuery = handle.replace(/^@/, "").trim();
+  const suggestions = handleQuery.length >= 2 ? actors : [];
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     triggerHaptic();
     setError(null);
-    const result = handleSchema.safeParse(handle);
+    const cleanHandle = handle.replace(/^@/, "").trim();
+    const result = handleSchema.safeParse(cleanHandle);
     if (!result.success) {
       setError(result.error.issues[0].message);
       return;
     }
     login(
-      { handle },
+      { handle: cleanHandle },
       {
         onSuccess: (data) => {
           if (data.redirectUrl) {
@@ -198,12 +232,28 @@ function LoginForm() {
           )}
 
           <form onSubmit={onSubmit}>
-            <TextInput
+            <Autocomplete
               label="Bluesky Handle"
               placeholder="e.g. yourname.bsky.social"
               value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              required
+              onChange={setHandle}
+              data={suggestions.map((a) => ({ value: a.handle, label: a.displayName || a.handle }))}
+              renderOption={({ option }) => {
+                const actor = suggestions.find((a) => a.handle === option.value);
+                return (
+                  <Group gap="sm" wrap="nowrap">
+                    <Avatar src={actor?.avatar ?? null} size="sm" radius="xl" />
+                    <Box style={{ minWidth: 0 }}>
+                      <Text size="sm" fw={500} truncate>
+                        {actor?.displayName || option.value}
+                      </Text>
+                      <Text size="xs" c="dimmed" truncate>
+                        @{option.value}
+                      </Text>
+                    </Box>
+                  </Group>
+                );
+              }}
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}

@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import Login from "../../pages/Login";
@@ -12,6 +12,10 @@ vi.mock("../../api/authService", async (importOriginal) => {
 
 const mockUseLogin = vi.mocked(authService.useLogin);
 
+function getHandleInput() {
+  return screen.getByRole("combobox", { name: /bluesky handle/i });
+}
+
 describe("Login page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -20,7 +24,7 @@ describe("Login page", () => {
   it("renders handle input and submit button", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />);
-    expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
+    expect(getHandleInput()).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /continue with bluesky/i })).toBeInTheDocument();
   });
 
@@ -33,8 +37,7 @@ describe("Login page", () => {
   it("shows validation error when submitting an empty handle", async () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />);
-    // Submit the form directly to bypass browser's native required-field validation
-    const form = screen.getByLabelText(/bluesky handle/i).closest("form")!;
+    const form = getHandleInput().closest("form")!;
     fireEvent.submit(form);
     await waitFor(() => {
       expect(screen.getByText(/handle is required/i)).toBeInTheDocument();
@@ -49,7 +52,7 @@ describe("Login page", () => {
     } as any);
     renderWithProviders(<Login />);
 
-    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+    fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
     fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
@@ -70,7 +73,7 @@ describe("Login page", () => {
     } as any);
     renderWithProviders(<Login />);
 
-    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+    fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
     fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
@@ -115,7 +118,7 @@ describe("Login page", () => {
     } as any);
     renderWithProviders(<Login />);
 
-    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+    fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
     fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
@@ -143,7 +146,7 @@ describe("Login page", () => {
     } as any);
     renderWithProviders(<Login />);
 
-    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+    fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
     fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
@@ -154,8 +157,7 @@ describe("Login page", () => {
       capturedCallbacks.onSuccess({});
     });
 
-    // No redirect happened; component remains rendered without error
-    expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
+    expect(getHandleInput()).toBeInTheDocument();
   });
 
   it("shows fallback error message when err.error is absent", async () => {
@@ -169,7 +171,7 @@ describe("Login page", () => {
     } as any);
     renderWithProviders(<Login />);
 
-    fireEvent.change(screen.getByLabelText(/bluesky handle/i), {
+    fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
     fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
@@ -186,6 +188,119 @@ describe("Login page", () => {
   it("renders correctly in dark mode (covers dark-style branches)", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />, { colorScheme: "dark" });
-    expect(screen.getByLabelText(/bluesky handle/i)).toBeInTheDocument();
+    expect(getHandleInput()).toBeInTheDocument();
+  });
+
+  it("strips leading @ from handle before calling login", async () => {
+    const mockMutate = vi.fn();
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    fireEvent.change(getHandleInput(), {
+      target: { value: "@karan.bsky.social" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith({ handle: "karan.bsky.social" }, expect.any(Object));
+    });
+  });
+
+  describe("handle autocomplete", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("fetches actor suggestions when query is 2+ chars", async () => {
+      const mockActors = [
+        {
+          did: "did:plc:abc",
+          handle: "alice.bsky.social",
+          displayName: "Alice",
+          avatar: "https://example.com/a.jpg",
+        },
+        {
+          did: "did:plc:def",
+          handle: "alicia.bsky.social",
+          displayName: undefined,
+          avatar: undefined,
+        },
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ json: () => Promise.resolve({ actors: mockActors }) })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "ali" } });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        expect.stringContaining("searchActorsTypeahead?q=ali"),
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      );
+    });
+
+    it("clears suggestions and skips fetch when query is under 2 chars", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "a" } });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("strips leading @ before searching", async () => {
+      const mockActors = [
+        { did: "did:plc:abc", handle: "karan.bsky.social", displayName: "Karan" },
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ json: () => Promise.resolve({ actors: mockActors }) })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "@karan" } });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        expect.stringContaining("q=karan"),
+        expect.any(Object)
+      );
+    });
+
+    it("does nothing when fetch response lacks actors array", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ json: () => Promise.resolve({}) }));
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "ali" } });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
+      expect(vi.mocked(fetch)).toHaveBeenCalled();
+      expect(getHandleInput()).toBeInTheDocument();
+    });
   });
 });
