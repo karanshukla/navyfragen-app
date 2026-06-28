@@ -42,7 +42,7 @@ jobs:
             -f docker/docker-compose.e2e.yml \
             build
         env:
-          E2E_PDS_URL: https://bsky.social
+          E2E_PDS_URL: ${{ secrets.E2E_PDS_URL }}
 
       - name: Start services
         run: |
@@ -51,7 +51,7 @@ jobs:
             -f docker/docker-compose.e2e.yml \
             up -d
         env:
-          E2E_PDS_URL: https://bsky.social
+          E2E_PDS_URL: ${{ secrets.E2E_PDS_URL }}
 
       - name: Wait for postgres to be healthy
         run: |

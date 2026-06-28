@@ -73,10 +73,11 @@ docker compose \
 
 | Secret | Value |
 |--------|-------|
+| `E2E_PDS_URL` | PDS URL for the test account (e.g. `https://bsky.social`) |
 | `E2E_HANDLE` | `yourhandle.bsky.social` |
 | `E2E_APP_PASSWORD` | App password from Bluesky settings |
 
-`OAUTH_TOKEN_SECRET` and `COOKIE_SECRET` are generated fresh each run — no secrets needed for those. `E2E_PDS_URL` defaults to `https://bsky.social` in the compose overlay.
+`OAUTH_TOKEN_SECRET` and `COOKIE_SECRET` are generated fresh each run. If `E2E_PDS_URL` is not set as a secret it falls back to `https://bsky.social` — only set it if using a non-bsky.social PDS.
 
 ## Security properties
 

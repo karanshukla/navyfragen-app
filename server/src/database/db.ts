@@ -1,4 +1,3 @@
-import SqliteDb from "better-sqlite3";
 import {
   Kysely,
   Migrator,
@@ -231,7 +230,7 @@ migrations["007"] = {
 };
 
 export const createDb = (location: string): Database => {
-  if (env.NODE_ENV === "production" && env.POSTGRESQL_URL) {
+  if (env.POSTGRESQL_URL) {
     return new Kysely<DatabaseSchema>({
       dialect: new PostgresDialect({
         pool: new Pool({
@@ -240,6 +239,9 @@ export const createDb = (location: string): Database => {
       }),
     });
   }
+  // Lazy require so the native binary is never loaded when PostgreSQL is in use
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const SqliteDb = require("better-sqlite3");
   return new Kysely<DatabaseSchema>({
     dialect: new SqliteDialect({
       database: new SqliteDb(location),
