@@ -89,6 +89,7 @@ export class Server {
     // Create our server
     const app: Express = express();
     app.set("trust proxy", 1);
+    app.disable("x-powered-by");
 
     // Enable CORS for the frontend client
     app.use(
