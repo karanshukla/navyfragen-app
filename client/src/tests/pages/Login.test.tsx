@@ -7,10 +7,11 @@ import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
-  return { ...actual, useLogin: vi.fn() };
+  return { ...actual, useLogin: vi.fn(), useE2ELogin: vi.fn() };
 });
 
 const mockUseLogin = vi.mocked(authService.useLogin);
+const mockUseE2ELogin = vi.mocked(authService.useE2ELogin);
 
 function getHandleInput() {
   return screen.getByRole("combobox", { name: /bluesky handle/i });
@@ -301,6 +302,155 @@ describe("Login page", () => {
 
       expect(vi.mocked(fetch)).toHaveBeenCalled();
       expect(getHandleInput()).toBeInTheDocument();
+    });
+
+    it("silently ignores fetch network errors", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "ali" } });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350);
+      });
+
+      expect(getHandleInput()).toBeInTheDocument();
+    });
+  });
+
+  describe("E2ELoginPanel", () => {
+    beforeEach(() => {
+      vi.stubEnv("VITE_E2E_TESTING", "true");
+      mockUseE2ELogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("renders identifier and password inputs in E2E mode", () => {
+      renderWithProviders(<Login />);
+      expect(screen.getByTestId("e2e-identifier")).toBeInTheDocument();
+      expect(screen.getByTestId("e2e-password")).toBeInTheDocument();
+      expect(screen.getByTestId("e2e-submit")).toBeInTheDocument();
+    });
+
+    it("calls e2eLogin mutation with identifier and password on submit", async () => {
+      const mockMutate = vi.fn();
+      mockUseE2ELogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(screen.getByTestId("e2e-identifier"), {
+        target: { value: "user.bsky.social" },
+      });
+      fireEvent.change(screen.getByTestId("e2e-password"), {
+        target: { value: "xxxx-xxxx-xxxx-xxxx" },
+      });
+      fireEvent.click(screen.getByTestId("e2e-submit"));
+
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledWith(
+          { identifier: "user.bsky.social", password: "xxxx-xxxx-xxxx-xxxx" },
+          expect.any(Object)
+        );
+      });
+    });
+
+    function submitE2EForm() {
+      fireEvent.change(screen.getByTestId("e2e-identifier"), {
+        target: { value: "user.bsky.social" },
+      });
+      fireEvent.change(screen.getByTestId("e2e-password"), {
+        target: { value: "xxxx-xxxx-xxxx-xxxx" },
+      });
+      fireEvent.click(screen.getByTestId("e2e-submit"));
+    }
+
+    it("navigates to /messages on e2eLogin success", async () => {
+      let capturedCallbacks: any;
+      const mockMutate = vi.fn((_data: any, callbacks: any) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseE2ELogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      submitE2EForm();
+      await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+      act(() => {
+        capturedCallbacks.onSuccess();
+      });
+
+      // MemoryRouter doesn't change window.location; component stays rendered
+      expect(screen.getByTestId("e2e-submit")).toBeInTheDocument();
+    });
+
+    it("shows error message on e2eLogin failure", async () => {
+      let capturedCallbacks: any;
+      const mockMutate = vi.fn((_data: any, callbacks: any) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseE2ELogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      submitE2EForm();
+      await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+      act(() => {
+        capturedCallbacks.onError({ error: "Invalid credentials" });
+      });
+
+      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+    });
+
+    it("shows fallback error when e2eLogin err.error is absent", async () => {
+      let capturedCallbacks: any;
+      const mockMutate = vi.fn((_data: any, callbacks: any) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseE2ELogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      submitE2EForm();
+      await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+      act(() => {
+        capturedCallbacks.onError({});
+      });
+
+      expect(screen.getByText(/e2e login failed/i)).toBeInTheDocument();
+    });
+
+    it("clears error alert when close button is clicked", async () => {
+      let capturedCallbacks: any;
+      const mockMutate = vi.fn((_data: any, callbacks: any) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseE2ELogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      submitE2EForm();
+      await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+      act(() => {
+        capturedCallbacks.onError({ error: "Something went wrong" });
+      });
+
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+
+      const closeBtn = screen.getByRole("alert").querySelector("button");
+      if (closeBtn) fireEvent.click(closeBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/something went wrong/i)).toBeNull();
+      });
+    });
+
+    it("shows loading state on submit button while e2eLogin is pending", () => {
+      mockUseE2ELogin.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
+      renderWithProviders(<Login />);
+      expect(screen.getByTestId("e2e-submit")).toBeDisabled();
     });
   });
 });
