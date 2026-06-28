@@ -160,6 +160,18 @@ export class ProfileService {
     }
   }
 
+  async searchActorsTypeahead(
+    q: string
+  ): Promise<{ did: string; handle: string; displayName?: string; avatar?: string }[]> {
+    const res = await this.agent.searchActorsTypeahead({ q, limit: 8 });
+    return res.data.actors.map((a) => ({
+      did: a.did,
+      handle: a.handle,
+      displayName: a.displayName,
+      avatar: a.avatar,
+    }));
+  }
+
   async resolveHandleToDid(handle: string): Promise<string> {
     let did: string | undefined;
     try {

@@ -4,6 +4,7 @@ import {
   Avatar,
   Button,
   Group,
+  Loader,
   PasswordInput,
   TextInput,
   Title,
@@ -15,11 +16,13 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHaptic } from "use-haptic";
 import { z } from "zod";
 
+import { apiClient } from "../api/apiClient";
 import { authKeys, useE2ELogin, useLogin } from "../api/authService";
 import { queryClient } from "../api/queryClient";
 import { WinkMark } from "../components/WinkMark";
@@ -29,6 +32,19 @@ const handleSchema = z
   .string()
   .min(1, { error: "Handle is required" })
   .max(64, { error: "Handle too long" });
+
+// Keyed on PDS hostnames returned by /handle-pds. Entries that share a hostname
+// prefix (bsky.network covers all per-user shard hosts) are matched with endsWith.
+const KNOWN_PDS_HOSTS: Array<[string, string]> = [
+  ["bsky.social", "Bluesky"],
+  ["bsky.network", "Bluesky"],
+  ["bsky.team", "Bluesky"],
+];
+
+function pdsHostToLabel(host: string): string {
+  const match = KNOWN_PDS_HOSTS.find(([suffix]) => host === suffix || host.endsWith(`.${suffix}`));
+  return match ? match[1] : host;
+}
 
 interface BlueskyActor {
   did: string;
@@ -123,7 +139,6 @@ function E2ELoginPanel() {
 function LoginForm() {
   const location = useLocation();
   const [handle, setHandle] = useState("");
-  const [actors, setActors] = useState<BlueskyActor[]>([]);
   const [debouncedHandle] = useDebouncedValue(handle, 300);
   const [error, setError] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("error") === "oauth_failed"
@@ -135,31 +150,42 @@ function LoginForm() {
   const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
-  useEffect(() => {
-    const query = debouncedHandle.replace(/^@/, "").trim();
-    if (query.length < 2) return;
-    const controller = new AbortController();
-    fetch(
-      `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(query)}&limit=8`,
-      { signal: controller.signal }
-    )
-      .then((res) => res.json())
-      .then((data: { actors?: BlueskyActor[] }) => {
-        if (data.actors) setActors(data.actors);
-      })
-      /* v8 ignore next */
-      .catch(() => {});
-    return () => controller.abort();
-  }, [debouncedHandle]);
+  const debouncedQuery = debouncedHandle.replace(/^@/, "").trim();
+  const cleanHandle = handle.replace(/^@/, "").trim();
+  const isHandleReady = cleanHandle.length >= 3 && cleanHandle.includes(".");
 
-  const handleQuery = handle.replace(/^@/, "").trim();
-  const suggestions = handleQuery.length >= 2 ? actors : [];
+  const { data: pdsHost, isFetching: isPdsResolving } = useQuery({
+    queryKey: ["handle-pds", debouncedQuery],
+    queryFn: async () => {
+      const data = await apiClient.get<{ pds: string }>(
+        `/handle-pds/${encodeURIComponent(debouncedQuery)}`
+      );
+      return data.pds;
+    },
+    enabled: isHandleReady && debouncedQuery === cleanHandle,
+    staleTime: 5 * 60_000,
+    throwOnError: false,
+  });
+
+  const pdsLabel = pdsHost ? pdsHostToLabel(pdsHost) : "Bluesky";
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ["bsky-handle-search", debouncedQuery],
+    queryFn: async (): Promise<BlueskyActor[]> => {
+      const data = await apiClient.get<{ actors: BlueskyActor[] }>(
+        `/handle-search?q=${encodeURIComponent(debouncedQuery)}`
+      );
+      return data.actors;
+    },
+    enabled: debouncedQuery.length >= 2,
+    staleTime: 30_000,
+    throwOnError: false,
+  });
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isHandleReady) return;
     triggerHaptic();
     setError(null);
-    const cleanHandle = handle.replace(/^@/, "").trim();
     const result = handleSchema.safeParse(cleanHandle);
     if (!result.success) {
       setError(result.error.issues[0].message);
@@ -221,7 +247,7 @@ function LoginForm() {
               Log in to Navyfragen
             </Title>
             <Text size="sm" c="dimmed" mt={4}>
-              Enter your Bluesky handle to continue
+              Enter your AT Protocol handle to continue
             </Text>
           </Box>
 
@@ -237,7 +263,7 @@ function LoginForm() {
               placeholder="e.g. yourname.bsky.social"
               value={handle}
               onChange={setHandle}
-              data={suggestions.map((a) => ({ value: a.handle, label: a.displayName || a.handle }))}
+              data={suggestions.map((a) => ({ value: a.handle, label: a.handle }))}
               renderOption={({ option }) => {
                 const actor = suggestions.find((a) => a.handle === option.value);
                 return (
@@ -254,6 +280,7 @@ function LoginForm() {
                   </Group>
                 );
               }}
+              filter={({ options }) => options}
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
@@ -267,8 +294,15 @@ function LoginForm() {
               gradient={{ from: "royal", to: "purple", deg: 135 }}
               size="md"
               radius="md"
+              style={{
+                opacity: isHandleReady ? 1 : 0.45,
+                cursor: isHandleReady ? undefined : "not-allowed",
+              }}
             >
-              Continue with Bluesky
+              <Group gap="xs" wrap="nowrap" align="center">
+                Continue with
+                {isPdsResolving ? <Loader size={14} color="white" /> : " " + pdsLabel}
+              </Group>
             </Button>
           </form>
         </Stack>

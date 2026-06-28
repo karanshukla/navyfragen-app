@@ -1,6 +1,6 @@
 /* v8 ignore start */
 import express from "express";
-import { param } from "express-validator";
+import { param, query } from "express-validator";
 import { Logger } from "pino";
 
 import { ProfileService } from "../services/profile-service";
@@ -114,6 +114,40 @@ export class ProfileController {
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to check bot follow status");
       return res.status(500).json({ error: "Failed to check bot follow status" });
+    }
+  };
+
+  validateHandlePDS = [param("handle").isString().notEmpty().withMessage("Handle required")];
+
+  getHandlePDS = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const handle = req.params.handle;
+    try {
+      const did = await this.ctx.resolver.resolveHandleToDid(handle);
+      if (!did) return res.status(404).json({ error: "Handle not found" });
+      const atprotoData = await this.ctx.idResolver.did.resolveAtprotoData(did);
+      const pdsUrl = new URL(atprotoData.pds);
+      return res.json({ pds: pdsUrl.hostname });
+    } catch (err) {
+      this.logger.error({ err, handle }, "Failed to resolve PDS for handle");
+      return res.status(500).json({ error: "Failed to resolve PDS" });
+    }
+  };
+
+  validateSearchHandles = [
+    query("q").isString().notEmpty().isLength({ max: 64 }).withMessage("Query required"),
+  ];
+
+  searchHandles = async (
+    req: express.Request,
+    res: express.Response
+  ): Promise<express.Response> => {
+    const q = req.query.q as string;
+    try {
+      const actors = await this.profileService.searchActorsTypeahead(q);
+      return res.json({ actors });
+    } catch (err) {
+      this.logger.error({ err }, "Failed to search handles");
+      return res.status(500).json({ error: "Failed to search handles" });
     }
   };
 
