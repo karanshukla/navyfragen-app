@@ -35,6 +35,11 @@ services:
       FRONTEND_PORT: 3000
       BACKEND_DOMAIN: server
       BACKEND_PORT: 3000
+      # Both regions point to the single server container in Docker
+      BACKEND_EU_DOMAIN: server
+      BACKEND_EU_PORT: 3000
+      BACKEND_NA_DOMAIN: server
+      BACKEND_NA_PORT: 3000
     depends_on:
       - client
       - server
