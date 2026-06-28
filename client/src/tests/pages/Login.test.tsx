@@ -14,7 +14,7 @@ const mockUseLogin = vi.mocked(authService.useLogin);
 const mockUseE2ELogin = vi.mocked(authService.useE2ELogin);
 
 function getHandleInput() {
-  return screen.getByRole("combobox", { name: /bluesky handle/i });
+  return screen.getByRole("textbox", { name: /atmosphere handle/i });
 }
 
 describe("Login page", () => {
@@ -26,7 +26,7 @@ describe("Login page", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />);
     expect(getHandleInput()).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /continue with bluesky/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument();
   });
 
   it("shows error notification when URL contains ?error=oauth_failed", () => {
@@ -35,13 +35,14 @@ describe("Login page", () => {
     expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
   });
 
-  it("shows validation error when submitting an empty handle", async () => {
-    mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+  it("does not call login mutation when handle is empty", async () => {
+    const mockMutate = vi.fn();
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
     renderWithProviders(<Login />);
     const form = getHandleInput().closest("form")!;
     fireEvent.submit(form);
     await waitFor(() => {
-      expect(screen.getByText(/handle is required/i)).toBeInTheDocument();
+      expect(mockMutate).not.toHaveBeenCalled();
     });
   });
 
@@ -56,7 +57,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith({ handle: "karan.bsky.social" }, expect.any(Object));
@@ -77,7 +78,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
     act(() => {
@@ -91,7 +92,7 @@ describe("Login page", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
     renderWithProviders(<Login />);
     const button = screen.getByRole("button", {
-      name: /continue with bluesky/i,
+      name: /continue/i,
     });
     expect(button).toBeDisabled();
   });
@@ -122,7 +123,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
@@ -150,7 +151,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
@@ -175,7 +176,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
@@ -200,7 +201,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "@karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue with bluesky/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith({ handle: "karan.bsky.social" }, expect.any(Object));
@@ -246,8 +247,8 @@ describe("Login page", () => {
       });
 
       expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-        expect.stringContaining("searchActorsTypeahead?q=ali"),
-        expect.objectContaining({ signal: expect.any(AbortSignal) })
+        expect.stringContaining("handle-search?q=ali"),
+        expect.objectContaining({ credentials: "include" })
       );
     });
 
