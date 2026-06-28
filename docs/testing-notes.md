@@ -185,6 +185,14 @@ The following "uncovered" lines are not executable TypeScript — they are blank
 
 No `/* v8 ignore */` annotations are added for these because the underlying logic IS reached by tests; the gaps are purely a source-map rendering artefact.
 
+### `server/src/services/auth-service.ts` — e2e branch in `revokeSession`
+
+**Lines:** the `if (hasE2EAgent(did)) { deleteE2EAgent(did); ... return; }` block.
+
+**Why ignored:** This branch only fires when the DID belongs to an E2E test session created by `e2eAuthRoutes`. In the unit test suite `E2E_TESTING` is never set to `true`, so `hasE2EAgent` always returns `false` and the branch is permanently unreachable.
+
+**What it would take to test:** Import and call `setE2EAgent` in a test to plant a fake agent, then call `revokeSession` — but this requires `e2e-agent-store.ts` to be importable in the test context, which it is. Left as a future improvement.
+
 ## Coverage Exclusions (via config)
 
 The following files are excluded from coverage metrics entirely. See the root-level notes in `CLAUDE.md` under "Coverage Exclusions".
@@ -193,10 +201,11 @@ The following files are excluded from coverage metrics entirely. See the root-le
 - `src/lexicon/**` — auto-generated AT Protocol types
 - `src/index.ts` — Express boot + signal handlers
 - `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — OAuth wiring
+- `src/auth/e2e-agent-store.ts` — in-memory Map for E2E agents; trivial code that requires a live AT Protocol PDS to exercise meaningfully
 - `src/database/db.ts` — Kysely migration runner
 - `src/lib/id-resolver.ts` — requires live network
 - `src/lib/env.ts` — bootstrapped before tests
-- `src/routes.ts`, `src/routes/*.ts` — pure Express wiring
+- `src/routes.ts`, `src/routes/*.ts` — pure Express wiring (includes `e2e-auth-routes.ts`)
 
 **Client** (excluded via `coverage.exclude` in `vite.config.ts`):
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and entry point

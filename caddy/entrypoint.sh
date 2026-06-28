@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -euo pipefail
+set -eu
 
 # for backwards compatibility, seperates host and port from url
 export FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-${FRONTEND_HOST%:*}}

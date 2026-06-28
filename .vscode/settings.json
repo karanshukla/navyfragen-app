@@ -1,0 +1,5 @@
+{
+  "playwright.env": {},
+  "playwright.reuseBrowser": false,
+  "playwright.enabledProjects": ["setup", "chromium"]
+}

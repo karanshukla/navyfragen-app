@@ -14,8 +14,10 @@ COPY client/ ./client/
 # Vite env vars are baked in at build time
 ARG VITE_API_URL=/api
 ARG VITE_SHORTLINK_URL
+ARG VITE_E2E_TESTING=false
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_SHORTLINK_URL=$VITE_SHORTLINK_URL
+ENV VITE_E2E_TESTING=$VITE_E2E_TESTING
 
 RUN npm run build --workspace=client
 

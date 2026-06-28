@@ -1,0 +1,2 @@
+# Saved auth state — contains session cookies, never commit
+.auth/
