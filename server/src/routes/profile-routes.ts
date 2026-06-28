@@ -32,6 +32,20 @@ export function profileRoutes(ctx: AppContext, handler: any, checkValidation: an
   router.get("/check-bot-follow", handler(profileController.checkBotFollow));
 
   router.get(
+    "/handle-pds/:handle",
+    profileController.validateHandlePDS,
+    checkValidation,
+    handler(profileController.getHandlePDS)
+  );
+
+  router.get(
+    "/handle-search",
+    profileController.validateSearchHandles,
+    checkValidation,
+    handler(profileController.searchHandles)
+  );
+
+  router.get(
     "/resolve-handle/:handle",
     profileController.validateResolveHandle,
     checkValidation,

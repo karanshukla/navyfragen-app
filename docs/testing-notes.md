@@ -193,6 +193,14 @@ No `/* v8 ignore */` annotations are added for these because the underlying logi
 
 **What it would take to test:** Import and call `setE2EAgent` in a test to plant a fake agent, then call `revokeSession` — but this requires `e2e-agent-store.ts` to be importable in the test context, which it is. Left as a future improvement.
 
+### `client/src/pages/Login.tsx` — `renderActorOption` dropdown render function
+
+**Lines:** the `renderActorOption` function body inside `LoginForm`.
+
+**Why ignored:** `renderActorOption` is passed as `renderOption` to Mantine's `Autocomplete` component. Mantine only invokes this callback when the combobox dropdown is open and options are being rendered. In the `happy-dom` test environment, Mantine's `Combobox` never opens the dropdown: focus events do not trigger the internal `combobox.openDropdown()` state update because `happy-dom` does not fully implement the browser's focus/pointer model required by Mantine's floating-UI positioning layer. After the async fetch resolves and `data` becomes non-empty, the dropdown stays closed (no re-open is triggered), so `renderOption` is never called during any test run.
+
+**What it would take to test:** Use Playwright (which runs against a real Chromium instance) to type in the login handle field, wait for the suggestion dropdown to appear, and assert that each option shows the avatar, display name, and `@handle` text. This is a UI-layer concern that unit tests cannot reach.
+
 ## Coverage Exclusions (via config)
 
 The following files are excluded from coverage metrics entirely. See the root-level notes in `CLAUDE.md` under "Coverage Exclusions".
