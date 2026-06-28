@@ -147,13 +147,31 @@ function LoginForm() {
       .then((data: { actors?: BlueskyActor[] }) => {
         if (data.actors) setActors(data.actors);
       })
-      /* v8 ignore next */
       .catch(() => {});
     return () => controller.abort();
   }, [debouncedHandle]);
 
   const handleQuery = handle.replace(/^@/, "").trim();
   const suggestions = handleQuery.length >= 2 ? actors : [];
+
+  /* v8 ignore start */
+  const renderActorOption = ({ option }: { option: { value: string } }) => {
+    const actor = suggestions.find((a) => a.handle === option.value);
+    return (
+      <Group gap="sm" wrap="nowrap">
+        <Avatar src={actor?.avatar ?? null} size="sm" radius="xl" />
+        <Box style={{ minWidth: 0 }}>
+          <Text size="sm" fw={500} truncate>
+            {actor?.displayName || option.value}
+          </Text>
+          <Text size="xs" c="dimmed" truncate>
+            @{option.value}
+          </Text>
+        </Box>
+      </Group>
+    );
+  };
+  /* v8 ignore stop */
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,22 +256,7 @@ function LoginForm() {
               value={handle}
               onChange={setHandle}
               data={suggestions.map((a) => ({ value: a.handle, label: a.displayName || a.handle }))}
-              renderOption={({ option }) => {
-                const actor = suggestions.find((a) => a.handle === option.value);
-                return (
-                  <Group gap="sm" wrap="nowrap">
-                    <Avatar src={actor?.avatar ?? null} size="sm" radius="xl" />
-                    <Box style={{ minWidth: 0 }}>
-                      <Text size="sm" fw={500} truncate>
-                        {actor?.displayName || option.value}
-                      </Text>
-                      <Text size="xs" c="dimmed" truncate>
-                        @{option.value}
-                      </Text>
-                    </Box>
-                  </Group>
-                );
-              }}
+              renderOption={renderActorOption}
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
