@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import { Logger } from "pino";
 
 import { MessageService } from "../services/message-service";
+import { NotificationService } from "../services/notification-service";
 
 import type { AppContext } from "../index";
 
@@ -13,7 +14,14 @@ export class MessageController {
   constructor(
     private messageService: MessageService,
     private logger: Logger,
-    private ctx: AppContext
+    private ctx: AppContext,
+    /**
+     * Optional push-notification side-effect. When wired (production routes),
+     * it triggers a push on new messages and drops subscriptions on account
+     * deletion. Optional + fire-and-forget so it never blocks a request, and
+     * existing call sites that omit it keep working unchanged.
+     */
+    private notificationService?: NotificationService
   ) {}
   /* v8 ignore stop */
 
@@ -133,8 +141,12 @@ export class MessageController {
     try {
       const result = await this.messageService.sendMessage(recipient, message);
       this.logger.info({ recipient }, "Anonymous message sent");
-      // TODO: trigger web push notification to recipient when enabled
-      // await notificationService.sendNewMessageNotification(recipient);
+      // Fire-and-forget: a push failure must never affect the send response.
+      this.notificationService
+        ?.sendNewMessageNotification(recipient)
+        .catch((err) =>
+          this.logger.error({ err, did: recipient }, "Failed to send push notification")
+        );
       return res.json(result);
     } catch (err: any) {
       this.logger.error({ err, recipient }, "Failed to send message");
@@ -226,6 +238,12 @@ export class MessageController {
 
     try {
       await this.messageService.deleteUserData(userSessionDid, agent);
+      // Fire-and-forget: also drop any push subscriptions for this user.
+      this.notificationService
+        ?.deleteAllSubscriptionsForUser(userSessionDid)
+        .catch((err) =>
+          this.logger.error({ err, did: userSessionDid }, "Failed to delete push subscriptions")
+        );
       req.session = null;
       this.logger.info({ did: userSessionDid }, "Account and all data deleted");
       return res.json({ success: true });

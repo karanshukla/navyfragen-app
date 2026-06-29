@@ -12,12 +12,13 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
-import { IconLogout, IconMoon, IconSun, IconUser } from "@tabler/icons-react";
+import { showNotification } from "@mantine/notifications";
+import { IconLogout, IconMoon, IconPlus, IconSun, IconUser } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 import { useHaptic } from "use-haptic";
 
-import { useSession, useLogout } from "../api/authService";
+import { type AccountEntry, useLogout, useSession, useSwitchAccount } from "../api/authService";
 import { surfaceBg } from "../styles/tokens";
 
 import { WinkMark } from "./WinkMark";
@@ -42,6 +43,8 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
   const isDark = computedColorScheme === "dark";
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const userProfile = sessionData?.profile;
+  const accounts = sessionData?.accounts ?? [];
+  const activeDid = sessionData?.did ?? undefined;
 
   return (
     <Group h="100%" px="md">
@@ -90,6 +93,8 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
         ) : isLoggedIn && userProfile ? (
           <UserMenu
             userProfile={userProfile}
+            accounts={accounts}
+            activeDid={activeDid}
             isDark={isDark}
             onLogout={() => {
               try {
@@ -131,21 +136,54 @@ interface UserMenuProps {
     displayName?: string | null;
     handle?: string;
   };
+  accounts: AccountEntry[];
+  activeDid?: string;
   isDark: boolean;
   onLogout: () => void;
   onNavigate: () => void;
 }
 
-function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) {
+function UserMenu({
+  userProfile,
+  accounts,
+  activeDid,
+  isDark,
+  onLogout,
+  onNavigate,
+}: UserMenuProps) {
   const { triggerHaptic } = useHaptic(1);
+  const { mutate: switchAccount, isPending: isSwitching } = useSwitchAccount();
+  const hasMultiple = accounts.length > 1;
+
+  const handleSwitch = (did: string, label: string) => {
+    if (did === activeDid || isSwitching) return;
+    triggerHaptic();
+    switchAccount(did, {
+      onSuccess: () => {
+        showNotification({
+          message: `Switched to @${label}`,
+          color: "green",
+        });
+        onNavigate();
+      },
+      onError: (err: any) => {
+        showNotification({
+          title: "Couldn't switch account",
+          message: err?.error || "Please try again.",
+          color: "red",
+        });
+      },
+    });
+  };
+
   return (
     <Menu
       shadow="md"
-      width={180}
+      width={220}
       position="bottom-end"
       middlewares={{ shift: true, flip: true }}
       styles={{
-        item: { padding: "12px 16px", fontSize: "var(--mantine-font-size-sm)" },
+        item: { padding: "10px 14px", fontSize: "var(--mantine-font-size-sm)" },
       }}
     >
       <Menu.Target>
@@ -170,7 +208,7 @@ function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) 
               <WinkMark size={22} sparkle={false} aria-hidden />
             </Avatar>
             <Box visibleFrom="sm">
-              <Text size="sm" fw={600} truncate>
+              <Text size="sm" fw={600} truncate maw={120}>
                 {userProfile.displayName}
               </Text>
             </Box>
@@ -179,6 +217,48 @@ function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) 
       </Menu.Target>
 
       <Menu.Dropdown>
+        {/* Account switcher — only shown when more than one account is signed in. */}
+        {hasMultiple && (
+          <>
+            <Menu.Label>Accounts</Menu.Label>
+            {accounts.map((acct) => {
+              const isActive = acct.did === activeDid;
+              const label = acct.displayName || acct.handle || acct.did;
+              return (
+                <Menu.Item
+                  key={acct.did}
+                  disabled={isActive || isSwitching}
+                  onClick={() => handleSwitch(acct.did, acct.handle || label)}
+                  leftSection={
+                    <Avatar size={20} src={acct.avatar || undefined} radius="xl">
+                      {(acct.handle || "?").charAt(0).toUpperCase()}
+                    </Avatar>
+                  }
+                  rightSection={
+                    isActive ? (
+                      <Text size="xs" c="dimmed" fw={600}>
+                        active
+                      </Text>
+                    ) : undefined
+                  }
+                >
+                  <Box style={{ minWidth: 0 }}>
+                    <Text size="sm" fw={500} truncate>
+                      {label}
+                    </Text>
+                    {acct.handle && (
+                      <Text size="xs" c="dimmed" truncate>
+                        @{acct.handle}
+                      </Text>
+                    )}
+                  </Box>
+                </Menu.Item>
+              );
+            })}
+            <Menu.Divider />
+          </>
+        )}
+
         <Menu.Item
           component={Link}
           to={`/profile/${userProfile.handle}`}
@@ -190,6 +270,20 @@ function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) 
         >
           View Profile
         </Menu.Item>
+
+        {/* Add another Bluesky account via OAuth. */}
+        <Menu.Item
+          component={Link}
+          to="/login?add=1"
+          onClick={() => {
+            triggerHaptic();
+            onNavigate();
+          }}
+          leftSection={<IconPlus size="1.2rem" stroke={1.5} />}
+        >
+          Add account
+        </Menu.Item>
+
         <Menu.Item
           onClick={() => {
             triggerHaptic();
@@ -197,7 +291,7 @@ function UserMenu({ userProfile, isDark, onLogout, onNavigate }: UserMenuProps) 
           }}
           leftSection={<IconLogout size="1.2rem" stroke={1.5} />}
         >
-          Logout
+          {hasMultiple ? "Log out @current" : "Logout"}
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>

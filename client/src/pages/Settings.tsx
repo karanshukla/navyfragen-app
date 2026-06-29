@@ -27,6 +27,7 @@ import {
 } from "../api/settingsService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { useInstallPrompt } from "../components/InstallPromptContext";
+import { PushNotificationsControl } from "../components/PushNotificationsControl";
 import { SettingsCard } from "../components/SettingsCard";
 
 // Stat display sizes — intentionally different to create visual hierarchy
@@ -215,9 +216,7 @@ export default function Settings() {
                 description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option."
                 isDark={isDark}
               >
-                <Button fullWidth disabled variant="outline">
-                  Coming Soon
-                </Button>
+                <PushNotificationsControl />
               </SettingsCard>
             </Grid.Col>
 

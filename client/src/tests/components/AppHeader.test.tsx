@@ -10,8 +10,17 @@ import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
-  return { ...actual, useSession: vi.fn(), useLogout: vi.fn() };
+  return {
+    ...actual,
+    useSession: vi.fn(),
+    useLogout: vi.fn(),
+    useSwitchAccount: vi.fn(),
+  };
 });
+
+vi.mock("@mantine/notifications", () => ({
+  showNotification: vi.fn(),
+}));
 
 vi.mock("@mantine/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@mantine/core")>();
@@ -28,6 +37,7 @@ import { AppHeader } from "../../components/AppHeader";
 
 const mockUseSession = vi.mocked(authService.useSession);
 const mockUseLogout = vi.mocked(authService.useLogout);
+const mockUseSwitchAccount = vi.mocked(authService.useSwitchAccount);
 const mockUseComputedColorScheme = vi.mocked(mantineCore.useComputedColorScheme);
 
 describe("AppHeader", () => {
@@ -43,6 +53,7 @@ describe("AppHeader", () => {
     document.body.style.pointerEvents = "";
     document.body.style.opacity = "";
     mockUseLogout.mockReturnValue({ mutate: vi.fn() } as any);
+    mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     mockUseComputedColorScheme.mockReturnValue("light" as any);
   });
 

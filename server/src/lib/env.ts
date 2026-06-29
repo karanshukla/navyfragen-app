@@ -28,10 +28,20 @@ export const env = cleanEnv(process.env, {
   AXIOM_TOKEN: str({ default: "" }),
   AXIOM_DATASET: str({ default: "" }),
   // Web push (VAPID) — generate a key pair with: npx web-push generate-vapid-keys
-  // Leave empty to keep web push disabled (feature is stubbed out, not yet active).
-  VAPID_PUBLIC_KEY: str({ default: "" }),
-  VAPID_PRIVATE_KEY: str({ default: "" }),
-  VAPID_SUBJECT: str({ default: "" }), // mailto: or https: URL identifying the sender
+  // Leave all three empty to keep web push disabled. When all three are set,
+  // push notifications are active and /notifications/* endpoints return 200.
+  VAPID_PUBLIC_KEY: str({
+    default: "",
+    desc: "VAPID public key (base64url) for web push; empty disables push",
+  }),
+  VAPID_PRIVATE_KEY: str({
+    default: "",
+    desc: "VAPID private key (base64url) for web push; empty disables push",
+  }),
+  VAPID_SUBJECT: str({
+    default: "",
+    desc: "VAPID subject — a mailto: or https: URL identifying the sender",
+  }),
   // E2E testing — disabled by default; never set in production
   E2E_TESTING: bool({ default: false }),
   E2E_PDS_URL: str({ default: "" }),
