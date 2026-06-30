@@ -108,6 +108,14 @@ function getFriendsCacheKey(did: string) {
   return `navyfragen_friends_v3_cache_${did}`;
 }
 
+export function clearFriendsCache(did: string) {
+  try {
+    localStorage.removeItem(getFriendsCacheKey(did));
+  } catch {
+    /* v8 ignore next */
+  }
+}
+
 function getCachedFriends(did: string): { data: FriendsResponse; timestamp: number } | null {
   try {
     const raw = localStorage.getItem(getFriendsCacheKey(did));

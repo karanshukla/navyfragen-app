@@ -18,9 +18,10 @@ vi.mock("../../api/authService", async (importOriginal) => {
   };
 });
 
-vi.mock("@mantine/notifications", () => ({
-  showNotification: vi.fn(),
-}));
+vi.mock("@mantine/notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@mantine/notifications")>();
+  return { ...actual, showNotification: vi.fn() };
+});
 
 vi.mock("@mantine/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@mantine/core")>();
@@ -151,7 +152,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const logoutItem = screen.getByText("Logout");
+      const logoutItem = screen.getByText("Log out @foo.bsky.social");
       await userEvent.click(logoutItem);
       expect(logoutMock).toHaveBeenCalled();
     }
@@ -244,7 +245,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const logoutItem = screen.getByText("Logout");
+      const logoutItem = screen.getByText("Log out @foo.bsky.social");
       fireEvent.click(logoutItem);
       // The catch block resets body styles
       expect(document.body.style.pointerEvents).toBe("");

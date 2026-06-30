@@ -1,6 +1,7 @@
 import { useMutation, useQuery, UseQueryResult } from "@tanstack/react-query";
 
 import { apiClient, ApiError } from "./apiClient";
+import { clearFriendsCache } from "./profileService";
 import { queryClient } from "./queryClient";
 
 /**
@@ -117,12 +118,10 @@ export function useLogout() {
 export function useSwitchAccount() {
   return useMutation({
     mutationFn: (data: SwitchAccountRequest) => authService.switchAccount(data),
-    onSuccess: () => {
-      // The active DID changed, so all per-account caches (messages, settings,
-      // profile) are stale. Clear them and refetch the session to pick up the
-      // newly active account's data.
+    onSuccess: (data) => {
+      clearFriendsCache(data.did);
       queryClient.clear();
-      queryClient.invalidateQueries({ queryKey: authKeys.session });
+      window.location.reload();
     },
   });
 }

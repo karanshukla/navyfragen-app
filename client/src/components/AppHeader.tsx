@@ -13,7 +13,7 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { showNotification } from "@mantine/notifications";
-import { IconLogout, IconMoon, IconPlus, IconSun, IconUser } from "@tabler/icons-react";
+import { IconCheck, IconLogout, IconMoon, IconPlus, IconSun, IconUser } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 import { useHaptic } from "use-haptic";
@@ -158,32 +158,36 @@ function UserMenu({
   const handleSwitch = (did: string, label: string) => {
     if (did === activeDid || isSwitching) return;
     triggerHaptic();
-    switchAccount(did, {
-      onSuccess: () => {
-        showNotification({
-          message: `Switched to @${label}`,
-          color: "green",
-        });
-        onNavigate();
-      },
-      onError: (err: any) => {
-        showNotification({
-          title: "Couldn't switch account",
-          message: err?.error || "Please try again.",
-          color: "red",
-        });
-      },
-    });
+    switchAccount(
+      { did },
+      {
+        onSuccess: () => {
+          showNotification({
+            message: `Switched to @${label}`,
+            color: "green",
+          });
+          onNavigate();
+        },
+        onError: (err: any) => {
+          showNotification({
+            title: "Couldn't switch account",
+            message: err?.error || "Please try again.",
+            color: "red",
+          });
+        },
+      }
+    );
   };
 
   return (
     <Menu
       shadow="md"
-      width={220}
+      width={260}
       position="bottom-end"
       middlewares={{ shift: true, flip: true }}
       styles={{
         item: { padding: "10px 14px", fontSize: "var(--mantine-font-size-sm)" },
+        itemLabel: { overflow: "hidden" },
       }}
     >
       <Menu.Target>
@@ -234,15 +238,9 @@ function UserMenu({
                       {(acct.handle || "?").charAt(0).toUpperCase()}
                     </Avatar>
                   }
-                  rightSection={
-                    isActive ? (
-                      <Text size="xs" c="dimmed" fw={600}>
-                        active
-                      </Text>
-                    ) : undefined
-                  }
+                  rightSection={isActive ? <IconCheck size={14} stroke={2.5} /> : undefined}
                 >
-                  <Box style={{ minWidth: 0 }}>
+                  <Box style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
                     <Text size="sm" fw={500} truncate>
                       {label}
                     </Text>
@@ -291,7 +289,7 @@ function UserMenu({
           }}
           leftSection={<IconLogout size="1.2rem" stroke={1.5} />}
         >
-          {hasMultiple ? "Log out @current" : "Logout"}
+          {`Log out @${userProfile.handle}`}
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>

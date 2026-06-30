@@ -27,6 +27,8 @@ vi.mock("../api/settingsService", async (importOriginal) => {
 const mockUseFriends = vi.mocked(profileService.useFriends);
 const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 
+const TEST_DID = "did:plc:testuser123";
+
 const MOCK_FRIENDS = [
   {
     did: "did:example:1",
@@ -100,7 +102,7 @@ describe("Navigation", () => {
         data: undefined,
         isLoading: false,
       } as any);
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
       expect(screen.getByText(/^following$/i)).toBeInTheDocument();
       expect(screen.getByText(/^oomfs$/i)).toBeInTheDocument();
@@ -125,7 +127,7 @@ describe("Navigation", () => {
         data: { moots: [], following: [], oomfs: [] },
         isLoading: false,
       } as any);
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       expect(screen.getByText(/no mutuals on navyfragen yet/i)).toBeInTheDocument();
       expect(screen.getByText(/no one-sided follows on navyfragen yet/i)).toBeInTheDocument();
       expect(screen.getByText(/none of your followers are on navyfragen yet/i)).toBeInTheDocument();
@@ -141,20 +143,20 @@ describe("Navigation", () => {
     });
 
     it("renders displayName and @handle for each friend", () => {
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       expect(screen.getByText("Alice")).toBeInTheDocument();
       expect(screen.getByText("@alice.bsky.social")).toBeInTheDocument();
       expect(screen.getByText("@bob.bsky.social")).toBeInTheDocument();
     });
 
     it("falls back to handle as the label when displayName is absent", () => {
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       // Bob has no displayName — the first Text renders the handle
       expect(screen.getByText("bob.bsky.social")).toBeInTheDocument();
     });
 
     it("links each friend to their profile page", () => {
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       const links = screen.getAllByRole("link");
       const hrefs = links.map((l) => l.getAttribute("href"));
       expect(hrefs).toContain("/profile/alice.bsky.social");
@@ -172,7 +174,7 @@ describe("Navigation", () => {
         data: { moots: manyFriends, following: [], oomfs: [] },
         isLoading: false,
       } as any);
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       for (let i = 0; i < 20; i++) {
         expect(screen.getByText(`User ${i}`)).toBeInTheDocument();
       }
@@ -357,7 +359,7 @@ describe("Navigation", () => {
   });
 
   describe("FriendSection toggle (getSectionOpen / setSectionOpen)", () => {
-    const SECTION_KEY = "navyfragen_friends_sections_open";
+    const SECTION_KEY = `navyfragen_friends_sections_open_${TEST_DID}`;
 
     beforeEach(() => {
       localStorage.clear();
@@ -370,7 +372,7 @@ describe("Navigation", () => {
     it("reads section state from localStorage when it contains a value", () => {
       // Pre-populate localStorage so getSectionOpen takes the JSON.parse branch
       localStorage.setItem(SECTION_KEY, JSON.stringify({ Moots: false }));
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       // The Moots section header is still rendered (it's a toggle, not removed)
       expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
     });
@@ -378,12 +380,14 @@ describe("Navigation", () => {
     it("falls back to open=true when localStorage contains invalid JSON", () => {
       localStorage.setItem(SECTION_KEY, "{{invalid}}");
       // Should not throw, getSectionOpen returns true from catch
-      expect(() => renderWithProviders(<Navigation isLoggedIn={true} />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />)
+      ).not.toThrow();
       expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
     });
 
     it("clicking a FriendSection header toggles it and persists to localStorage", () => {
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       const mootsHeader = screen.getByText(/^moots$/i);
       // Click the header — triggers handleToggle → setSectionOpen → localStorage.setItem
       fireEvent.click(mootsHeader);
@@ -395,7 +399,7 @@ describe("Navigation", () => {
 
     it("setSectionOpen merges into existing localStorage data", () => {
       localStorage.setItem(SECTION_KEY, JSON.stringify({ Following: false }));
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       const mootsHeader = screen.getByText(/^moots$/i);
       fireEvent.click(mootsHeader);
       const stored = localStorage.getItem(SECTION_KEY);

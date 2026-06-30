@@ -80,7 +80,9 @@ export class NotificationService {
    * not configured (so the controller can surface a "not available" response).
    */
   getVapidPublicKey(): string | null {
-    return env.VAPID_PUBLIC_KEY || null;
+    // Read process.env directly rather than the frozen `env` snapshot so that
+    // tests can override VAPID_PUBLIC_KEY without reloading the module.
+    return process.env.VAPID_PUBLIC_KEY || null;
   }
 
   /**
