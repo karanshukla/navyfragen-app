@@ -1,4 +1,4 @@
-const CACHE = "nf-static-v1";
+const CACHE = "nf-static-v2";
 
 // Pre-cache the app shell on install
 self.addEventListener("install", (event) => {
@@ -43,5 +43,55 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
     )
+  );
+});
+
+const APP_ICON = "/android-chrome-192x192.png"; // shown in the notification body
+const APP_BADGE = "/favicon-32x32.png"; // small status-bar stamp (Android)
+
+self.addEventListener("push", (event) => {
+  let data = { title: "Navyfragen", body: "You have a new update", url: "/messages" };
+  try {
+    if (event.data) {
+      data = { ...data, ...event.data.json() };
+    }
+  } catch {
+    // Payload wasn't valid JSON (or empty) — keep the defaults above.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: APP_ICON,
+      badge: APP_BADGE,
+      data,
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "/messages", self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+
+      for (const client of clientList) {
+        if (!client.url.startsWith(self.location.origin)) continue;
+
+        try {
+          await client.focus();
+          await client.navigate(targetUrl);
+          return;
+        } catch (err) {
+          console.warn("[sw] focus/navigate failed, falling back to openWindow", err);
+        }
+      }
+
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })()
   );
 });

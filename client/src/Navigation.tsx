@@ -191,7 +191,7 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
         )}
       </Box>
 
-      {isLoggedIn && (
+      {isLoggedIn && did && (
         <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {friendsLoading ? (
             <>
@@ -217,18 +217,21 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
                 friends={friendsData?.moots ?? []}
                 emptyText="No mutuals on Navyfragen yet."
                 onLinkClick={handleClick}
+                did={did}
               />
               <FriendSection
                 label="Following"
                 friends={friendsData?.following ?? []}
                 emptyText="No one-sided follows on Navyfragen yet."
                 onLinkClick={handleClick}
+                did={did}
               />
               <FriendSection
                 label="Oomfs"
                 friends={friendsData?.oomfs ?? []}
                 emptyText="None of your followers are on Navyfragen yet."
                 onLinkClick={handleClick}
+                did={did}
               />
             </>
           )}
@@ -240,11 +243,13 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
   );
 }
 
-const SECTION_OPEN_KEY = "navyfragen_friends_sections_open";
+function sectionKey(did: string) {
+  return `navyfragen_friends_sections_open_${did}`;
+}
 
-function getSectionOpen(label: string): boolean {
+function getSectionOpen(label: string, did: string): boolean {
   try {
-    const raw = localStorage.getItem(SECTION_OPEN_KEY);
+    const raw = localStorage.getItem(sectionKey(did));
     if (!raw) return true;
     const parsed = JSON.parse(raw);
     return parsed[label] !== false;
@@ -253,11 +258,11 @@ function getSectionOpen(label: string): boolean {
   }
 }
 
-function setSectionOpen(label: string, open: boolean) {
+function setSectionOpen(label: string, open: boolean, did: string) {
   try {
-    const raw = localStorage.getItem(SECTION_OPEN_KEY);
+    const raw = localStorage.getItem(sectionKey(did));
     const parsed = raw ? JSON.parse(raw) : {};
-    localStorage.setItem(SECTION_OPEN_KEY, JSON.stringify({ ...parsed, [label]: open }));
+    localStorage.setItem(sectionKey(did), JSON.stringify({ ...parsed, [label]: open }));
   } catch {
     /* v8 ignore next */
   }
@@ -268,18 +273,20 @@ function FriendSection({
   friends,
   emptyText,
   onLinkClick,
+  did,
 }: {
   label: string;
   friends: Friend[];
   emptyText: string;
   onLinkClick: () => void;
+  did: string;
 }) {
-  const [opened, { toggle }] = useDisclosure(getSectionOpen(label));
+  const [opened, { toggle }] = useDisclosure(getSectionOpen(label, did));
   const { triggerHaptic } = useHaptic(1);
 
   const handleToggle = () => {
     triggerHaptic();
-    setSectionOpen(label, !opened);
+    setSectionOpen(label, !opened, did);
     toggle();
   };
 

@@ -4,7 +4,7 @@ import { isValidHandle } from "@atproto/syntax";
 import Cryptr from "cryptr";
 
 import { deleteE2EAgent, getE2EHandle, hasE2EAgent } from "../auth/e2e-agent-store";
-import { initializeAgentFromSession } from "../auth/session-agent";
+import { initializeAgentForDid } from "../auth/session-agent";
 import { env } from "../lib/env";
 
 import type { AppContext } from "../index";
@@ -44,7 +44,7 @@ export class AuthService {
     await this.ctx.oauthClient.revoke(did);
   }
 
-  async checkSession(did: string, req: any) {
+  async checkSession(did: string) {
     const dbSession = await this.ctx.db
       .selectFrom("auth_session")
       .selectAll()
@@ -66,7 +66,7 @@ export class AuthService {
       };
     }
 
-    const agent = await initializeAgentFromSession(req, this.ctx);
+    const agent = await initializeAgentForDid(this.ctx, did);
     if (!agent) return null;
     /* v8 ignore next 12 */
     const response = await agent.getProfile({ actor: did });

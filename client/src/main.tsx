@@ -30,3 +30,19 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </MantineProvider>
   </React.StrictMode>
 );
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      if (import.meta.env.PROD) {
+        if (registrations.length === 0) {
+          navigator.serviceWorker.register("/sw.js").catch(() => {
+            /* non-fatal: push just won't be available */
+          });
+        }
+      } else {
+        registrations.forEach((reg) => reg.unregister());
+      }
+    });
+  });
+}

@@ -23,6 +23,15 @@ export function authRoutes(ctx: AppContext, handler: any, checkValidation: any) 
   // Session check, we want to keep the client authenticated with ATProto
   router.get("/session", handler(controller.session.bind(controller)));
 
+  // Switch the active account (multi-account). Only DIDs already remembered
+  // in the signed cookie-session can be switched to (enforced by the controller).
+  router.post(
+    "/accounts/switch",
+    body("did").isString().isLength({ min: 1, max: 512 }).withMessage("did is required"),
+    checkValidation,
+    handler(controller.switchAccount.bind(controller))
+  );
+
   // OAuth metadata, just for compatibility
   router.get("/client-metadata.json", handler(controller.clientMetadata.bind(controller)));
 

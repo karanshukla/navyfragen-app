@@ -1,6 +1,7 @@
 import { useMutation, useQuery, UseQueryResult } from "@tanstack/react-query";
 
 import { apiClient, ApiError } from "./apiClient";
+import { clearFriendsCache } from "./profileService";
 import { queryClient } from "./queryClient";
 
 /**
@@ -17,10 +18,24 @@ export interface UserProfile {
   banner?: string;
 }
 
+/**
+ * A remembered account in the multi-account switcher. Mirrors the server-side
+ * `AccountEntry`. The list is populated server-side after each successful
+ * OAuth login; the client only ever reads it (and POSTs a switch request).
+ */
+export interface AccountEntry {
+  did: string;
+  handle?: string;
+  displayName?: string;
+  avatar?: string;
+}
+
 export interface SessionResponse {
   isLoggedIn: boolean;
   profile: UserProfile | null;
   did: string | null;
+  /** All accounts authenticated in this browser session (multi-account). */
+  accounts?: AccountEntry[];
 }
 
 export interface LoginRequest {
@@ -29,6 +44,15 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   redirectUrl: string;
+}
+
+export interface SwitchAccountRequest {
+  did: string;
+}
+
+export interface SwitchAccountResponse {
+  success: boolean;
+  did: string;
 }
 
 export interface E2ELoginRequest {
@@ -57,6 +81,10 @@ export const authService = {
     return apiClient.post<{ message: string }>("/logout");
   },
 
+  switchAccount: async (data: SwitchAccountRequest): Promise<SwitchAccountResponse> => {
+    return apiClient.post<SwitchAccountResponse, SwitchAccountRequest>("/accounts/switch", data);
+  },
+
   e2eLogin: async (data: E2ELoginRequest): Promise<E2ELoginResponse> => {
     return apiClient.post<E2ELoginResponse, E2ELoginRequest>("/auth/e2e-login", data);
   },
@@ -83,6 +111,15 @@ export function useLogout() {
       // Invalidate the session query to force a refetch
       queryClient.invalidateQueries({ queryKey: authKeys.session });
       window.location.href = "/";
+    },
+  });
+}
+
+export function useSwitchAccount() {
+  return useMutation<SwitchAccountResponse, ApiError, SwitchAccountRequest>({
+    mutationFn: (data: SwitchAccountRequest) => authService.switchAccount(data),
+    onSuccess: (response) => {
+      clearFriendsCache(response.did);
     },
   });
 }

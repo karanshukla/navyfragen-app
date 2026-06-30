@@ -126,7 +126,7 @@ describe("AuthService", () => {
         }),
         executeTakeFirst: mock.fn(async () => undefined),
       }));
-      const result = await service.checkSession("did:foo", { session: { did: "did:foo" } });
+      const result = await service.checkSession("did:foo");
       assert.strictEqual(result, null);
     });
 
@@ -141,7 +141,7 @@ describe("AuthService", () => {
         executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
       }));
       ctx.oauthClient.restore = mock.fn(async () => null);
-      const result = await service.checkSession("did:foo", { session: { did: "did:foo" } });
+      const result = await service.checkSession("did:foo");
       assert.strictEqual(result, null);
     });
 
@@ -155,13 +155,10 @@ describe("AuthService", () => {
         }),
         executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
       }));
-      // Restore returns a non-null object so initializeAgentFromSession creates a real Agent
+      // Restore returns a non-null object so initializeAgentForDid creates a real Agent
       ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
       // The real Agent has no valid network session so getProfile will throw
-      await assert.rejects(
-        () => service.checkSession("did:foo", { session: { did: "did:foo" } }),
-        /.+/
-      );
+      await assert.rejects(() => service.checkSession("did:foo"), /.+/);
     });
   });
 

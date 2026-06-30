@@ -271,30 +271,6 @@ describe("Settings page", () => {
     expect(screen.getByText(/notifications enabled/i)).toBeInTheDocument();
   });
 
-  it("renders the push notifications coming soon card", () => {
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default" },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    expect(screen.getByText(/push notifications/i)).toBeInTheDocument();
-    const comingSoon = screen.getByRole("button", { name: /coming soon/i });
-    expect(comingSoon).toBeInTheDocument();
-    expect(comingSoon).toBeDisabled();
-  });
-
   it("opens delete account modal when 'Delete my Data' is clicked", async () => {
     setupLoggedIn();
     mockUseUserSettings.mockReturnValue({

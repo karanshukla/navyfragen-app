@@ -50,7 +50,9 @@ export function e2eAuthRoutes(ctx: AppContext, handler: any, checkValidation: an
       // Cast: AtpAgent implements the same API surface as Agent for our use-cases.
       const handle = agent.session?.handle || identifier;
       setE2EAgent(did, agent as any, handle);
-      req.session = { did };
+      // Preserve any previously remembered accounts (multi-account add flow).
+      req.session = req.session ?? {};
+      req.session.did = did;
 
       ctx.logger.info({ did }, "E2E login successful");
       return res.json({ success: true });

@@ -10,7 +10,17 @@ import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
-  return { ...actual, useSession: vi.fn(), useLogout: vi.fn() };
+  return {
+    ...actual,
+    useSession: vi.fn(),
+    useLogout: vi.fn(),
+    useSwitchAccount: vi.fn(),
+  };
+});
+
+vi.mock("@mantine/notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@mantine/notifications")>();
+  return { ...actual, showNotification: vi.fn() };
 });
 
 vi.mock("@mantine/core", async (importOriginal) => {
@@ -28,6 +38,7 @@ import { AppHeader } from "../../components/AppHeader";
 
 const mockUseSession = vi.mocked(authService.useSession);
 const mockUseLogout = vi.mocked(authService.useLogout);
+const mockUseSwitchAccount = vi.mocked(authService.useSwitchAccount);
 const mockUseComputedColorScheme = vi.mocked(mantineCore.useComputedColorScheme);
 
 describe("AppHeader", () => {
@@ -43,6 +54,7 @@ describe("AppHeader", () => {
     document.body.style.pointerEvents = "";
     document.body.style.opacity = "";
     mockUseLogout.mockReturnValue({ mutate: vi.fn() } as any);
+    mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     mockUseComputedColorScheme.mockReturnValue("light" as any);
   });
 
@@ -140,7 +152,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const logoutItem = screen.getByText("Logout");
+      const logoutItem = screen.getByText("Log out @foo.bsky.social");
       await userEvent.click(logoutItem);
       expect(logoutMock).toHaveBeenCalled();
     }
@@ -233,7 +245,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const logoutItem = screen.getByText("Logout");
+      const logoutItem = screen.getByText("Log out @foo.bsky.social");
       fireEvent.click(logoutItem);
       // The catch block resets body styles
       expect(document.body.style.pointerEvents).toBe("");

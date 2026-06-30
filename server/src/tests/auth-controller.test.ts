@@ -190,11 +190,14 @@ describe("AuthController", () => {
 
       await controller.session(makeReq({ session: { did: "did:foo" } }), res);
 
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
-        isLoggedIn: true,
-        profile: mockProfile,
-        did: "did:foo",
-      });
+      const payload = res.json.mock.calls[0].arguments[0];
+      assert.strictEqual(payload.isLoggedIn, true);
+      assert.deepStrictEqual(payload.profile, mockProfile);
+      assert.strictEqual(payload.did, "did:foo");
+      // The active account is upserted into the remembered accounts list.
+      assert.deepStrictEqual(payload.accounts, [
+        { did: "did:foo", handle: "foo.bsky.social", displayName: undefined, avatar: undefined },
+      ]);
     });
 
     test("returns isLoggedIn:false and clears session when checkSession returns null", async () => {
@@ -212,6 +215,36 @@ describe("AuthController", () => {
         did: null,
       });
       assert.strictEqual(req.session, null);
+    });
+
+    test("falls back to another remembered account when active one is invalid", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      // First call (active) returns null; second call (fallback) returns a profile.
+      let call = 0;
+      (controller as any).service = makeService({
+        checkSession: mock.fn(async () => {
+          call++;
+          return call === 1 ? null : { did: "did:bar", handle: "bar.bsky.social" };
+        }),
+      });
+      const req = makeReq({
+        session: {
+          did: "did:foo",
+          accounts: [
+            { did: "did:bar", handle: "bar.bsky.social" },
+            { did: "did:foo", handle: "foo.bsky.social" },
+          ],
+        },
+      });
+      const res = makeRes();
+
+      await controller.session(req, res);
+
+      const payload = res.json.mock.calls[0].arguments[0];
+      assert.strictEqual(payload.isLoggedIn, true);
+      assert.strictEqual(payload.did, "did:bar");
+      assert.strictEqual(payload.profile.handle, "bar.bsky.social");
     });
 
     test("returns isLoggedIn:false when checkSession throws", async () => {
@@ -459,6 +492,183 @@ describe("AuthController", () => {
       await controller.oauthConsume(makeReq({ body: { oauth_token: "token" } }), res);
 
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
+    test("preserves previously remembered accounts (add-account flow)", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      // An existing session with a remembered account must NOT be wiped.
+      const req = makeReq({
+        body: { oauth_token: "token" },
+        session: { did: "did:old", accounts: [{ did: "did:old", handle: "old.bsky.social" }] },
+      });
+      const res = makeRes();
+
+      await controller.oauthConsume(req, res);
+
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
+      assert.strictEqual(req.session.did, "did:foo");
+      assert.deepStrictEqual(req.session.accounts, [{ did: "did:old", handle: "old.bsky.social" }]);
+    });
+  });
+
+  describe("switchAccount", () => {
+    test("returns 400 when did is missing", async () => {
+      const controller = new AuthController(makeCtx());
+      const res = makeRes();
+      await controller.switchAccount(makeReq({ body: {} }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+    });
+
+    test("returns 400 for a malformed (non-DID) string", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      const warnMock = ctx.logger.warn;
+      const req = makeReq({
+        body: { did: "not-a-did" },
+        session: { did: "did:foo", accounts: [{ did: "did:foo", handle: "foo.bsky.social" }] },
+      });
+      const res = makeRes();
+
+      await controller.switchAccount(req, res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 400);
+      // Defense-in-depth validation must reject before any session lookup logging.
+      assert.strictEqual(warnMock.mock.calls.length, 0);
+    });
+
+    test("returns 403 and logs when DID is not in the session (probing attempt)", async () => {
+      const ctx = makeCtx();
+      const warnMock = ctx.logger.warn;
+      const controller = new AuthController(ctx);
+      const req = makeReq({
+        body: { did: "did:plc:attacker" },
+        session: {
+          did: "did:plc:foo",
+          accounts: [{ did: "did:plc:foo", handle: "foo.bsky.social" }],
+        },
+      });
+      const res = makeRes();
+
+      await controller.switchAccount(req, res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(warnMock.mock.calls.length, 1);
+      assert.strictEqual(
+        warnMock.mock.calls[0].arguments[1],
+        "Account switch denied: DID not in session"
+      );
+    });
+
+    test("switches active DID when account is remembered and token is valid", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        checkSession: mock.fn(async () => ({
+          did: "did:plc:bar",
+          handle: "bar.bsky.social",
+          displayName: "Bar",
+          avatar: "img",
+        })),
+      });
+      const req = makeReq({
+        body: { did: "did:plc:bar" },
+        session: {
+          did: "did:plc:foo",
+          accounts: [
+            { did: "did:plc:foo", handle: "foo.bsky.social" },
+            { did: "did:plc:bar", handle: "bar.bsky.social" },
+          ],
+        },
+      });
+      const res = makeRes();
+
+      await controller.switchAccount(req, res);
+
+      assert.strictEqual(req.session.did, "did:plc:bar");
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        success: true,
+        did: "did:plc:bar",
+      });
+      const bar = req.session.accounts.find((a: any) => a.did === "did:plc:bar");
+      assert.strictEqual(bar.displayName, "Bar");
+      assert.strictEqual(bar.avatar, "img");
+    });
+
+    test("returns 401 and drops the account when its token has expired", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({ checkSession: mock.fn(async () => null) });
+      const req = makeReq({
+        body: { did: "did:plc:bar" },
+        session: {
+          did: "did:plc:foo",
+          accounts: [
+            { did: "did:plc:foo", handle: "foo.bsky.social" },
+            { did: "did:plc:bar", handle: "bar.bsky.social" },
+          ],
+        },
+      });
+      const res = makeRes();
+
+      await controller.switchAccount(req, res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 401);
+      assert.strictEqual(req.session.did, "did:plc:foo");
+      assert.strictEqual(req.session.accounts.length, 1);
+      assert.strictEqual(req.session.accounts[0].did, "did:plc:foo");
+    });
+
+    test("returns 500 when checkSession throws", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService({
+        checkSession: mock.fn(async () => {
+          throw new Error("boom");
+        }),
+      });
+      const req = makeReq({
+        body: { did: "did:plc:bar" },
+        session: {
+          did: "did:plc:foo",
+          accounts: [{ did: "did:plc:bar", handle: "bar.bsky.social" }],
+        },
+      });
+      const res = makeRes();
+
+      await controller.switchAccount(req, res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+  });
+
+  describe("logout (multi-account)", () => {
+    test("switches to a remaining account instead of ending the session", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      (controller as any).service = makeService();
+      const req = makeReq({
+        session: {
+          did: "did:plc:foo",
+          accounts: [
+            { did: "did:plc:foo", handle: "foo.bsky.social" },
+            { did: "did:plc:bar", handle: "bar.bsky.social" },
+          ],
+        },
+      });
+      const res = makeRes();
+
+      await controller.logout(req, res);
+
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 200);
+      assert.strictEqual(req.session.did, "did:plc:bar");
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        message: "Logged out, switched account",
+        switched: true,
+      });
+      assert.ok(req.session);
+      assert.strictEqual(res.clearCookie.mock.calls.length, 0);
     });
   });
 });

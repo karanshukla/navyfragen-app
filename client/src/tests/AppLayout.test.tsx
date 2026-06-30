@@ -33,6 +33,11 @@ vi.mock("../api/settingsService", () => ({
   useUserStats: vi.fn(() => ({ data: null, isLoading: false })),
 }));
 
+vi.mock("@mantine/notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@mantine/notifications")>();
+  return { ...actual, showNotification: vi.fn() };
+});
+
 import { AppLayout } from "../AppLayout";
 
 import { renderWithProviders } from "./testUtils";
@@ -45,6 +50,8 @@ describe("AppLayout", () => {
       data: { isLoggedIn: false, profile: null, did: null },
       isLoading: false,
     } as any);
+    // Ensure no leftover ?accountSwitched= param leaks between tests.
+    window.history.replaceState({}, "", "/");
   });
 
   it("renders without crashing", () => {
@@ -214,5 +221,19 @@ describe("AppLayout", () => {
     }
     // Covers AppLayout line 60: onNavClose={() => setNavOpen(false)}
     expect(document.body).toBeInTheDocument();
+  });
+
+  it("fires a 'Switched to' toast when the URL carries the accountSwitched marker", async () => {
+    const { showNotification } = await import("@mantine/notifications");
+    window.history.replaceState({}, "", "/?accountSwitched=tester.bsky.social");
+
+    renderWithProviders(<AppLayout />);
+
+    expect(vi.mocked(showNotification)).toHaveBeenCalledWith({
+      message: "Switched to @tester.bsky.social",
+      color: "green",
+    });
+    // The marker is stripped so it can't re-fire on refresh.
+    expect(window.location.search).toBe("");
   });
 });

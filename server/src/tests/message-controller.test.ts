@@ -46,6 +46,14 @@ describe("MessageController", () => {
     };
   }
 
+  function makeNotificationService(overrides: any = {}): any {
+    return {
+      sendNewMessageNotification: mock.fn(async () => {}),
+      deleteAllSubscriptionsForUser: mock.fn(async () => {}),
+      ...overrides,
+    };
+  }
+
   function makeReq(overrides: any = {}): any {
     return { body: {}, session: { did: "did:foo" }, params: {}, ...overrides };
   }
@@ -224,6 +232,25 @@ describe("MessageController", () => {
         res
       );
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { tid: "t2" });
+    });
+
+    test("triggers sendNewMessageNotification (fire-and-forget) on success", async () => {
+      const svc = makeService();
+      const notifications = makeNotificationService();
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx(), notifications);
+      const res = makeRes();
+      await controller.sendMessage(
+        makeReq({ body: { recipient: "did:recipient", message: "hi" } }),
+        res
+      );
+      // Push is invoked with the recipient DID (not the sender — there is no
+      // authenticated sender on the public send endpoint).
+      assert.strictEqual(notifications.sendNewMessageNotification.mock.calls.length, 1);
+      assert.strictEqual(
+        notifications.sendNewMessageNotification.mock.calls[0].arguments[0],
+        "did:recipient"
+      );
     });
 
     test("returns 404 when service throws with 'not found'", async () => {
@@ -442,6 +469,21 @@ describe("MessageController", () => {
       await controller.deleteAccount(req, res);
       assert.strictEqual(req.session, null);
       assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { success: true });
+    });
+
+    test("drops push subscriptions (fire-and-forget) on success", async () => {
+      const svc = makeService();
+      const notifications = makeNotificationService();
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx(), notifications);
+      const req = makeReq();
+      const res = makeRes();
+      await controller.deleteAccount(req, res);
+      assert.strictEqual(notifications.deleteAllSubscriptionsForUser.mock.calls.length, 1);
+      assert.strictEqual(
+        notifications.deleteAllSubscriptionsForUser.mock.calls[0].arguments[0],
+        "did:foo"
+      );
     });
 
     test("returns 500 when service throws", async () => {
