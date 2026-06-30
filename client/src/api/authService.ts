@@ -116,12 +116,10 @@ export function useLogout() {
 }
 
 export function useSwitchAccount() {
-  return useMutation({
+  return useMutation<SwitchAccountResponse, ApiError, SwitchAccountRequest>({
     mutationFn: (data: SwitchAccountRequest) => authService.switchAccount(data),
-    onSuccess: (data) => {
-      clearFriendsCache(data.did);
-      queryClient.clear();
-      window.location.reload();
+    onSuccess: (response) => {
+      clearFriendsCache(response.did);
     },
   });
 }

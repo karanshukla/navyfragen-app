@@ -1,71 +1,74 @@
-import { Loader, Button } from "@mantine/core";
+import { Button, Loader } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 
 import {
+  getPushPermission,
   useDisablePushNotifications,
   useEnablePushNotifications,
   usePushAvailable,
-  getPushPermission,
   type PushPermission,
 } from "../api/notificationService";
 
-export function PushNotificationsControl() {
-  const { data: available, isLoading: availabilityLoading } = usePushAvailable();
-  const enableMutation = useEnablePushNotifications();
-  const disableMutation = useDisablePushNotifications();
+const SUBSCRIBED_FLAG = "nf-push-subscribed";
+
+export function PushNotificationsButton() {
+  const { data: isServerPushAvailable, isLoading: isCheckingAvailability } = usePushAvailable();
+  const enablePush = useEnablePushNotifications();
+  const disablePush = useDisablePushNotifications();
 
   const permission: PushPermission = getPushPermission();
-  const isSupported = permission !== "unsupported";
+  const isBrowserSupported = permission !== "unsupported";
 
-  // Determining "subscribed" requires an async SW check; we approximate from
-  // permission + a localStorage flag set on successful subscribe. This keeps
-  // the component synchronous and avoids a blocking SW probe on every render.
-  // The authoritative source is the server's push_subscription table.
-  const [subscribedFlag, setSubscribedFlag] = useState(
-    typeof localStorage !== "undefined" && localStorage.getItem("nf-push-subscribed") === "1"
+  const [locallySubscribed, setLocallySubscribed] = useState(
+    typeof localStorage !== "undefined" && localStorage.getItem(SUBSCRIBED_FLAG) === "1"
   );
-  const isChecked = permission === "granted" && subscribedFlag;
+  // Effective state: the flag must be set AND the browser must still hold permission.
+  const isSubscribed = permission === "granted" && locallySubscribed;
 
-  const busy = enableMutation.isPending || disableMutation.isPending;
+  const isBusy = enablePush.isPending || disablePush.isPending;
+  const isUnavailable =
+    isServerPushAvailable === false || !isBrowserSupported || permission === "denied";
 
-  if (availabilityLoading) {
-    return <Loader size="sm" />;
-  }
-
-  if (available === false || !isSupported || permission === "denied") {
+  if (isCheckingAvailability) return <Loader size="sm" />;
+  if (isUnavailable) {
     return (
       <Button fullWidth disabled>
-        Enable Push Notifications
+        Push Notifications Unavailable
       </Button>
     );
   }
 
-  const handleClick = async () => {
+  const togglePush = async () => {
     try {
-      if (!isChecked) {
-        await enableMutation.mutateAsync();
-        localStorage.setItem("nf-push-subscribed", "1");
-        setSubscribedFlag(true);
+      if (isSubscribed) {
+        await disablePush.mutateAsync();
+        localStorage.removeItem(SUBSCRIBED_FLAG);
+        setLocallySubscribed(false);
       } else {
-        await disableMutation.mutateAsync();
-        localStorage.removeItem("nf-push-subscribed");
-        setSubscribedFlag(false);
+        await enablePush.mutateAsync();
+        localStorage.setItem(SUBSCRIBED_FLAG, "1");
+        setLocallySubscribed(true);
       }
-    } catch {
-      // Error toast is handled by the caller via mutation onError; nothing here.
+    } catch (err) {
+      notifications.show({
+        title: "Push notifications",
+        message: (err as { error?: string })?.error || "Something went wrong. Please try again.",
+        color: "red",
+      });
     }
   };
 
-  if (isChecked) {
+  if (isSubscribed) {
     return (
-      <Button fullWidth disabled={busy} onClick={handleClick}>
-        Push Notifications enabled
+      <Button fullWidth loading={isBusy} onClick={togglePush}>
+        Push Notifications Enabled
       </Button>
     );
   }
 
   return (
-    <Button fullWidth variant="outline" disabled={busy} onClick={handleClick}>
+    <Button fullWidth variant="outline" loading={isBusy} onClick={togglePush}>
       Enable Push Notifications
     </Button>
   );

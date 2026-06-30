@@ -3,15 +3,23 @@ import { sendNotification, setVapidDetails } from "web-push";
 
 import type { Database } from "../database/db";
 
-import { env } from "#/lib/env";
+// VAPID config is read live from process.env (rather than the frozen `env`
+// snapshot) so tests can toggle it per-case without reloading the module.
+// All three reads below share this single source.
+function readVapidConfig() {
+  return {
+    publicKey: process.env.VAPID_PUBLIC_KEY || "",
+    privateKey: process.env.VAPID_PRIVATE_KEY || "",
+    subject: process.env.VAPID_SUBJECT || "",
+  };
+}
 
 /**
  * True only when all three VAPID values are present in the environment.
- * Reads from the validated, frozen `env` object (single source of truth for
- * server config). Tests toggle this by mocking `#/lib/env` via mock.module.
  */
 export function isWebPushConfigured(): boolean {
-  return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT);
+  const { publicKey, privateKey, subject } = readVapidConfig();
+  return Boolean(publicKey && privateKey && subject);
 }
 
 /**
@@ -80,9 +88,7 @@ export class NotificationService {
    * not configured (so the controller can surface a "not available" response).
    */
   getVapidPublicKey(): string | null {
-    // Read process.env directly rather than the frozen `env` snapshot so that
-    // tests can override VAPID_PUBLIC_KEY without reloading the module.
-    return process.env.VAPID_PUBLIC_KEY || null;
+    return readVapidConfig().publicKey || null;
   }
 
   /**
@@ -150,7 +156,8 @@ export class NotificationService {
     // Re-assert VAPID details on each send (cheap, idempotent). Wrapped so a
     // malformed subject never crashes the request — push just stays inert.
     try {
-      setVapidDetails(env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+      const { subject, publicKey, privateKey } = readVapidConfig();
+      setVapidDetails(subject, publicKey, privateKey);
     } catch (err) {
       this.logger.error({ err, did: recipientDid }, "Failed to configure VAPID details");
       return;

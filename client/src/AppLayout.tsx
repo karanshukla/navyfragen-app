@@ -1,9 +1,11 @@
 import { AppShell, Container, Paper, Text, Title } from "@mantine/core";
+import { showNotification } from "@mantine/notifications";
 import React, { useEffect, useRef } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import { useSession } from "./api/authService";
 import { AppHeader } from "./components/AppHeader";
+import { consumeAccountSwitchToast } from "./lib/accountSwitchToast";
 import { Navigation } from "./Navigation";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -18,6 +20,12 @@ export function AppLayout() {
 
   const navbarRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    consumeAccountSwitchToast((message) => {
+      showNotification({ message, color: "green" });
+    });
+  }, []);
 
   // Close the mobile navbar when the user clicks outside it
   useEffect(() => {

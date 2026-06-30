@@ -118,6 +118,11 @@ export class Server {
       })
     );
 
+    app.use((_req, res, next) => {
+      res.set("Cache-Control", "no-store");
+      next();
+    });
+
     const router = createRouter(ctx);
     app.use(router);
 

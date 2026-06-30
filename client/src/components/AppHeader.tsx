@@ -18,7 +18,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useHaptic } from "use-haptic";
 
+import { ApiError } from "../api/apiClient";
 import { type AccountEntry, useLogout, useSession, useSwitchAccount } from "../api/authService";
+import { buildAccountSwitchUrl } from "../lib/accountSwitchToast";
 import { surfaceBg } from "../styles/tokens";
 
 import { WinkMark } from "./WinkMark";
@@ -155,23 +157,20 @@ function UserMenu({
   const { mutate: switchAccount, isPending: isSwitching } = useSwitchAccount();
   const hasMultiple = accounts.length > 1;
 
-  const handleSwitch = (did: string, label: string) => {
+  const handleSwitch = (did: string, handle: string) => {
     if (did === activeDid || isSwitching) return;
     triggerHaptic();
+
     switchAccount(
       { did },
       {
         onSuccess: () => {
-          showNotification({
-            message: `Switched to @${label}`,
-            color: "green",
-          });
-          onNavigate();
+          window.location.href = buildAccountSwitchUrl(handle);
         },
-        onError: (err: any) => {
+        onError: (err: ApiError) => {
           showNotification({
             title: "Couldn't switch account",
-            message: err?.error || "Please try again.",
+            message: err.error || "Please try again.",
             color: "red",
           });
         },
@@ -232,7 +231,7 @@ function UserMenu({
                 <Menu.Item
                   key={acct.did}
                   disabled={isActive || isSwitching}
-                  onClick={() => handleSwitch(acct.did, acct.handle || label)}
+                  onClick={() => handleSwitch(acct.did, acct.handle || acct.did)}
                   leftSection={
                     <Avatar size={20} src={acct.avatar || undefined} radius="xl">
                       {(acct.handle || "?").charAt(0).toUpperCase()}
