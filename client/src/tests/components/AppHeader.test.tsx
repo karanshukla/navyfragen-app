@@ -1,12 +1,19 @@
 import * as mantineCore from "@mantine/core";
-import { screen, fireEvent } from "@testing-library/react";
+import { showNotification } from "@mantine/notifications";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as authService from "../../api/authService";
+import * as accountSwitchToast from "../../lib/accountSwitchToast";
 // eslint-disable-next-line import/order
 import { renderWithProviders } from "../testUtils";
+
+vi.mock("../../lib/accountSwitchToast", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/accountSwitchToast")>();
+  return { ...actual, buildAccountSwitchUrl: vi.fn() };
+});
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
@@ -40,6 +47,9 @@ const mockUseSession = vi.mocked(authService.useSession);
 const mockUseLogout = vi.mocked(authService.useLogout);
 const mockUseSwitchAccount = vi.mocked(authService.useSwitchAccount);
 const mockUseComputedColorScheme = vi.mocked(mantineCore.useComputedColorScheme);
+const mockBuildAccountSwitchUrl = vi.mocked(accountSwitchToast.buildAccountSwitchUrl);
+
+const originalLocation = window.location;
 
 describe("AppHeader", () => {
   const defaultProps = {
@@ -250,5 +260,184 @@ describe("AppHeader", () => {
       // The catch block resets body styles
       expect(document.body.style.pointerEvents).toBe("");
     }
+  });
+
+  describe("account switcher", () => {
+    const accounts = [
+      { did: "did:example:active", handle: "active.bsky.social", displayName: "Active User" },
+      { did: "did:example:other", handle: "other.bsky.social", displayName: "Other User" },
+    ];
+
+    beforeEach(() => {
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { ...originalLocation, href: "" },
+      });
+      mockUseSession.mockReturnValue({
+        data: {
+          isLoggedIn: true,
+          profile: { handle: "active.bsky.social", displayName: "Active User", avatar: null },
+          accounts,
+          did: "did:example:active",
+        },
+        isLoading: false,
+      } as any);
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: originalLocation,
+      });
+    });
+
+    async function openMenu() {
+      const userBtn = screen.getAllByText("Active User")[0].closest("button")!;
+      await userEvent.click(userBtn);
+    }
+
+    it("lists every account with the active one checked and disabled", async () => {
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      expect(screen.getByText("Other User")).toBeInTheDocument();
+      const activeItem = screen.getByText("@active.bsky.social").closest('[role="menuitem"]');
+      expect(activeItem).toHaveAttribute("data-disabled", "true");
+    });
+
+    it("does nothing when clicking the already-active account", async () => {
+      const mockSwitch = vi.fn();
+      mockUseSwitchAccount.mockReturnValue({ mutate: mockSwitch, isPending: false } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      const activeItem = screen.getByText("@active.bsky.social").closest("button")!;
+      fireEvent.click(activeItem);
+      expect(mockSwitch).not.toHaveBeenCalled();
+    });
+
+    it("switches to another account and redirects on success", async () => {
+      let capturedCallbacks: any;
+      const mockSwitch = vi.fn((_data, callbacks) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseSwitchAccount.mockReturnValue({ mutate: mockSwitch, isPending: false } as any);
+      mockBuildAccountSwitchUrl.mockReturnValue("/?accountSwitched=other.bsky.social");
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      const otherItem = screen.getByText("@other.bsky.social").closest("button")!;
+      fireEvent.click(otherItem);
+
+      expect(mockSwitch).toHaveBeenCalledWith({ did: "did:example:other" }, expect.any(Object));
+
+      act(() => {
+        capturedCallbacks.onSuccess();
+      });
+
+      expect(mockBuildAccountSwitchUrl).toHaveBeenCalledWith("other.bsky.social");
+      expect(window.location.href).toBe("/?accountSwitched=other.bsky.social");
+    });
+
+    it("shows an error notification when switching accounts fails", async () => {
+      let capturedCallbacks: any;
+      const mockSwitch = vi.fn((_data, callbacks) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseSwitchAccount.mockReturnValue({ mutate: mockSwitch, isPending: false } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      const otherItem = screen.getByText("@other.bsky.social").closest("button")!;
+      fireEvent.click(otherItem);
+
+      await waitFor(() => expect(mockSwitch).toHaveBeenCalled());
+
+      act(() => {
+        capturedCallbacks.onError({ error: "Switch failed" });
+      });
+
+      expect(vi.mocked(showNotification)).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Couldn't switch account", message: "Switch failed" })
+      );
+    });
+
+    it("shows a fallback error message when switching accounts fails without a message", async () => {
+      let capturedCallbacks: any;
+      const mockSwitch = vi.fn((_data, callbacks) => {
+        capturedCallbacks = callbacks;
+      });
+      mockUseSwitchAccount.mockReturnValue({ mutate: mockSwitch, isPending: false } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      const otherItem = screen.getByText("@other.bsky.social").closest("button")!;
+      fireEvent.click(otherItem);
+
+      await waitFor(() => expect(mockSwitch).toHaveBeenCalled());
+
+      act(() => {
+        capturedCallbacks.onError({} as any);
+      });
+
+      expect(vi.mocked(showNotification)).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Couldn't switch account", message: "Please try again." })
+      );
+    });
+
+    it("does not render the account switcher section when there is only one account", async () => {
+      mockUseSession.mockReturnValue({
+        data: {
+          isLoggedIn: true,
+          profile: { handle: "active.bsky.social", displayName: "Active User", avatar: null },
+          accounts: [accounts[0]],
+          did: "did:example:active",
+        },
+        isLoading: false,
+      } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      expect(screen.queryByText("Accounts")).not.toBeInTheDocument();
+    });
+
+    it("does nothing when a switch is already pending", async () => {
+      const mockSwitch = vi.fn();
+      mockUseSwitchAccount.mockReturnValue({ mutate: mockSwitch, isPending: true } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      const otherItem = screen.getByText("@other.bsky.social").closest("button")!;
+      fireEvent.click(otherItem);
+      expect(mockSwitch).not.toHaveBeenCalled();
+    });
+
+    it("falls back to did/handle placeholders when displayName and handle are missing", async () => {
+      const mockSwitch = vi.fn();
+      mockUseSwitchAccount.mockReturnValue({ mutate: mockSwitch, isPending: false } as any);
+      mockUseSession.mockReturnValue({
+        data: {
+          isLoggedIn: true,
+          profile: { handle: "active.bsky.social", displayName: "Active User", avatar: null },
+          accounts: [
+            accounts[0],
+            { did: "did:example:bare", handle: undefined, displayName: undefined, avatar: null },
+          ],
+          did: "did:example:active",
+        },
+        isLoading: false,
+      } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      await openMenu();
+      // Falls back to the did for both the label and the avatar initial.
+      const bareItem = screen.getByText("did:example:bare").closest("button")!;
+      expect(bareItem).toHaveTextContent("?");
+
+      fireEvent.click(bareItem);
+      expect(mockSwitch).toHaveBeenCalledWith({ did: "did:example:bare" }, expect.any(Object));
+    });
+
+    it("triggers haptics and onNavigate when 'Add account' is clicked", async () => {
+      const onNavClose = vi.fn();
+      renderWithProviders(<AppHeader {...defaultProps} onNavClose={onNavClose} />);
+      await openMenu();
+      const addAccountItem = screen.getByText("Add account");
+      fireEvent.click(addAccountItem);
+      expect(onNavClose).toHaveBeenCalled();
+      expect(addAccountItem.closest("a")).toHaveAttribute("href", "/login?add=1");
+    });
   });
 });

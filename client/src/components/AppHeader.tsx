@@ -158,7 +158,11 @@ function UserMenu({
   const hasMultiple = accounts.length > 1;
 
   const handleSwitch = (did: string, handle: string) => {
+    // The menu item for the active account is rendered with `disabled`, so a click can
+    // never reach this handler with did === activeDid; kept as a defensive guard.
+    /* v8 ignore start */
     if (did === activeDid || isSwitching) return;
+    /* v8 ignore stop */
     triggerHaptic();
 
     switchAccount(

@@ -320,6 +320,230 @@ describe("Login page", () => {
     });
   });
 
+  describe("handle suggestion selection", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("sorts and renders multiple suggestions, allowing selection of the top match", async () => {
+      const mockActors = [
+        { did: "did:plc:def", handle: "alicia.bsky.social", displayName: "Alicia" },
+        { did: "did:plc:abc", handle: "ali.bsky.social", displayName: "Ali" },
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "ali" } });
+
+      // Exact handle match ("ali.bsky.social") should be ranked first.
+      const suggestionRow = await screen.findByRole("option", {}, { timeout: 2000 });
+      expect(suggestionRow).toHaveTextContent("Ali");
+
+      fireEvent.click(suggestionRow);
+      expect((getHandleInput() as HTMLInputElement).value).toBe("ali.bsky.social");
+    });
+
+    it("offers the typed handle directly when there are no search results", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: [] }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "unknown.example.com" } });
+
+      const suggestionRow = await screen.findByText("@unknown.example.com", {}, { timeout: 2000 });
+      fireEvent.click(suggestionRow);
+      expect((getHandleInput() as HTMLInputElement).value).toBe("unknown.example.com");
+    });
+
+    it("auto-selects a single suggestion that exactly matches the typed handle", async () => {
+      const mockActors = [
+        { did: "did:plc:abc", handle: "karan.bsky.social", displayName: "Karan" },
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      fireEvent.change(getHandleInput(), { target: { value: "karan.bsky.social" } });
+
+      await waitFor(() => expect(screen.getByText("Karan")).toBeInTheDocument(), { timeout: 2000 });
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
+
+    it("ranks a suggestion with no matching prefix last and clears a manual selection on Escape", async () => {
+      const mockActors = [
+        { did: "did:plc:karina", handle: "karina.bsky.social", displayName: "Karina" },
+        { did: "did:plc:karan", handle: "karan.bsky.social", displayName: "Karan" },
+        { did: "did:plc:zzz", handle: "zzz.bsky.social", displayName: "Zzz" },
+        // Handle doesn't match the prefix, but the display name does (rank 3).
+        { did: "did:plc:disp", handle: "unrelated.bsky.social", displayName: "Karenina" },
+        // Neither handle nor (missing) display name match — falls to the `?? ""` fallback.
+        { did: "did:plc:nodisp", handle: "other.bsky.social", displayName: undefined },
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      const input = getHandleInput();
+      fireEvent.change(input, { target: { value: "kar" } });
+
+      const suggestionRow = await screen.findByRole("option", {}, { timeout: 2000 });
+      fireEvent.click(suggestionRow);
+      expect(screen.queryByRole("option")).not.toBeInTheDocument();
+
+      fireEvent.keyDown(input, { key: "Escape" });
+      expect(await screen.findByRole("option", {}, { timeout: 2000 })).toBeInTheDocument();
+    });
+
+    it("clears a manual selection when the user resumes typing", async () => {
+      const mockActors = [
+        { did: "did:plc:abc", handle: "karan.bsky.social", displayName: "Karan" },
+      ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      const input = getHandleInput();
+      fireEvent.change(input, { target: { value: "kar" } });
+      const suggestionRow = await screen.findByRole("option", {}, { timeout: 2000 });
+      fireEvent.click(suggestionRow);
+      expect(screen.getByText("Karan")).toBeInTheDocument();
+
+      fireEvent.change(input, { target: { value: "karan.bsky.socia" } });
+      // Typing again clears the manual selection; the static "selected" row disappears.
+      await waitFor(() => expect(screen.queryByText("Karan")).not.toBeInTheDocument());
+    });
+
+    it("shows 'No handles found' and tolerates a response with no actors field", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      // Two characters, no dot: search runs but the handle is not "ready" yet, so the
+      // typed-handle offer is skipped and the plain "No handles found" branch renders.
+      fireEvent.change(getHandleInput(), { target: { value: "ab" } });
+
+      expect(
+        await screen.findByText(/no handles found/i, {}, { timeout: 2000 })
+      ).toBeInTheDocument();
+    });
+
+    it("navigates with ArrowDown into the suggestion and back to the input with Escape", async () => {
+      const mockActors = [{ did: "did:plc:abc", handle: "someone.bsky.social" }];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      const input = getHandleInput();
+      fireEvent.change(input, { target: { value: "some" } });
+
+      const suggestionRow = await screen.findByRole("option", {}, { timeout: 2000 });
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      expect(document.activeElement).toBe(suggestionRow);
+
+      fireEvent.keyDown(suggestionRow, { key: "Escape" });
+      expect(document.activeElement).toBe(input);
+    });
+
+    it("moves focus back to the input when ArrowUp is pressed on a suggestion", async () => {
+      const mockActors = [{ did: "did:plc:abc", handle: "someone.bsky.social" }];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      const input = getHandleInput();
+      fireEvent.change(input, { target: { value: "some" } });
+
+      const suggestionRow = await screen.findByRole("option", {}, { timeout: 2000 });
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(suggestionRow, { key: "ArrowUp" });
+      expect(document.activeElement).toBe(input);
+    });
+
+    it("ignores unrelated keys on a suggestion row and on the main input", async () => {
+      const mockActors = [{ did: "did:plc:abc", handle: "someone.bsky.social" }];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ actors: mockActors }),
+        })
+      );
+      mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+      renderWithProviders(<Login />);
+
+      const input = getHandleInput();
+      fireEvent.change(input, { target: { value: "some" } });
+
+      const suggestionRow = await screen.findByRole("option", {}, { timeout: 2000 });
+      fireEvent.keyDown(suggestionRow, { key: "a" });
+      expect(suggestionRow).toBeInTheDocument();
+
+      fireEvent.keyDown(input, { key: "a" });
+      expect(document.activeElement).not.toBe(suggestionRow);
+    });
+  });
+
+  it("shows a validation error when the typed handle exceeds the max length", async () => {
+    const mockMutate = vi.fn();
+    mockUseLogin.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Login />);
+
+    const longHandle = `${"a".repeat(70)}.bsky.social`;
+    fireEvent.change(getHandleInput(), { target: { value: longHandle } });
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/handle too long/i)).toBeInTheDocument();
+    });
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
   describe("E2ELoginPanel", () => {
     beforeEach(() => {
       vi.stubEnv("VITE_E2E_TESTING", "true");

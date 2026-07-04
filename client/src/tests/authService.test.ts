@@ -9,9 +9,12 @@ import {
   useSession,
   useLogin,
   useLogout,
+  useSwitchAccount,
+  useE2ELogin,
   authKeys,
   SessionResponse,
 } from "../api/authService";
+import { clearFriendsCache } from "../api/profileService";
 import { queryClient } from "../api/queryClient";
 
 function makeWrapper() {
@@ -34,6 +37,10 @@ vi.mock("../api/queryClient", () => ({
   queryClient: {
     invalidateQueries: vi.fn(),
   },
+}));
+
+vi.mock("../api/profileService", () => ({
+  clearFriendsCache: vi.fn(),
 }));
 
 const originalLocation = window.location;
@@ -110,6 +117,38 @@ describe("authService", () => {
       expect(apiClient.post).toHaveBeenCalledWith("/logout");
     });
   });
+
+  describe("switchAccount", () => {
+    it("should call apiClient.post with the correct endpoint and data", async () => {
+      const mockResponse = { success: true, did: "did:example:456" };
+      vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponse);
+
+      const result = await authService.switchAccount({ did: "did:example:456" });
+
+      expect(result).toEqual(mockResponse);
+      expect(apiClient.post).toHaveBeenCalledWith("/accounts/switch", {
+        did: "did:example:456",
+      });
+    });
+  });
+
+  describe("e2eLogin", () => {
+    it("should call apiClient.post with the correct endpoint and data", async () => {
+      const mockResponse = { success: true };
+      vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponse);
+
+      const result = await authService.e2eLogin({
+        identifier: "user.example.com",
+        password: "hunter2",
+      });
+
+      expect(result).toEqual(mockResponse);
+      expect(apiClient.post).toHaveBeenCalledWith("/auth/e2e-login", {
+        identifier: "user.example.com",
+        password: "hunter2",
+      });
+    });
+  });
 });
 
 describe("auth hooks", () => {
@@ -163,5 +202,53 @@ describe("auth hooks", () => {
       queryKey: authKeys.session,
     });
     expect(window.location.href).toBe("/");
+  });
+
+  it("useSwitchAccount returns a mutation object", () => {
+    const { result } = renderHook(() => useSwitchAccount(), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useSwitchAccount.onSuccess clears the friends cache for the new did", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      success: true,
+      did: "did:example:789",
+    });
+    const { result } = renderHook(() => useSwitchAccount(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ did: "did:example:789" });
+    });
+    expect(apiClient.post).toHaveBeenCalledWith("/accounts/switch", {
+      did: "did:example:789",
+    });
+    expect(vi.mocked(clearFriendsCache)).toHaveBeenCalledWith("did:example:789");
+  });
+
+  it("useE2ELogin returns a mutation object", () => {
+    const { result } = renderHook(() => useE2ELogin(), {
+      wrapper: makeWrapper(),
+    });
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("useE2ELogin executes the mutationFn with the provided data", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ success: true });
+    const { result } = renderHook(() => useE2ELogin(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync({
+        identifier: "user.example.com",
+        password: "hunter2",
+      });
+    });
+    expect(apiClient.post).toHaveBeenCalledWith("/auth/e2e-login", {
+      identifier: "user.example.com",
+      password: "hunter2",
+    });
   });
 });

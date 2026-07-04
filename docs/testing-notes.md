@@ -28,6 +28,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Not possible through React rendering — the branch requires `friendsLoading` to be simultaneously falsy (to skip the loading skeleton) and truthy (to skip the empty-state text).
 
+### `client/src/components/AppHeader.tsx` — unreachable `did === activeDid` guard in `handleSwitch`
+
+**Line:** `if (did === activeDid || isSwitching) return;` inside `handleSwitch` (the account-switcher's `UserMenu`).
+
+**Why ignored:** The `Menu.Item` for the currently-active account is rendered with `disabled={isActive || isSwitching}`, and Mantine/JSDOM do not dispatch click events to disabled buttons. `handleSwitch` can therefore only ever be invoked with `did !== activeDid` through the UI, making the `did === activeDid` arm of the guard permanently unreachable in tests. It's kept in the source as defense-in-depth in case the disabled state and the handler ever fall out of sync.
+
+**What it would take to test:** Call `handleSwitch` directly (bypassing the disabled menu item) by exporting it or via a component ref, with `did` equal to `activeDid`.
+
 ### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
 
 **Line:** `if (!installPrompt) return;` inside `handleInstallClick`.
