@@ -213,7 +213,7 @@ export default function Settings() {
             <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Push Notifications"
-                description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option."
+                description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option. If you have multiple accounts signed in on this device, enabling notifications here turns them on for all of them, and each notification names the account it's for."
                 isDark={isDark}
               >
                 <PushNotificationsButton />

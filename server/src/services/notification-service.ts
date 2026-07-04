@@ -102,7 +102,8 @@ export class NotificationService {
 
   /**
    * Save or update a push subscription for a user.
-   * Upserts by endpoint so re-subscribing doesn't duplicate rows.
+   * Upserts by (did, endpoint) so a single device can hold a separate row
+   * per signed-in account instead of the newest account stealing the row.
    */
   async saveSubscription(
     did: string,
@@ -114,13 +115,15 @@ export class NotificationService {
       .selectFrom("push_subscription")
       .selectAll()
       .where("endpoint", "=", endpoint)
+      .where("did", "=", did)
       .executeTakeFirst();
 
     if (existing) {
       await this.db
         .updateTable("push_subscription")
-        .set({ did, p256dh, auth })
+        .set({ p256dh, auth })
         .where("endpoint", "=", endpoint)
+        .where("did", "=", did)
         .execute();
     } else {
       await this.db
