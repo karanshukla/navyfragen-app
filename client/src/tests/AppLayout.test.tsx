@@ -1,7 +1,7 @@
 import { screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // eslint-disable-next-line import/order
 import * as authService from "../api/authService";
@@ -271,5 +271,59 @@ describe("AppLayout", () => {
     renderWithProviders(<AppLayout />);
 
     expect(vi.mocked(showNotification)).not.toHaveBeenCalled();
+  });
+
+  describe("onSuccess of a notifyDid switch", () => {
+    const originalLocation = window.location;
+
+    afterEach(() => {
+      window.location = originalLocation;
+    });
+
+    it("navigates to the accountSwitched URL when the notification carried a handle", () => {
+      let capturedHref = "";
+      window.location = {
+        ...originalLocation,
+        get href() {
+          return capturedHref || originalLocation.href;
+        },
+        set href(value: string) {
+          capturedHref = value;
+        },
+      } as unknown as Location;
+
+      const mutate = vi.fn((_vars, { onSuccess }) => onSuccess());
+      mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
+      window.history.replaceState(
+        {},
+        "",
+        "/messages?notifyDid=did:plc:foo&notifyHandle=foo.bsky.social"
+      );
+
+      renderWithProviders(<AppLayout />);
+
+      expect(capturedHref).toBe("/messages?accountSwitched=foo.bsky.social");
+    });
+
+    it("leaves the URL unchanged when the notification carried no handle", () => {
+      let capturedHref = "";
+      window.location = {
+        ...originalLocation,
+        get href() {
+          return capturedHref || originalLocation.href;
+        },
+        set href(value: string) {
+          capturedHref = value;
+        },
+      } as unknown as Location;
+
+      const mutate = vi.fn((_vars, { onSuccess }) => onSuccess());
+      mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
+      window.history.replaceState({}, "", "/messages?notifyDid=did:plc:foo");
+
+      renderWithProviders(<AppLayout />);
+
+      expect(capturedHref).toBe(originalLocation.href);
+    });
   });
 });
