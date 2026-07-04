@@ -1,11 +1,31 @@
 import assert from "node:assert";
-import { test, describe, mock } from "node:test";
+import { test, describe, mock, afterEach } from "node:test";
 
 import { Agent } from "@atproto/api";
 
+import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 import { initializeAgentFromSession } from "../auth/session-agent";
 
 describe("initializeAgentFromSession", () => {
+  describe("with an E2E agent", () => {
+    afterEach(() => {
+      deleteE2EAgent("did:e2e");
+    });
+
+    test("returns the stored E2E agent without calling oauthClient.restore", async () => {
+      const e2eAgent = {} as Agent;
+      setE2EAgent("did:e2e", e2eAgent, "e2e-user.bsky.social");
+      const restoreMock = mock.fn(async () => ({}));
+      const ctx: any = {
+        oauthClient: { restore: restoreMock },
+        logger: { warn: mock.fn() },
+      };
+      const result = await initializeAgentFromSession({ session: { did: "did:e2e" } } as any, ctx);
+      assert.strictEqual(result, e2eAgent);
+      assert.strictEqual(restoreMock.mock.calls.length, 0);
+    });
+  });
+
   test("returns null when req.session is null", async () => {
     const result = await initializeAgentFromSession({ session: null } as any, {} as any);
     assert.strictEqual(result, null);

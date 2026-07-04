@@ -13,6 +13,14 @@ describe("ProfileController", () => {
       oauthClient: {
         restore: mock.fn(async () => ({ sub: "did:foo" })),
       },
+      resolver: {
+        resolveHandleToDid: mock.fn(async () => "did:foo"),
+      },
+      idResolver: {
+        did: {
+          resolveAtprotoData: mock.fn(async () => ({ pds: "https://pds.example.com" })),
+        },
+      },
       logger: {
         info: mock.fn(),
         error: mock.fn(),
@@ -29,6 +37,7 @@ describe("ProfileController", () => {
       getFriendsOnApp: mock.fn(async () => []),
       checkFollowsBot: mock.fn(async () => false),
       resolveHandleToDid: mock.fn(async () => "did:foo"),
+      searchActorsTypeahead: mock.fn(async () => []),
       ...overrides,
     };
   }
@@ -192,6 +201,67 @@ describe("ProfileController", () => {
       const res = makeRes();
       await controller.checkBotFollow(makeReq(), res);
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+    });
+  });
+
+  describe("getHandlePDS", () => {
+    test("returns the PDS hostname on success", async () => {
+      const ctx = makeCtx();
+      const controller = new ProfileController(makeService(), ctx.logger, ctx);
+      const res = makeRes();
+      await controller.getHandlePDS(makeReq({ params: { handle: "foo.bsky.social" } }), res);
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { pds: "pds.example.com" });
+    });
+
+    test("returns 404 when the handle does not resolve to a DID", async () => {
+      const ctx = makeCtx();
+      ctx.resolver.resolveHandleToDid = mock.fn(async () => undefined);
+      const controller = new ProfileController(makeService(), ctx.logger, ctx);
+      const res = makeRes();
+      await controller.getHandlePDS(makeReq({ params: { handle: "nobody.bsky.social" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 404);
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { error: "Handle not found" });
+    });
+
+    test("returns 500 when PDS resolution throws", async () => {
+      const ctx = makeCtx();
+      ctx.idResolver.did.resolveAtprotoData = mock.fn(async () => {
+        throw new Error("network error");
+      });
+      const controller = new ProfileController(makeService(), ctx.logger, ctx);
+      const res = makeRes();
+      await controller.getHandlePDS(makeReq({ params: { handle: "foo.bsky.social" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(ctx.logger.error.mock.calls.length, 1);
+    });
+  });
+
+  describe("searchHandles", () => {
+    test("returns matching actors on success", async () => {
+      const svc = makeService({
+        searchActorsTypeahead: mock.fn(async () => [{ did: "did:foo", handle: "foo.bsky.social" }]),
+      });
+      const ctx = makeCtx();
+      const controller = new ProfileController(svc, ctx.logger, ctx);
+      const res = makeRes();
+      await controller.searchHandles(makeReq({ query: { q: "foo" } }), res);
+      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+        actors: [{ did: "did:foo", handle: "foo.bsky.social" }],
+      });
+    });
+
+    test("returns 500 when the search fails", async () => {
+      const svc = makeService({
+        searchActorsTypeahead: mock.fn(async () => {
+          throw new Error("search failed");
+        }),
+      });
+      const ctx = makeCtx();
+      const controller = new ProfileController(svc, ctx.logger, ctx);
+      const res = makeRes();
+      await controller.searchHandles(makeReq({ query: { q: "foo" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(ctx.logger.error.mock.calls.length, 1);
     });
   });
 

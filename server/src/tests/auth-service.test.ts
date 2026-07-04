@@ -1,8 +1,9 @@
 import assert from "node:assert";
-import { test, describe, beforeEach, mock } from "node:test";
+import { test, describe, beforeEach, afterEach, mock } from "node:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 
+import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 import { AuthService } from "../services/auth-service";
 
 describe("AuthService", () => {
@@ -32,6 +33,12 @@ describe("AuthService", () => {
             return this as any;
           }),
           onConflict: mock.fn(function (this: any) {
+            return this as any;
+          }),
+          execute: mock.fn(async () => ({})),
+        })),
+        deleteFrom: mock.fn(() => ({
+          where: mock.fn(function (this: any) {
             return this as any;
           }),
           execute: mock.fn(async () => ({})),
@@ -93,6 +100,20 @@ describe("AuthService", () => {
   test("revokeSession calls oauthClient.revoke", async () => {
     await service.revokeSession("did:foo");
     assert.strictEqual(ctx.oauthClient.revoke.mock.calls.length, 1);
+  });
+
+  describe("revokeSession with an E2E agent", () => {
+    afterEach(() => {
+      deleteE2EAgent("did:e2e");
+    });
+
+    test("deletes the E2E agent and auth session instead of calling oauthClient.revoke", async () => {
+      setE2EAgent("did:e2e", {} as any, "e2e-user.bsky.social");
+      await service.revokeSession("did:e2e");
+      assert.strictEqual(ctx.oauthClient.revoke.mock.calls.length, 0);
+      assert.strictEqual(ctx.db.deleteFrom.mock.calls.length, 1);
+      assert.strictEqual(ctx.db.deleteFrom.mock.calls[0].arguments[0], "auth_session");
+    });
   });
 
   test("encryptDid and decryptDid roundtrip", () => {
@@ -159,6 +180,54 @@ describe("AuthService", () => {
       ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
       // The real Agent has no valid network session so getProfile will throw
       await assert.rejects(() => service.checkSession("did:foo"), /.+/);
+    });
+
+    describe("with an E2E agent", () => {
+      afterEach(() => {
+        deleteE2EAgent("did:e2e");
+      });
+
+      test("returns a synthetic profile built from the stored E2E handle", async () => {
+        ctx.db.selectFrom = mock.fn(() => ({
+          selectAll: mock.fn(function (this: any) {
+            return this as any;
+          }),
+          where: mock.fn(function (this: any) {
+            return this as any;
+          }),
+          executeTakeFirst: mock.fn(async () => ({ key: "did:e2e" })),
+        }));
+        setE2EAgent("did:e2e", {} as any, "e2e-user.bsky.social");
+
+        const result = await service.checkSession("did:e2e");
+
+        assert.deepStrictEqual(result, {
+          did: "did:e2e",
+          handle: "e2e-user.bsky.social",
+          displayName: "e2e-user.bsky.social",
+          description: "",
+          avatar: undefined,
+          banner: undefined,
+          createdAt: undefined,
+        });
+      });
+
+      test("falls back to the did as the handle when no E2E handle was stored", async () => {
+        ctx.db.selectFrom = mock.fn(() => ({
+          selectAll: mock.fn(function (this: any) {
+            return this as any;
+          }),
+          where: mock.fn(function (this: any) {
+            return this as any;
+          }),
+          executeTakeFirst: mock.fn(async () => ({ key: "did:e2e" })),
+        }));
+        setE2EAgent("did:e2e", {} as any, "");
+
+        const result = await service.checkSession("did:e2e");
+
+        assert.strictEqual(result?.handle, "did:e2e");
+      });
     });
   });
 
