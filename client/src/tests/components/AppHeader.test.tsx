@@ -63,6 +63,7 @@ describe("AppHeader", () => {
     // Reset body styles that may linger from the "calls logout" test
     document.body.style.pointerEvents = "";
     document.body.style.opacity = "";
+    window.localStorage.removeItem("nf-bounce-logos-enabled");
     mockUseLogout.mockReturnValue({ mutate: vi.fn() } as any);
     mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     mockUseComputedColorScheme.mockReturnValue("light" as any);
@@ -438,6 +439,49 @@ describe("AppHeader", () => {
       fireEvent.click(addAccountItem);
       expect(onNavClose).toHaveBeenCalled();
       expect(addAccountItem.closest("a")).toHaveAttribute("href", "/login?add=1");
+    });
+  });
+
+  describe("bouncing logos toggle button", () => {
+    const originalWidth = window.innerWidth;
+    const originalHeight = window.innerHeight;
+
+    function setViewport(width: number, height: number) {
+      Object.defineProperty(window, "innerWidth", {
+        value: width,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(window, "innerHeight", {
+        value: height,
+        configurable: true,
+        writable: true,
+      });
+    }
+
+    afterEach(() => {
+      setViewport(originalWidth, originalHeight);
+    });
+
+    it("is hidden on a normal-width viewport", () => {
+      setViewport(1400, 900);
+      mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+      expect(screen.queryByText("Disable animations")).not.toBeInTheDocument();
+      expect(screen.queryByText("Enable animations")).not.toBeInTheDocument();
+    });
+
+    it("appears on a very wide (4K-style) viewport and toggles its own label", async () => {
+      setViewport(2560, 1440);
+      mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+      renderWithProviders(<AppHeader {...defaultProps} />);
+
+      const toggleBtn = screen.getByText("Disable animations");
+      await userEvent.click(toggleBtn);
+      expect(screen.getByText("Enable animations")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText("Enable animations"));
+      expect(screen.getByText("Disable animations")).toBeInTheDocument();
     });
   });
 });

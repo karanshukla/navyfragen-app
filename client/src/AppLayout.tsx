@@ -5,6 +5,7 @@ import { Route, Routes } from "react-router-dom";
 
 import { useSession, useSwitchAccount } from "./api/authService";
 import { AppHeader } from "./components/AppHeader";
+import { BouncingLogos } from "./components/BouncingLogos";
 import { buildAccountSwitchUrl, consumeAccountSwitchToast } from "./lib/accountSwitchToast";
 import { consumeNotificationSwitchRequest } from "./lib/notificationSwitch";
 import { Navigation } from "./Navigation";
@@ -69,50 +70,53 @@ export function AppLayout() {
   const userProfile = sessionData?.profile;
 
   return (
-    <div className="app-shell-boundary">
-      <AppShell
-        header={{ height: 60 }}
-        navbar={{
-          width: 250,
-          breakpoint: "sm",
-          collapsed: { mobile: !navOpen, desktop: false },
-        }}
-        padding="md"
-      >
-        <AppShell.Header>
-          <AppHeader
-            opened={navOpen}
-            onBurgerToggle={() => setNavOpen((o) => !o)}
-            burgerRef={burgerRef as React.RefObject<HTMLButtonElement>}
-            onNavClose={() => setNavOpen(false)}
-          />
-        </AppShell.Header>
+    <>
+      <BouncingLogos />
+      <div className="app-shell-boundary">
+        <AppShell
+          header={{ height: 60 }}
+          navbar={{
+            width: 250,
+            breakpoint: "sm",
+            collapsed: { mobile: !navOpen, desktop: false },
+          }}
+          padding="md"
+        >
+          <AppShell.Header>
+            <AppHeader
+              opened={navOpen}
+              onBurgerToggle={() => setNavOpen((o) => !o)}
+              burgerRef={burgerRef as React.RefObject<HTMLButtonElement>}
+              onNavClose={() => setNavOpen(false)}
+            />
+          </AppShell.Header>
 
-        <AppShell.Navbar ref={navbarRef} p="md" style={{ overflow: "hidden" }}>
-          <Navigation
-            onLinkClick={() => setNavOpen(false)}
-            isLoggedIn={isLoggedIn}
-            handle={userProfile?.handle}
-            did={sessionData?.did ?? undefined}
-          />
-        </AppShell.Navbar>
+          <AppShell.Navbar ref={navbarRef} p="md" style={{ overflow: "hidden" }}>
+            <Navigation
+              onLinkClick={() => setNavOpen(false)}
+              isLoggedIn={isLoggedIn}
+              handle={userProfile?.handle}
+              did={sessionData?.did ?? undefined}
+            />
+          </AppShell.Navbar>
 
-        <AppShell.Main pt={70}>
-          <Container pt="md">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/profile" element={<PublicProfile />} />
-              <Route path="/profile/:handle" element={<PublicProfile />} />
-              <Route path="/oauth_callback" element={<OAuthCallback />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Container>
-        </AppShell.Main>
-      </AppShell>
-    </div>
+          <AppShell.Main pt={70}>
+            <Container pt="md">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/profile" element={<PublicProfile />} />
+                <Route path="/profile/:handle" element={<PublicProfile />} />
+                <Route path="/oauth_callback" element={<OAuthCallback />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Container>
+          </AppShell.Main>
+        </AppShell>
+      </div>
+    </>
   );
 }
 
