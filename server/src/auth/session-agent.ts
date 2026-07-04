@@ -38,6 +38,7 @@ export async function initializeAgentForDid(ctx: AppContext, did: string): Promi
  * Restores the AT Protocol Agent for the session's currently active account.
  * Thin wrapper over {@link initializeAgentForDid} using `req.session.did`.
  */
+/* v8 ignore next 1 */
 export async function initializeAgentFromSession(
   req: Express.Request,
   ctx: AppContext

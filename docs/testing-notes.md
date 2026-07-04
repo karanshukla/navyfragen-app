@@ -180,6 +180,18 @@ These branches are V8 JIT internals; no user-written test can reach them. The sa
 
 These files all previously caused a visible coverage drop because the class body is small enough that 2 uncovered artifact branches crossed the rounding threshold.
 
+### `server/src/services/notification-service.ts` — module-scope and class-closing-brace artifacts (single-line variant)
+
+**Lines:** line 1 (module-scope artifact) and the line before the class's final `}`.
+
+**Why suppressed with two `/* v8 ignore next 1 */` markers instead of `start/stop`:** Same two V8 JIT artifacts as the class-based modules above, but this file has several standalone exported functions (`readVapidConfig`, `isWebPushConfigured`, `createConcurrencyLimiter`) between the module-scope line and the class declaration. Wrapping `/* v8 ignore start */`...`/* v8 ignore stop */` across that whole span (as done for the pure class-based modules) would also exclude those real, tested functions from coverage. Using a single-line `/* v8 ignore next 1 */` at line 1 and another immediately before the class's closing `}` suppresses only the two artifact branches while leaving every function body (including the class methods) measured normally.
+
+### `server/src/auth/session-agent.ts` — function-declaration artifact on `initializeAgentFromSession`
+
+**Line:** the line immediately before `export async function initializeAgentFromSession(`.
+
+**Why ignored:** Same V8 "function not JIT-compiled" artifact documented for `pds-region.ts` above, but affecting only the second function in this file (`initializeAgentForDid`'s declaration line does not exhibit it — the artifact does not attach to every function declaration consistently). `initializeAgentFromSession` is exercised extensively by `session-agent.test.ts`; a single `/* v8 ignore next 1 */` suppresses just the artifact branch on its declaration line.
+
 ## TypeScript Transpilation Artifacts (tsx source-map gaps)
 
 The following "uncovered" lines are not executable TypeScript — they are blank lines, type annotations, or closing punctuation of multi-line expressions that tsx maps back to the wrong source position. The underlying code **is** executed and tested; only V8's source-map alignment is imprecise.
@@ -192,14 +204,6 @@ The following "uncovered" lines are not executable TypeScript — they are blank
 | `server/src/lib/image-generator.ts` | 144, 454–459 | TypeScript return-type annotation on `generateThemeSpecificHtml` (line 144); static CSS string content inside a multi-hundred-line template literal in `generateTwitterHtml` (lines 454–459) — V8 does not track every line within a template literal |
 
 No `/* v8 ignore */` annotations are added for these because the underlying logic IS reached by tests; the gaps are purely a source-map rendering artefact.
-
-### `server/src/services/auth-service.ts` — e2e branch in `revokeSession`
-
-**Lines:** the `if (hasE2EAgent(did)) { deleteE2EAgent(did); ... return; }` block.
-
-**Why ignored:** This branch only fires when the DID belongs to an E2E test session created by `e2eAuthRoutes`. In the unit test suite `E2E_TESTING` is never set to `true`, so `hasE2EAgent` always returns `false` and the branch is permanently unreachable.
-
-**What it would take to test:** Import and call `setE2EAgent` in a test to plant a fake agent, then call `revokeSession` — but this requires `e2e-agent-store.ts` to be importable in the test context, which it is. Left as a future improvement.
 
 ### `client/src/pages/Login.tsx` — `renderActorOption` dropdown render function
 

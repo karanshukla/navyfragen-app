@@ -289,6 +289,53 @@ describe("ProfileService", () => {
     });
   });
 
+  describe("searchActorsTypeahead", () => {
+    it("should map the agent's search results to the trimmed actor shape", async () => {
+      const searchMock = mock.fn(async () => ({
+        data: {
+          actors: [
+            {
+              did: "did:user:1",
+              handle: "user1.bsky.app",
+              displayName: "User One",
+              avatar: "https://cdn.test/1.jpg",
+            },
+            {
+              did: "did:user:2",
+              handle: "user2.bsky.app",
+              displayName: undefined,
+              avatar: undefined,
+            },
+          ],
+        },
+      }));
+      (profileService as any).agent.searchActorsTypeahead = searchMock;
+
+      const result = await profileService.searchActorsTypeahead("user");
+
+      assert.deepStrictEqual(result, [
+        {
+          did: "did:user:1",
+          handle: "user1.bsky.app",
+          displayName: "User One",
+          avatar: "https://cdn.test/1.jpg",
+        },
+        { did: "did:user:2", handle: "user2.bsky.app", displayName: undefined, avatar: undefined },
+      ]);
+      assert.deepStrictEqual(searchMock.mock.calls[0].arguments, [{ q: "user", limit: 8 }]);
+    });
+
+    it("should return an empty array when there are no matching actors", async () => {
+      (profileService as any).agent.searchActorsTypeahead = mock.fn(async () => ({
+        data: { actors: [] },
+      }));
+
+      const result = await profileService.searchActorsTypeahead("nobody");
+
+      assert.deepStrictEqual(result, []);
+    });
+  });
+
   describe("getFriendsOnApp", () => {
     const sampleFollows = [
       {

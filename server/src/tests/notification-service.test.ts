@@ -1,5 +1,11 @@
 import assert from "node:assert";
-import { test, describe, beforeEach, mock } from "node:test";
+import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import https from "node:https";
+import os from "node:os";
+import path from "node:path";
+import { test, describe, before, after, beforeEach, afterEach, mock } from "node:test";
 
 import { generateVAPIDKeys } from "web-push";
 
@@ -46,6 +52,18 @@ function makeUpdateBuilder() {
       return this;
     }),
     execute: mock.fn(async () => ({})),
+  };
+}
+
+// A valid-shaped (but throwaway) push subscription keypair, so web-push's
+// client-side payload encryption succeeds and the test actually reaches the
+// network call instead of failing validation before it.
+function makeSubscriptionKeys() {
+  const ecdh = crypto.createECDH("prime256v1");
+  ecdh.generateKeys();
+  return {
+    p256dh: ecdh.getPublicKey("base64url"),
+    auth: crypto.randomBytes(16).toString("base64url"),
   };
 }
 
@@ -228,6 +246,199 @@ describe("NotificationService", () => {
         process.env.VAPID_SUBJECT = prev.subj;
       }
     });
+
+    test("returns early (no-op) when setVapidDetails throws for a malformed subject", async () => {
+      const keys = generateVAPIDKeys();
+      const prev = {
+        pub: process.env.VAPID_PUBLIC_KEY,
+        priv: process.env.VAPID_PRIVATE_KEY,
+        subj: process.env.VAPID_SUBJECT,
+      };
+      process.env.VAPID_PUBLIC_KEY = keys.publicKey;
+      process.env.VAPID_PRIVATE_KEY = keys.privateKey;
+      process.env.VAPID_SUBJECT = "not-a-valid-subject";
+
+      try {
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockLogger.error.mock.calls.length, 1);
+        // Bails out before ever querying for subscriptions.
+        assert.strictEqual(mockDb.selectFrom.mock.calls.length, 0);
+      } finally {
+        process.env.VAPID_PUBLIC_KEY = prev.pub;
+        process.env.VAPID_PRIVATE_KEY = prev.priv;
+        process.env.VAPID_SUBJECT = prev.subj;
+      }
+    });
+
+    // These tests exercise the real `web-push` `sendNotification` call against a
+    // local HTTPS server (self-signed cert) instead of mocking the module, since
+    // `node:test`'s `mock.module()` requires the `--experimental-test-module-mocks`
+    // flag, which this repo's test script does not enable.
+    describe("against a local HTTPS push endpoint", () => {
+      let server: https.Server;
+      let port: number;
+      let nextStatus: number;
+      let prevEnv: { pub?: string; priv?: string; subj?: string };
+      let prevGlobalAgent: typeof https.globalAgent;
+
+      before(() => {
+        const certDir = fs.mkdtempSync(path.join(os.tmpdir(), "wp-test-certs-"));
+        const keyPath = path.join(certDir, "key.pem");
+        const certPath = path.join(certDir, "cert.pem");
+        execFileSync("openssl", [
+          "req",
+          "-x509",
+          "-newkey",
+          "rsa:2048",
+          "-keyout",
+          keyPath,
+          "-out",
+          certPath,
+          "-days",
+          "1",
+          "-nodes",
+          "-subj",
+          "/CN=127.0.0.1",
+          // A SAN entry is required — modern Node/OpenSSL clients reject
+          // certs that only match via the legacy CN fallback.
+          "-addext",
+          "subjectAltName=IP:127.0.0.1",
+        ]);
+
+        const certPem = fs.readFileSync(certPath);
+        nextStatus = 201;
+        server = https.createServer(
+          { key: fs.readFileSync(keyPath), cert: certPem },
+          (req, res) => {
+            req.resume();
+            req.on("end", () => {
+              res.writeHead(nextStatus);
+              res.end();
+            });
+          }
+        );
+
+        // Trust this run's throwaway CA specifically (scoped to the global
+        // agent web-push falls back to), rather than disabling certificate
+        // validation process-wide.
+        prevGlobalAgent = https.globalAgent;
+        https.globalAgent = new https.Agent({ ca: certPem });
+
+        return new Promise<void>((resolve) => {
+          server.listen(0, "127.0.0.1", () => {
+            port = (server.address() as { port: number }).port;
+            fs.rmSync(certDir, { recursive: true, force: true });
+            resolve();
+          });
+        });
+      });
+
+      after(() => {
+        https.globalAgent = prevGlobalAgent;
+        return new Promise<void>((resolve) => server.close(() => resolve()));
+      });
+
+      beforeEach(() => {
+        nextStatus = 201;
+        const keys = generateVAPIDKeys();
+        prevEnv = {
+          pub: process.env.VAPID_PUBLIC_KEY,
+          priv: process.env.VAPID_PRIVATE_KEY,
+          subj: process.env.VAPID_SUBJECT,
+        };
+        process.env.VAPID_PUBLIC_KEY = keys.publicKey;
+        process.env.VAPID_PRIVATE_KEY = keys.privateKey;
+        process.env.VAPID_SUBJECT = "mailto:test@example.com";
+
+        const subKeys = makeSubscriptionKeys();
+        mockDb.selectFrom = mock.fn(() =>
+          makeSelectBuilder(undefined, [
+            {
+              did: "did:recipient",
+              endpoint: `https://127.0.0.1:${port}/sub`,
+              p256dh: subKeys.p256dh,
+              auth: subKeys.auth,
+            },
+          ])
+        );
+      });
+
+      afterEach(() => {
+        process.env.VAPID_PUBLIC_KEY = prevEnv.pub;
+        process.env.VAPID_PRIVATE_KEY = prevEnv.priv;
+        process.env.VAPID_SUBJECT = prevEnv.subj;
+      });
+
+      test("resolves the recipient's handle and sends successfully", async () => {
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockResolver.resolveDidToHandle.mock.calls.length, 1);
+        assert.strictEqual(mockLogger.error.mock.calls.length, 0);
+      });
+
+      test("falls back to a generic no-op when handle resolution fails, but still sends", async () => {
+        mockResolver.resolveDidToHandle = mock.fn(async () => {
+          throw new Error("resolution failed");
+        });
+
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockLogger.error.mock.calls.length, 0);
+      });
+
+      test("deletes the subscription when the push service reports 410 Gone", async () => {
+        nextStatus = 410;
+        const deleteBuilder = makeDeleteBuilder();
+        mockDb.deleteFrom = mock.fn(() => deleteBuilder);
+
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 1);
+        // One info log from deleteSubscription itself, one from the "removed expired" note.
+        assert.strictEqual(mockLogger.info.mock.calls.length, 2);
+      });
+
+      test("deletes the subscription when the push service reports 404 Not Found", async () => {
+        nextStatus = 404;
+        const deleteBuilder = makeDeleteBuilder();
+        mockDb.deleteFrom = mock.fn(() => deleteBuilder);
+
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 1);
+      });
+
+      test("logs an error and keeps the subscription for other failure statuses", async () => {
+        nextStatus = 500;
+
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 0);
+        assert.strictEqual(mockLogger.error.mock.calls.length, 1);
+      });
+
+      test("logs an error (statusCode undefined) when the failure has no HTTP response at all", async () => {
+        // A malformed subscription key fails web-push's own client-side validation
+        // synchronously, before any network call — the resulting error has no
+        // `statusCode` field, exercising the `undefined` fallback.
+        mockDb.selectFrom = mock.fn(() =>
+          makeSelectBuilder(undefined, [
+            {
+              did: "did:recipient",
+              endpoint: `https://127.0.0.1:${port}/sub`,
+              p256dh: "too-short",
+              auth: "also-too-short",
+            },
+          ])
+        );
+
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockDb.deleteFrom.mock.calls.length, 0);
+        assert.strictEqual(mockLogger.error.mock.calls.length, 1);
+      });
+    });
   });
 });
 
@@ -257,6 +468,25 @@ describe("createConcurrencyLimiter", () => {
       limiter.run(() => Promise.reject(new Error("boom"))),
       /boom/
     );
+  });
+
+  test("exposes active/pending counts while tasks are in flight and queued", async () => {
+    const limiter = createConcurrencyLimiter(1);
+    let releaseFirst: () => void = () => {};
+    const blocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    const firstRun = limiter.run(() => blocked);
+    const secondRun = limiter.run(() => Promise.resolve());
+    // First task is active immediately; second is queued behind the limit of 1.
+    assert.strictEqual(limiter.active, 1);
+    assert.strictEqual(limiter.pending, 1);
+
+    releaseFirst();
+    await Promise.all([firstRun, secondRun]);
+    assert.strictEqual(limiter.active, 0);
+    assert.strictEqual(limiter.pending, 0);
   });
 
   test("resumes queue slots as tasks complete", async () => {

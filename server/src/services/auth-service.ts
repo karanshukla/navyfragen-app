@@ -35,7 +35,6 @@ export class AuthService {
   }
 
   async revokeSession(did: string) {
-    /* v8 ignore next 6 */
     if (hasE2EAgent(did)) {
       deleteE2EAgent(did);
       await this.ctx.db.deleteFrom("auth_session").where("key", "=", did).execute();
@@ -52,7 +51,6 @@ export class AuthService {
       .executeTakeFirst();
     if (!dbSession) return null;
 
-    /* v8 ignore next 8 */
     if (hasE2EAgent(did)) {
       const handle = getE2EHandle(did) || did;
       return {

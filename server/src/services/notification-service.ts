@@ -1,3 +1,4 @@
+/* v8 ignore next 1 */
 import { Logger } from "pino";
 import { sendNotification, setVapidDetails } from "web-push";
 
@@ -263,4 +264,5 @@ export class NotificationService {
       })
     );
   }
+  /* v8 ignore next 1 */
 }
