@@ -24,12 +24,6 @@ export function AppLayout() {
   const { mutate: switchAccount } = useSwitchAccount();
 
   useEffect(() => {
-    // Tapping a push notification lands here with a notifyDid param when the
-    // question wasn't for whichever account is currently active on this
-    // device. Switch to it (an actual API call, unlike the service worker,
-    // this has the app's real API base URL) then reload so the inbox that
-    // opens is the right one. If that account isn't remembered here (session
-    // expired, cookie cleared), fall back silently to whatever's active.
     const notifyRequest = consumeNotificationSwitchRequest();
     if (notifyRequest) {
       switchAccount(
@@ -48,6 +42,7 @@ export function AppLayout() {
     consumeAccountSwitchToast((message) => {
       showNotification({ message, color: "green" });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close the mobile navbar when the user clicks outside it
@@ -74,48 +69,50 @@ export function AppLayout() {
   const userProfile = sessionData?.profile;
 
   return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 250,
-        breakpoint: "sm",
-        collapsed: { mobile: !navOpen, desktop: false },
-      }}
-      padding="md"
-    >
-      <AppShell.Header>
-        <AppHeader
-          opened={navOpen}
-          onBurgerToggle={() => setNavOpen((o) => !o)}
-          burgerRef={burgerRef as React.RefObject<HTMLButtonElement>}
-          onNavClose={() => setNavOpen(false)}
-        />
-      </AppShell.Header>
+    <div className="app-shell-boundary">
+      <AppShell
+        header={{ height: 60 }}
+        navbar={{
+          width: 250,
+          breakpoint: "sm",
+          collapsed: { mobile: !navOpen, desktop: false },
+        }}
+        padding="md"
+      >
+        <AppShell.Header>
+          <AppHeader
+            opened={navOpen}
+            onBurgerToggle={() => setNavOpen((o) => !o)}
+            burgerRef={burgerRef as React.RefObject<HTMLButtonElement>}
+            onNavClose={() => setNavOpen(false)}
+          />
+        </AppShell.Header>
 
-      <AppShell.Navbar ref={navbarRef} p="md" style={{ overflow: "hidden" }}>
-        <Navigation
-          onLinkClick={() => setNavOpen(false)}
-          isLoggedIn={isLoggedIn}
-          handle={userProfile?.handle}
-          did={sessionData?.did ?? undefined}
-        />
-      </AppShell.Navbar>
+        <AppShell.Navbar ref={navbarRef} p="md" style={{ overflow: "hidden" }}>
+          <Navigation
+            onLinkClick={() => setNavOpen(false)}
+            isLoggedIn={isLoggedIn}
+            handle={userProfile?.handle}
+            did={sessionData?.did ?? undefined}
+          />
+        </AppShell.Navbar>
 
-      <AppShell.Main pt={70}>
-        <Container pt="md">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/profile" element={<PublicProfile />} />
-            <Route path="/profile/:handle" element={<PublicProfile />} />
-            <Route path="/oauth_callback" element={<OAuthCallback />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Container>
-      </AppShell.Main>
-    </AppShell>
+        <AppShell.Main pt={70}>
+          <Container pt="md">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/profile" element={<PublicProfile />} />
+              <Route path="/profile/:handle" element={<PublicProfile />} />
+              <Route path="/oauth_callback" element={<OAuthCallback />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Container>
+        </AppShell.Main>
+      </AppShell>
+    </div>
   );
 }
 

@@ -19,6 +19,21 @@ body {
   max-width: 60vw !important;
 }
 
+/* Boxed layout: cap the whole app (header + navbar + main) to a centered
+   column on wide/4K screens instead of letting it stretch edge-to-edge.
+   AppShell's header/navbar use `position: fixed`, which normally resolves
+   against the viewport — giving this wrapper a `transform` creates a new
+   containing block, so those fixed elements clip to its width instead. */
+.app-shell-boundary {
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  position: relative;
+  transform: translateZ(0);
+  border-left: 1px solid var(--nf-app-boundary-border);
+  border-right: 1px solid var(--nf-app-boundary-border);
+}
+
 /* Brand CSS tokens */
 :root {
   --nf-midnight: #1e1b4b;
@@ -44,6 +59,10 @@ body {
   --nf-nav-active-bg: rgba(107, 63, 212, 0.22);
   --nf-nav-active-color: #fdf8ff;
   --nf-nav-active-shadow: none;
+
+  /* App boundary divider — stronger than --nf-border since it sits between
+     two areas of identical background (no bg contrast to lean on) */
+  --nf-app-boundary-border: rgba(255, 255, 255, 0.14);
 }
 
 /* ── Light mode: white cards on cream page background ── */
@@ -56,6 +75,8 @@ body {
   --nf-nav-active-bg: #ede9ff;
   --nf-nav-active-color: #1e1b4b;
   --nf-nav-active-shadow: none;
+
+  --nf-app-boundary-border: rgba(30, 27, 75, 0.14);
 }
 
 /* ── Dark mode ── */
