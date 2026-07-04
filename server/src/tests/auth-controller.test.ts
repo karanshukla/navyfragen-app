@@ -247,6 +247,29 @@ describe("AuthController", () => {
       assert.strictEqual(payload.profile.handle, "bar.bsky.social");
     });
 
+    test("removes the fallback account too when its session is also invalid", async () => {
+      const ctx = makeCtx();
+      const controller = new AuthController(ctx);
+      // Both the active and fallback accounts' sessions are invalid.
+      (controller as any).service = makeService({ checkSession: mock.fn(async () => null) });
+      const req = makeReq({
+        session: {
+          did: "did:foo",
+          accounts: [
+            { did: "did:bar", handle: "bar.bsky.social" },
+            { did: "did:foo", handle: "foo.bsky.social" },
+          ],
+        },
+      });
+      const res = makeRes();
+
+      await controller.session(req, res);
+
+      const payload = res.json.mock.calls[0].arguments[0];
+      assert.strictEqual(payload.isLoggedIn, false);
+      assert.strictEqual(req.session, null);
+    });
+
     test("returns isLoggedIn:false when checkSession throws", async () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
@@ -284,7 +307,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService();
-      const req = makeReq({ session: {}, originalUrl: "/oauth/callback?code=abc&state=xyz" });
+      // No pre-existing session object (makeReq defaults to null) — exercises
+      // the `req.session ?? {}` fallback.
+      const req = makeReq({ originalUrl: "/oauth/callback?code=abc&state=xyz" });
       const res = makeRes();
 
       await controller.oauthCallback(req, res);
@@ -428,7 +453,9 @@ describe("AuthController", () => {
       const ctx = makeCtx();
       const controller = new AuthController(ctx);
       (controller as any).service = makeService();
-      const req = makeReq({ body: { oauth_token: "token" }, session: {} });
+      // No pre-existing session object (makeReq defaults to null) — exercises
+      // the `req.session ?? {}` fallback.
+      const req = makeReq({ body: { oauth_token: "token" } });
       const res = makeRes();
 
       await controller.oauthConsume(req, res);

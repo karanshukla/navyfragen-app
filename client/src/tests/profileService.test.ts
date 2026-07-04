@@ -12,6 +12,7 @@ import {
   useFriends,
   useBotFollow,
   useResolveHandle,
+  clearFriendsCache,
 } from "../api/profileService";
 
 function makeWrapper() {
@@ -318,5 +319,30 @@ describe("profile hooks", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ friends: [] });
     setItemSpy.mockRestore();
+  });
+});
+
+describe("clearFriendsCache", () => {
+  const mockDid = "did:example:123";
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("removes the cached friends entry for the given did", () => {
+    localStorage.setItem(
+      `navyfragen_friends_v3_cache_${mockDid}`,
+      JSON.stringify({ data: { friends: [] }, timestamp: Date.now() })
+    );
+    clearFriendsCache(mockDid);
+    expect(localStorage.getItem(`navyfragen_friends_v3_cache_${mockDid}`)).toBeNull();
+  });
+
+  it("silently ignores localStorage.removeItem errors", () => {
+    const removeItemSpy = vi.spyOn(Storage.prototype, "removeItem").mockImplementationOnce(() => {
+      throw new Error("SecurityError");
+    });
+    expect(() => clearFriendsCache(mockDid)).not.toThrow();
+    removeItemSpy.mockRestore();
   });
 });

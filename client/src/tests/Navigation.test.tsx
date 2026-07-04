@@ -115,9 +115,11 @@ describe("Navigation", () => {
         data: undefined,
         isLoading: true,
       } as any);
-      renderWithProviders(<Navigation isLoggedIn={true} />);
+      renderWithProviders(<Navigation isLoggedIn={true} did={TEST_DID} />);
       expect(screen.queryByText("Alice")).toBeNull();
       expect(screen.queryByText("@alice.bsky.social")).toBeNull();
+      // Skeleton placeholders render in place of the friends list while loading.
+      expect(document.querySelectorAll(".mantine-Skeleton-root").length).toBeGreaterThan(0);
     });
   });
 

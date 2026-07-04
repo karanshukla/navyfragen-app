@@ -2,6 +2,7 @@ import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
+import * as notificationService from "../../api/notificationService";
 import * as profileService from "../../api/profileService";
 import * as settingsService from "../../api/settingsService";
 import * as installPromptContext from "../../components/InstallPromptContext";
@@ -11,6 +12,19 @@ import { renderWithProviders } from "../testUtils";
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
   return { ...actual, useSession: vi.fn() };
+});
+
+// Settings renders <PushNotificationsButton>, whose usePushAvailable() hook
+// otherwise makes a real apiClient.get() fetch call that races with (and can
+// consume) the delete-account fetch mocks used by several tests below.
+vi.mock("../../api/notificationService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/notificationService")>();
+  return {
+    ...actual,
+    usePushAvailable: vi.fn(),
+    useEnablePushNotifications: vi.fn(),
+    useDisablePushNotifications: vi.fn(),
+  };
 });
 
 vi.mock("../../api/settingsService", async (importOriginal) => {
@@ -41,6 +55,9 @@ const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 const mockUsePdsInfo = vi.mocked(settingsService.usePdsInfo);
 const mockUseBotFollow = vi.mocked(profileService.useBotFollow);
 const mockUseInstallPrompt = vi.mocked(installPromptContext.useInstallPrompt);
+const mockUsePushAvailable = vi.mocked(notificationService.usePushAvailable);
+const mockUseEnablePushNotifications = vi.mocked(notificationService.useEnablePushNotifications);
+const mockUseDisablePushNotifications = vi.mocked(notificationService.useDisablePushNotifications);
 
 const noopMutation = { mutate: vi.fn(), isPending: false } as any;
 const noopInstall = { installPrompt: null, setInstallPrompt: vi.fn() };
@@ -61,6 +78,9 @@ describe("Settings page", () => {
       data: undefined,
       isLoading: false,
     } as any);
+    mockUsePushAvailable.mockReturnValue({ data: false, isLoading: false } as any);
+    mockUseEnablePushNotifications.mockReturnValue(noopMutation);
+    mockUseDisablePushNotifications.mockReturnValue(noopMutation);
   });
 
   it("shows auth error when user is not logged in", () => {
@@ -317,6 +337,12 @@ describe("Settings page", () => {
     });
     window.fetch = fetchMock as any;
 
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, href: "" },
+    });
+
     renderWithProviders(<Settings />);
     fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
     await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
@@ -327,6 +353,14 @@ describe("Settings page", () => {
         expect.stringContaining("/delete-account"),
         expect.objectContaining({ method: "DELETE" })
       );
+    });
+    await waitFor(() => {
+      expect(window.location.href).toBe("/");
+    });
+
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: originalLocation,
     });
   });
 

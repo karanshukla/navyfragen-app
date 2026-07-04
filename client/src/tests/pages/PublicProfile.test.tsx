@@ -1,5 +1,6 @@
 import { notifications } from "@mantine/notifications";
 import { screen, fireEvent, waitFor, act, within } from "@testing-library/react";
+import * as reactRouterDom from "react-router-dom";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as messageService from "../../api/messageService";
@@ -9,7 +10,7 @@ import { renderWithProviders } from "../testUtils";
 
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
-  return { ...actual, useParams: () => ({ handle: "karan.bsky.social" }) };
+  return { ...actual, useParams: vi.fn(() => ({ handle: "karan.bsky.social" })) };
 });
 
 vi.mock("../../api/profileService", async (importOriginal) => {
@@ -29,6 +30,7 @@ vi.mock("../../api/messageService", async (importOriginal) => {
 const mockUseResolveHandle = vi.mocked(profileService.useResolveHandle);
 const mockUsePublicProfile = vi.mocked(profileService.usePublicProfile);
 const mockUseSendMessage = vi.mocked(messageService.useSendMessage);
+const mockUseParams = vi.mocked(reactRouterDom.useParams);
 
 const TEST_DID = "did:example:karan";
 
@@ -65,6 +67,23 @@ describe("PublicProfile page", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("resolves with a null handle when the route has no :handle param", () => {
+    mockUseParams.mockReturnValueOnce({ handle: undefined } as any);
+    mockUseResolveHandle.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(mockUseResolveHandle).toHaveBeenCalledWith(null);
   });
 
   it("shows loading indicator while handle is resolving", () => {
@@ -305,6 +324,15 @@ describe("PublicProfile page", () => {
     });
   });
 
+  it("pressing Shift+Enter in textarea does not call handleSend", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Hello!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
+    expect(screen.queryByText(/are you sure/i)).toBeNull();
+  });
+
   it("clicking the clear button empties the message", async () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
@@ -430,6 +458,21 @@ describe("PublicProfile page", () => {
     expect(() => fireEvent.click(copyBtn)).not.toThrow();
   });
 
+  it("flips the copy tooltip to the 'Copied!' state after a successful copy", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const copyBtn = screen.getByRole("button", { name: /copy profile link/i });
+    fireEvent.click(copyBtn);
+    // A successful navigator.clipboard.writeText() flips Mantine's `copied`
+    // state to true, re-rendering the Tooltip with the "Copied!" label.
+    await waitFor(() => expect(writeTextMock).toHaveBeenCalled());
+  });
+
   it("clicking the share button via navigator.share succeeds", async () => {
     const shareMock = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "share", {
@@ -443,6 +486,9 @@ describe("PublicProfile page", () => {
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
+    expect(shareMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringContaining("Karan") })
+    );
     // Restore
     Object.defineProperty(navigator, "share", {
       value: undefined,
@@ -489,6 +535,39 @@ describe("PublicProfile page", () => {
     await waitFor(() => {
       expect(screen.getByText(/share failed/i)).toBeInTheDocument();
     });
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
+  });
+
+  it("share title falls back to profile.handle when displayName is absent", async () => {
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", {
+      value: shareMock,
+      configurable: true,
+    });
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: {
+        exists: true,
+        profile: { did: TEST_DID, handle: "karan.bsky.social", displayName: null, avatar: null },
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    renderWithProviders(<PublicProfile />);
+    const shareBtn = screen.getByRole("button", { name: /share profile link/i });
+    fireEvent.click(shareBtn);
+    await waitFor(() => expect(shareMock).toHaveBeenCalled());
+    expect(shareMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringContaining("karan.bsky.social") })
+    );
     Object.defineProperty(navigator, "share", {
       value: undefined,
       configurable: true,
