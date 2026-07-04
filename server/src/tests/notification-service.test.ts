@@ -279,7 +279,8 @@ describe("NotificationService", () => {
       let server: https.Server;
       let port: number;
       let nextStatus: number;
-      let prevEnv: { pub?: string; priv?: string; subj?: string; tls?: string };
+      let prevEnv: { pub?: string; priv?: string; subj?: string };
+      let prevGlobalAgent: typeof https.globalAgent;
 
       before(() => {
         const certDir = fs.mkdtempSync(path.join(os.tmpdir(), "wp-test-certs-"));
@@ -299,11 +300,16 @@ describe("NotificationService", () => {
           "-nodes",
           "-subj",
           "/CN=127.0.0.1",
+          // A SAN entry is required — modern Node/OpenSSL clients reject
+          // certs that only match via the legacy CN fallback.
+          "-addext",
+          "subjectAltName=IP:127.0.0.1",
         ]);
 
+        const certPem = fs.readFileSync(certPath);
         nextStatus = 201;
         server = https.createServer(
-          { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) },
+          { key: fs.readFileSync(keyPath), cert: certPem },
           (req, res) => {
             req.resume();
             req.on("end", () => {
@@ -312,6 +318,12 @@ describe("NotificationService", () => {
             });
           }
         );
+
+        // Trust this run's throwaway CA specifically (scoped to the global
+        // agent web-push falls back to), rather than disabling certificate
+        // validation process-wide.
+        prevGlobalAgent = https.globalAgent;
+        https.globalAgent = new https.Agent({ ca: certPem });
 
         return new Promise<void>((resolve) => {
           server.listen(0, "127.0.0.1", () => {
@@ -323,6 +335,7 @@ describe("NotificationService", () => {
       });
 
       after(() => {
+        https.globalAgent = prevGlobalAgent;
         return new Promise<void>((resolve) => server.close(() => resolve()));
       });
 
@@ -333,13 +346,10 @@ describe("NotificationService", () => {
           pub: process.env.VAPID_PUBLIC_KEY,
           priv: process.env.VAPID_PRIVATE_KEY,
           subj: process.env.VAPID_SUBJECT,
-          tls: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
         };
         process.env.VAPID_PUBLIC_KEY = keys.publicKey;
         process.env.VAPID_PRIVATE_KEY = keys.privateKey;
         process.env.VAPID_SUBJECT = "mailto:test@example.com";
-        // The server above uses a throwaway self-signed cert.
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
         const subKeys = makeSubscriptionKeys();
         mockDb.selectFrom = mock.fn(() =>
@@ -358,7 +368,6 @@ describe("NotificationService", () => {
         process.env.VAPID_PUBLIC_KEY = prevEnv.pub;
         process.env.VAPID_PRIVATE_KEY = prevEnv.priv;
         process.env.VAPID_SUBJECT = prevEnv.subj;
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = prevEnv.tls;
       });
 
       test("resolves the recipient's handle and sends successfully", async () => {
