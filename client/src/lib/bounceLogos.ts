@@ -3,7 +3,7 @@ export const BOX_MAX_WIDTH = 1400;
 export const LOGO_SIZE = 48;
 export const MIN_GAP_PX = 192;
 
-const MARGIN = 32;
+export const MARGIN = 32;
 export const BASE_SPEED = 90;
 
 export interface BounceBounds {

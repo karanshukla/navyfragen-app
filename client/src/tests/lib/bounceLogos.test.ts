@@ -6,6 +6,7 @@ import {
   computeGapBounds,
   createInitialState,
   LOGO_SIZE,
+  MARGIN,
   MIN_GAP_PX,
   stepBounce,
 } from "../../lib/bounceLogos";
@@ -32,12 +33,12 @@ describe("computeGapBounds", () => {
     expect(bounds).not.toBeNull();
     const gap = (width - BOX_MAX_WIDTH) / 2;
 
-    expect(bounds!.left.xMin).toBe(16);
-    expect(bounds!.left.xMax).toBe(gap - LOGO_SIZE - 16);
-    expect(bounds!.right.xMax).toBe(width - LOGO_SIZE - 16);
-    expect(bounds!.right.xMin).toBe(width - gap + 16);
-    expect(bounds!.left.yMin).toBe(16);
-    expect(bounds!.left.yMax).toBe(height - LOGO_SIZE - 16);
+    expect(bounds!.left.xMin).toBe(MARGIN);
+    expect(bounds!.left.xMax).toBe(gap - LOGO_SIZE - MARGIN);
+    expect(bounds!.right.xMax).toBe(width - LOGO_SIZE - MARGIN);
+    expect(bounds!.right.xMin).toBe(width - gap + MARGIN);
+    expect(bounds!.left.yMin).toBe(MARGIN);
+    expect(bounds!.left.yMax).toBe(height - LOGO_SIZE - MARGIN);
     expect(bounds!.right.yMin).toBe(bounds!.left.yMin);
     expect(bounds!.right.yMax).toBe(bounds!.left.yMax);
   });
