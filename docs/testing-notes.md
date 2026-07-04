@@ -116,6 +116,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Mock the `tokenize` function to inject a fake segment with an unknown type.
 
+### `client/src/utils/parseRichText.tsx` — protocol-prefix guard for auto-detected domain links
+
+**Line:** `if (!/^https?:\/\//.test(href)) { href = "https://" + href; }` inside the `text`-segment auto-linking loop in `parseRichText`.
+
+**Why ignored:** `matchText` comes from `domainRegex`, whose domain-segment pattern (`(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}`) requires a literal `.` immediately before the TLD. `http:` and `https:` contain no `.` before their `:`, so the regex engine can never start a match there — verified empirically (`domainRegex.exec("https://example.com/path")` returns `"example.com/path"`, never including the scheme). `matchText` is therefore always a bare domain, so the guard's "already has a protocol" false arm is structurally unreachable.
+
+**What it would take to test:** Not possible through `parseRichText`'s public behavior — would require calling the auto-linking logic directly with a hand-crafted `matchText` that already includes a scheme, bypassing the regex that makes this guard necessary in the first place.
+
 ### `client/src/api/messageService.ts` — disabled-query reject branch in `useMessages`
 
 **Line:** the `Promise.reject("No DID provided")` inside `useMessages`'s `queryFn`.
