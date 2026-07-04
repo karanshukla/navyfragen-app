@@ -285,19 +285,6 @@ function UserMenu({
 
         <Menu.Item
           component={Link}
-          to={`/profile/${userProfile.handle}`}
-          onClick={() => {
-            triggerHaptic();
-            onNavigate();
-          }}
-          leftSection={<IconUser size="1.2rem" stroke={1.5} />}
-        >
-          View Profile
-        </Menu.Item>
-
-        {/* Add another Bluesky account via OAuth. */}
-        <Menu.Item
-          component={Link}
           to="/login?add=1"
           onClick={() => {
             triggerHaptic();
@@ -306,6 +293,20 @@ function UserMenu({
           leftSection={<IconPlus size="1.2rem" stroke={1.5} />}
         >
           Add account
+        </Menu.Item>
+
+        <Menu.Divider />
+
+        <Menu.Item
+          component={Link}
+          to={`/profile/${userProfile.handle}`}
+          onClick={() => {
+            triggerHaptic();
+            onNavigate();
+          }}
+          leftSection={<IconUser size="1.2rem" stroke={1.5} />}
+        >
+          View Profile
         </Menu.Item>
 
         <Menu.Item
