@@ -9,7 +9,7 @@ import type { AppContext } from "../index";
 export function messageRoutes(ctx: AppContext, handler: any, checkValidation: any) {
   // Initialize service and controller
   const messageService = new MessageService(ctx.db, ctx.resolver, ctx.logger);
-  const notificationService = new NotificationService(ctx.db, ctx.logger);
+  const notificationService = new NotificationService(ctx.db, ctx.resolver, ctx.logger);
   const messageController = new MessageController(
     messageService,
     ctx.logger,

@@ -3,6 +3,14 @@ import { sendNotification, setVapidDetails } from "web-push";
 
 import type { Database } from "../database/db";
 
+/**
+ * Minimal shape NotificationService needs from the app's DID resolver, so
+ * tests can stub it without pulling in the real AT Protocol resolution.
+ */
+export interface ProfileResolver {
+  resolveDidToHandle(did: string): Promise<string | undefined>;
+}
+
 // VAPID config is read live from process.env (rather than the frozen `env`
 // snapshot) so tests can toggle it per-case without reloading the module.
 // All three reads below share this single source.
@@ -80,6 +88,7 @@ const pushLimiter = createConcurrencyLimiter(PUSH_CONCURRENCY_LIMIT);
 export class NotificationService {
   constructor(
     private db: Database,
+    private resolver: ProfileResolver,
     private logger: Logger
   ) {}
 
@@ -171,10 +180,19 @@ export class NotificationService {
 
     if (subscriptions.length === 0) return;
 
+    // Push isn't scoped to a single account per browser — a device can be
+    // subscribed under one account while the browser's active session has
+    // since switched to another. Naming the recipient account up front (and
+    // passing its DID along) lets the client tell notifications apart and
+    // auto-switch to the right account on click.
+    const handle = await this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined);
+
     const payload = JSON.stringify({
-      title: "New anonymous question",
+      title: handle ? `New question for @${handle}` : "New anonymous question",
       body: "Someone sent you an anonymous question on Navyfragen!",
       url: "/messages",
+      did: recipientDid,
+      handle,
     });
 
     await Promise.allSettled(

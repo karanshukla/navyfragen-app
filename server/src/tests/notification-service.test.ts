@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import { test, describe, beforeEach, mock } from "node:test";
 
+import { generateVAPIDKeys } from "web-push";
+
 import { NotificationService, createConcurrencyLimiter } from "../services/notification-service";
 
 // Chainable DB builder mocks — match the pattern used across the server tests.
@@ -50,6 +52,7 @@ function makeUpdateBuilder() {
 describe("NotificationService", () => {
   let mockDb: any;
   let mockLogger: any;
+  let mockResolver: any;
   let service: NotificationService;
 
   beforeEach(() => {
@@ -59,13 +62,16 @@ describe("NotificationService", () => {
       warn: mock.fn(),
       debug: mock.fn(),
     };
+    mockResolver = {
+      resolveDidToHandle: mock.fn(async () => "alice.test"),
+    };
     mockDb = {
       selectFrom: mock.fn(() => makeSelectBuilder(undefined, [])),
       insertInto: mock.fn(() => makeInsertBuilder()),
       deleteFrom: mock.fn(() => makeDeleteBuilder()),
       updateTable: mock.fn(() => makeUpdateBuilder()),
     };
-    service = new NotificationService(mockDb, mockLogger);
+    service = new NotificationService(mockDb, mockResolver, mockLogger);
   });
 
   describe("saveSubscription", () => {
@@ -153,6 +159,30 @@ describe("NotificationService", () => {
       await service.sendNewMessageNotification("did:recipient");
       assert.strictEqual(mockLogger.debug.mock.calls.length, 1);
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 0);
+    });
+
+    test("skips handle resolution when the recipient has no subscriptions", async () => {
+      const keys = generateVAPIDKeys();
+      const prev = {
+        pub: process.env.VAPID_PUBLIC_KEY,
+        priv: process.env.VAPID_PRIVATE_KEY,
+        subj: process.env.VAPID_SUBJECT,
+      };
+      process.env.VAPID_PUBLIC_KEY = keys.publicKey;
+      process.env.VAPID_PRIVATE_KEY = keys.privateKey;
+      process.env.VAPID_SUBJECT = "mailto:test@example.com";
+
+      try {
+        // Default mockDb.selectFrom resolves to an empty subscriptions array.
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
+        assert.strictEqual(mockResolver.resolveDidToHandle.mock.calls.length, 0);
+      } finally {
+        process.env.VAPID_PUBLIC_KEY = prev.pub;
+        process.env.VAPID_PRIVATE_KEY = prev.priv;
+        process.env.VAPID_SUBJECT = prev.subj;
+      }
     });
   });
 });

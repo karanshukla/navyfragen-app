@@ -69,12 +69,48 @@ self.addEventListener("push", (event) => {
   );
 });
 
+// A device's push subscription is tied to whatever account was active when
+// the user last enabled push — it doesn't automatically follow later account
+// switches in the same browser. So a notification's recipient (data.did) can
+// differ from whichever account is currently active. Before navigating, try
+// to switch the active session to match so the inbox that opens is the right
+// one; if that account isn't remembered on this device, fall back silently.
+async function switchToNotificationAccount(data) {
+  if (!data?.did) return null;
+
+  try {
+    const sessionRes = await fetch("/session", { credentials: "include" });
+    if (!sessionRes.ok) return null;
+    const session = await sessionRes.json();
+    if (!session.did || session.did === data.did) return null;
+
+    const switchRes = await fetch("/accounts/switch", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ did: data.did }),
+    });
+    return switchRes.ok ? (data.handle ?? null) : null;
+  } catch (err) {
+    console.warn("[sw] account auto-switch failed", err);
+    return null;
+  }
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = new URL(event.notification.data?.url || "/messages", self.location.origin).href;
+  const data = event.notification.data || {};
 
   event.waitUntil(
     (async () => {
+      const switchedToHandle = await switchToNotificationAccount(data);
+
+      const url = new URL(data.url || "/messages", self.location.origin);
+      if (switchedToHandle) {
+        url.searchParams.set("accountSwitched", switchedToHandle);
+      }
+      const targetUrl = url.href;
+
       const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
 
       for (const client of clientList) {
