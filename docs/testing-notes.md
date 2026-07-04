@@ -140,13 +140,25 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** There is no DOM path to exercise the false branch because the tokenizer's domain regex logically excludes protocol-prefixed strings. Testing it would require either mocking the regex or exporting the inner text-processing logic.
 
-### `client/src/pages/Messages.tsx` — collapsed reply Box/Button handlers (lines 1314-1318)
+### `client/src/pages/Messages.tsx` — collapsed reply Box/Button handlers (correction to a prior note)
 
-**Lines:** 1314 (`<Box ... onClick={(e) => e.stopPropagation()}>`) and 1315-1318 (the collapsed `↩ Reply` Button's `onClick` body: `triggerHaptic()` + `handlePrepareResponse(msg.tid)`).
+A previous version of this note claimed the collapsed `↩ Reply` Box's `stopPropagation` handler and the collapsed Button's `onClick` body were uncovered due to a Vitest/v8 source-map alignment bug with arrow functions nested in the non-first branch of a JSX ternary. That diagnosis was wrong. The real cause: `screen.getAllByRole("button", { name: /reply/i })` matches **both** the outer message-card `<Paper role="button">` (whose aggregated accessible name includes the nested "↩ Reply" text) **and** the actual nested `<button>` element. `.find((b) => b.textContent?.includes("↩"))` picked the first DOM-order match, which is the outer Paper card — so those "collapsed button" tests were actually clicking the card itself (which has its own unguarded `onClick` that produces the same visible outcome), never the real nested Box/Button. Querying with an **exact** name match (e.g. `screen.getAllByRole("button", { name: "↩ Reply" })`, exact matching excludes the Paper since its full accessible name is longer) or `document.querySelectorAll("button")` reliably isolates the real element and exercises these handlers normally — no ignore annotation or tooling workaround is needed. See `Messages.test.tsx` for the corrected tests ("collapsed reply Box wrapper stops click propagation…", "collapsed reply Button (exact match) opens the response box…", "collapsed reply Button does nothing when blocked…").
 
-**Why uncovered:** These handlers live inside the `else` arm of the `{isExpanded ? (expanded view) : (collapsed view)}` JSX ternary. Vitest 4.1.9 with the v8 coverage provider has a persistent source-map alignment issue: arrow-function bodies nested inside the non-first branch of a JSX ternary are not attributed to their correct source lines. Tests that behaviorally prove both handlers execute correctly (a Box-click test confirms `stopPropagation` works; a `userEvent.click` test confirms the Reply button expands the card) exist and pass, but v8 does not increment line coverage for lines 1314-1318 regardless.
+### `client/src/pages/Messages.tsx` — six structurally-unreachable defensive guards
 
-**What it would take to fix the measurement:** Upgrade to a version of Vitest/v8 that correctly attributes ternary-branch arrow functions, or switch the affected file to Istanbul (`/* istanbul ignore */`) which uses AST-based instrumentation instead of source maps.
+**Lines (as of this writing):** `handleDeleteRequest`'s `if (threadRootTid === tid) return;`; `handleConfirmDelete`'s `if (messageIdToDelete) performDelete(...)`; `handlePrepareResponse`'s `if (idx !== -1) setFocusedCardIndex(idx);`; the `if (el) setTimeout(...)` in the respondingTid scroll-into-view `useEffect`; the `newestCard ?? messagesTopRef.current` fallback plus its `if (target)` guard in the auto-scroll `useEffect`; and the `if (idx !== -1) messageCardRefs.current[idx]?.focus();` in the global Escape-key handler.
+
+**Why ignored:** All six are defensive guards whose "unhappy" arm can never be reached given the app's actual call graph:
+- `handleDeleteRequest`'s guard duplicates a check the trash `ActionIcon`'s `onClick` already performs (`if (isPinned) return;`) before ever calling the handler — by the time `handleDeleteRequest` runs, `threadRootTid === tid` is already known false.
+- `handleConfirmDelete`'s guard: `messageIdToDelete` is always set in the same state update that opens the confirmation modal, and the only element that invokes this handler (the modal's Confirm button) doesn't exist in the DOM unless the modal is open.
+- `handlePrepareResponse`'s `idx` lookup: every call site passes a `tid` taken directly from a `sortedMessages` entry (the same array being searched), so the entry is always found.
+- The scroll-into-view effect's `el` lookup: `respondingTid` is only ever set (via `handlePrepareResponse`) to the tid of a card that is already rendered in the same commit, so `document.getElementById` always finds it.
+- The auto-scroll effect's `newestCard` lookup: whenever the guarding `messages?.[0]` check passes, that message's card is rendered in the same commit, so `newestCard` is always truthy, making both the `??` fallback and the `if (target)` guard's false arm dead.
+- The Escape-key handler's `idx` lookup: same reasoning as `handlePrepareResponse` — `respondingTid` always corresponds to a `sortedMessages` entry.
+
+Each is annotated in place with `/* v8 ignore start */` / `/* v8 ignore stop */` around just the guard statement, following this file's established convention, plus an inline comment explaining the reachability argument.
+
+**What it would take to test:** Each would require calling the relevant internal function directly with an argument that violates the invariant enforced by its sole caller (e.g. a `tid` not present in `sortedMessages`, or firing the modal's `onConfirm` with `messageIdToDelete` forced to `null`) — not reachable by driving the rendered UI, since every caller already enforces the invariant before invoking these functions.
 
 ## V8 JIT Module-Scope Artifacts
 

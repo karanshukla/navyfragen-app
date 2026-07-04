@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
 import * as settingsService from "../../api/settingsService";
+import { themes } from "../../lib/themes";
 import Messages, { formatTimestamp } from "../../pages/Messages";
 import { renderWithProviders } from "../testUtils";
 
@@ -1036,5 +1037,530 @@ describe("Messages page", () => {
     await waitFor(() => {
       expect(screen.getByRole("textbox", { name: /your response/i })).toBeInTheDocument();
     });
+  });
+
+  // ── Batch 5: closing remaining coverage gaps ──────────────────────────────
+
+  it("CharRing shows the danger color once the response exceeds 90% of the character limit", async () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
+    fireEvent.click(realReplyBtn);
+    const textarea = await screen.findByRole("textbox", { name: /your response/i });
+
+    const longText = "a".repeat(260); // > 90% of the default 277 char limit
+    fireEvent.change(textarea, { target: { value: longText } });
+
+    await waitFor(() => {
+      expect(screen.getByText(`${longText.length}/277`)).toBeInTheDocument();
+    });
+
+    const dangerCircle = Array.from(document.querySelectorAll("svg circle")).find(
+      (c) => c.getAttribute("stroke") === "var(--nf-sunshine)"
+    );
+    expect(dangerCircle).toBeTruthy();
+  });
+
+  it("updateSettings onError falls back to a default message when error.error is missing", async () => {
+    let capturedOnError: any;
+    setupMocks();
+    mockUseUpdateUserSettings.mockImplementation((options: any) => {
+      capturedOnError = options?.onError;
+      return noopMutation;
+    });
+    renderWithProviders(<Messages />);
+
+    act(() => {
+      capturedOnError({});
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/failed to update image theme/i)).toBeInTheDocument();
+    });
+  });
+
+  it("addExampleMessages onError falls back to a default message when err.error is missing", async () => {
+    let capturedCallbacks: any;
+    const mockAddMutate = vi.fn((_did: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseAddExampleMessages.mockReturnValue({
+      mutate: mockAddMutate,
+      isPending: false,
+    } as any);
+    mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
+    mockUseMessages.mockReturnValue({
+      data: { messages: [] },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as any);
+    mockUseDeleteMessage.mockReturnValue(noopMutation);
+    mockUseRespondToMessage.mockReturnValue(noopMutation);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default" },
+      isLoading: false,
+    } as any);
+    mockUseUpdateUserSettings.mockReturnValue(noopMutation);
+    renderWithProviders(<Messages />);
+
+    fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
+    await waitFor(() => expect(mockAddMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onError({});
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/failed to add example messages/i)).toBeInTheDocument();
+    });
+  });
+
+  it("performDelete onError (from modal) falls back to a default message when err.error is missing", async () => {
+    localStorage.setItem("confirmBeforeDelete", JSON.stringify(true));
+    let capturedCallbacks: any;
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    setupMocks();
+    mockUseDeleteMessage.mockReturnValue({
+      mutate: mockDeleteMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    await waitFor(() => screen.getByText(/confirm deletion/i));
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onError({});
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/failed to delete message/i)).toBeInTheDocument();
+      expect(screen.queryByText(/confirm deletion/i)).toBeNull();
+    });
+  });
+
+  it("characterLimit skips the question-length subtraction once the responding message disappears from the list", async () => {
+    localStorage.setItem("includeQuestionAsImage", JSON.stringify(false));
+    setupMocks();
+    const { rerender } = renderWithProviders(<Messages />);
+
+    const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
+    fireEvent.click(realReplyBtn);
+    await screen.findByRole("textbox", { name: /your response/i });
+    // With includeQuestionAsImage off, the question text is subtracted from the base 277 limit.
+    expect(screen.queryByText(/^0\/277$/)).toBeNull();
+
+    // Simulate the message list refreshing without msg-1 while still "responding" to it
+    // (e.g. it was deleted from another tab, or a refetch raced the in-progress reply).
+    mockUseMessages.mockReturnValue({
+      data: { messages: [MESSAGES[1]] },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    expect(() => rerender(<Messages />)).not.toThrow();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+    });
+    expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
+  });
+
+  it("clears a stale pinned threadRootTid (and its threadLinks entry) when the message no longer exists", async () => {
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("ghost-tid"));
+    localStorage.setItem(
+      "threadLinks-did:example:1",
+      JSON.stringify({ "ghost-tid": { uri: "at://x", cid: "y" } })
+    );
+    setupMocks(); // MESSAGES contains only msg-1 / msg-2, not "ghost-tid"
+    renderWithProviders(<Messages />);
+
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem("threadRootTid-did:example:1") || "null")).toBeNull();
+    });
+    await waitFor(() => {
+      const links = JSON.parse(localStorage.getItem("threadLinks-did:example:1") || "{}");
+      expect(links["ghost-tid"]).toBeUndefined();
+    });
+  });
+
+  it("replying to a non-root message when the thread root already has a link sets replyTo and shows 'Added to thread!' with a link", async () => {
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-2"));
+    localStorage.setItem(
+      "threadLinks-did:example:1",
+      JSON.stringify({ "msg-2": { uri: "at://root", cid: "cid-root" } })
+    );
+    let capturedCallbacks: any;
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    // msg-1 is not the root, and threadLinks["msg-2"] has a uri/cid, so it's unblocked.
+    const replyBtn = screen.getByRole("button", { name: "↩ Reply to thread" });
+    fireEvent.click(replyBtn);
+    await screen.findByRole("textbox", { name: /your response/i });
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "Thread reply text" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^reply to thread$/i }));
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+    expect(mockRespondMutate.mock.calls[0][0].replyTo).toEqual({
+      uri: "at://root",
+      cid: "cid-root",
+    });
+
+    act(() => {
+      capturedCallbacks.onSuccess({ link: "https://bsky.app/profile/user/post/thread1" });
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/added to thread!/i)).toBeInTheDocument();
+      expect(screen.getByText(/added to thread\./i)).toBeInTheDocument();
+      expect(screen.getByText("https://bsky.app/profile/user/post/thread1")).toBeInTheDocument();
+    });
+  });
+
+  it("replying to a non-root message without a data.link shows plain 'Added to thread.' message", async () => {
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-2"));
+    localStorage.setItem(
+      "threadLinks-did:example:1",
+      JSON.stringify({ "msg-2": { uri: "at://root", cid: "cid-root" } })
+    );
+    let capturedCallbacks: any;
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    const replyBtn = screen.getByRole("button", { name: "↩ Reply to thread" });
+    fireEvent.click(replyBtn);
+    await screen.findByRole("textbox", { name: /your response/i });
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "Thread reply text" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^reply to thread$/i }));
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onSuccess({});
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/added to thread!/i)).toBeInTheDocument();
+      expect(screen.getByText(/added to thread\./i)).toBeInTheDocument();
+    });
+  });
+
+  it("the expanded send button is disabled when the thread root has no link yet (blocked)", async () => {
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-2"));
+    // No threadLinks entry for msg-2 → responding to msg-1 is blocked.
+    const mockRespondMutate = vi.fn();
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    // Click the card body directly (not the small Reply button, which itself blocks opening)
+    // to get into the expanded/blocked state and exercise the Send button's disabled branch.
+    const card = document.getElementById("message-card-msg-1")!;
+    fireEvent.click(card);
+    await screen.findByRole("textbox", { name: /your response/i });
+
+    const sendBtn = screen.getByRole("button", { name: /^reply to thread$/i });
+    expect(sendBtn).toBeDisabled();
+    fireEvent.click(sendBtn);
+    expect(mockRespondMutate).not.toHaveBeenCalled();
+  });
+
+  it("collapsed reply Box wrapper stops click propagation without itself opening the response box", () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    const realBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
+    const boxDiv = realBtn.parentElement!;
+    fireEvent.click(boxDiv);
+
+    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+  });
+
+  it("collapsed reply Button (exact match) opens the response box when not blocked", async () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    const realBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
+    fireEvent.click(realBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /your response/i })).toBeInTheDocument();
+    });
+  });
+
+  it("collapsed reply Button does nothing when blocked (thread root has no link yet)", async () => {
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-2"));
+    setupMocks();
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    const realBtn = screen.getByRole("button", { name: "↩ Reply to thread" });
+    fireEvent.click(realBtn);
+    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+  });
+
+  it("clicking the Copy button shows 'Copied!' after navigator.clipboard.writeText resolves", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+      writable: true,
+    });
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^copied!$/i })).toBeInTheDocument();
+    });
+  });
+
+  it("shows a loader in place of the message grid while messages are loading", () => {
+    mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
+    mockUseMessages.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    mockUseDeleteMessage.mockReturnValue(noopMutation);
+    mockUseRespondToMessage.mockReturnValue(noopMutation);
+    mockUseAddExampleMessages.mockReturnValue(noopMutation);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default" },
+      isLoading: false,
+    } as any);
+    mockUseUpdateUserSettings.mockReturnValue(noopMutation);
+    renderWithProviders(<Messages />);
+
+    expect(screen.queryByText(/no messages/i)).toBeNull();
+    expect(screen.queryByText("Hello?")).toBeNull();
+  });
+
+  it("shows the 'Default' theme label while user settings are loading", () => {
+    setupMocks();
+    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: true } as any);
+    renderWithProviders(<Messages />);
+    expect(screen.getAllByText(themes.default).length).toBeGreaterThan(0);
+  });
+
+  it("falls back to the 'Default' theme label when userSettings.imageTheme is undefined", () => {
+    setupMocks();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Messages />);
+    expect(screen.getAllByText(themes.default).length).toBeGreaterThan(0);
+  });
+
+  it("clicking a ThemeCard while settings are loading does not call updateSettings.mutate", () => {
+    const mockMutate = vi.fn();
+    setupMocks();
+    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: true } as any);
+    mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+    renderWithProviders(<Messages />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^default$/i }));
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it("clicking a ThemeCard while an update is already pending does not call updateSettings.mutate again", () => {
+    const mockMutate = vi.fn();
+    setupMocks();
+    mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: true } as any);
+    renderWithProviders(<Messages />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^default$/i }));
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it("pressing a non-Enter/Space key on a message card does nothing", () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    const card = document.getElementById("message-card-msg-1")!;
+    fireEvent.focus(card);
+    fireEvent.keyDown(card, { key: "Tab" });
+
+    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+  });
+
+  it("useGradients=false hydrates from localStorage and drives the card's background-color source", async () => {
+    // Note: we can't assert the rendered `style.background` string directly here — happy-dom has
+    // a quirk where once a `background` shorthand containing `var(...)` is set via the CSSOM
+    // property setter, later property-based updates to that same node stop being reflected in
+    // `.style`/`getAttribute("style")`, even though the underlying JS ternary re-evaluates
+    // correctly on every render. The Switch's `checked` DOM property isn't subject to that
+    // shorthand-specific bug, and it reflects the exact same `useGradients` value read in the
+    // same render pass as the card's `background: useGradients ? ... : surfaceBg(isDark)` line.
+    localStorage.setItem("useGradients", JSON.stringify(false));
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    await waitFor(() => {
+      const gradientSwitch = screen.getByLabelText(/gradient backgrounds/i) as HTMLInputElement;
+      expect(gradientSwitch.checked).toBe(false);
+    });
+  });
+
+  it("pressing Shift+Enter in the response textarea does not submit the response", async () => {
+    const mockRespondMutate = vi.fn();
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+
+    const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
+    fireEvent.click(realReplyBtn);
+    const textarea = await screen.findByRole("textbox", { name: /your response/i });
+    fireEvent.change(textarea, { target: { value: "line one" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
+
+    expect(mockRespondMutate).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: /your response/i })).toBeInTheDocument();
+  });
+
+  it("Alt+R shortcut is a no-op when there are no messages", () => {
+    setupMocks([]);
+    renderWithProviders(<Messages />);
+    expect(() => fireEvent.keyDown(document, { key: "R", altKey: true })).not.toThrow();
+  });
+
+  it("ArrowDown/ArrowUp shortcuts are a no-op when the message list becomes empty", async () => {
+    setupMocks();
+    const { rerender } = renderWithProviders(<Messages />);
+
+    // Focus a card via Alt+R so focusedCardIndex !== -1
+    fireEvent.keyDown(document, { key: "R", altKey: true });
+
+    mockUseMessages.mockReturnValue({
+      data: { messages: [] },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    rerender(<Messages />);
+    await waitFor(() => {
+      expect(screen.getByText(/don.t have any messages yet/i)).toBeInTheDocument();
+    });
+
+    expect(() => fireEvent.keyDown(document, { key: "ArrowDown" })).not.toThrow();
+  });
+
+  it("does not scroll into view when the newest message target is already visible in the viewport", async () => {
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+      top: 100,
+      bottom: 200,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 100,
+      x: 0,
+      y: 100,
+      toJSON: () => {},
+    } as DOMRect);
+
+    setupMocks([]);
+    const { rerender } = renderWithProviders(<Messages />);
+    await waitFor(() => expect(screen.queryByText("Hello?")).toBeNull());
+
+    mockUseMessages.mockReturnValue({
+      data: { messages: MESSAGES },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    rerender(<Messages />);
+    await waitFor(() => expect(screen.getByText("Hello?")).toBeInTheDocument());
+
+    expect(scrollSpy).not.toHaveBeenCalled();
+    scrollSpy.mockRestore();
+    rectSpy.mockRestore();
+  });
+
+  it("Cancel does not close the confirmation modal while a delete mutation is globally pending", async () => {
+    localStorage.setItem("confirmBeforeDelete", JSON.stringify(true));
+    setupMocks();
+    mockUseDeleteMessage.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    await waitFor(() => screen.getByText(/confirm deletion/i));
+
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    expect(screen.getByText(/confirm deletion/i)).toBeInTheDocument();
+  });
+
+  it("handleSendResponse onError falls back to a default message when err.error is missing", async () => {
+    let capturedRespondCallbacks: any;
+    setupMocks();
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedRespondCallbacks = callbacks;
+    });
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+
+    const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
+    fireEvent.click(realReplyBtn);
+    await screen.findByRole("textbox", { name: /your response/i });
+    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+      target: { value: "Great question!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedRespondCallbacks.onError({});
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/failed to send response/i)).toBeInTheDocument();
+    });
+  });
+
+  it("the auto-scroll effect does not re-fire scrollIntoView when a refetch returns the same message count", async () => {
+    setupMocks();
+    const { rerender } = renderWithProviders(<Messages />);
+    await waitFor(() => expect(screen.getByText("Hello?")).toBeInTheDocument());
+
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    // A background refetch (refetchInterval) resolves with a new array reference containing the
+    // same messages — count === prev, so the effect's guard should short-circuit to false.
+    mockUseMessages.mockReturnValue({
+      data: { messages: [...MESSAGES] },
+      isLoading: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    } as any);
+    rerender(<Messages />);
+    await act(async () => {});
+
+    expect(scrollSpy).not.toHaveBeenCalled();
+    scrollSpy.mockRestore();
   });
 });
