@@ -12,6 +12,7 @@ describe("NotificationController", () => {
     return {
       getVapidPublicKey: mock.fn(() => "vapid-key"),
       saveSubscription: mock.fn(async () => {}),
+      syncSubscriptionsAcrossAccounts: mock.fn(async () => {}),
       deleteSubscription: mock.fn(async () => {}),
       ...overrides,
     };
@@ -90,6 +91,30 @@ describe("NotificationController", () => {
       const args = svc.saveSubscription.mock.calls[0].arguments;
       assert.strictEqual(args[0], "did:foo"); // did from session
       assert.strictEqual(args[1], "https://push.example.com/sub");
+    });
+
+    test("syncs the subscription across every account remembered on this device", async () => {
+      const svc = makeService();
+      const controller = new NotificationController(svc, makeLogger());
+      const res = makeRes();
+      await controller.subscribe(
+        makeReq({
+          body: validBody,
+          session: {
+            did: "did:foo",
+            accounts: [
+              { did: "did:foo", handle: "foo.bsky.social" },
+              { did: "did:bar", handle: "bar.bsky.social" },
+            ],
+          },
+        }),
+        res
+      );
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 201);
+      assert.deepStrictEqual(svc.syncSubscriptionsAcrossAccounts.mock.calls[0].arguments[0], [
+        "did:foo",
+        "did:bar",
+      ]);
     });
 
     test("returns 500 when service throws", async () => {

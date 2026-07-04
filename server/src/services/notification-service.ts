@@ -135,6 +135,43 @@ export class NotificationService {
   }
 
   /**
+   * Make push notifications device-wide: given every account remembered on
+   * one browser, copy whichever (endpoint, keys) rows already exist for any
+   * of them onto the accounts still missing a row. Called after enabling
+   * push and after switching accounts, so a device that's ever subscribed
+   * keeps every signed-in account covered, not just whichever was active at
+   * subscribe time.
+   */
+  async syncSubscriptionsAcrossAccounts(dids: string[]): Promise<void> {
+    if (dids.length < 2) return;
+
+    const rows = await this.db
+      .selectFrom("push_subscription")
+      .selectAll()
+      .where("did", "in", dids)
+      .execute();
+    if (rows.length === 0) return;
+
+    const devices = new Map<string, { p256dh: string; auth: string }>();
+    for (const row of rows) {
+      if (!devices.has(row.endpoint)) {
+        devices.set(row.endpoint, { p256dh: row.p256dh, auth: row.auth });
+      }
+    }
+
+    const existingPairs = new Set(rows.map((row) => `${row.did}:${row.endpoint}`));
+    const missing: Promise<void>[] = [];
+    for (const did of dids) {
+      for (const [endpoint, keys] of devices) {
+        if (!existingPairs.has(`${did}:${endpoint}`)) {
+          missing.push(this.saveSubscription(did, endpoint, keys.p256dh, keys.auth));
+        }
+      }
+    }
+    await Promise.all(missing);
+  }
+
+  /**
    * Remove a specific push subscription by endpoint (called on unsubscribe).
    */
   async deleteSubscription(did: string, endpoint: string): Promise<void> {

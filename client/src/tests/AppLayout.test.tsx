@@ -8,7 +8,7 @@ import * as authService from "../api/authService";
 
 vi.mock("../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/authService")>();
-  return { ...actual, useSession: vi.fn() };
+  return { ...actual, useSession: vi.fn(), useSwitchAccount: vi.fn() };
 });
 
 vi.mock("../api/messageService", () => ({
@@ -43,6 +43,7 @@ import { AppLayout } from "../AppLayout";
 import { renderWithProviders } from "./testUtils";
 
 const mockUseSession = vi.mocked(authService.useSession);
+const mockUseSwitchAccount = vi.mocked(authService.useSwitchAccount);
 
 describe("AppLayout", () => {
   beforeEach(() => {
@@ -50,6 +51,7 @@ describe("AppLayout", () => {
       data: { isLoggedIn: false, profile: null, did: null },
       isLoading: false,
     } as any);
+    mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     // Ensure no leftover ?accountSwitched= param leaks between tests.
     window.history.replaceState({}, "", "/");
   });
@@ -235,5 +237,39 @@ describe("AppLayout", () => {
     });
     // The marker is stripped so it can't re-fire on refresh.
     expect(window.location.search).toBe("");
+  });
+
+  it("switches account when the URL carries a notifyDid marker", async () => {
+    const mutate = vi.fn();
+    mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
+    window.history.replaceState(
+      {},
+      "",
+      "/messages?notifyDid=did:plc:foo&notifyHandle=foo.bsky.social"
+    );
+
+    renderWithProviders(<AppLayout />);
+
+    expect(mutate).toHaveBeenCalledWith(
+      { did: "did:plc:foo" },
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    // The notify params are stripped immediately so a re-render can't re-fire it.
+    expect(window.location.search).toBe("");
+  });
+
+  it("does not show the accountSwitched toast when a notifyDid switch is pending", async () => {
+    const { showNotification } = await import("@mantine/notifications");
+    vi.mocked(showNotification).mockClear();
+    mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    window.history.replaceState(
+      {},
+      "",
+      "/messages?notifyDid=did:plc:foo&accountSwitched=old.bsky.social"
+    );
+
+    renderWithProviders(<AppLayout />);
+
+    expect(vi.mocked(showNotification)).not.toHaveBeenCalled();
   });
 });

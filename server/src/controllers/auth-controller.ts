@@ -12,13 +12,16 @@ import {
 import { env } from "../lib/env";
 import { pdsRegion } from "../lib/pds-region";
 import { AuthService } from "../services/auth-service";
+import { NotificationService } from "../services/notification-service";
 
 import type { AppContext } from "../index";
 
 export class AuthController {
   private service: AuthService;
+  private notificationService: NotificationService;
   constructor(private ctx: AppContext) {
     this.service = new AuthService(ctx);
+    this.notificationService = new NotificationService(ctx.db, ctx.resolver, ctx.logger);
   }
   /* v8 ignore stop */
 
@@ -254,6 +257,14 @@ export class AuthController {
       session.did = did;
       upsertAccount(session, toAccountEntry(profile));
       this.ctx.logger.info({ did }, "Switched active account");
+      // Fire-and-forget: if this device already has push enabled for another
+      // remembered account, extend it to the one just switched to. Never
+      // block the switch response on this.
+      this.notificationService
+        .syncSubscriptionsAcrossAccounts(getAccounts(session).map((account) => account.did))
+        .catch((err) =>
+          this.ctx.logger.error({ err, did }, "Failed to sync push subscriptions across accounts")
+        );
       return res.json({ success: true, did });
     } catch (err) {
       this.ctx.logger.error({ err, did }, "Failed to switch account");
