@@ -183,11 +183,12 @@ export class NotificationService {
 
     if (subscriptions.length === 0) return;
 
-    // Push isn't scoped to a single account per browser — a device can be
-    // subscribed under one account while the browser's active session has
-    // since switched to another. Naming the recipient account up front (and
-    // passing its DID along) lets the client tell notifications apart and
-    // auto-switch to the right account on click.
+    // A device can hold a push subscription for several accounts at once,
+    // so more than one account's notifications can land here side by side.
+    // Naming the recipient account up front (and passing its DID along) lets
+    // the client tell them apart and auto-switch to the right account on
+    // click, since clicking one shouldn't open whichever account happens to
+    // be active in the browser.
     const handle = await this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined);
 
     const payload = JSON.stringify({

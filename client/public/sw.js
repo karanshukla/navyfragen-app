@@ -69,12 +69,12 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// A device's push subscription is tied to whatever account was active when
-// the user last enabled push — it doesn't automatically follow later account
-// switches in the same browser. So a notification's recipient (data.did) can
-// differ from whichever account is currently active. Before navigating, try
-// to switch the active session to match so the inbox that opens is the right
-// one; if that account isn't remembered on this device, fall back silently.
+// A device can hold push subscriptions for several signed-in accounts at
+// once, so a notification's recipient (data.did) doesn't necessarily match
+// whichever account is currently active in the browser. Before navigating,
+// try to switch the active session to match so the inbox that opens is the
+// right one; if that account isn't remembered on this device, fall back
+// silently.
 async function switchToNotificationAccount(data) {
   if (!data?.did) return null;
 
