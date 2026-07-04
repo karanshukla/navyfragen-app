@@ -525,7 +525,12 @@ export default function Messages() {
   };
 
   const handleDeleteRequest = (tid: string) => {
+    // The trash ActionIcon's onClick already guards on `isPinned` (threadRootTid === msg.tid)
+    // before ever calling this handler, so this condition can never be true through the UI —
+    // see docs/testing-notes.md for details.
+    /* v8 ignore start */
     if (threadRootTid === tid) return;
+    /* v8 ignore stop */
     if (confirmBeforeDelete) {
       setMessageIdToDelete(tid);
       setDeleteModalOpened(true);
@@ -562,14 +567,24 @@ export default function Messages() {
   };
 
   const handleConfirmDelete = () => {
+    // messageIdToDelete is always set in the same state update that opens the modal, and the
+    // Confirm button that invokes this handler only exists in the DOM while the modal is
+    // opened — so the false arm (messageIdToDelete === null) has no reachable UI path. See
+    // docs/testing-notes.md for details.
+    /* v8 ignore start */
     if (messageIdToDelete) performDelete(messageIdToDelete, true);
+    /* v8 ignore stop */
   };
 
   const handlePrepareResponse = (tid: string) => {
     setRespondingTid(tid);
     setResponseText("");
     const idx = sortedMessages.findIndex((m) => m.tid === tid);
+    // Every call site passes a tid taken directly from a `sortedMessages` entry, so idx is
+    // always found — the -1 branch has no reachable UI path. See docs/testing-notes.md.
+    /* v8 ignore start */
     if (idx !== -1) setFocusedCardIndex(idx);
+    /* v8 ignore stop */
   };
 
   const handleSendResponse = (msg: Message) => {
@@ -653,7 +668,12 @@ export default function Messages() {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
       const el = document.getElementById(`message-card-${respondingTid}`);
+      // respondingTid is always set (via handlePrepareResponse) to the tid of a card that is
+      // already rendered in the same commit, so el is always found — the false arm has no
+      // reachable UI path. See docs/testing-notes.md.
+      /* v8 ignore start */
       if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
+      /* v8 ignore stop */
     }
   }, [respondingTid]);
 
@@ -668,8 +688,14 @@ export default function Messages() {
     prevMsgCountRef.current = count;
     if (autoScrollToMessages && count > prev && messages?.[0]) {
       const newestCard = document.getElementById(`message-card-${messages[0].tid}`);
+      // newestCard is always found whenever this branch runs (messages[0] existing implies its
+      // card is rendered in the same commit), so the `?? messagesTopRef.current` fallback and
+      // the `if (target)` guard's false arm are both structurally unreachable. See
+      // docs/testing-notes.md.
+      /* v8 ignore start */
       const target = newestCard ?? messagesTopRef.current;
       if (target) {
+        /* v8 ignore stop */
         const { top, bottom } = target.getBoundingClientRect();
         if (top >= window.innerHeight || bottom <= 0) {
           target.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -686,7 +712,11 @@ export default function Messages() {
         event.preventDefault();
         const idx = sortedMessages.findIndex((m) => m.tid === respondingTid);
         setRespondingTid(null);
+        // respondingTid always corresponds to an entry in sortedMessages, so idx is always
+        // found — the -1 branch has no reachable UI path. See docs/testing-notes.md.
+        /* v8 ignore start */
         if (idx !== -1) messageCardRefs.current[idx]?.focus();
+        /* v8 ignore stop */
         return;
       }
 

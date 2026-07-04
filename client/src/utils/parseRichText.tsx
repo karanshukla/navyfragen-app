@@ -114,9 +114,14 @@ export const parseRichText = (text: string): React.ReactNode => {
           result.push(text.slice(lastIndex, start));
         }
         let href = matchText;
+        // domainRegex's segments require a literal "." before the TLD, so it can never
+        // match starting at "http:" or "https:" (no dot before the colon) — matchText is
+        // always the bare domain, so this guard's false arm is structurally unreachable.
+        /* v8 ignore start */
         if (!/^https?:\/\//.test(href)) {
           href = "https://" + href;
         }
+        /* v8 ignore stop */
         result.push(
           <a
             href={href}

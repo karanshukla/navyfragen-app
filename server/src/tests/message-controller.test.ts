@@ -253,6 +253,29 @@ describe("MessageController", () => {
       );
     });
 
+    test("logs an error when the fire-and-forget push notification rejects", async () => {
+      const svc = makeService();
+      const notifications = makeNotificationService({
+        sendNewMessageNotification: mock.fn(async () => {
+          throw new Error("push failed");
+        }),
+      });
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx(), notifications);
+      const res = makeRes();
+      await controller.sendMessage(
+        makeReq({ body: { recipient: "did:recipient", message: "hi" } }),
+        res
+      );
+      // The push call isn't awaited by the controller, so give its .catch() a tick to run.
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.strictEqual(logger.error.mock.calls.length, 1);
+      assert.strictEqual(
+        logger.error.mock.calls[0].arguments[1],
+        "Failed to send push notification"
+      );
+    });
+
     test("returns 404 when service throws with 'not found'", async () => {
       const svc = makeService({
         sendMessage: mock.fn(async () => {
@@ -483,6 +506,27 @@ describe("MessageController", () => {
       assert.strictEqual(
         notifications.deleteAllSubscriptionsForUser.mock.calls[0].arguments[0],
         "did:foo"
+      );
+    });
+
+    test("logs an error when dropping push subscriptions (fire-and-forget) rejects", async () => {
+      const svc = makeService();
+      const notifications = makeNotificationService({
+        deleteAllSubscriptionsForUser: mock.fn(async () => {
+          throw new Error("db unavailable");
+        }),
+      });
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx(), notifications);
+      const req = makeReq();
+      const res = makeRes();
+      await controller.deleteAccount(req, res);
+      // The push cleanup isn't awaited by the controller, so give its .catch() a tick to run.
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.strictEqual(logger.error.mock.calls.length, 1);
+      assert.strictEqual(
+        logger.error.mock.calls[0].arguments[1],
+        "Failed to delete push subscriptions"
       );
     });
 
