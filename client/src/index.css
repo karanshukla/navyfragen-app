@@ -133,6 +133,20 @@ body {
   animation: nf-pin-settle 0.38s cubic-bezier(0.34, 1.45, 0.64, 1) both;
 }
 
+/* Bouncing logo easter egg — slow spin variant */
+@keyframes nf-bounce-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nf-bounce-spin {
+  animation: nf-bounce-spin 6s linear infinite;
+}
+
 /* Alert / notification brand radius */
 .mantine-Alert-root {
   border-radius: 12px;

@@ -8,6 +8,7 @@ import { BrowserRouter } from "react-router-dom";
 
 import { queryClient } from "./api/queryClient";
 import { AppLayout } from "./AppLayout";
+import { BounceLogosProvider } from "./components/BounceLogosContext";
 import { InstallPromptProvider } from "./components/InstallPromptContext";
 import navyfragenTheme from "./Theme";
 
@@ -22,8 +23,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <InstallPromptProvider>
-            <AppLayout />
-            <ReactQueryDevtools initialIsOpen={false} />
+            <BounceLogosProvider>
+              <AppLayout />
+              <ReactQueryDevtools initialIsOpen={false} />
+            </BounceLogosProvider>
           </InstallPromptProvider>
         </QueryClientProvider>
       </BrowserRouter>

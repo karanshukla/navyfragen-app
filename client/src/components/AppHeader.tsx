@@ -21,8 +21,10 @@ import { useHaptic } from "use-haptic";
 import { ApiError } from "../api/apiClient";
 import { type AccountEntry, useLogout, useSession, useSwitchAccount } from "../api/authService";
 import { buildAccountSwitchUrl } from "../lib/accountSwitchToast";
+import { useHasBounceGap } from "../lib/useHasBounceGap";
 import { surfaceBg } from "../styles/tokens";
 
+import { useBounceLogos } from "./BounceLogosContext";
 import { WinkMark } from "./WinkMark";
 import { Wordmark } from "./Wordmark";
 
@@ -37,6 +39,8 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { toggleColorScheme } = useMantineColorScheme();
+  const { enabled: bounceLogosEnabled, setEnabled: setBounceLogosEnabled } = useBounceLogos();
+  const hasBounceGap = useHasBounceGap();
   const { triggerHaptic } = useHaptic(1);
   const computedColorScheme = useComputedColorScheme("light", {
     getInitialValueInEffect: true,
@@ -73,6 +77,25 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
       </Box>
 
       <Flex gap="sm" justify="flex-end" align="center" style={{ flexGrow: 1 }}>
+        {hasBounceGap && (
+          <Button
+            onClick={() => {
+              triggerHaptic();
+              setBounceLogosEnabled(!bounceLogosEnabled);
+            }}
+            variant="default"
+            size="xs"
+            radius="xl"
+            style={{
+              background: surfaceBg(isDark),
+              color: "var(--mantine-color-text)",
+              border: "none",
+            }}
+          >
+            {bounceLogosEnabled ? "Disable animations" : "Enable animations"}
+          </Button>
+        )}
+
         <ActionIcon
           onClick={() => {
             triggerHaptic();
