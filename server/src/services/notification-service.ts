@@ -3,6 +3,14 @@ import { sendNotification, setVapidDetails } from "web-push";
 
 import type { Database } from "../database/db";
 
+/**
+ * Minimal shape NotificationService needs from the app's DID resolver, so
+ * tests can stub it without pulling in the real AT Protocol resolution.
+ */
+export interface ProfileResolver {
+  resolveDidToHandle(did: string): Promise<string | undefined>;
+}
+
 // VAPID config is read live from process.env (rather than the frozen `env`
 // snapshot) so tests can toggle it per-case without reloading the module.
 // All three reads below share this single source.
@@ -80,6 +88,7 @@ const pushLimiter = createConcurrencyLimiter(PUSH_CONCURRENCY_LIMIT);
 export class NotificationService {
   constructor(
     private db: Database,
+    private resolver: ProfileResolver,
     private logger: Logger
   ) {}
 
@@ -93,7 +102,8 @@ export class NotificationService {
 
   /**
    * Save or update a push subscription for a user.
-   * Upserts by endpoint so re-subscribing doesn't duplicate rows.
+   * Upserts by (did, endpoint) so a single device can hold a separate row
+   * per signed-in account instead of the newest account stealing the row.
    */
   async saveSubscription(
     did: string,
@@ -105,13 +115,15 @@ export class NotificationService {
       .selectFrom("push_subscription")
       .selectAll()
       .where("endpoint", "=", endpoint)
+      .where("did", "=", did)
       .executeTakeFirst();
 
     if (existing) {
       await this.db
         .updateTable("push_subscription")
-        .set({ did, p256dh, auth })
+        .set({ p256dh, auth })
         .where("endpoint", "=", endpoint)
+        .where("did", "=", did)
         .execute();
     } else {
       await this.db
@@ -171,10 +183,20 @@ export class NotificationService {
 
     if (subscriptions.length === 0) return;
 
+    // A device can hold a push subscription for several accounts at once,
+    // so more than one account's notifications can land here side by side.
+    // Naming the recipient account up front (and passing its DID along) lets
+    // the client tell them apart and auto-switch to the right account on
+    // click, since clicking one shouldn't open whichever account happens to
+    // be active in the browser.
+    const handle = await this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined);
+
     const payload = JSON.stringify({
-      title: "New anonymous question",
+      title: handle ? `New question for @${handle}` : "New anonymous question",
       body: "Someone sent you an anonymous question on Navyfragen!",
       url: "/messages",
+      did: recipientDid,
+      handle,
     });
 
     await Promise.allSettled(
