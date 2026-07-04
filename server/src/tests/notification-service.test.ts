@@ -105,6 +105,50 @@ describe("NotificationService", () => {
     });
   });
 
+  describe("syncSubscriptionsAcrossAccounts", () => {
+    test("no-ops when fewer than two accounts are given", async () => {
+      await service.syncSubscriptionsAcrossAccounts(["did:foo"]);
+      assert.strictEqual(mockDb.selectFrom.mock.calls.length, 0);
+    });
+
+    test("no-ops when none of the accounts have an existing subscription", async () => {
+      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, []));
+      await service.syncSubscriptionsAcrossAccounts(["did:foo", "did:bar"]);
+      assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
+    });
+
+    test("copies an existing device subscription to accounts still missing one", async () => {
+      const rows = [
+        { did: "did:foo", endpoint: "https://push.example/dev", p256dh: "p256", auth: "auth" },
+      ];
+      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, rows));
+      const insertBuilder = makeInsertBuilder();
+      mockDb.insertInto = mock.fn(() => insertBuilder);
+
+      await service.syncSubscriptionsAcrossAccounts(["did:foo", "did:bar"]);
+
+      assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
+      const valuesArg = insertBuilder.values.mock.calls[0].arguments[0];
+      assert.strictEqual(valuesArg.did, "did:bar");
+      assert.strictEqual(valuesArg.endpoint, "https://push.example/dev");
+      assert.strictEqual(valuesArg.p256dh, "p256");
+    });
+
+    test("does not duplicate a row that already exists for that account", async () => {
+      const rows = [
+        { did: "did:foo", endpoint: "https://push.example/dev", p256dh: "p256", auth: "auth" },
+        { did: "did:bar", endpoint: "https://push.example/dev", p256dh: "p256", auth: "auth" },
+      ];
+      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, rows));
+      const insertBuilder = makeInsertBuilder();
+      mockDb.insertInto = mock.fn(() => insertBuilder);
+
+      await service.syncSubscriptionsAcrossAccounts(["did:foo", "did:bar"]);
+
+      assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
+    });
+  });
+
   describe("deleteSubscription", () => {
     test("deletes from push_subscription by did + endpoint", async () => {
       const deleteBuilder = makeDeleteBuilder();

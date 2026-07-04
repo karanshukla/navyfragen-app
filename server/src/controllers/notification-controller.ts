@@ -2,6 +2,7 @@ import express from "express";
 import { body } from "express-validator";
 import { Logger } from "pino";
 
+import { getAccounts } from "../auth/session";
 import { NotificationService } from "../services/notification-service";
 
 export class NotificationController {
@@ -61,6 +62,10 @@ export class NotificationController {
 
     try {
       await this.notificationService.saveSubscription(did, endpoint, keys.p256dh, keys.auth);
+      // Cover every account remembered on this device, not just the active
+      // one, so switching accounts later doesn't leave the others without push.
+      const dids = getAccounts(req.session).map((account) => account.did);
+      await this.notificationService.syncSubscriptionsAcrossAccounts(dids);
       this.logger.info({ did }, "Push subscription registered");
       return res.status(201).json({ ok: true });
     } catch (err) {

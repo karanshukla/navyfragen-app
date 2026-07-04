@@ -71,43 +71,24 @@ self.addEventListener("push", (event) => {
 
 // A device can hold push subscriptions for several signed-in accounts at
 // once, so a notification's recipient (data.did) doesn't necessarily match
-// whichever account is currently active in the browser. Before navigating,
-// try to switch the active session to match so the inbox that opens is the
-// right one; if that account isn't remembered on this device, fall back
-// silently.
-async function switchToNotificationAccount(data) {
-  if (!data?.did) return null;
-
-  try {
-    const sessionRes = await fetch("/session", { credentials: "include" });
-    if (!sessionRes.ok) return null;
-    const session = await sessionRes.json();
-    if (!session.did || session.did === data.did) return null;
-
-    const switchRes = await fetch("/accounts/switch", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ did: data.did }),
-    });
-    return switchRes.ok ? (data.handle ?? null) : null;
-  } catch (err) {
-    console.warn("[sw] account auto-switch failed", err);
-    return null;
-  }
-}
-
+// whichever account is currently active in the browser. The service worker
+// itself can't reliably call the API to switch accounts here — it has no
+// access to the app's VITE_API_URL, which may prefix every request (e.g.
+// "/api") depending on how the app is deployed. So instead of fetching here,
+// pass the recipient along as query params and let the page (which already
+// knows its own API base URL) perform the switch on load.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data || {};
 
   event.waitUntil(
     (async () => {
-      const switchedToHandle = await switchToNotificationAccount(data);
-
       const url = new URL(data.url || "/messages", self.location.origin);
-      if (switchedToHandle) {
-        url.searchParams.set("accountSwitched", switchedToHandle);
+      if (data.did) {
+        url.searchParams.set("notifyDid", data.did);
+        if (data.handle) {
+          url.searchParams.set("notifyHandle", data.handle);
+        }
       }
       const targetUrl = url.href;
 

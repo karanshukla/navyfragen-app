@@ -1,14 +1,14 @@
 import { screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // eslint-disable-next-line import/order
 import * as authService from "../api/authService";
 
 vi.mock("../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/authService")>();
-  return { ...actual, useSession: vi.fn() };
+  return { ...actual, useSession: vi.fn(), useSwitchAccount: vi.fn() };
 });
 
 vi.mock("../api/messageService", () => ({
@@ -43,6 +43,7 @@ import { AppLayout } from "../AppLayout";
 import { renderWithProviders } from "./testUtils";
 
 const mockUseSession = vi.mocked(authService.useSession);
+const mockUseSwitchAccount = vi.mocked(authService.useSwitchAccount);
 
 describe("AppLayout", () => {
   beforeEach(() => {
@@ -50,6 +51,7 @@ describe("AppLayout", () => {
       data: { isLoggedIn: false, profile: null, did: null },
       isLoading: false,
     } as any);
+    mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     // Ensure no leftover ?accountSwitched= param leaks between tests.
     window.history.replaceState({}, "", "/");
   });
@@ -235,5 +237,93 @@ describe("AppLayout", () => {
     });
     // The marker is stripped so it can't re-fire on refresh.
     expect(window.location.search).toBe("");
+  });
+
+  it("switches account when the URL carries a notifyDid marker", async () => {
+    const mutate = vi.fn();
+    mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
+    window.history.replaceState(
+      {},
+      "",
+      "/messages?notifyDid=did:plc:foo&notifyHandle=foo.bsky.social"
+    );
+
+    renderWithProviders(<AppLayout />);
+
+    expect(mutate).toHaveBeenCalledWith(
+      { did: "did:plc:foo" },
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    // The notify params are stripped immediately so a re-render can't re-fire it.
+    expect(window.location.search).toBe("");
+  });
+
+  it("does not show the accountSwitched toast when a notifyDid switch is pending", async () => {
+    const { showNotification } = await import("@mantine/notifications");
+    vi.mocked(showNotification).mockClear();
+    mockUseSwitchAccount.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+    window.history.replaceState(
+      {},
+      "",
+      "/messages?notifyDid=did:plc:foo&accountSwitched=old.bsky.social"
+    );
+
+    renderWithProviders(<AppLayout />);
+
+    expect(vi.mocked(showNotification)).not.toHaveBeenCalled();
+  });
+
+  describe("onSuccess of a notifyDid switch", () => {
+    const originalLocation = window.location;
+
+    afterEach(() => {
+      window.location = originalLocation;
+    });
+
+    it("navigates to the accountSwitched URL when the notification carried a handle", () => {
+      let capturedHref = "";
+      window.location = {
+        ...originalLocation,
+        get href() {
+          return capturedHref || originalLocation.href;
+        },
+        set href(value: string) {
+          capturedHref = value;
+        },
+      } as unknown as Location;
+
+      const mutate = vi.fn((_vars, { onSuccess }) => onSuccess());
+      mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
+      window.history.replaceState(
+        {},
+        "",
+        "/messages?notifyDid=did:plc:foo&notifyHandle=foo.bsky.social"
+      );
+
+      renderWithProviders(<AppLayout />);
+
+      expect(capturedHref).toBe("/messages?accountSwitched=foo.bsky.social");
+    });
+
+    it("leaves the URL unchanged when the notification carried no handle", () => {
+      let capturedHref = "";
+      window.location = {
+        ...originalLocation,
+        get href() {
+          return capturedHref || originalLocation.href;
+        },
+        set href(value: string) {
+          capturedHref = value;
+        },
+      } as unknown as Location;
+
+      const mutate = vi.fn((_vars, { onSuccess }) => onSuccess());
+      mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
+      window.history.replaceState({}, "", "/messages?notifyDid=did:plc:foo");
+
+      renderWithProviders(<AppLayout />);
+
+      expect(capturedHref).toBe(originalLocation.href);
+    });
   });
 });

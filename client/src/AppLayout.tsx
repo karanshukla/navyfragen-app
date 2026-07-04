@@ -3,9 +3,10 @@ import { showNotification } from "@mantine/notifications";
 import React, { useEffect, useRef } from "react";
 import { Route, Routes } from "react-router-dom";
 
-import { useSession } from "./api/authService";
+import { useSession, useSwitchAccount } from "./api/authService";
 import { AppHeader } from "./components/AppHeader";
-import { consumeAccountSwitchToast } from "./lib/accountSwitchToast";
+import { buildAccountSwitchUrl, consumeAccountSwitchToast } from "./lib/accountSwitchToast";
+import { consumeNotificationSwitchRequest } from "./lib/notificationSwitch";
 import { Navigation } from "./Navigation";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -20,8 +21,30 @@ export function AppLayout() {
 
   const navbarRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
+  const { mutate: switchAccount } = useSwitchAccount();
 
   useEffect(() => {
+    // Tapping a push notification lands here with a notifyDid param when the
+    // question wasn't for whichever account is currently active on this
+    // device. Switch to it (an actual API call, unlike the service worker,
+    // this has the app's real API base URL) then reload so the inbox that
+    // opens is the right one. If that account isn't remembered here (session
+    // expired, cookie cleared), fall back silently to whatever's active.
+    const notifyRequest = consumeNotificationSwitchRequest();
+    if (notifyRequest) {
+      switchAccount(
+        { did: notifyRequest.did },
+        {
+          onSuccess: () => {
+            window.location.href = notifyRequest.handle
+              ? buildAccountSwitchUrl(notifyRequest.handle)
+              : window.location.href;
+          },
+        }
+      );
+      return;
+    }
+
     consumeAccountSwitchToast((message) => {
       showNotification({ message, color: "green" });
     });
