@@ -1471,6 +1471,15 @@ describe("Messages page", () => {
   });
 
   it("does not scroll into view when the newest message target is already visible in the viewport", async () => {
+    // window.innerHeight varies by test environment/CI runner, so pin it explicitly rather
+    // than relying on the ambient default — the "visible" rect below (top:100, bottom:200)
+    // is only actually in-view relative to a known viewport height.
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, "innerHeight", {
+      writable: true,
+      configurable: true,
+      value: 800,
+    });
     const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
       top: 100,
@@ -1484,21 +1493,31 @@ describe("Messages page", () => {
       toJSON: () => {},
     } as DOMRect);
 
-    setupMocks([]);
-    const { rerender } = renderWithProviders(<Messages />);
-    await waitFor(() => expect(screen.queryByText("Hello?")).toBeNull());
+    try {
+      setupMocks([]);
+      const { rerender } = renderWithProviders(<Messages />);
+      await waitFor(() => expect(screen.queryByText("Hello?")).toBeNull());
 
-    mockUseMessages.mockReturnValue({
-      data: { messages: MESSAGES },
-      isLoading: false,
-      refetch: vi.fn().mockResolvedValue(undefined),
-    } as any);
-    rerender(<Messages />);
-    await waitFor(() => expect(screen.getByText("Hello?")).toBeInTheDocument());
+      mockUseMessages.mockReturnValue({
+        data: { messages: MESSAGES },
+        isLoading: false,
+        refetch: vi.fn().mockResolvedValue(undefined),
+      } as any);
+      rerender(<Messages />);
+      await waitFor(() => expect(screen.getByText("Hello?")).toBeInTheDocument());
 
-    expect(scrollSpy).not.toHaveBeenCalled();
-    scrollSpy.mockRestore();
-    rectSpy.mockRestore();
+      expect(scrollSpy).not.toHaveBeenCalled();
+    } finally {
+      // Restore even on assertion failure, so a broken test here can't leak a mocked
+      // scrollIntoView/getBoundingClientRect/innerHeight into later tests.
+      scrollSpy.mockRestore();
+      rectSpy.mockRestore();
+      Object.defineProperty(window, "innerHeight", {
+        writable: true,
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
   });
 
   it("Cancel does not close the confirmation modal while a delete mutation is globally pending", async () => {
@@ -1550,17 +1569,20 @@ describe("Messages page", () => {
     await waitFor(() => expect(screen.getByText("Hello?")).toBeInTheDocument());
 
     const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
-    // A background refetch (refetchInterval) resolves with a new array reference containing the
-    // same messages — count === prev, so the effect's guard should short-circuit to false.
-    mockUseMessages.mockReturnValue({
-      data: { messages: [...MESSAGES] },
-      isLoading: false,
-      refetch: vi.fn().mockResolvedValue(undefined),
-    } as any);
-    rerender(<Messages />);
-    await act(async () => {});
+    try {
+      // A background refetch (refetchInterval) resolves with a new array reference containing
+      // the same messages — count === prev, so the effect's guard should short-circuit to false.
+      mockUseMessages.mockReturnValue({
+        data: { messages: [...MESSAGES] },
+        isLoading: false,
+        refetch: vi.fn().mockResolvedValue(undefined),
+      } as any);
+      rerender(<Messages />);
+      await act(async () => {});
 
-    expect(scrollSpy).not.toHaveBeenCalled();
-    scrollSpy.mockRestore();
+      expect(scrollSpy).not.toHaveBeenCalled();
+    } finally {
+      scrollSpy.mockRestore();
+    }
   });
 });
