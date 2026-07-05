@@ -55,7 +55,7 @@
     "@atproto/common": "^0.5.16",
     "@atproto/identity": "^0.4.12",
     "@atproto/lexicon": "^0.6.2",
-    "@atproto/oauth-client-node": "^0.3.17",
+    "@atproto/oauth-client-node": "^0.4.5",
     "@atproto/sync": "^0.2.4",
     "@atproto/syntax": "^0.5.4",
     "@atproto/xrpc-server": "^0.10.22",
