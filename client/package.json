@@ -30,8 +30,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.62.0",
-    "@typescript-eslint/parser": "^8.62.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/parser": "^8.62.1",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^10.6.0",
@@ -47,7 +47,7 @@
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@atcute/bluesky-richtext-parser": "^1.0.7",
@@ -59,7 +59,7 @@
     "@tanstack/react-query": "^5.101.2",
     "@tanstack/react-query-devtools": "^5.101.2",
     "@types/react-router-dom": "^5.3.3",
-    "react-router-dom": "^7.18.0",
+    "react-router-dom": "^7.18.1",
     "serve": "^14.2.6",
     "use-haptic": "^1.1.13",
     "zod": "^4.4.3"
