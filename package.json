@@ -27,6 +27,6 @@
     "overrides": {
         "esbuild": ">=0.28.1",
         "multiformats": "^14.0.4",
-        "await-lock": "2.2.2"
+        "await-lock": "1.2.1"
     }
 }
