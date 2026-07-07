@@ -155,4 +155,49 @@ describe("parseRichText", () => {
     expect(anchor).not.toBeNull();
     expect(anchor!.textContent).toContain("#section");
   });
+
+  it("renders a bare url in text as an autolink using toShortUrl", () => {
+    const result = parseRichText("https://example.com");
+    const { container } = render(<>{result}</>);
+    const anchor = container.querySelector("a");
+    expect(anchor).not.toBeNull();
+    expect(anchor!.href).toBe("https://example.com/");
+    expect(anchor!.textContent).toBe("example.com");
+  });
+
+  it("renders bold markdown as a strong element", () => {
+    const result = parseRichText("**bold**");
+    const { container } = render(<>{result}</>);
+    expect(container.querySelector("strong")?.textContent).toBe("bold");
+  });
+
+  it("renders italic markdown as an em element", () => {
+    const result = parseRichText("*italic*");
+    const { container } = render(<>{result}</>);
+    expect(container.querySelector("em")?.textContent).toBe("italic");
+  });
+
+  it("renders underline markdown as a u element", () => {
+    const result = parseRichText("__underline__");
+    const { container } = render(<>{result}</>);
+    expect(container.querySelector("u")?.textContent).toBe("underline");
+  });
+
+  it("renders strikethrough markdown as a del element", () => {
+    const result = parseRichText("~~strike~~");
+    const { container } = render(<>{result}</>);
+    expect(container.querySelector("del")?.textContent).toBe("strike");
+  });
+
+  it("renders inline code markdown as a code element", () => {
+    const result = parseRichText("`code`");
+    const { container } = render(<>{result}</>);
+    expect(container.querySelector("code")?.textContent).toBe("code");
+  });
+
+  it("renders an escaped character as its literal value", () => {
+    const result = parseRichText("\\*hi\\*");
+    const { container } = render(<>{result}</>);
+    expect(container.textContent).toBe("*hi*");
+  });
 });
