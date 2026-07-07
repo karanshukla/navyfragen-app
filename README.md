@@ -11,8 +11,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![AT Protocol](https://img.shields.io/badge/AT%20Protocol-native-0085ff?logo=bluesky&logoColor=white)](https://atproto.com)
 
-*Inspired by CuriousCat, AskFM, and NGL, rebuilt for the open social web.*
-
 ---
 
 ## Screenshots
