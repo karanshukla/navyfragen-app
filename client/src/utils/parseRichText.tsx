@@ -1,9 +1,14 @@
-import { tokenize } from "@atcute/bluesky-richtext-parser";
+import { tokenize, type Token } from "@atcute/bluesky-richtext-parser";
 import React from "react";
 
 const WHITESPACE_REGEX = /^\s+|\s+$| +(?=\n)|\n(?=(?: *\n){2}) */g;
 const TRIM_HOST_RE = /^www\./;
-const PATH_MAX_LENGTH = 16;
+
+const linkStyle: React.CSSProperties = {
+  color: "inherit",
+  fontWeight: "bold",
+  textDecoration: "none",
+};
 
 const safeUrlParse = (href: string): URL | null => {
   try {
@@ -45,110 +50,126 @@ const toShortUrl = (href: string): string => {
   return href;
 };
 
-export const parseRichText = (text: string): React.ReactNode => {
-  if (!text) return null;
-  const trimmedText = text.replace(WHITESPACE_REGEX, "");
-  const segments = tokenize(trimmedText);
-  const result: React.ReactNode[] = [];
+const ensureProtocol = (href: string): string =>
+  /^https?:\/\//.test(href) ? href : "https://" + href;
 
-  segments.forEach((segment: any, index: number) => {
-    // Render mentions
-    if (segment.type === "mention") {
-      result.push(
+const renderTextWithAutolinks = (content: string, keyPrefix: string): React.ReactNode[] => {
+  // Regex to match domains/short links
+  const domainRegex = /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
+  const result: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  let keyOffset = 0;
+  while ((match = domainRegex.exec(content)) !== null) {
+    const matchText = match[0];
+    const start = match.index;
+
+    if (start > lastIndex) {
+      result.push(content.slice(lastIndex, start));
+    }
+    let href = matchText;
+    // domainRegex's segments require a literal "." before the TLD, so it can never
+    // match starting at "http:" or "https:" (no dot before the colon) — matchText is
+    // always the bare domain, so this guard's false arm is structurally unreachable.
+    /* v8 ignore start */
+    if (!/^https?:\/\//.test(href)) {
+      href = "https://" + href;
+    }
+    /* v8 ignore stop */
+    result.push(
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        key={`${keyPrefix}-domain-${keyOffset}`}
+        style={linkStyle}
+      >
+        {toShortUrl(matchText)}
+      </a>
+    );
+    lastIndex = start + matchText.length;
+    keyOffset++;
+  }
+
+  if (lastIndex < content.length) {
+    result.push(content.slice(lastIndex));
+  }
+  return result;
+};
+
+const renderTokens = (tokens: Token[], keyPrefix: string): React.ReactNode[] =>
+  tokens.map((token, index) => renderToken(token, `${keyPrefix}-${index}`));
+
+const renderToken = (token: Token, key: string): React.ReactNode => {
+  switch (token.type) {
+    case "mention":
+      return (
         <a
-          href={`https://bsky.app/profile/${segment.handle}`}
+          href={`https://bsky.app/profile/${token.handle}`}
           target="_blank"
           rel="noopener noreferrer"
-          key={index}
-          style={{
-            color: "inherit",
-            fontWeight: "bold",
-            textDecoration: "none",
-          }}
+          key={key}
+          style={linkStyle}
         >
-          {segment.raw}
+          {token.raw}
         </a>
       );
-      return;
+
+    case "autolink": {
+      const href = ensureProtocol(token.url);
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" key={key} style={linkStyle}>
+          {toShortUrl(token.url)}
+        </a>
+      );
     }
-    // Render markdown/explicit links
-    if (segment.type === "link") {
-      let href = segment.url;
-      if (!/^https?:\/\//.test(href)) {
-        href = "https://" + href;
-      }
-      const displayText =
-        segment.text === segment.url
-          ? toShortUrl(segment.url)
-          : segment.text.replace(WHITESPACE_REGEX, "");
-      result.push(
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          key={index}
-          style={{
-            color: "inherit",
-            fontWeight: "bold",
-            textDecoration: "none",
-          }}
-        >
+
+    case "link": {
+      const href = ensureProtocol(token.url);
+      // A markdown link whose single child's raw text is identical to the url
+      // (e.g. `[https://example.com](https://example.com)`) is a bare-url link —
+      // shorten its display text the same way a plain autolink would.
+      const isBareUrlLink = token.children.length === 1 && token.children[0].raw === token.url;
+      const displayText = isBareUrlLink
+        ? toShortUrl(token.url)
+        : renderTokens(token.children, `${key}-c`);
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" key={key} style={linkStyle}>
           {displayText}
         </a>
       );
-      return;
     }
 
-    if (segment.type === "text") {
-      // Regex to match domains/short links
-      const domainRegex = /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
-      let lastIndex = 0;
-      let match;
-      const text = segment.text;
-      let keyOffset = 0;
-      while ((match = domainRegex.exec(text)) !== null) {
-        const matchText = match[0];
-        const start = match.index;
+    case "strong":
+      return <strong key={key}>{renderTokens(token.children, `${key}-c`)}</strong>;
 
-        if (start > lastIndex) {
-          result.push(text.slice(lastIndex, start));
-        }
-        let href = matchText;
-        // domainRegex's segments require a literal "." before the TLD, so it can never
-        // match starting at "http:" or "https:" (no dot before the colon) — matchText is
-        // always the bare domain, so this guard's false arm is structurally unreachable.
-        /* v8 ignore start */
-        if (!/^https?:\/\//.test(href)) {
-          href = "https://" + href;
-        }
-        /* v8 ignore stop */
-        result.push(
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            key={`${index}-domain-${keyOffset}`}
-            style={{
-              color: "inherit",
-              fontWeight: "bold",
-              textDecoration: "none",
-            }}
-          >
-            {toShortUrl(matchText)}
-          </a>
-        );
-        lastIndex = start + matchText.length;
-        keyOffset++;
-      }
+    case "emphasis":
+      return <em key={key}>{renderTokens(token.children, `${key}-c`)}</em>;
 
-      if (lastIndex < text.length) {
-        result.push(text.slice(lastIndex));
-      }
-      return;
-    }
+    case "underline":
+      return <u key={key}>{renderTokens(token.children, `${key}-c`)}</u>;
 
-    /* v8 ignore next */
-    result.push(segment.text || segment.raw);
-  });
-  return result;
+    case "delete":
+      return <del key={key}>{renderTokens(token.children, `${key}-c`)}</del>;
+
+    case "code":
+      return <code key={key}>{token.content}</code>;
+
+    case "escape":
+      return token.escaped;
+
+    case "text":
+      return renderTextWithAutolinks(token.content, key);
+
+    /* v8 ignore next 2 */
+    default:
+      return token.raw;
+  }
+};
+
+export const parseRichText = (text: string): React.ReactNode => {
+  if (!text) return null;
+  const trimmedText = text.replace(WHITESPACE_REGEX, "");
+  const tokens = tokenize(trimmedText);
+  return renderTokens(tokens, "t");
 };

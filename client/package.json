@@ -41,7 +41,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@atcute/bluesky-richtext-parser": "^1.0.7",
+    "@atcute/bluesky-richtext-parser": "^2.1.2",
     "@mantine/core": "^9.4.1",
     "@mantine/hooks": "^9.4.1",
     "@mantine/notifications": "^9.4.1",
