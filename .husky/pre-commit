@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Auto-fix staged files with Prettier and ESLint.
-# Run per-workspace so each picks up its own ESLint v10 config.
+# Auto-fix staged files with Prettier and oxlint.
+# Run per-workspace so each picks up its own .oxlintrc.json config.
 (cd client && npx lint-staged --allow-empty)
 (cd server && npx lint-staged --allow-empty)
 

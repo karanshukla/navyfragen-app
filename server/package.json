@@ -13,8 +13,8 @@
     "postinstall": "npm run build",
     "lexgen": "lex gen-server ./src/lexicon ./lexicons/*",
     "clean": "rimraf dist coverage",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "test": "node --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
     "test:watch": "node --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts",
@@ -24,7 +24,7 @@
   "lint-staged": {
     "src/**/*.ts": [
       "prettier --write",
-      "eslint --fix"
+      "oxlint --fix"
     ]
   },
   "c8": {
@@ -85,18 +85,13 @@
   },
   "devDependencies": {
     "@atproto/lex-cli": "^0.9.9",
-    "@eslint/compat": "^2.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
     "@types/pg": "^8.20.0",
     "@types/serve-static": "^1.15.10",
-    "@typescript-eslint/eslint-plugin": "^8.62.1",
-    "@typescript-eslint/parser": "^8.62.1",
     "c8": "^11.0.0",
-    "eslint": "^10.6.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
+    "oxlint": "^1.73.0",
     "pino-pretty": "^13.1.3",
     "rimraf": "^6.1.3",
     "ts-node": "^10.9.2",

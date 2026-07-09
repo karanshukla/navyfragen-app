@@ -11,6 +11,22 @@ updates:
       - "/client"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      atproto:
+        patterns:
+          - "@atproto/*"
+      atcute:
+        patterns:
+          - "@atcute/*"
+      mantine:
+        patterns:
+          - "@mantine/*"
+      oxlint:
+        patterns:
+          - "oxlint"
 
   - package-ecosystem: "docker"
     directory: "/anubis"

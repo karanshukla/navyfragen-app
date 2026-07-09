@@ -30,7 +30,7 @@ npm run dev        # start client (port 5173) and server (port 3000) together
 ```bash
 npm run dev        # Vite dev server
 npm run build      # tsc + vite build
-npm run lint       # ESLint
+npm run lint       # oxlint
 npm run test       # Vitest (single run)
 npm run test:watch # Vitest watch mode
 ```
@@ -39,7 +39,7 @@ npm run test:watch # Vitest watch mode
 ```bash
 npm run dev        # tsx watch with pino-pretty
 npm run build      # tsup
-npm run lint       # ESLint
+npm run lint       # oxlint
 npm run test       # Node.js built-in test runner (single run)
 npm run test:watch # Node.js built-in test runner watch mode
 npm run lexgen     # Regenerate AT Protocol lexicon types from ./lexicons/*.json
