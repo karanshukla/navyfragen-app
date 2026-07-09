@@ -185,7 +185,7 @@ export class MessageController {
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
-    const { tid } = req.params;
+    const tid = req.params.tid as string;
 
     if (!tid) {
       return res.status(400).json({ error: "Message TID required" });

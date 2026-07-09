@@ -31,7 +31,7 @@ export class ProfileController {
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
-    const did = req.params.did;
+    const did = req.params.did as string;
 
     try {
       const profileData = await this.profileService.getPublicProfile(did);
@@ -57,7 +57,7 @@ export class ProfileController {
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
-    const did = req.params.did;
+    const did = req.params.did as string;
 
     try {
       const exists = await this.profileService.checkUserExists(did);
@@ -120,7 +120,7 @@ export class ProfileController {
   validateHandlePDS = [param("handle").isString().notEmpty().withMessage("Handle required")];
 
   getHandlePDS = async (req: express.Request, res: express.Response): Promise<express.Response> => {
-    const handle = req.params.handle;
+    const handle = req.params.handle as string;
     try {
       const did = await this.ctx.resolver.resolveHandleToDid(handle);
       if (!did) return res.status(404).json({ error: "Handle not found" });
@@ -163,7 +163,7 @@ export class ProfileController {
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
-    const handle = req.params.handle;
+    const handle = req.params.handle as string;
 
     try {
       const did = await this.profileService.resolveHandleToDid(handle);

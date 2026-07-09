@@ -1,12 +1,6 @@
-import {
-  Kysely,
-  Migrator,
-  SqliteDialect,
-  Migration,
-  MigrationProvider,
-  PostgresDialect,
-  Generated,
-} from "kysely";
+import { Kysely, SqliteDialect, PostgresDialect, Generated } from "kysely";
+import type { Migration, MigrationProvider } from "kysely/migration";
+import { Migrator } from "kysely/migration";
 import { Pool } from "pg";
 
 import { env } from "#/lib/env";
