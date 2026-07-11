@@ -189,11 +189,12 @@ function UserMenu({
     try {
       document.body.style.pointerEvents = "none";
       document.body.style.opacity = "0.5";
-      /* v8 ignore next 4 */
+      /* v8 ignore start */
     } catch {
       document.body.style.pointerEvents = "";
       document.body.style.opacity = "";
     }
+    /* v8 ignore stop */
 
     switchAccount(
       { did },

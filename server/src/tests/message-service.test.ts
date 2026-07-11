@@ -692,18 +692,13 @@ describe("MessageService", () => {
   });
 
   test("respondToMessage with image uses default theme when user_settings is null", async () => {
-    mockDb.selectFrom = mock.fn((table: string) => {
-      if (table === "user_settings") {
-        return {
-          selectAll: mock.fn(() => ({
-            where: mock.fn(() => ({
-              executeTakeFirst: mock.fn(async () => undefined),
-            })),
-          })),
-        };
-      }
-      return mockSelectBuilder;
-    });
+    mockDb.selectFrom = mock.fn(() => ({
+      selectAll: mock.fn(() => ({
+        where: mock.fn(() => ({
+          executeTakeFirst: mock.fn(async () => undefined),
+        })),
+      })),
+    }));
     const result = await messageService.respondToMessage(
       "tid",
       "did:example:user",

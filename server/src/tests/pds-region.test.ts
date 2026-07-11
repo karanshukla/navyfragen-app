@@ -1,7 +1,9 @@
+/* v8 ignore start */
 import assert from "node:assert";
 import { test, describe } from "node:test";
 
 import { pdsRegion } from "../lib/pds-region";
+/* v8 ignore stop */
 
 describe("pdsRegion", () => {
   test("returns us for bsky.social", () => {

@@ -36,6 +36,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Call `handleSwitch` directly (bypassing the disabled menu item) by exporting it or via a component ref, with `did` equal to `activeDid`.
 
+### `client/src/components/AppHeader.tsx` — `handleSwitch` catch block that resets `body.style`
+
+**Lines:** the `catch { document.body.style.pointerEvents = ""; document.body.style.opacity = ""; }` block inside `handleSwitch` (the account-switcher's `UserMenu`).
+
+**Why ignored:** Same pattern as the `onLogout` catch block already documented in `CLAUDE.md`'s `/* v8 ignore next */` convention — the `try` only assigns string literals to `document.body.style`, which never throws in practice. Note: a `/* v8 ignore next 4 */` placed on the line before `} catch {` did **not** suppress this block (the two assignment lines still showed as uncovered) even though the identical pattern worked for the `onLogout` handler a few lines above. Switching to `/* v8 ignore start */` immediately before `} catch {` and `/* v8 ignore stop */` immediately after the closing `}` reliably suppresses the whole block.
+
+**What it would take to test:** Not worth pursuing — would require mocking `document.body.style` property assignment to throw, which doesn't reflect any real browser behavior.
+
 ### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
 
 **Line:** `if (!installPrompt) return;` inside `handleInstallClick`.
@@ -211,6 +219,24 @@ These files all previously caused a visible coverage drop because the class body
 **Line:** the line immediately before `export async function initializeAgentFromSession(`.
 
 **Why ignored:** Same V8 "function not JIT-compiled" artifact documented for `pds-region.ts` above, but affecting only the second function in this file (`initializeAgentForDid`'s declaration line does not exhibit it — the artifact does not attach to every function declaration consistently). `initializeAgentFromSession` is exercised extensively by `session-agent.test.ts`; a single `/* v8 ignore next 1 */` suppresses just the artifact branch on its declaration line.
+
+### `server/src/tests/*.test.ts` — module-scope artifact on the import block (per-file rollout)
+
+**Lines:** line 1 of each affected test file (the first `import` statement).
+
+**Why ignored:** Unlike client-side test files (excluded wholesale from coverage via `src/tests/**` in `vite.config.ts`), the server's `c8.exclude` list in `server/package.json` does **not** exclude `src/tests/**`, so `.test.ts` files are measured by c8 like any other source file. Every module — test files included — exhibits the same V8 module-scope "not-initialized" branch artifact documented above for `pds-region.ts` and the class-based service/controller modules, mapped to line 1. `pds-region.test.ts` has been fixed (`/* v8 ignore start */` before the imports, `/* v8 ignore stop */` after) as the first of these; the same fix needs to be rolled out to the remaining server test files that still show a line-1 gap (`auth-controller.test.ts`, `auth-service.test.ts`, `image-generator.test.ts`, `image-generator-generate.test.ts`, `message-controller.test.ts`, `message-service.test.ts`, `notification-controller.test.ts`, `notification-service.test.ts`, `profile-controller.test.ts`, `profile-service.test.ts`, `session-agent.test.ts`, `settings-controller.test.ts`, `settings-service.test.ts`) in a follow-up pass.
+
+### `server/src/tests/auth-service.test.ts` — unused `selectFrom`/`insertInto` chains in the default mock context
+
+**Why removed (not ignored):** `makeMockCtx`'s default `db` mock included full `selectFrom(...)` and `insertInto(...)` chain stubs, but `AuthService` only ever calls `db.deleteFrom(...)` (in `deleteSession`) — `selectFrom`/`insertInto` are unused by the class entirely. Every test that exercises a code path needing `selectFrom`/`insertInto` (e.g. `checkSession`, profile creation) overrides `ctx.db.selectFrom`/`ctx.db.insertInto` with a test-specific mock, so the defaults in `makeMockCtx` were dead code — genuinely unreachable, not just under-tested. Removed rather than annotated, since they were unused scaffolding rather than a real code path.
+
+### `server/src/tests/image-generator-generate.test.ts` — dead `try/catch` around `mock.timers.reset()`
+
+**Why removed (not ignored):** The `afterEach` hook wrapped `mock.timers.reset()` in a `try { ... } catch { /* not enabled */ }`, defending against a hypothetical throw when mock timers were never enabled. Verified empirically (`node --eval` calling `mock.timers.reset()` with no prior `mock.timers.enable()`) that Node's `node:test` `MockTimers.reset()` does not throw in this case — it's a no-op. No test in this file ever calls `mock.timers.enable()`, so the `catch` arm was unreachable in every run. Removed the `try/catch`, calling `mock.timers.reset()` directly.
+
+### `server/src/tests/message-service.test.ts` — dead table-name branch in a one-off `selectFrom` mock
+
+**Why removed (not ignored):** The test `"respondToMessage with image uses default theme when user_settings is null"` built an inline `mockDb.selectFrom = mock.fn((table) => { if (table === "user_settings") {...} return mockSelectBuilder; })`. `MessageService.respondToMessage` only calls `db.selectFrom("user_settings")` once (to look up the image theme when `includeQuestionAsImage` is true) — it never queries any other table within that method — so the `return mockSelectBuilder` fallback for a non-matching table name was unreachable in this test. Simplified to a mock that always returns the `user_settings` shape.
 
 ## TypeScript Transpilation Artifacts (tsx source-map gaps)
 
