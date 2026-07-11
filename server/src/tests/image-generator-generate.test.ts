@@ -19,11 +19,7 @@ describe("generateQuestionImage", () => {
 
   afterEach(() => {
     mock.restoreAll();
-    try {
-      mock.timers.reset();
-    } catch {
-      /* not enabled */
-    }
+    mock.timers.reset();
   });
 
   function makeLogger() {

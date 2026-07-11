@@ -19,24 +19,6 @@ describe("AuthService", () => {
         clientMetadata: { foo: "bar" },
       },
       db: {
-        selectFrom: mock.fn(() => ({
-          selectAll: mock.fn(function (this: any) {
-            return this as any;
-          }),
-          where: mock.fn(function (this: any) {
-            return this as any;
-          }),
-          executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
-        })),
-        insertInto: mock.fn(() => ({
-          values: mock.fn(function (this: any) {
-            return this as any;
-          }),
-          onConflict: mock.fn(function (this: any) {
-            return this as any;
-          }),
-          execute: mock.fn(async () => ({})),
-        })),
         deleteFrom: mock.fn(() => ({
           where: mock.fn(function (this: any) {
             return this as any;
