@@ -96,6 +96,42 @@ describe("Navigation", () => {
       renderWithProviders(<Navigation isLoggedIn={true} />);
       expect(screen.queryByText("Login")).toBeNull();
     });
+  });
+
+  describe("while session is being confirmed", () => {
+    beforeEach(() => {
+      mockUseFriends.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
+    });
+
+    it("does not render Login link while isLoggedIn is not yet known", () => {
+      renderWithProviders(<Navigation isLoggedIn={false} isSessionLoading={true} />);
+      expect(screen.queryByText("Login")).toBeNull();
+    });
+
+    it("renders a skeleton placeholder in place of the Login link while loading", () => {
+      renderWithProviders(<Navigation isLoggedIn={false} isSessionLoading={true} />);
+      expect(screen.getByTestId("nav-login-skeleton")).toBeInTheDocument();
+    });
+
+    it("renders Login link once loading finishes and user is not logged in", () => {
+      renderWithProviders(<Navigation isLoggedIn={false} isSessionLoading={false} />);
+      expect(screen.getByText("Login")).toBeInTheDocument();
+    });
+
+    it("Alt+L does not navigate to login while session is loading", () => {
+      renderWithProviders(
+        <>
+          <Navigation isLoggedIn={false} isSessionLoading={true} />
+          <LocationDisplay />
+        </>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "L", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
 
     it("renders the friends section headers", () => {
       mockUseFriends.mockReturnValue({

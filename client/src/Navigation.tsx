@@ -29,11 +29,11 @@ import { WinkMark } from "./components/WinkMark";
 interface NavigationProps {
   onLinkClick?: () => void;
   isLoggedIn: boolean;
+  isSessionLoading?: boolean;
   handle?: string;
   did?: string;
 }
 
-// Active nav item: mode-aware — subtle tint in light mode, brand gradient in dark
 const activeNavStyle = {
   background: "var(--nf-nav-active-bg)",
   borderRadius: 12,
@@ -50,7 +50,13 @@ const friendNavLinkStyles = {
   root: { borderRadius: 10, transition: "background 120ms ease" },
 };
 
-export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: NavigationProps) {
+export function Navigation({
+  onLinkClick,
+  isLoggedIn,
+  isSessionLoading,
+  handle: _handle,
+  did,
+}: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: friendsData, isLoading: friendsLoading } = useFriends(
@@ -82,7 +88,7 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
             if (isLoggedIn) targetPath = "/settings";
             break;
           case "L":
-            if (!isLoggedIn) targetPath = "/login";
+            if (!isLoggedIn && !isSessionLoading) targetPath = "/login";
             break;
         }
         if (targetPath) {
@@ -94,7 +100,7 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isLoggedIn, navigate, onLinkClick]);
+  }, [isLoggedIn, isSessionLoading, navigate, onLinkClick]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -151,6 +157,11 @@ export function Navigation({ onLinkClick, isLoggedIn, handle: _handle, did }: Na
               styles={navItemStyles("/settings")}
             />
           </>
+        ) : isSessionLoading ? (
+          <Group gap={10} wrap="nowrap" my={2} px={12} py={8} data-testid="nav-login-skeleton">
+            <Skeleton circle height={16} width={16} style={{ flexShrink: 0 }} />
+            <Skeleton height={12} width="40%" radius="sm" />
+          </Group>
         ) : (
           <NavLink
             my={2}

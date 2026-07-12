@@ -18,7 +18,7 @@ import Settings from "./pages/Settings";
 
 export function AppLayout() {
   const [navOpen, setNavOpen] = React.useState(false);
-  const { data: sessionData } = useSession();
+  const { data: sessionData, isLoading: isSessionLoading } = useSession();
 
   const navbarRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
@@ -95,6 +95,7 @@ export function AppLayout() {
             <Navigation
               onLinkClick={() => setNavOpen(false)}
               isLoggedIn={isLoggedIn}
+              isSessionLoading={isSessionLoading}
               handle={userProfile?.handle}
               did={sessionData?.did ?? undefined}
             />
