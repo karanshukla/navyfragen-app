@@ -22,16 +22,13 @@ import { useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useHaptic } from "use-haptic";
 
+import { useSession } from "./api/authService";
 import { useFriends, Friend } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
 import { WinkMark } from "./components/WinkMark";
 
 interface NavigationProps {
   onLinkClick?: () => void;
-  isLoggedIn: boolean;
-  isSessionLoading?: boolean;
-  handle?: string;
-  did?: string;
 }
 
 const activeNavStyle = {
@@ -50,15 +47,12 @@ const friendNavLinkStyles = {
   root: { borderRadius: 10, transition: "background 120ms ease" },
 };
 
-export function Navigation({
-  onLinkClick,
-  isLoggedIn,
-  isSessionLoading,
-  handle: _handle,
-  did,
-}: NavigationProps) {
+export function Navigation({ onLinkClick }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: sessionData, isLoading: isSessionLoading } = useSession();
+  const isLoggedIn = !!sessionData?.isLoggedIn;
+  const did = sessionData?.did ?? undefined;
   const { data: friendsData, isLoading: friendsLoading } = useFriends(
     isLoggedIn ? (did ?? null) : null
   );

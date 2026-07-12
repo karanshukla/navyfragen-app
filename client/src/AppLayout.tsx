@@ -3,7 +3,7 @@ import { showNotification } from "@mantine/notifications";
 import React, { useEffect, useRef } from "react";
 import { Route, Routes } from "react-router-dom";
 
-import { useSession, useSwitchAccount } from "./api/authService";
+import { useSwitchAccount } from "./api/authService";
 import { AppHeader } from "./components/AppHeader";
 import { BouncingLogos } from "./components/BouncingLogos";
 import { buildAccountSwitchUrl, consumeAccountSwitchToast } from "./lib/accountSwitchToast";
@@ -18,7 +18,6 @@ import Settings from "./pages/Settings";
 
 export function AppLayout() {
   const [navOpen, setNavOpen] = React.useState(false);
-  const { data: sessionData, isLoading: isSessionLoading } = useSession();
 
   const navbarRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
@@ -66,9 +65,6 @@ export function AppLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [navOpen]);
 
-  const isLoggedIn = !!sessionData?.isLoggedIn;
-  const userProfile = sessionData?.profile;
-
   return (
     <>
       <BouncingLogos />
@@ -92,13 +88,7 @@ export function AppLayout() {
           </AppShell.Header>
 
           <AppShell.Navbar ref={navbarRef} p="md" style={{ overflow: "hidden" }}>
-            <Navigation
-              onLinkClick={() => setNavOpen(false)}
-              isLoggedIn={isLoggedIn}
-              isSessionLoading={isSessionLoading}
-              handle={userProfile?.handle}
-              did={sessionData?.did ?? undefined}
-            />
+            <Navigation onLinkClick={() => setNavOpen(false)} />
           </AppShell.Navbar>
 
           <AppShell.Main pt={70}>
