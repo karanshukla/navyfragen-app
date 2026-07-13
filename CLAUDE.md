@@ -195,16 +195,26 @@ Do **not** use it to skip real business logic. Document any usage in `docs/testi
 
 ### Module Mocking in Server Tests
 
-The server runs as native ESM (see issue #216), which keeps `node:test`'s `mock.module()` API (Node.js v22.3+) available — it is no longer blocked by a CJS transform layer. The current test suite relies on dependency-injection mocks (chainable DB builders passed into constructors) rather than `mock.module()`, but the module-mocking path is open for cases that need to intercept a constructor the SUT imports at module scope (e.g. `@atproto/api`'s `Agent`). The pattern, when needed:
+`node:test`'s `mock.module()` (still flagged `--experimental-test-module-mocks` on Node 24) lets a test replace a module's exports before the system-under-test imports it. The test scripts (`test`, `test:watch`, `test:coverage`) already pass the flag. The default mocking strategy is dependency injection (chainable DB builders passed into constructors); `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
 
 ```typescript
+let AuthService: typeof import("../services/auth-service").AuthService;
+let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
+
 before(async () => {
-  mock.module("@atproto/api", {
-    namedExports: { Agent: function(session) { return mockAgent; } },
+  mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
+  // Register the mock BEFORE importing the module under test so its
+  // transitive import of session-agent picks up the fakes.
+  await mock.module("../auth/session-agent", {
+    exports: { initializeAgentForDid: async (ctx, did) => { /* ... */ mockAgent } },
   });
-  const mod = await import("../controllers/some-controller.ts");
-  SomeController = mod.SomeController;
+  const mod = await import("../services/auth-service");
+  AuthService = mod.AuthService;
 });
 ```
 
-`mock.module` must be called **before** the target module is imported. Always use `before()` + dynamic `import()` in test files that need module-level mocking — never top-level static imports of the module under test.
+Notes:
+- `mock.module` is called on the **test context** (`t.mock.module`) inside a test, or on the top-level `mock` import inside `before()`. It must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `before()`, never a top-level static import.
+- Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
+- The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
+- Use the `exports` option key, not the deprecated `namedExports`.

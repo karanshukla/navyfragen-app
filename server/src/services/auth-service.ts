@@ -66,7 +66,6 @@ export class AuthService {
 
     const agent = await initializeAgentForDid(this.ctx, did);
     if (!agent) return null;
-    /* v8 ignore next 12 */
     const response = await agent.getProfile({ actor: did });
     const data = response?.data as AppBskyActorDefs.ProfileViewDetailed;
     if (!data) return null;
