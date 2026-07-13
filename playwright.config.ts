@@ -22,9 +22,20 @@ export default defineConfig({
       name: "setup",
       testMatch: /.*\.setup\.ts/,
     },
+    // Desktop / web — full Chrome viewport, sidebar always visible.
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testMatch: /.*\.spec\.ts/,
+      // Specs at the e2e root (e.g. happy-path.spec.ts) and under e2e/web/.
+      testIgnore: [/mobile\/.*\.spec\.ts/],
+      dependencies: ["setup"],
+    },
+    // Mobile — small viewport, navbar collapses behind the burger.
+    {
+      name: "mobile-chromium",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /mobile\/.*\.spec\.ts/,
       dependencies: ["setup"],
     },
   ],
