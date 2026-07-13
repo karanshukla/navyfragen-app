@@ -105,8 +105,27 @@ func ParseTTL(s string, fallback time.Duration) time.Duration {
 // --- OG composite template ---
 
 // Brand gradient per CLAUDE.md design tokens (--nf-grad-mark). Used as the
-// fallback background when a profile has no banner.
+// fallback background when a profile has no banner, and as the accent strip.
 const brandGradient = "linear-gradient(135deg, #3349E0 0%, #6B3FD4 50%, #4F1FA6 100%)"
+
+// Brand color tokens (mirror server/src/lib/image-generator.ts default theme).
+const (
+	brandIndigo   = "#3349E0"
+	brandViolet   = "#6B3FD4"
+	brandDeepV    = "#4F1FA6"
+	brandOnDark   = "rgba(255, 255, 255, 0.90)" // primary text on dark bg
+	brandOnDarkMu = "rgba(255, 255, 255, 0.62)" // muted text on dark bg
+)
+
+// Noto font stacks covering Latin, CJK, Arabic, Hebrew, Devanagari, Thai, and
+// emoji. Mirrors server/src/lib/image-generator.ts so OG previews match the
+// app's typography.
+const notoStack = `'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Noto Color Emoji', sans-serif`
+
+// notoLink is the Google Fonts stylesheet that actually loads the Noto stacks.
+// Without it html-to-image renders with generic fallback fonts, which looks
+// inconsistent with the app. Mirrors image-generator.ts's NOTO_LINK.
+const notoLink = `<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">`
 
 // OGWidth/OGHeight are the standard Open Graph image dimensions.
 const (
@@ -131,6 +150,10 @@ const DefaultPrompt = "Ask me anything anonymously on Navyfragen"
 // gradient) as background, avatar (or initial glyph) overlaid, prompt text.
 // All user-supplied strings are HTML-escaped — the rendered HTML is fed to a
 // headless browser, so an unescaped payload would be a code-injection vector.
+//
+// Visual language mirrors server/src/lib/image-generator.ts: Noto stacks
+// actually loaded via Google Fonts, the brand purple gradient, a dark scrim
+// for text legibility over any banner, and a navyfragen.app wordmark footer.
 func BuildOGTemplate(in OGInput) string {
 	bg := brandGradient
 	if in.Banner != "" {
@@ -153,53 +176,65 @@ func BuildOGTemplate(in OGInput) string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+%s
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   body {
-    font-family: 'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC',
-      'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari',
-      'Noto Sans Hebrew', 'Noto Sans Thai', 'Noto Color Emoji', sans-serif;
+    font-family: %s;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
     background: %s;
     background-size: cover;
     background-position: center;
-    display: flex;
-    align-items: flex-end;
+    position: relative;
     color: #fff;
   }
+  /* Dark scrim: makes white text legible over any banner image, and tints the
+     brand-gradient fallback so it reads as the app's default theme. */
   .scrim {
     position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.65) 0%%, rgba(0,0,0,0.15) 55%%, rgba(0,0,0,0) 100%%);
-  }
-  .card {
-    position: relative;
-    z-index: 1;
-    margin: 0 0 56px 56px;
-    display: flex;
-    align-items: center;
-    gap: 28px;
-  }
-  .avatar {
-    width: 132px; height: 132px; border-radius: 50%%; object-fit: cover;
-    border: 4px solid rgba(255,255,255,0.9); box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    background: %s;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 64px; font-weight: 700;
-  }
-  .meta { display: flex; flex-direction: column; gap: 8px; max-width: 956px; overflow: hidden; }
-  .name {
-    font-size: 56px; font-weight: 700; text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-    max-width: 956px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  }
-  .handle {
-    font-size: 30px; font-weight: 400; opacity: 0.92; text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-    max-width: 956px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%%, rgba(30,27,75,0.35) 45%%, rgba(30,27,75,0.82) 100%%);
   }
   .prompt {
     position: absolute; left: 56px; top: 56px; z-index: 1;
-    font-size: 34px; font-weight: 600; max-width: 1088px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+    font-size: 34px; font-weight: 600; line-height: 1.3;
+    max-width: 1088px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    letter-spacing: 0.2px;
+  }
+  .card {
+    position: absolute; left: 56px; bottom: 96px; z-index: 1;
+    display: flex; align-items: center; gap: 28px;
+  }
+  .avatar {
+    width: 132px; height: 132px; border-radius: 50%%; object-fit: cover;
+    border: 4px solid rgba(255,255,255,0.92);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    background: %s;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 64px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .meta { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .name {
+    font-size: 56px; font-weight: 700; line-height: 1.1;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.6);
+    max-width: 900px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .handle {
+    font-size: 30px; font-weight: 400; line-height: 1.2;
+    color: %s; text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    max-width: 900px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .footer {
+    position: absolute; right: 56px; bottom: 56px; z-index: 1;
+    font-size: 22px; font-weight: 600; letter-spacing: 0.5px;
+    color: %s;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
   }
 </style>
 </head>
@@ -213,12 +248,17 @@ func BuildOGTemplate(in OGInput) string {
       <div class="handle">@%s</div>
     </div>
   </div>
+  <div class="footer">navyfragen.app</div>
 </body>
 </html>`
 
 	return fmt.Sprintf(tmpl,
+		notoLink,
+		notoStack,
 		bg,
 		brandGradient,
+		brandOnDark,
+		brandOnDarkMu,
 		html.EscapeString(prompt),
 		avatarEl,
 		html.EscapeString(name),

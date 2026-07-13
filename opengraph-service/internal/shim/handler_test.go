@@ -555,6 +555,45 @@ func (b *blockingFetcher) ResolveDID(ctx context.Context, handle string) (string
 // that don't care about the renderer's output.
 func NewFakeRenderer() *FakeRenderer { return &FakeRenderer{PNG: []byte("DEFAULT-PNG")} }
 
+// --- FRONTEND_URL scheme tolerance ---
+//
+// Railway private-network URLs are easy to paste without the http:// scheme
+// (e.g. "client.railway.internal:3000"). Without defaulting, the reverse
+// proxy's Director sets an empty scheme and every request fails at runtime
+// with "unsupported protocol scheme" — taking the whole frontend down. This
+// guards against that class of misconfiguration by defaulting to http.
+
+func TestNewHandler_BareHostnameDefaultsToHTTP(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	cache, err := NewFileCache(t.TempDir(), 100, time.Hour)
+	if err != nil {
+		t.Fatalf("NewFileCache: %v", err)
+	}
+	gen := NewGenerator(cache, fetcher, renderer)
+
+	// Real upstream to prove the proxy actually reaches it once the scheme is
+	// defaulted — a bare hostname must behave like http://<host>.
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "ok")
+	}))
+	t.Cleanup(upstream.Close)
+
+	// Strip the http:// from the httptest URL to simulate the bare-hostname case.
+	bare := strings.TrimPrefix(upstream.URL, "http://")
+	h, err := NewHandler(bare, gen, cache, "https://navyfragen.app")
+	if err != nil {
+		t.Fatalf("NewHandler with bare hostname: %v", err)
+	}
+
+	rec := do(t, h, "Mozilla/5.0", "/")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (bare hostname should default to http and proxy)", rec.Code)
+	}
+	if rec.Body.String() != "ok" {
+		t.Fatalf("body = %q, want %q (upstream not reached)", rec.Body.String(), "ok")
+	}
+}
+
 // --- helper: set file times so a test can simulate TTL expiry. ---
 
 func chtimes(path string, atime, mtime time.Time) error {

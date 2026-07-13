@@ -53,7 +53,13 @@ const DefaultMaxConcurrentGenerate = 4
 
 // NewHandler wires the handler against an upstream client URL and the injected
 // generator/cache. upstreamURL is the client's base URL (e.g. http://client:3000).
+// A schemeless value (e.g. "client:3000") is treated as http:// — Railway
+// private-network URLs are easy to paste without the scheme, and without this
+// default the proxy fails at runtime with "unsupported protocol scheme".
 func NewHandler(upstreamURL string, gen *Generator, cache *FileCache, origin string) (*Handler, error) {
+	if !strings.Contains(upstreamURL, "://") {
+		upstreamURL = "http://" + upstreamURL
+	}
 	target, err := url.Parse(upstreamURL)
 	if err != nil {
 		return nil, err
