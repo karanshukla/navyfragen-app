@@ -47,14 +47,36 @@ body {
    width — but an ancestor `transform` would also make them scroll with the
    page (a transformed element becomes the containing block for fixed
    descendants, turning fixed into absolute). So the wrapper does NOT use a
-   transform; instead the fixed elements are centered/clipped directly below. */
+   transform; instead the fixed elements are centered/clipped directly below.
+
+   The column's left/right divider lines are drawn via the ::before overlay
+   below, NOT via border-left/right on .app-shell-boundary itself. A parent's
+   border paints *below* its fixed descendants, so the opaque fixed navbar
+   (repositioned to the column's left edge on wide screens — see
+   .mantine-AppShell-navbar below) would paint over a real border-left and
+   make the left divider vanish (the right one survived because nothing
+   covers it). The overlay sits at z-index 200, above the navbar (101), so
+   both dividers render. */
 .app-shell-boundary {
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100dvh;
   position: relative;
+}
+
+.app-shell-boundary::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1400px;
+  max-width: 100vw;
+  pointer-events: none;
   border-left: 1px solid var(--nf-app-boundary-border);
   border-right: 1px solid var(--nf-app-boundary-border);
+  z-index: 200;
 }
 
 /* Center + clip the fixed header to the 1400px column without an ancestor
