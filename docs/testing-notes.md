@@ -14,11 +14,7 @@ This document explains coverage exclusions and hard-to-test code.
 
 ### `server/src/services/auth-service.ts` — `agent.getProfile()` block in `checkSession`
 
-**Lines:** the `agent.getProfile()` call and the following data extraction inside `checkSession`.
-
-**Why ignored:** This block calls AT Protocol methods on a live `Agent` instance. The `agent.getProfile()` method requires a live Bluesky network session.
-
-**What it would take to test:** The server now runs as native ESM (see issue #216), so `node:test`'s `mock.module()` is no longer blocked by a CJS transform layer and could intercept the `Agent` constructor at the module level. Adopting that pattern (call `mock.module("@atproto/api", ...)` in a `before()` hook, then dynamically `import()` the module under test) would let this branch run without a network session. Alternatively, refactor `checkSession` to accept an injected `Agent`-like interface that can be replaced in tests.
+**Status: now tested.** This block was previously ignored because `node:test`'s `mock.module()` was unavailable under the CJS `tsx` transform. After the ESM migration (#216) it became reachable: `auth-service.test.ts` mocks `../auth/session-agent` via `mock.module()` (registered in a `before()` hook before dynamically importing `auth-service`) so `initializeAgentForDid` returns a fake agent whose `getProfile` is controlled per-test. The block now has full coverage (success path, `!data` branch, optional-field fallbacks, getProfile rejection). See the `checkSession` tests for the pattern.
 
 ### `client/src/Navigation.tsx` — unreachable `null` tail of friends ternary
 

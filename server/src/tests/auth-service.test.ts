@@ -1,14 +1,49 @@
 import assert from "node:assert";
-import { test, describe, beforeEach, afterEach, mock } from "node:test";
+import { test, describe, before, beforeEach, afterEach, mock } from "node:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 
-import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
-import { AuthService } from "../services/auth-service";
+import { deleteE2EAgent, getE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
+
+// `mock.module` must be registered before the module under test is imported so
+// that auth-service's transitive import of session-agent picks up the mock.
+// AuthService is therefore loaded lazily in `before()` and held in this `let`.
+//
+// The mock faithfully reproduces the real `initializeAgentForDid` branching
+// (e2e agent > null-on-restore-miss > fake agent) so the existing E2E/no-agent
+// tests keep working; only the `new Agent(session)` leaf is replaced with
+// `mockAgent`, whose `getProfile` tests reassign to exercise the previously
+// untestable getProfile block in checkSession.
+let AuthService: typeof import("../services/auth-service").AuthService;
+let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
+
+before(async () => {
+  mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
+  await mock.module("../auth/session-agent", {
+    exports: {
+      // Mirror the real contract: e2e bypass first, then null on restore-miss,
+      // otherwise hand back the controllable fake agent.
+      initializeAgentForDid: async (ctx: any, did: string) => {
+        const e2e = getE2EAgent(did);
+        if (e2e) return e2e;
+        const restored = await ctx.oauthClient.restore(did);
+        if (!restored) return null;
+        return mockAgent;
+      },
+      initializeAgentFromSession: async (req: any, ctx: any) => {
+        if (!req.session?.did) return null;
+        const { initializeAgentForDid } = await import("../auth/session-agent");
+        return initializeAgentForDid(ctx, req.session.did);
+      },
+    },
+  });
+  const mod = await import("../services/auth-service");
+  AuthService = mod.AuthService;
+});
 
 describe("AuthService", () => {
   let ctx: any;
-  let service: AuthService;
+  let service: InstanceType<typeof AuthService>;
 
   function makeMockCtx(overrides: any = {}) {
     return {
@@ -148,7 +183,7 @@ describe("AuthService", () => {
       assert.strictEqual(result, null);
     });
 
-    test("throws when agent exists but getProfile call fails (covers !agent=false branch)", async () => {
+    test("returns the mapped profile when getProfile resolves with data", async () => {
       ctx.db.selectFrom = mock.fn(() => ({
         selectAll: mock.fn(function (this: any) {
           return this as any;
@@ -158,10 +193,98 @@ describe("AuthService", () => {
         }),
         executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
       }));
-      // Restore returns a non-null object so initializeAgentForDid creates a real Agent
       ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
-      // The real Agent has no valid network session so getProfile will throw
-      await assert.rejects(() => service.checkSession("did:foo"), /.+/);
+      mockAgent.getProfile = mock.fn(async () => ({
+        data: {
+          did: "did:foo",
+          handle: "foo.bsky.social",
+          displayName: "Foo",
+          description: "a bio",
+          avatar: "https://example.com/a.png",
+          banner: "https://example.com/b.png",
+          createdAt: "2024-01-01T00:00:00.000Z",
+        },
+      }));
+      const result = await service.checkSession("did:foo");
+      assert.deepStrictEqual(result, {
+        did: "did:foo",
+        handle: "foo.bsky.social",
+        displayName: "Foo",
+        description: "a bio",
+        avatar: "https://example.com/a.png",
+        banner: "https://example.com/b.png",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      });
+      assert.deepStrictEqual(mockAgent.getProfile.mock.calls[0].arguments[0], {
+        actor: "did:foo",
+      });
+    });
+
+    test("coerces absent optional profile fields to empty string / undefined", async () => {
+      ctx.db.selectFrom = mock.fn(() => ({
+        selectAll: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        where: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+      }));
+      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock.fn(async () => ({
+        data: {
+          did: "did:foo",
+          handle: "foo.bsky.social",
+          displayName: undefined,
+          description: undefined,
+          avatar: undefined,
+          banner: undefined,
+          createdAt: undefined,
+        },
+      }));
+      const result = await service.checkSession("did:foo");
+      assert.deepStrictEqual(result, {
+        did: "did:foo",
+        handle: "foo.bsky.social",
+        displayName: "",
+        description: "",
+        avatar: undefined,
+        banner: undefined,
+        createdAt: undefined,
+      });
+    });
+
+    test("returns null when getProfile resolves but data is falsy", async () => {
+      ctx.db.selectFrom = mock.fn(() => ({
+        selectAll: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        where: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+      }));
+      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock.fn(async () => ({ data: null }));
+      const result = await service.checkSession("did:foo");
+      assert.strictEqual(result, null);
+    });
+
+    test("rethrows when getProfile rejects", async () => {
+      ctx.db.selectFrom = mock.fn(() => ({
+        selectAll: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        where: mock.fn(function (this: any) {
+          return this as any;
+        }),
+        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+      }));
+      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock.fn(async () => {
+        throw new Error("network down");
+      });
+      await assert.rejects(() => service.checkSession("did:foo"), /network down/);
     });
 
     describe("with an E2E agent", () => {
