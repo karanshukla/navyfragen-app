@@ -4,24 +4,26 @@ This service runs between Caddy and the client: it reverse-proxies all `/*`
 traffic unchanged except `Bluesky Cardyb` requests on `/profile/:handle`, where
 it generates and serves a per-profile OG image (see the [workflow summary](../.claude/investigations/227-complete.md) for the full design).
 
-The variables below are read from the environment by `cmd/shim/main.go`. Every
-one has a sensible default, so in a normal Railway private-network deployment
-you only **need** to set `FRONTEND_URL` and `EXPORT_HTML_URL` — the rest are
-tuned for the production topology already.
-
 ## Service
 
 - **Source:** root of the repo; Dockerfile at `opengraph-service/Dockerfile`
   (multi-stage `golang` build → distroless static runtime).
-- **Port:** listens on `$PORT` (Railway injects this automatically — leave it).
+- **Port:** Railway injects `$PORT` automatically — **do not set it yourself**.
 - **Health:** `GET /healthz` returns `200` once the proxy is wired up.
 
-## Required variables
+## What to set (the short version)
 
-| Variable | Example | Purpose |
+You only need to configure **two variables** and **one volume**. Everything else
+has a production-correct default.
+
+| Setting | Value | Why |
 |---|---|---|
-| `FRONTEND_URL` | `http://client.railway.internal:3000` | The upstream client SPA to proxy to. This is where Caddy's `FRONTEND_DOMAIN`/`FRONTEND_PORT` *used* to point. On Railway, use the client service's private URL. |
-| `EXPORT_HTML_URL` | `http://html-to-image.railway.internal:3033/` | The `html-to-image` service, called by the generate path to render the composited PNG. |
+| `FRONTEND_URL` | `http://<client-service>:${PORT}` — your client service's **private** Railway URL, e.g. `http://client.railway.internal:3000` | The shim proxies all non-crawler `/*` traffic here. This is the upstream that previously sat behind Caddy directly. |
+| `EXPORT_HTML_URL` | `http://<html-to-image-service>:3033/` — your html-to-image service's **private** Railway URL | The generate path calls this to render the composited PNG. Must end with `/`. |
+| Volume mount | `/data` | Railway mounts the volume here (root-owned). The shim runs as root and creates `/data/og-cache` itself. **Mount at `/data`, not `/data/og-cache`** — the shim makes the subdir. |
+
+That's it for a working deploy. `PORT` is auto-injected by Railway; all `OG_*`,
+`ATPROTO_APPVIEW_HOST`, and `PUBLIC_URL` settings below are optional tuning.
 
 ## Optional variables (defaults are production-correct)
 
@@ -37,12 +39,10 @@ tuned for the production topology already.
 
 ## Volume
 
-Attach a Railway volume and mount it at `/data` (the service writes cache files
-under `$OG_CACHE_DIR`, i.e. `/data/og-cache`). The image pre-creates
-`/data/og-cache` as writable by the distroless non-root user, so **a fresh
-empty volume works out of the box**. A pre-existing root-owned volume would
-need `chown`-ing to uid `65532` (the nonroot uid) — simplest path is to create
-a new volume for this service.
+Attach a Railway volume and mount it at **`/data`** (Railway mounts volumes
+root-owned; the shim runs as root and creates `/data/og-cache` itself, so no
+manual `chown` is needed — fresh or pre-existing volumes both work). One cache
+entry = one user, keyed by DID.
 
 See [Railway volumes docs](https://docs.railway.app/reference/volumes).
 

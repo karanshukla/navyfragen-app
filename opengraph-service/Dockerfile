@@ -2,7 +2,7 @@
 # anubis (Go) build/run exclusively via their images — there is no host Go
 # install (hard constraint #10 in the investigation).
 #
-# Stage 1: build the shim binary (+ test helpers as needed).
+# Stage 1: build the shim binary.
 FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
@@ -14,26 +14,22 @@ RUN go mod download
 COPY . .
 
 # Static build for a distroless runtime. CGO disabled so we can ship a
-# FROM-scratch / gcr.io/distroless/static image.
+# gcr.io/distroless/static image.
 ENV CGO_ENABLED=0 GOOS=linux
 RUN go build -trimpath -ldflags="-s -w" -o /out/shim ./cmd/shim
 
-# Pre-create the cache dir so the runtime stage can copy it with nonroot
-# ownership. Docker copies this dir's perms onto a first-mounted named volume.
-RUN mkdir -p /out/og-cache
-
-# Stage 2: distroless static runtime — no shell, no package manager, ~minimal CVE surface.
-FROM gcr.io/distroless/static-debian12:nonroot
+# Stage 2: distroless static runtime — no shell, no package manager, minimal CVE surface.
+#
+# Uses the root-running variant (not :nonroot) because Railway bind-mounts
+# volumes as root-owned, shadowing anything the image pre-creates at the mount
+# path. A :nonroot uid 65532 can't mkdir under a root-owned bind mount, so the
+# cache init crashes with EACCES on startup. Running as root lets the shim
+# create /data/og-cache on the mounted volume. Distroless still ships no shell
+# or package manager, so the privilege exposure is bounded.
+FROM gcr.io/distroless/static-debian12
 
 WORKDIR /
 COPY --from=builder /out/shim /shim
 
-# Pre-create the cache dir as the nonroot user (uid 65532). When a named volume
-# is first mounted at /data/og-cache, Docker copies this dir's ownership/perms
-# onto the volume, so the nonroot process can write to it. Without this, the
-# volume initializes root-owned and the store fails with EACCES.
-COPY --from=builder --chown=nonroot:nonroot /out/og-cache /data/og-cache
-
-# nonroot user (uid 65532) is baked into the image.
 EXPOSE 8080
 ENTRYPOINT ["/shim"]
