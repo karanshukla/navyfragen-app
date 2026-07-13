@@ -13,6 +13,45 @@ const FORMATS = {
   webp: { contentType: 'image/webp', args: { type: 'webp' } },
 };
 
+// Bounded deadline for waiting on images/fonts to load before a screenshot.
+// Long enough to absorb a slow CDN fetch (banners/avatars live on cdn.bsky.app,
+// fonts on fonts.googleapis.com), short enough that a hung host can't stall a
+// render. On timeout we proceed with the screenshot anyway — the common case
+// will have loaded, the pathological case degrades to the pre-fix behavior.
+const VISUAL_READINESS_TIMEOUT_MS = 8000;
+
+// waitForVisualReadiness blocks until the page's webfonts and <img> elements
+// have loaded, so the screenshot doesn't race background-image/avatar fetches.
+// Without this, page.goto's 'load' event (the default wait) fires as soon as
+// the HTML's direct resources resolve, but CSS background-image and <img>
+// sources from a CDN (e.g. cdn.bsky.app banners/avatars) and webfonts are
+// frequently still in flight — producing flaky renders with blank banners or
+// fallback-font text. document.fonts.ready covers the FontFaceSet; the in-page
+// function covers <img> completeness. Both settle quickly on a local file URL
+// with no external assets.
+async function waitForVisualReadiness(page) {
+  await Promise.all([
+    // Best-effort font load. document.fonts.ready resolves once the FontFaceSet
+    // settles (all @font-face faces that the page actually uses have loaded or
+    // failed). Guarded — very old Chromium lacks document.fonts, though 23.x
+    // always has it.
+    page.evaluate(() => {
+      if (document.fonts && document.fonts.ready) {
+        return document.fonts.ready;
+      }
+      return Promise.resolve();
+    }),
+    // Every <img> must be complete with a non-zero naturalWidth (i.e. decoded,
+    // not broken/empty). waitForFunction polls until the predicate holds or
+    // the timeout elapses; on timeout it rejects, which we swallow so the
+    // screenshot still fires.
+    page.waitForFunction(
+      () => Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0),
+      { timeout: VISUAL_READINESS_TIMEOUT_MS }
+    ).catch(() => {}),
+  ]);
+}
+
 export function createApp(getBrowser) {
   const app = express();
 
@@ -64,6 +103,7 @@ export function createApp(getBrowser) {
       try {
         await page.setViewport({ width: options.width || 1920, height: options.height || 1080 });
         await page.goto('file://' + tmpinput.name);
+        await waitForVisualReadiness(page);
         await page.screenshot(Object.assign({}, options.args, format.args, { path: tmpoutput.name }));
       } finally {
         await page.close();
