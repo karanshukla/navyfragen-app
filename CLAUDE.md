@@ -195,7 +195,7 @@ Do **not** use it to skip real business logic. Document any usage in `docs/testi
 
 ### Module Mocking in Server Tests
 
-Controller and session-agent tests use `mock.module()` (Node.js v22.3+ API) to mock dependencies before a dynamic `import()` of the module under test. The pattern:
+The server runs as native ESM (see issue #216), which keeps `node:test`'s `mock.module()` API (Node.js v22.3+) available — it is no longer blocked by a CJS transform layer. The current test suite relies on dependency-injection mocks (chainable DB builders passed into constructors) rather than `mock.module()`, but the module-mocking path is open for cases that need to intercept a constructor the SUT imports at module scope (e.g. `@atproto/api`'s `Agent`). The pattern, when needed:
 
 ```typescript
 before(async () => {
