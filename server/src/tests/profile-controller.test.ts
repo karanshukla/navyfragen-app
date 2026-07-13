@@ -121,15 +121,6 @@ describe("ProfileController", () => {
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
     });
 
-    test("returns 401 when agent is null", async () => {
-      const ctx = makeCtx();
-      ctx.oauthClient.restore = mock.fn(async () => null);
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getFriends(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 401);
-    });
-
     test("returns moots, following, and oomfs on success", async () => {
       const svc = makeService({
         getFriendsOnApp: mock.fn(async () => ({

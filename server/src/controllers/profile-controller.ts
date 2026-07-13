@@ -77,13 +77,8 @@ export class ProfileController {
       return res.status(403).json({ error: "Not authenticated" });
     }
 
-    const agent = await initializeAgentFromSession(req, this.ctx);
-    if (!agent) {
-      return res.status(401).json({ error: "Session expired" });
-    }
-
     try {
-      const result = await this.profileService.getFriendsOnApp(userDid, agent);
+      const result = await this.profileService.getFriendsOnApp(userDid);
       return res.json(result);
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to fetch friends on app");
