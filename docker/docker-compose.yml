@@ -26,13 +26,17 @@ services:
 
   # ── Reverse proxy ───────────────────────────────────────────────────────────
 
-  # Routes /*  →  client,  /api/*  →  server (strips /api prefix)
+  # Routes /*  →  opengraph-service (→ client),  /api/*  →  server (strips /api prefix)
+  # The opengraph-service shim sits between Caddy and the client so it can
+  # synthesize per-profile OG responses for the Bluesky Cardyb crawler while
+  # passing all other /* traffic through unchanged. /api/* is split by Caddy
+  # upstream and never reaches the shim.
   caddy:
     build: ../caddy
     environment:
       PORT: 80
-      FRONTEND_DOMAIN: client
-      FRONTEND_PORT: 3000
+      FRONTEND_DOMAIN: opengraph-service
+      FRONTEND_PORT: 8080
       BACKEND_DOMAIN: server
       BACKEND_PORT: 3000
       # Both regions point to the single server container in Docker
@@ -41,7 +45,7 @@ services:
       BACKEND_NA_DOMAIN: server
       BACKEND_NA_PORT: 3000
     depends_on:
-      - client
+      - opengraph-service
       - server
     restart: unless-stopped
 
@@ -94,6 +98,33 @@ services:
     shm_size: "256m"
     restart: unless-stopped
 
+  # Go OG-preview shim. Sits between Caddy and the client. The fast path
+  # (all /* traffic except Bluesky Cardyb on /profile/:handle) is a near-zero
+  # overhead reverse-proxy pass-through. The generate path resolves the profile
+  # via indigo, composites a banner+avatar OG image via html-to-image, caches it
+  # by DID on a volume, and serves a rewritten index.html whose og:image points
+  # at the cached PNG.
+  opengraph-service:
+    build: ../opengraph-service
+    environment:
+      # The shim proxies to the client (the previous FRONTEND upstream).
+      FRONTEND_URL: "http://client:3000"
+      # html-to-image, reached by the generation path.
+      EXPORT_HTML_URL: "http://html-to-image:3033/"
+      # ~1 month TTL cache, keyed by DID (accepted staleness tradeoff).
+      OG_CACHE_TTL: "720h"
+      # AT Protocol AppView — matches the TS ProfileService exactly.
+      ATPROTO_APPVIEW_HOST: "https://api.bsky.app"
+      # Public site origin used to build absolute og:image URLs for crawlers.
+      PUBLIC_URL: "${PUBLIC_URL:-https://navyfragen.app}"
+      PORT: "8080"
+    volumes:
+      - og-image-cache:/data/og-cache
+    depends_on:
+      - client
+      - html-to-image
+    restart: unless-stopped
+
   # ── Data ────────────────────────────────────────────────────────────────────
 
   postgres:
@@ -113,3 +144,4 @@ services:
 
 volumes:
   postgres-data:
+  og-image-cache:

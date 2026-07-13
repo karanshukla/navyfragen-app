@@ -1,0 +1,34 @@
+# POC compose snippet for opengraph-service. This is NOT wired into the main
+# docker/docker-compose.yml — it shows how the shim slots in for the implement
+# stage. To validate the full path you would:
+#   1. Add this service to docker/docker-compose.yml.
+#   2. Repoint caddy's FRONTEND_DOMAIN/FRONTEND_PORT from `client`/`3000` to
+#      `opengraph-service`/`8080` (env-var only — no Caddyfile edit, per the
+#      investigation).
+#   3. Add the og-image-cache volume (mirrors postgres-data).
+#
+# For the poc itself, slices #1 (latency) and #3 (composite render) were
+# validated standalone against a stub nginx and the already-running
+# html-to-image service respectively — see the report.
+version: "3.9"
+
+services:
+  opengraph-service:
+    build: ../opengraph-service
+    environment:
+      # The shim proxies to the client (the previous FRONTEND upstream).
+      FRONTEND_URL: "http://client:3000"
+      # html-to-image, reached by the generation path.
+      EXPORT_HTML_URL: "http://html-to-image:3033/"
+      # ~1 month TTL cache, keyed by DID (accepted staleness tradeoff).
+      OG_CACHE_TTL: "720h"
+      PORT: "8080"
+    volumes:
+      - og-image-cache:/data/og-cache
+    depends_on:
+      - client
+      - html-to-image
+    restart: unless-stopped
+
+volumes:
+  og-image-cache:

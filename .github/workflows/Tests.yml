@@ -142,6 +142,35 @@ jobs:
         if: steps.server-tests.outcome == 'failure'
         run: exit 1
 
+  opengraph-tests:
+    name: OpenGraph Service (Go) Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: opengraph-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: opengraph-service/go.mod
+          cache: true
+          cache-dependency-path: opengraph-service/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Run tests
+        # -race exercises the singleflight / cache-mutex / semaphore
+        # concurrency surface that this change introduces. CGO is required for
+        # the race detector; setup-go enables it by default on linux.
+        run: go test -race -count=1 ./...
+
   coveralls-finish:
     name: Coveralls Finish
     needs: [client-tests, server-tests]
