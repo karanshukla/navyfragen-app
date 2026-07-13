@@ -178,7 +178,7 @@ function UserMenu({
 }: UserMenuProps) {
   const { triggerHaptic } = useHaptic(1);
   const { mutate: switchAccount, isPending: isSwitching } = useSwitchAccount();
-  const hasMultiple = accounts.length > 1;
+  const hasMultiple = accounts.length > 1; // gates the "Accounts" label only
 
   const handleSwitch = (did: string, handle: string) => {
     /* v8 ignore start */
@@ -255,10 +255,13 @@ function UserMenu({
       </Menu.Target>
 
       <Menu.Dropdown>
-        {/* Account switcher — only shown when more than one account is signed in. */}
-        {hasMultiple && (
+        {/* Account switcher — the active profile row always renders above
+            "Add account", even when only one account is signed in. The
+            "Accounts" label is shown only when there are other switchable
+            accounts to list beneath the current one. */}
+        {accounts.length > 0 && (
           <>
-            <Menu.Label>Accounts</Menu.Label>
+            {hasMultiple && <Menu.Label>Accounts</Menu.Label>}
             {accounts.map((acct) => {
               const isActive = acct.did === activeDid;
               const label = acct.displayName || acct.handle || acct.did;

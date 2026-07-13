@@ -17,6 +17,14 @@
   <meta property="og:image" content="https://navyfragen.app/navyfragen-og.png" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual" />
+  <!-- iOS standalone launch: "Add to Home Screen" opens without Safari's chrome.
+       viewport-fit=cover above enables env(safe-area-inset-*) in index.css. -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <!-- "default" adapts to the active color scheme (dark text on the light-mode
+       header, light on the dark-mode header); black-translucent would force
+       always-white status-bar text, unreadable against the light header. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <!-- Chrome address bar matches light/dark scheme -->
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FDF8FF" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0A24" />
