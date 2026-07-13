@@ -257,7 +257,7 @@ function generateDefaultHtml(
       font-family: ${NOTO_STACK};
     }
     body {
-      background: linear-gradient(135deg, #1E1B4B 0%, #3B2E78 55%, #6B3FD4 100%);
+      background: linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%);
       padding: 16px;
       display: flex;
       flex-direction: column;
