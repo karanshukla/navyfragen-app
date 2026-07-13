@@ -4,7 +4,8 @@
   "description": "For answering anonymous questions and posting them to Bluesky",
   "author": "Karan Shukla",
   "license": "MIT",
-  "main": "index.ts",
+  "type": "module",
+  "main": "dist/index.js",
   "private": true,
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts | pino-pretty",
@@ -105,6 +106,7 @@
       "!src/**/__tests__/**",
       "!src/**/*.test.*"
     ],
+    "format": "esm",
     "splitting": false,
     "sourcemap": true,
     "clean": true

@@ -71,7 +71,7 @@ export class Server {
     const logger = createLogger();
 
     // Set up the SQLite database
-    const db = createDb(DB_PATH);
+    const db = await createDb(DB_PATH);
     await migrateToLatest(db);
 
     // Create the atproto utilities

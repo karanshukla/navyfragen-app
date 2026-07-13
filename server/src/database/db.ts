@@ -275,7 +275,7 @@ migrations["008"] = {
   },
 };
 
-export const createDb = (location: string): Database => {
+export const createDb = async (location: string): Promise<Database> => {
   if (env.POSTGRESQL_URL) {
     return new Kysely<DatabaseSchema>({
       dialect: new PostgresDialect({
@@ -285,9 +285,8 @@ export const createDb = (location: string): Database => {
       }),
     });
   }
-  // Lazy require so the native binary is never loaded when PostgreSQL is in use
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const SqliteDb = require("better-sqlite3");
+  // Lazy import so the native binary is never loaded when PostgreSQL is in use
+  const { default: SqliteDb } = await import("better-sqlite3");
   return new Kysely<DatabaseSchema>({
     dialect: new SqliteDialect({
       database: new SqliteDb(location),

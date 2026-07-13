@@ -7,7 +7,10 @@ import os from "node:os";
 import path from "node:path";
 import { test, describe, before, after, beforeEach, afterEach, mock } from "node:test";
 
-import { generateVAPIDKeys } from "web-push";
+// web-push is CJS whose named exports aren't statically detectable by Node's
+// ESM loader (cjs-module-lexer), so import the default and destructure.
+import webPush from "web-push";
+const { generateVAPIDKeys } = webPush;
 
 import { NotificationService, createConcurrencyLimiter } from "../services/notification-service";
 
@@ -272,9 +275,11 @@ describe("NotificationService", () => {
     });
 
     // These tests exercise the real `web-push` `sendNotification` call against a
-    // local HTTPS server (self-signed cert) instead of mocking the module, since
-    // `node:test`'s `mock.module()` requires the `--experimental-test-module-mocks`
-    // flag, which this repo's test script does not enable.
+    // local HTTPS server (self-signed cert) rather than mocking the module, so
+    // they cover web-push's actual HTTP/encryption behavior end-to-end. (The
+    // server is now native ESM, so `mock.module()` no longer needs a special
+    // flag — these could be converted to mocks later if the local-server setup
+    // becomes a maintenance burden.)
     describe("against a local HTTPS push endpoint", () => {
       let server: https.Server;
       let port: number;

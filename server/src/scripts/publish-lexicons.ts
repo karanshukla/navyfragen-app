@@ -17,6 +17,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { AtpAgent } from "@atproto/api";
 
@@ -40,7 +41,7 @@ async function main() {
   console.log(`Logged in as ${handle} (${did})`);
   console.log(`\nDNS record to add:\n  _lexicon.navyfragen.app  TXT  "did=${did}"\n`);
 
-  const lexiconPath = join(__dirname, "../../lexicons/message.json");
+  const lexiconPath = join(fileURLToPath(import.meta.url), "../../lexicons/message.json");
   const lexicon = JSON.parse(readFileSync(lexiconPath, "utf-8"));
   const nsid = lexicon.id as string;
 

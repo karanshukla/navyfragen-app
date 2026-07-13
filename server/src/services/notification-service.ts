@@ -1,6 +1,9 @@
 /* v8 ignore next 1 */
 import { Logger } from "pino";
-import { sendNotification, setVapidDetails } from "web-push";
+// web-push is CJS whose named exports aren't statically detectable by Node's
+// ESM loader (cjs-module-lexer), so we import the default and destructure.
+import webPush from "web-push";
+const { sendNotification, setVapidDetails } = webPush;
 
 import type { Database } from "../database/db";
 
