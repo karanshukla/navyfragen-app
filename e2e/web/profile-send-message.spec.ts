@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.use({ storageState: "e2e/.auth/user.json" });
 
@@ -12,20 +12,19 @@ const handle = () => {
 // inbox API regardless of the auto-generated tid.
 const marker = () => `[e2e profile ${Date.now()}]`;
 
+// The ask-box aria-label is dynamic: `Send {displayName} an anonymous message`.
+// Match it by shape so the test doesn't need to know the display name ahead of
+// time (and so it doesn't have to call the session API).
+const askBox = (page: Page) =>
+  page.getByLabel(/^Send .+ an anonymous message$/);
+
 // Sending a message creates only a local DB row (no PDS/Bluesky post), so we can
 // clean it up by deleting it from the inbox afterwards.
 
 test("send anonymous message to own profile shows success toast", async ({ page }) => {
-  const h = handle();
-  await page.goto(`/profile/${h}`);
+  await page.goto(`/profile/${handle()}`);
 
-  // Wait for the ask card to render so we can read the exact dynamic aria-label.
-  const session = await page.request.get("/api/session");
-  const { profile, did } = await session.json();
-  if (!profile?.displayName) throw new Error("session profile.displayName missing");
-
-  const askLabel = `Send ${profile.displayName} an anonymous message`;
-  const textarea = page.getByLabel(askLabel);
+  const textarea = askBox(page);
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
   const text = `${marker()} Hello from the e2e suite!`;
@@ -38,24 +37,18 @@ test("send anonymous message to own profile shows success toast", async ({ page 
   await dialog.getByRole("button", { name: "Send Message" }).click();
 
   // Success toast (Mantine notifications render as role="alert").
-  await expect(
-    page.getByRole("alert", { name: /Message sent!/ })
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("alert", { name: /Message sent!/ })).toBeVisible({
+    timeout: 15_000,
+  });
 
   // Cleanup: delete the message we just created via the inbox API.
-  await cleanupMessages(page, did, [text, marker()]);
+  await cleanupMessages(page, [text]);
 });
 
 test("sending an empty message is blocked before the modal", async ({ page }) => {
-  const h = handle();
-  await page.goto(`/profile/${h}`);
+  await page.goto(`/profile/${handle()}`);
 
-  const session = await page.request.get("/api/session");
-  const { profile } = await session.json();
-  if (!profile?.displayName) throw new Error("session profile.displayName missing");
-
-  const askLabel = `Send ${profile.displayName} an anonymous message`;
-  const textarea = page.getByLabel(askLabel);
+  const textarea = askBox(page);
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
   // Click Send with an empty box — client-side validation should fire.
@@ -69,15 +62,9 @@ test("sending an empty message is blocked before the modal", async ({ page }) =>
 });
 
 test("cancel confirmation modal does not send the message", async ({ page }) => {
-  const h = handle();
-  await page.goto(`/profile/${h}`);
+  await page.goto(`/profile/${handle()}`);
 
-  const session = await page.request.get("/api/session");
-  const { profile } = await session.json();
-  if (!profile?.displayName) throw new Error("session profile.displayName missing");
-
-  const askLabel = `Send ${profile.displayName} an anonymous message`;
-  const textarea = page.getByLabel(askLabel);
+  const textarea = askBox(page);
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
   await textarea.fill(`${marker()} this should NOT be sent`);
@@ -93,15 +80,9 @@ test("cancel confirmation modal does not send the message", async ({ page }) => 
 });
 
 test("clear button empties the ask box", async ({ page }) => {
-  const h = handle();
-  await page.goto(`/profile/${h}`);
+  await page.goto(`/profile/${handle()}`);
 
-  const session = await page.request.get("/api/session");
-  const { profile } = await session.json();
-  if (!profile?.displayName) throw new Error("session profile.displayName missing");
-
-  const askLabel = `Send ${profile.displayName} an anonymous message`;
-  const textarea = page.getByLabel(askLabel);
+  const textarea = askBox(page);
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
   await textarea.fill("a draft I will discard");
@@ -115,12 +96,12 @@ test("clear button empties the ask box", async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 /** Delete any inbox messages whose body contains one of `needles`. Best-effort. */
-async function cleanupMessages(
-  page: import("@playwright/test").Page,
-  did: string,
-  needles: string[]
-) {
+async function cleanupMessages(page: Page, needles: string[]) {
   try {
+    const session = await page.request.get("/api/session");
+    if (!session.ok()) return;
+    const { did } = await session.json();
+    if (!did) return;
     const res = await page.request.get(`/api/messages/${encodeURIComponent(did)}`);
     if (!res.ok()) return;
     const { messages }: { messages: { tid: string; message: string }[] } = await res.json();

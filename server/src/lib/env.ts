@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { bool, cleanEnv, host, port, str, testOnly } from "envalid";
+import { bool, cleanEnv, host, num, port, str, testOnly } from "envalid";
 
 dotenv.config();
 
@@ -45,4 +45,7 @@ export const env = cleanEnv(process.env, {
   // E2E testing — disabled by default; never set in production
   E2E_TESTING: bool({ default: false }),
   E2E_PDS_URL: str({ default: "" }),
+  // Per-IP request cap per minute. Set to 0 in the e2e overlay to disable
+  // rate limiting entirely so a large Playwright suite doesn't trip 429s.
+  RATE_LIMIT_MAX: num({ default: 100 }),
 });

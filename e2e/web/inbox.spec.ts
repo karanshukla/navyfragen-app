@@ -21,7 +21,7 @@ const handle = () => {
 test.beforeEach(async ({ page }) => {
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/messages/);
-  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
     timeout: 10_000,
   });
 });
@@ -83,11 +83,13 @@ test("posting-preferences switch toggles state", async ({ page }) => {
   }
   await expect(autoScroll).toBeVisible({ timeout: 5_000 });
 
-  const before = await autoScroll.getAttribute("aria-checked");
+  const before = await autoScroll.isChecked();
   await autoScroll.click();
-  await expect(autoScroll).not.toHaveAttribute("aria-checked", before ?? "", {
-    timeout: 5_000,
-  });
+  if (before) {
+    await expect(autoScroll).not.toBeChecked({ timeout: 5_000 });
+  } else {
+    await expect(autoScroll).toBeChecked({ timeout: 5_000 });
+  }
 
   if (seeded) await cleanupAllMessages(page);
 });

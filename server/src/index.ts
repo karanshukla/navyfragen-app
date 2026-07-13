@@ -110,13 +110,17 @@ export class Server {
 
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    app.use(
-      rateLimit({
-        windowMs: 60 * 1000, // 1 minute
-        max: 100,
-        message: "Too many requests, please try again later.",
-      })
-    );
+    // RATE_LIMIT_MAX=0 disables rate limiting (used by the e2e overlay so a
+    // large Playwright suite doesn't trip the per-IP cap).
+    if (env.RATE_LIMIT_MAX > 0) {
+      app.use(
+        rateLimit({
+          windowMs: 60 * 1000, // 1 minute
+          max: env.RATE_LIMIT_MAX,
+          message: "Too many requests, please try again later.",
+        })
+      );
+    }
 
     app.use((_req, res, next) => {
       res.set("Cache-Control", "no-store");

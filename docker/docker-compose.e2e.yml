@@ -5,6 +5,7 @@
 # What this changes:
 #   • Bakes VITE_E2E_TESTING=true into the client build (shows the app-password form)
 #   • Enables the /auth/e2e-login route on the server
+#   • Disables the per-IP rate limit so a large Playwright suite doesn't trip 429s
 #   • Exposes Caddy directly on port 8090 so Playwright bypasses Anubis bot-protection
 #
 # Credentials (E2E_HANDLE, E2E_APP_PASSWORD) are NOT in this file.
@@ -23,6 +24,8 @@ services:
       NODE_ENV: "test"
       E2E_TESTING: "true"
       E2E_PDS_URL: "${E2E_PDS_URL:-https://bsky.social}"
+      # Disable rate limiting so the Playwright suite can fan out freely.
+      RATE_LIMIT_MAX: "0"
 
   caddy:
     ports:
