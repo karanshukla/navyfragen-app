@@ -39,3 +39,5 @@ e2e/.auth/
 
 # Superpowers spec/design docs
 docs/superpowers/
+/.zcode
+/.playwright-mcp
