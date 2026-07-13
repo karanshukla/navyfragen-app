@@ -1,4 +1,4 @@
-import { Button, Loader } from "@mantine/core";
+import { Loader, Switch } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 
@@ -31,12 +31,12 @@ export function PushNotificationsButton() {
     isServerPushAvailable === false || !isBrowserSupported || permission === "denied";
 
   if (isCheckingAvailability) return <Loader size="sm" />;
+
   if (isUnavailable) {
-    return (
-      <Button fullWidth disabled>
-        Push Notifications Unavailable
-      </Button>
-    );
+    // A disabled switch reads as "off, and you can't turn it on here" more
+    // clearly than the old inert button, and matches the PDS Sync control's
+    // affordance on the neighbouring card.
+    return <Switch size="lg" label="Push Notifications Unavailable" checked={false} disabled />;
   }
 
   const togglePush = async () => {
@@ -59,17 +59,13 @@ export function PushNotificationsButton() {
     }
   };
 
-  if (isSubscribed) {
-    return (
-      <Button fullWidth loading={isBusy} onClick={togglePush}>
-        Push Notifications Enabled
-      </Button>
-    );
-  }
-
   return (
-    <Button fullWidth variant="outline" loading={isBusy} onClick={togglePush}>
-      Enable Push Notifications
-    </Button>
+    <Switch
+      size="lg"
+      label={isSubscribed ? "Push Notifications Enabled" : "Enable Push Notifications"}
+      checked={isSubscribed}
+      disabled={isBusy}
+      onChange={togglePush}
+    />
   );
 }
