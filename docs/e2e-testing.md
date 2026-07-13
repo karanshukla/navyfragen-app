@@ -96,3 +96,46 @@ test.use({ storageState: "e2e/.auth/user.json" });
 ```
 
 The `setup` project in `playwright.config.ts` runs `auth.setup.ts` first; all other specs inherit the logged-in session.
+
+### Project layout
+
+`playwright.config.ts` defines three projects:
+
+| Project | Viewport | Matches |
+|---------|----------|---------|
+| `setup` | — | `*.setup.ts` (auth) |
+| `chromium` | Desktop Chrome | `*.spec.ts` at the `e2e/` root and under `e2e/web/` |
+| `mobile-chromium` | Pixel 7 (412×732) | `*.spec.ts` under `e2e/mobile/` |
+
+Put desktop/web tests in `e2e/web/` and mobile-viewport tests in `e2e/mobile/`. The
+mobile project runs the same auth setup, so specs there reuse the saved session too.
+
+Run a single project locally:
+
+```bash
+npx playwright test --project=chromium
+npx playwright test --project=mobile-chromium
+```
+
+### Side-effect hygiene
+
+The suite runs against a real Bluesky PDS on a shared account. Prefer read-only
+assertions. For tests that write data:
+
+- **Send message** (`/profile/:handle` → Send) and **Add example messages** create
+  only a local postgres row (no PDS record, no Bluesky post) and are deletable via
+  `DELETE /api/messages/:tid`. Clean them up in the test via the API.
+- **Reply** (`POST /messages/respond`) creates a **permanent** `app.bsky.feed.post`
+  on the PDS with no cleanup path. The inbox reply test exercises the compose UI
+  and then backs out with Escape — it never sends.
+- **Pin/unpin** and the **posting-preferences** switches are pure client state
+  (localStorage) and need no cleanup.
+- **Settings** toggles write through to the server — read the initial value, toggle,
+  assert, then restore via the API.
+
+### Selectors
+
+There are no `data-testid` attributes in the app (the e2e login panel is the only
+exception). Tests use accessible queries: `getByRole`, `getByLabel`, `getByText`.
+Mantine notifications render with `role="alert"` (not `role="status"`), and the
+notification's accessible name aggregates its title and description.
