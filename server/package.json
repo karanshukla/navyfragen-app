@@ -51,12 +51,12 @@
     ]
   },
   "dependencies": {
-    "@atproto/api": "^0.20.25",
-    "@atproto/common": "^0.7.0",
-    "@atproto/identity": "^0.5.3",
+    "@atproto/api": "^0.20.28",
+    "@atproto/common": "^0.7.2",
+    "@atproto/identity": "^0.5.6",
     "@atproto/lexicon": "^0.7.4",
-    "@atproto/oauth-client-node": "^0.4.5",
-    "@atproto/sync": "^0.3.7",
+    "@atproto/oauth-client-node": "^0.4.8",
+    "@atproto/sync": "^0.3.10",
     "@atproto/syntax": "^0.7.0",
     "@atproto/xrpc-server": "^0.11.6",
     "@axiomhq/pino": "^1.8.0",
@@ -84,7 +84,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "@atproto/lex-cli": "^0.10.3",
+    "@atproto/lex-cli": "^0.10.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
