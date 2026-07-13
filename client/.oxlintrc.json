@@ -120,7 +120,7 @@
     },
     {
       "files": [
-        "public/sw.js"
+        "src/sw.ts"
       ],
       "env": {
         "serviceworker": true

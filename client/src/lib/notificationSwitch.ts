@@ -1,7 +1,7 @@
 // Query params the service worker attaches to a notification's target URL
-// (see client/public/sw.js) so the page, not the service worker, performs the
+// (see client/src/sw.ts) so the page, not the service worker, performs the
 // actual account switch. The service worker has no reliable way to know the
-// app's API base path (VITE_API_URL isn't available in a plain public script),
+// app's API base path (VITE_API_URL isn't available to the SW bundle),
 // so it just passes the recipient account through and lets already-configured
 // client code make the request.
 const NOTIFY_DID_PARAM = "notifyDid";
