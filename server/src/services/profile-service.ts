@@ -73,10 +73,7 @@ export class ProfileService {
    * @param handle The user's handle
    * @returns The resolved DID
    */
-  async getFriendsOnApp(
-    userDid: string,
-    agent: Agent
-  ): Promise<{
+  async getFriendsOnApp(userDid: string): Promise<{
     moots: { did: string; handle: string; displayName?: string; avatar?: string }[];
     following: { did: string; handle: string; displayName?: string; avatar?: string }[];
     oomfs: { did: string; handle: string; displayName?: string; avatar?: string }[];
@@ -109,12 +106,20 @@ export class ProfileService {
       return map;
     }
 
+    // Both calls go through the same public appview agent so the follows and
+    // followers datasets are read from one consistent indexing state. Splitting
+    // them across the authenticated caller agent and this public agent could
+    // observe the same relationship differently (one appview session lagging
+    // the other), which mislabels moots as oomfs. Note we can't move follows to
+    // the authenticated agent instead: its OAuth scope grants getFollows but not
+    // getFollowers, so doing so would break getFollowers for existing sessions.
+    const agent = this.agent;
     const [followingMap, followersMap] = await Promise.all([
       fetchPages((cursor) =>
         agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor })
       ),
       fetchPages((cursor) =>
-        this.agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })
+        agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })
       ),
     ]);
 
