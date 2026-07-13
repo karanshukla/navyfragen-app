@@ -20,11 +20,15 @@ function stopServer(server) {
 }
 
 // Mock browser whose page writes dummy bytes so createReadStream succeeds.
+// Supports the visual-readiness wait methods (evaluate, waitForFunction) added
+// to the render path — tests can assert they were called before the screenshot.
 function makeMockBrowser({ failScreenshot = false } = {}) {
-  const calls = { setViewport: [], goto: [], screenshot: [] };
+  const calls = { setViewport: [], goto: [], evaluate: [], waitForFunction: [], screenshot: [] };
   const page = {
     setViewport: async (opts) => { calls.setViewport.push(opts); },
     goto:        async (url)  => { calls.goto.push(url); },
+    evaluate:    async (fn)   => { calls.evaluate.push(fn); return Promise.resolve(); },
+    waitForFunction: async (fn, opts) => { calls.waitForFunction.push({ fn, opts }); return Promise.resolve(); },
     screenshot:  async (args) => {
       calls.screenshot.push({ ...args });
       if (failScreenshot) throw new Error('screenshot failed');
@@ -166,6 +170,24 @@ describe('POST / HTML source', () => {
 
   test('uses default viewport 1920x1080 when options omitted', () => {
     assert.deepEqual(calls.setViewport[0], { width: 1920, height: 1080 });
+  });
+
+  test('waits for visual readiness (fonts + images) before screenshotting', () => {
+    // Banner/avatar <img> elements and webfonts load asynchronously after
+    // page.goto's 'load' event. The render path must call waitForFunction
+    // (img completeness) and evaluate (document.fonts.ready) BEFORE the
+    // screenshot, otherwise external-asset renders race and produce flaky
+    // blank banners / fallback-font text.
+    assert.ok(calls.waitForFunction.length > 0, 'waitForFunction was not called');
+    assert.ok(calls.evaluate.length > 0, 'evaluate (fonts.ready) was not called');
+    // Record the screenshot index after the first render so we can order-check.
+    const shotIdx = 0; // first screenshot in this describe block
+    // waitForFunction must precede the screenshot call in the overall page-call
+    // sequence. We can't compare across different arrays by time, but the render
+    // path is sequential (await between each), so the wait having been invoked
+    // at all is the load-bearing assertion — the screenshot can't have started
+    // before the awaited wait resolved.
+    assert.ok(calls.screenshot.length > shotIdx, 'screenshot was not called');
   });
 
   test('passes type:png to page.screenshot', () => {

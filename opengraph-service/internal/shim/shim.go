@@ -201,9 +201,9 @@ func BuildOGTemplate(in OGInput) string {
   }
   .prompt {
     position: absolute; left: 56px; top: 56px; z-index: 1;
-    font-size: 34px; font-weight: 600; line-height: 1.3;
+    font-size: 56px; font-weight: 700; line-height: 1.2;
     max-width: 1088px;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.55);
+    text-shadow: 0 3px 16px rgba(0,0,0,0.65);
     letter-spacing: 0.2px;
   }
   .card {
