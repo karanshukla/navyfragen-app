@@ -9,7 +9,6 @@
     },
     "rootDir": "./src",
     "outDir": "dist",
-    "importsNotUsedAsValues": "remove",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

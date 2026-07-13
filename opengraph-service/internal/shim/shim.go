@@ -104,15 +104,13 @@ func ParseTTL(s string, fallback time.Duration) time.Duration {
 
 // --- OG composite template ---
 
-// Brand gradient per CLAUDE.md design tokens (--nf-grad-mark). Used as the
+// Brand gradient per CLAUDE.md design tokens (--nf-grad-dark — reserved for
+// image-export/OG preview surfaces, not live UI). Matches the "default" theme
+// gradient in server/src/lib/image-generator.ts exactly. Used as the
 // fallback background when a profile has no banner, and as the accent strip.
-const brandGradient = "linear-gradient(135deg, #3349E0 0%, #6B3FD4 50%, #4F1FA6 100%)"
+const brandGradient = "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)"
 
-// Brand color tokens (mirror server/src/lib/image-generator.ts default theme).
 const (
-	brandIndigo   = "#3349E0"
-	brandViolet   = "#6B3FD4"
-	brandDeepV    = "#4F1FA6"
 	brandOnDark   = "rgba(255, 255, 255, 0.90)" // primary text on dark bg
 	brandOnDarkMu = "rgba(255, 255, 255, 0.62)" // muted text on dark bg
 )

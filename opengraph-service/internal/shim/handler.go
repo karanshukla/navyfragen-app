@@ -2,10 +2,8 @@ package shim
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -22,9 +20,10 @@ import (
 // Routes:
 //   - GET /healthz → 200 {}
 //   - GET /og-cache/<safe-did>.png → cached PNG from the volume
-//   - everything else → Classify; DecisionGenerate → slow path, else reverse-proxy.
+//   - everything else → Classify; DecisionGenerate → slow path, else reverse-proxy
+//     (via the embedded Caddy engine — see caddyproxy.go).
 type Handler struct {
-	Proxy     *httputil.ReverseProxy
+	Proxy     http.Handler
 	Generator *Generator
 	Cache     *FileCache
 	Origin    string // public site origin for absolute OG URLs
@@ -64,34 +63,19 @@ func NewHandler(upstreamURL string, gen *Generator, cache *FileCache, origin str
 	if err != nil {
 		return nil, err
 	}
-	proxy := &httputil.ReverseProxy{
-		// Director (not Rewrite/NewSingleHostRewrite, which are newer): mutate
-		// the inbound request to point at the client upstream. This is the
-		// stable API across the supported Go versions.
-		Director: func(req *http.Request) {
-			req.URL.Scheme = target.Scheme
-			req.URL.Host = target.Host
-			req.Host = target.Host
-		},
-		BufferPool:    newBufferPool(),
-		FlushInterval: 100 * time.Millisecond,
-		// ErrorHandler customizes the body returned when the upstream client is
-		// unreachable (connection refused, dial timeout, mid-stream EOF). The
-		// stdlib default is a bare 502 with no body and a log line; for the
-		// sole frontend upstream we surface a short, stable 502 body and a
-		// structured log entry so operators see the upstream is down rather
-		// than a silent blank page. This does NOT add retry or a circuit
-		// breaker — those are larger changes (and Caddy's lb_retries already
-		// hides transient blips upstream of us) — it only improves the
-		// observable failure mode.
-		ErrorHandler: proxyErrorHandler,
+	// The pass-through path is now proxied by an embedded Caddy engine (see
+	// caddyproxy.go) instead of a hand-rolled httputil.ReverseProxy — Caddy
+	// owns buffering, streaming, and upstream-failure handling.
+	proxy, err := newCaddyProxy(target)
+	if err != nil {
+		return nil, err
 	}
 	h := &Handler{
-		Proxy:                proxy,
-		Generator:            gen,
-		Cache:                cache,
-		Origin:               origin,
-		GenTimeout:           45 * time.Second,
+		Proxy:                 proxy,
+		Generator:             gen,
+		Cache:                 cache,
+		Origin:                origin,
+		GenTimeout:            45 * time.Second,
 		MaxConcurrentGenerate: DefaultMaxConcurrentGenerate,
 	}
 	h.initSem()
@@ -219,53 +203,4 @@ func (h *Handler) serveCacheFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", entry.MimeType)
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	_, _ = w.Write(entry.Bytes)
-}
-
-// IsErrServerClosed reports whether err is http.ErrServerClosed — the expected
-// error from Server.Shutdown. Main callers use this to distinguish graceful
-// shutdown from a real listen failure.
-func IsErrServerClosed(err error) bool {
-	return errors.Is(err, http.ErrServerClosed)
-}
-
-// proxyErrorHandler is the ReverseProxy's ErrorHandler: invoked when the
-// upstream client connection fails (refused, timed out, EOF mid-response). We
-// preserve the stdlib's 502 status but add a short body and a log line so an
-// upstream outage is observable from the response rather than a blank page.
-// Context cancellation (client disconnect) is intentionally left to the
-// stdlib's default (no-op) so a client hang-up does not log as an error.
-func proxyErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, context.Canceled) {
-		// Client gave up — not an upstream fault, do not log as one.
-		return
-	}
-	log.Printf("opengraph-service: upstream proxy error for %s %s: %v",
-		r.Method, r.URL.Path, err)
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusBadGateway)
-	_, _ = w.Write([]byte("upstream unavailable\n"))
-}
-
-// smallBufferPool reuses proxy scratch buffers to avoid per-request allocs on
-// the hot path.
-type bufferPool struct{ ch chan []byte }
-
-func newBufferPool() *bufferPool {
-	return &bufferPool{ch: make(chan []byte, 64)}
-}
-
-func (p *bufferPool) Get() []byte {
-	select {
-	case b := <-p.ch:
-		return b
-	default:
-		return make([]byte, 32*1024)
-	}
-}
-
-func (p *bufferPool) Put(b []byte) {
-	select {
-	case p.ch <- b:
-	default:
-	}
 }
