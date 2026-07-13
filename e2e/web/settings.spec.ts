@@ -15,10 +15,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("settings page renders key cards", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "PDS Sync" })).toBeVisible({
+  // Card titles are bold <Text>, not headings — match by text.
+  await expect(page.getByText("PDS Sync", { exact: true })).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page.getByRole("heading", { name: "Push Notifications" })).toBeVisible();
+  await expect(page.getByText("Push Notifications", { exact: true })).toBeVisible();
 });
 
 test("PDS sync switch toggles and is restored afterwards", async ({ page }) => {

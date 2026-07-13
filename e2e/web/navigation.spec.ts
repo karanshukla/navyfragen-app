@@ -15,8 +15,9 @@ test("header wordmark returns home", async ({ page }) => {
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/messages/);
 
-  // The sidebar wordmark is a link to "/" with accessible name "navyfragen".
-  await page.getByRole("link", { name: /navyfragen/i }).first().click();
+  // The wordmark renders "navy" + "fragen" as separate spans, so its accessible
+  // name is "navy fragen" (with a space). Match by shape, not the concatenated form.
+  await page.getByRole("link", { name: /navy.*fragen/i }).first().click();
   await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
   await expect(page.locator("main, [role=main]")).toBeVisible();
 });
@@ -24,20 +25,23 @@ test("header wordmark returns home", async ({ page }) => {
 test("sidebar navigates between home, messages, and settings", async ({ page }) => {
   await page.goto("/");
 
-  // exact: true avoids colliding with the home hero "View Your Messages" link.
-  await page.getByRole("link", { name: "Messages", exact: true }).click();
+  // The sidebar NavLink's accessible name includes any unread-count badge
+  // ("Messages 3"), so anchor to the label and allow a trailing number. Scope
+  // to the navbar to avoid the home hero's "View Your Messages" link.
+  const navbar = page.locator("nav").first();
+  await navbar.getByRole("link", { name: /^Messages\b/ }).click();
   await expect(page).toHaveURL(/\/messages/);
   await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
     timeout: 10_000,
   });
 
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await navbar.getByRole("link", { name: "Settings" }).click();
   await expect(page).toHaveURL(/\/settings/);
   await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible({
     timeout: 10_000,
   });
 
-  await page.getByRole("link", { name: "Home", exact: true }).click();
+  await navbar.getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 
@@ -63,8 +67,9 @@ test("user menu links to own profile", async ({ page }) => {
   const h = handle();
   await page.goto("/");
 
-  // The user-menu trigger is the header button containing the avatar image.
-  await page.locator("header").getByRole("button").filter({ has: page.locator("img") }).click();
+  // The user-menu trigger is the last header button (after the color-scheme
+  // toggle). It has no stable aria-label — its name is the user's display name.
+  await page.locator("header").getByRole("button").last().click();
   await page.getByRole("menuitem", { name: "View Profile" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/profile/${h.replace(".", "\\.")}`), {

@@ -19,12 +19,27 @@ function burger(page: Page): Locator {
   return page.locator("header").locator("button").first();
 }
 
+/**
+ * Mantine collapses the mobile navbar with a CSS transform (translateX off the
+ * left edge); the links remain in the accessibility tree, so toBeVisible() /
+ * toBeHidden() can't tell the states apart. The user-facing reality is the
+ * navbar's on-screen x position, which we assert via the bounding box.
+ */
+async function expectDrawerOpen(page: Page) {
+  await expect
+    .poll(async () => (await page.locator("nav").first().boundingBox())?.x, { timeout: 5_000 })
+    .toBeGreaterThanOrEqual(0);
+}
+
+async function expectDrawerClosed(page: Page) {
+  await expect
+    .poll(async () => (await page.locator("nav").first().boundingBox())?.x, { timeout: 5_000 })
+    .toBeLessThan(0);
+}
+
 async function openDrawer(page: Page) {
   await burger(page).click();
-  // exact: true avoids colliding with the home hero "View Your Messages" link.
-  await expect(page.getByRole("link", { name: "Messages", exact: true })).toBeVisible({
-    timeout: 5_000,
-  });
+  await expectDrawerOpen(page);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -33,34 +48,30 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("burger opens and closes the navigation drawer", async ({ page }) => {
-  // Drawer collapsed initially: nav links are not visible.
-  await expect(page.getByRole("link", { name: "Messages", exact: true })).toHaveCount(0);
+  // Drawer starts collapsed (navbar translated off the left edge).
+  await expectDrawerClosed(page);
 
   await burger(page).click();
-
-  // Drawer open: nav links appear.
-  await expect(page.getByRole("link", { name: "Messages", exact: true })).toBeVisible({
-    timeout: 5_000,
-  });
-  await expect(page.getByRole("link", { name: "Settings", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expectDrawerOpen(page);
 
   // Close again.
   await burger(page).click();
-  await expect(page.getByRole("link", { name: "Messages", exact: true })).toHaveCount(0);
+  await expectDrawerClosed(page);
 });
 
 test("tapping a nav link navigates and closes the drawer", async ({ page }) => {
   await openDrawer(page);
 
-  await page.getByRole("link", { name: "Messages", exact: true }).click();
+  // The NavLink accessible name may include an unread badge ("Messages 3"),
+  // so anchor to the label and allow a trailing number.
+  await page.locator("nav").getByRole("link", { name: /^Messages\b/ }).click();
 
   await expect(page).toHaveURL(/\/messages/);
   await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
     timeout: 10_000,
   });
   // Drawer auto-closed after navigation.
-  await expect(page.getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
+  await expectDrawerClosed(page);
 });
 
 test("home hero links to messages on mobile", async ({ page }) => {
@@ -75,8 +86,9 @@ test("home hero links to messages on mobile", async ({ page }) => {
 test("navigate to own profile via the user menu on mobile", async ({ page }) => {
   const h = handle();
 
-  // The user-menu trigger is the header button containing the avatar image.
-  await page.locator("header").getByRole("button").filter({ has: page.locator("img") }).click();
+  // The user-menu trigger is the last header button (after the color-scheme
+  // toggle). It has no stable aria-label.
+  await page.locator("header").getByRole("button").last().click();
   await page.getByRole("menuitem", { name: "View Profile" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/profile/${h.replace(".", "\\.")}`), {
