@@ -23,6 +23,10 @@ const mockUseDisablePushNotifications = vi.mocked(notificationService.useDisable
 
 const SUBSCRIBED_FLAG = "nf-push-subscribed";
 
+// Mantine Switch renders an <input type="checkbox" role="switch">. A helper
+// keeps the assertions readable across the on/off/unavailable states.
+const switchInput = () => screen.getByRole("switch");
+
 describe("PushNotificationsButton", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,58 +46,67 @@ describe("PushNotificationsButton", () => {
     mockUsePushAvailable.mockReturnValue({ data: undefined, isLoading: true } as any);
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsButton />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
-  it("shows an unavailable button when the server does not support push", () => {
+  it("renders a disabled, unchecked switch when the server does not support push", () => {
     mockUsePushAvailable.mockReturnValue({ data: false, isLoading: false } as any);
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsButton />);
-    expect(screen.getByRole("button", { name: /push notifications unavailable/i })).toBeDisabled();
+    expect(switchInput()).toBeDisabled();
+    expect(switchInput()).not.toBeChecked();
+    expect(screen.getByText(/push notifications unavailable/i)).toBeInTheDocument();
   });
 
-  it("shows an unavailable button when the browser is unsupported", () => {
+  it("renders a disabled, unchecked switch when the browser is unsupported", () => {
     mockGetPushPermission.mockReturnValue("unsupported");
     renderWithProviders(<PushNotificationsButton />);
-    expect(screen.getByRole("button", { name: /push notifications unavailable/i })).toBeDisabled();
+    expect(switchInput()).toBeDisabled();
+    expect(switchInput()).not.toBeChecked();
+    expect(screen.getByText(/push notifications unavailable/i)).toBeInTheDocument();
   });
 
-  it("shows an unavailable button when permission was denied", () => {
+  it("renders a disabled, unchecked switch when permission was denied", () => {
     mockGetPushPermission.mockReturnValue("denied");
     renderWithProviders(<PushNotificationsButton />);
-    expect(screen.getByRole("button", { name: /push notifications unavailable/i })).toBeDisabled();
+    expect(switchInput()).toBeDisabled();
+    expect(switchInput()).not.toBeChecked();
+    expect(screen.getByText(/push notifications unavailable/i)).toBeInTheDocument();
   });
 
-  it("shows an 'Enable' button when not subscribed", () => {
+  it("renders an unchecked switch with an Enable label when not subscribed", () => {
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsButton />);
-    expect(screen.getByRole("button", { name: /enable push notifications/i })).toBeInTheDocument();
+    expect(switchInput()).not.toBeDisabled();
+    expect(switchInput()).not.toBeChecked();
+    expect(screen.getByText(/enable push notifications/i)).toBeInTheDocument();
   });
 
-  it("shows an 'Enabled' button when locally subscribed and permission is granted", () => {
+  it("renders a checked switch with an Enabled label when subscribed and permission is granted", () => {
     localStorage.setItem(SUBSCRIBED_FLAG, "1");
     mockGetPushPermission.mockReturnValue("granted");
     renderWithProviders(<PushNotificationsButton />);
-    expect(screen.getByRole("button", { name: /push notifications enabled/i })).toBeInTheDocument();
+    expect(switchInput()).toBeChecked();
+    expect(screen.getByText(/push notifications enabled/i)).toBeInTheDocument();
   });
 
-  it("enables push notifications on click and persists the subscribed flag", async () => {
+  it("enables push notifications on toggle and persists the subscribed flag", async () => {
     const mutateAsync = vi.fn().mockResolvedValue("endpoint");
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(screen.getByRole("button", { name: /enable push notifications/i }));
+    fireEvent.click(switchInput());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(localStorage.getItem(SUBSCRIBED_FLAG)).toBe("1"));
   });
 
-  it("disables push notifications on click and clears the subscribed flag", async () => {
+  it("disables push notifications on toggle and clears the subscribed flag", async () => {
     localStorage.setItem(SUBSCRIBED_FLAG, "1");
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     mockUseDisablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("granted");
     renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(screen.getByRole("button", { name: /push notifications enabled/i }));
+    fireEvent.click(switchInput());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(localStorage.getItem(SUBSCRIBED_FLAG)).toBeNull());
   });
@@ -103,7 +116,7 @@ describe("PushNotificationsButton", () => {
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(screen.getByRole("button", { name: /enable push notifications/i }));
+    fireEvent.click(switchInput());
     await waitFor(() => expect(screen.getByText("Boom")).toBeInTheDocument());
   });
 
@@ -112,7 +125,7 @@ describe("PushNotificationsButton", () => {
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(screen.getByRole("button", { name: /enable push notifications/i }));
+    fireEvent.click(switchInput());
     await waitFor(() =>
       expect(screen.getByText(/something went wrong. please try again/i)).toBeInTheDocument()
     );
