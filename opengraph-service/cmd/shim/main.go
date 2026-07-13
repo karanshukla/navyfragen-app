@@ -1,9 +1,11 @@
 // Command shim is the opengraph-service reverse proxy. It sits between Caddy
 // and the client. The fast path (everything except Bluesky Cardyb on
-// /profile/:handle) is a near-zero-overhead httputil.ReverseProxy pass-through.
-// The generate path (Cardyb + profile) resolves the handle via indigo, renders a
-// per-profile OG image via html-to-image, caches it by DID, and serves a
-// rewritten HTML response whose og:image points at the cached PNG.
+// /profile/:handle) is proxied via an embedded Caddy reverse-proxy engine
+// (see internal/shim/caddyproxy.go) rather than a hand-rolled
+// httputil.ReverseProxy. The generate path (Cardyb + profile) resolves the
+// handle via indigo, renders a per-profile OG image via html-to-image,
+// caches it by DID, and serves a rewritten HTML response whose og:image
+// points at the cached PNG.
 //
 // Cache-serving is a shim responsibility: GET /og-cache/:did.png returns the
 // stored image directly from the volume.
