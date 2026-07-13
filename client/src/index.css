@@ -43,17 +43,41 @@ body {
 
 /* Boxed layout: cap the whole app (header + navbar + main) to a centered
    column on wide/4K screens instead of letting it stretch edge-to-edge.
-   AppShell's header/navbar use `position: fixed`, which normally resolves
-   against the viewport — giving this wrapper a `transform` creates a new
-   containing block, so those fixed elements clip to its width instead. */
+   NOTE: the header/navbar use `position: fixed` and must clip to this column
+   width — but an ancestor `transform` would also make them scroll with the
+   page (a transformed element becomes the containing block for fixed
+   descendants, turning fixed into absolute). So the wrapper does NOT use a
+   transform; instead the fixed elements are centered/clipped directly below. */
 .app-shell-boundary {
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100dvh;
   position: relative;
-  transform: translateZ(0);
   border-left: 1px solid var(--nf-app-boundary-border);
   border-right: 1px solid var(--nf-app-boundary-border);
+}
+
+/* Center + clip the fixed header to the 1400px column without an ancestor
+   transform (which would make it scroll away — see note above). max-width
+   makes this a no-op below 1400px, so mobile/desktop-wide headers are
+   unaffected. translateX(-50%) re-centers after the left: 50% shift. */
+.mantine-AppShell-header {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1400px;
+}
+/* The navbar is also position: fixed. On wide screens it's a visible sidebar
+   that must align to the column's left edge (= 50% − half the column). This
+   only matters once the 1400px column is actually centered with room to spare,
+   so the gate matches .app-shell-boundary's max-width — below it the column is
+   full-width and the navbar's default left: 0 is correct. The mobile off-canvas
+   drawer (uses left: 0 + a slide transform) is untouched. */
+@media (min-width: 87.5em) {
+  .mantine-AppShell-navbar {
+    left: calc(50% - 700px);
+  }
 }
 
 /* Brand CSS tokens */
