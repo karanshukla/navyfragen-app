@@ -14,6 +14,28 @@ body {
   min-height: 100dvh;
 }
 
+/* PWA safe-area insets: keep the fixed header (and its content) clear of the
+   notch / status bar, and reserve space at the bottom for the home-indicator
+   gesture area. These env() values are non-zero only because viewport-fit=cover
+   is set in index.html; on desktop / non-notched devices they resolve to 0.
+
+   Growing --app-shell-header-height makes the header's solid background extend
+   behind the status bar AND auto-re-offsets the mobile Navbar's `top` (Mantine
+   derives --app-shell-header-offset from it). padding-top on the header then
+   pushes the logo / buttons below the notch. Main's inline pt={70} would
+   otherwise hide content under the now-taller header, so it's bumped by the
+   same inset; padding-bottom keeps the last scrollable item above the indicator. */
+:root {
+  --app-shell-header-height: calc(60px + env(safe-area-inset-top));
+}
+.mantine-AppShell-header {
+  padding-top: env(safe-area-inset-top);
+}
+.mantine-AppShell-main {
+  padding-top: calc(70px + env(safe-area-inset-top)) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
 /* Constrain the mobile navbar to 60% of the viewport width */
 .mantine-AppShell-navbar {
   max-width: 60vw !important;

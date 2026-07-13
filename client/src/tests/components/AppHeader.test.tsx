@@ -381,7 +381,7 @@ describe("AppHeader", () => {
       );
     });
 
-    it("does not render the account switcher section when there is only one account", async () => {
+    it("always shows the active profile row when there is only one account, with no others listed", async () => {
       mockUseSession.mockReturnValue({
         data: {
           isLoggedIn: true,
@@ -393,7 +393,16 @@ describe("AppHeader", () => {
       } as any);
       renderWithProviders(<AppHeader {...defaultProps} />);
       await openMenu();
+      // The active profile row renders unconditionally above "Add account"...
+      expect(screen.getByText("@active.bsky.social")).toBeInTheDocument();
+      // ...marked active (disabled + checked)...
+      const activeItem = screen.getByText("@active.bsky.social").closest('[role="menuitem"]');
+      expect(activeItem).toHaveAttribute("data-disabled", "true");
+      // ...with no "Accounts" label (only shown when there are others)...
       expect(screen.queryByText("Accounts")).not.toBeInTheDocument();
+      // ...and no other switchable accounts listed beneath it.
+      expect(screen.queryByText("Other User")).not.toBeInTheDocument();
+      expect(screen.queryByText("@other.bsky.social")).not.toBeInTheDocument();
     });
 
     it("does nothing when a switch is already pending", async () => {
