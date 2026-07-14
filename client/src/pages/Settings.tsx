@@ -5,7 +5,6 @@ import {
   Paper,
   Text,
   Button,
-  Switch,
   Alert,
   Skeleton,
   Loader,
@@ -189,23 +188,19 @@ export default function Settings() {
                 ) : settingsError ? (
                   settingsLoadError
                 ) : (
-                  <Switch
-                    size="lg"
-                    label="Enable PDS Sync"
-                    checked={Boolean(userSettings?.pdsSyncEnabled)}
-                    onChange={(event) => {
+                  <Button
+                    fullWidth
+                    variant={userSettings?.pdsSyncEnabled ? "filled" : "outline"}
+                    loading={updateSettings.isPending}
+                    onClick={() => {
                       updateSettings.mutate({
-                        pdsSyncEnabled: event.currentTarget.checked,
+                        pdsSyncEnabled: !userSettings?.pdsSyncEnabled,
                         imageTheme: userSettings?.imageTheme || "default",
                       });
                     }}
-                    disabled={updateSettings.isPending}
-                    styles={{
-                      label: { opacity: 1, color: "inherit" },
-                      track: { opacity: updateSettings.isPending ? 0.7 : 1 },
-                      thumb: { opacity: updateSettings.isPending ? 0.7 : 1 },
-                    }}
-                  />
+                  >
+                    {userSettings?.pdsSyncEnabled ? "PDS Sync Enabled" : "Enable PDS Sync"}
+                  </Button>
                 )}
               </SettingsCard>
             </Grid.Col>

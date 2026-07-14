@@ -197,8 +197,8 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    // Mantine Switch renders as a labelled checkbox input
-    fireEvent.click(screen.getByLabelText(/enable pds sync/i));
+    // pdsSyncEnabled is truthy, so the toggle button reads "PDS Sync Enabled"
+    fireEvent.click(screen.getByRole("button", { name: /pds sync enabled/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ pdsSyncEnabled: false }));
@@ -624,14 +624,14 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    fireEvent.click(screen.getByLabelText(/enable pds sync/i));
+    fireEvent.click(screen.getByRole("button", { name: /pds sync enabled/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ imageTheme: "default" }));
     });
   });
 
-  it("renders PDS sync switch with reduced opacity when updateSettings is pending", () => {
+  it("renders PDS sync button in a loading state when updateSettings is pending", () => {
     mockUseUpdateUserSettings.mockReturnValue({
       mutate: vi.fn(),
       isPending: true,
@@ -652,8 +652,8 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    // isPending=true covers the 0.7 opacity ternary branches in the Switch styles
-    expect(screen.getByLabelText(/enable pds sync/i)).toBeInTheDocument();
+    // isPending=true covers the Button `loading` branch
+    expect(screen.getByRole("button", { name: /pds sync enabled/i })).toBeInTheDocument();
   });
 
   it("shows skeleton for daily notifications card while bot-follow status is loading", () => {
