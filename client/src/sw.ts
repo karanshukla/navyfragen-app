@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 
-import { clientsClaim } from "workbox-core";
 import { precacheAndRoute } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 import { NetworkFirst, CacheFirst } from "workbox-strategies";
@@ -13,10 +12,15 @@ declare const self: ServiceWorkerGlobalScope;
 // by vite-plugin-pwa's `injectManifest` strategy).
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Take over from older workers immediately so updates apply on the next reload
-// rather than waiting for every tab to close (matches the prior sw.js behavior).
+// Activate a newly installed worker without waiting for every tab to close,
+// but deliberately skip clientsClaim(): claiming already-open tabs fires a
+// `controllerchange` event that vite-plugin-pwa's autoUpdate registration
+// (main.tsx) responds to with an immediate, unprompted `location.reload()` —
+// so any tab open when a new deploy ships gets silently reloaded seconds into
+// the session. Without clientsClaim(), the new worker only takes control of
+// tabs opened/reloaded after activation, so the update applies on the next
+// natural navigation instead of interrupting an in-progress session.
 self.skipWaiting();
-clientsClaim();
 
 // --- Production-only runtime caching ---------------------------------------
 // In dev, vite-plugin-pwa serves the SW with devOptions that intentionally keep
