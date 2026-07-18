@@ -65,6 +65,8 @@ export default defineConfig({
         "src/Theme.tsx",
         "src/vite-env.d.ts",
         "src/styles/tokens.ts",
+        "src/pushPayload.ts",
+        "src/index.css",
       ],
     },
   },

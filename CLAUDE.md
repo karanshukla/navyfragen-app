@@ -182,6 +182,8 @@ Target is 100% across all four v8 metrics: statements, lines, branches, function
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and app entry point
 - `src/vite-env.d.ts` — ambient declarations
 - `src/styles/tokens.ts` — pure style constant exports
+- `src/pushPayload.ts` — a type-only `interface` with no runtime code to execute
+- `src/index.css` — a stylesheet; Vite's CSS import handling registers it as a coverage-tracked module with zero instrumentable statements
 
 Adding a new exclusion requires a comment in `docs/testing-notes.md` explaining why and what it would take to test.
 

@@ -71,8 +71,6 @@ describe("SettingsService", () => {
 
     executeTakeFirstQueue = [];
     mockSelectBuilder.executeTakeFirst = async () => executeTakeFirstQueue.shift();
-    mockInsertBuilder.execute = async () => ({});
-    mockUpdateBuilder.execute = async () => ({});
     lastValuesArg = undefined;
 
     settingsService = new SettingsService(mockDb as any, mockLogger as any);
