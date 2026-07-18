@@ -216,6 +216,12 @@ These files all previously caused a visible coverage drop because the class body
 
 **Why ignored:** Same V8 "function not JIT-compiled" artifact documented for `pds-region.ts` above, but affecting only the second function in this file (`initializeAgentForDid`'s declaration line does not exhibit it — the artifact does not attach to every function declaration consistently). `initializeAgentFromSession` is exercised extensively by `session-agent.test.ts`; a single `/* v8 ignore next 1 */` suppresses just the artifact branch on its declaration line.
 
+### `server/src/auth/session-agent.ts` — blank-line/JSDoc gap between the module-scope ignore block and `initializeAgentForDid`
+
+**Lines:** the blank line and the 8-line JSDoc comment directly above `export async function initializeAgentForDid(`.
+
+**Why fixed by repositioning, not ignoring:** With `/* v8 ignore stop */` placed immediately after the import block (its own line, followed by a blank line and then the JSDoc comment before the function), tsx's source map attributed an uncovered statement range to those blank/comment lines even though `initializeAgentForDid` itself was fully exercised (100% branches, 100% funcs) — the same "wrong source position" class of artifact documented under "TypeScript Transpilation Artifacts" below, just severe enough here (9 of 51 lines) to visibly drop the file below 100% rather than round away. Moving `/* v8 ignore stop */` to sit directly above `export async function initializeAgentForDid(` (after the JSDoc instead of before it) closed the gap — the artifact range no longer starts mid-file on non-code lines. No test or behavior change; purely a marker-placement fix.
+
 ### `server/src/tests/*.test.ts` — module-scope artifact on the import block (per-file rollout)
 
 **Lines:** line 1 of each affected test file (the first `import` statement).
@@ -233,6 +239,32 @@ These files all previously caused a visible coverage drop because the class body
 ### `server/src/tests/message-service.test.ts` — dead table-name branch in a one-off `selectFrom` mock
 
 **Why removed (not ignored):** The test `"respondToMessage with image uses default theme when user_settings is null"` built an inline `mockDb.selectFrom = mock.fn((table) => { if (table === "user_settings") {...} return mockSelectBuilder; })`. `MessageService.respondToMessage` only calls `db.selectFrom("user_settings")` once (to look up the image theme when `includeQuestionAsImage` is true) — it never queries any other table within that method — so the `return mockSelectBuilder` fallback for a non-matching table name was unreachable in this test. Simplified to a mock that always returns the `user_settings` shape.
+
+### `server/src/tests/auth-service.test.ts` — unused `initializeAgentFromSession` export in the `session-agent` module mock
+
+**Why removed (not ignored):** The `mock.module("../auth/session-agent", ...)` call in `before()` originally stubbed both `initializeAgentForDid` and `initializeAgentFromSession`, mirroring every export of the real module "for fidelity." But `AuthService` (the only thing this file imports/exercises) calls `initializeAgentForDid` directly — it never imports or calls `initializeAgentFromSession`. The mock's `initializeAgentFromSession` implementation, and its dead `if (e2e) return e2e;` branch inside the mocked `initializeAgentForDid` (unreachable because `checkSession`/`revokeSession` both check `hasE2EAgent()` themselves before ever calling `initializeAgentForDid`), were both unused scaffolding. Removed rather than annotated.
+
+### `server/src/tests/auth-service.test.ts` — tsx dynamic-`import()` interop branch
+
+**Line:** `const mod = await import("../services/auth-service");` in `before()`.
+
+**Why ignored:** This is the one file in the server suite that needs a dynamic `import()` (to load `AuthService` only after `mock.module()` has registered its `session-agent` replacement — see the file's leading comment). tsx compiles `await import(...)` through an ESM-interop shim that introduces a branch for "module namespace vs. default-only", which is structurally unreachable for a static, always-resolving relative path — the same category as the V8 JIT artifacts above, but produced by the import transform rather than JIT. Suppressed with a single `/* v8 ignore next */` immediately above the line.
+
+### `server/src/tests/settings-service.test.ts` — unused default `execute` mocks in `beforeEach`
+
+**Why removed (not ignored):** `beforeEach` set `mockInsertBuilder.execute` and `mockUpdateBuilder.execute` to a default `async () => ({})` before every test, but all four call sites that exercise `createDefaultSettings`/`updateSettings` (success and failure cases) reassign `mockInsertBuilder.execute`/`mockUpdateBuilder.execute` themselves immediately before calling the service — the `beforeEach` defaults were overwritten before ever being invoked, so the two arrow functions had a permanent 0 call count. Removed the two dead assignments from `beforeEach`.
+
+## Client — `src/sw.ts` (PWA service worker)
+
+**Coverage:** `sw.ts` is measured like any other client module (not excluded) and is now covered by `src/tests/sw.test.ts`, which mocks `workbox-precaching`/`workbox-routing`/`workbox-strategies` and stubs the `self` global (`ServiceWorkerGlobalScope`) so the module's top-level route registrations and its `push`/`notificationclick` listeners can be imported and invoked directly in `happy-dom`, without a real service worker runtime.
+
+### `client/src/pushPayload.ts` — excluded, type-only file
+
+**Why excluded:** A single exported `interface PushPayload { ... }` with no runtime code — TypeScript interfaces compile away entirely, leaving zero executable statements. Same category as `src/vite-env.d.ts`.
+
+### `client/src/index.css` — excluded, non-JS coverage artifact
+
+**Why excluded:** Vite's CSS import handling registers the stylesheet as a coverage-tracked "module" with the v8 provider, but it has zero instrumentable statements/branches/functions (0/0 everywhere). It showed up in per-file coverage output as a spurious 0% row; excluded since there is no JavaScript to cover.
 
 ## TypeScript Transpilation Artifacts (tsx source-map gaps)
 

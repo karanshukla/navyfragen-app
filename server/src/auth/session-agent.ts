@@ -4,7 +4,6 @@ import { Agent } from "@atproto/api";
 import { getE2EAgent } from "./e2e-agent-store";
 
 import type { AppContext } from "../index";
-/* v8 ignore stop */
 
 /**
  * Restores an AT Protocol Agent for an explicit DID.
@@ -14,6 +13,7 @@ import type { AppContext } from "../index";
  * any remembered account — not just the currently active one. This is what
  * enables multi-account switching without a fresh OAuth round-trip.
  */
+/* v8 ignore stop */
 export async function initializeAgentForDid(ctx: AppContext, did: string): Promise<Agent | null> {
   // E2E sessions bypass OAuth — agent is stored in-process by the e2e login route.
   const e2eAgent = getE2EAgent(did);

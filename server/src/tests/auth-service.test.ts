@@ -3,17 +3,17 @@ import { test, describe, before, beforeEach, afterEach, mock } from "node:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 
-import { deleteE2EAgent, getE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
+import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 
 // `mock.module` must be registered before the module under test is imported so
 // that auth-service's transitive import of session-agent picks up the mock.
 // AuthService is therefore loaded lazily in `before()` and held in this `let`.
 //
-// The mock faithfully reproduces the real `initializeAgentForDid` branching
-// (e2e agent > null-on-restore-miss > fake agent) so the existing E2E/no-agent
-// tests keep working; only the `new Agent(session)` leaf is replaced with
-// `mockAgent`, whose `getProfile` tests reassign to exercise the previously
-// untestable getProfile block in checkSession.
+// checkSession and revokeSession both check hasE2EAgent() themselves before
+// ever calling initializeAgentForDid, so the mock only needs to reproduce the
+// null-on-restore-miss / fake-agent branching; the `new Agent(session)` leaf
+// is replaced with `mockAgent`, whose `getProfile` tests reassign to exercise
+// the previously untestable getProfile block in checkSession.
 let AuthService: typeof import("../services/auth-service").AuthService;
 let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 
@@ -21,22 +21,18 @@ before(async () => {
   mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
   await mock.module("../auth/session-agent", {
     exports: {
-      // Mirror the real contract: e2e bypass first, then null on restore-miss,
-      // otherwise hand back the controllable fake agent.
       initializeAgentForDid: async (ctx: any, did: string) => {
-        const e2e = getE2EAgent(did);
-        if (e2e) return e2e;
         const restored = await ctx.oauthClient.restore(did);
         if (!restored) return null;
         return mockAgent;
       },
-      initializeAgentFromSession: async (req: any, ctx: any) => {
-        if (!req.session?.did) return null;
-        const { initializeAgentForDid } = await import("../auth/session-agent");
-        return initializeAgentForDid(ctx, req.session.did);
-      },
     },
   });
+  // v8 ignore: tsx's ESM interop shim for dynamic `import()` compiles to a
+  // branch (module-namespace vs. default-only) that's structurally
+  // unreachable here — the target path is static and always resolves the
+  // same way.
+  /* v8 ignore next */
   const mod = await import("../services/auth-service");
   AuthService = mod.AuthService;
 });
