@@ -672,7 +672,15 @@ export default function Messages() {
       // already rendered in the same commit, so el is always found — the false arm has no
       // reachable UI path. See docs/testing-notes.md.
       /* v8 ignore start */
-      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
+      // Defer the scroll so it lands after the textarea-expansion layout shift
+      // settles; without the cleanup, the timer survives a respondingTid change
+      // (or unmount) and scrolls a card from a prior interaction.
+      let handle: ReturnType<typeof setTimeout> | undefined;
+      if (el)
+        handle = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
+      return () => {
+        if (handle) clearTimeout(handle);
+      };
       /* v8 ignore stop */
     }
   }, [respondingTid]);

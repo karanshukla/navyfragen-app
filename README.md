@@ -63,7 +63,10 @@ navyfragen-app/
 
 - [Node.js 24+](https://nodejs.org)
 - [Git](https://git-scm.com)
+- [Bun](https://bun.sh) (package manager / installer — see [issue #250](https://github.com/karanshukla/navyfragen-app/issues/250))
 - A modern web browser
+
+> **Runtime note:** Bun is the *installer* only. Node remains the runtime for the client (Vite dev/build, Vitest) and the production server. The Bun-runtime canary for the server is tracked separately in [issue #251](https://github.com/karanshukla/navyfragen-app/issues/251).
 
 > **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `better-sqlite3` and `sharp`). WSL2 is recommended for the best experience.
 
@@ -77,7 +80,7 @@ navyfragen-app/
 
 2. **Install all dependencies:**
    ```bash
-   npm install
+   bun install
    ```
 
 3. **Configure the server:**
@@ -95,7 +98,7 @@ navyfragen-app/
 
 4. **Start the development servers:**
    ```bash
-   npm run dev
+   bun run dev
    ```
 
    This starts both the client (port `5173`) and the server (port `3000`) concurrently.
@@ -112,7 +115,7 @@ navyfragen-app/
 
 Responding to a message with an image card requires the in-house `html-to-image` service (located in `html-to-image/` at the repo root). It renders HTML in a headless Chromium browser and returns a screenshot.
 
-`npm run dev` at the repo root starts it automatically alongside the client and server. To run it in isolation:
+`bun run dev` at the repo root starts it automatically alongside the client and server. To run it in isolation:
 
 ```bash
 npm --prefix html-to-image start
@@ -121,7 +124,7 @@ npm --prefix html-to-image start
 For Docker (e.g. in CI or the full stack), use:
 
 ```bash
-npm run html-to-image
+bun run html-to-image
 ```
 
 Set `EXPORT_HTML_URL=http://localhost:3033/` in `server/.env` (this is the default).
@@ -169,14 +172,14 @@ Set the shortlink base URL in the frontend environment config.
 
 ```bash
 # Client tests
-cd client && npm test
+cd client && bun run test
 
 # Server tests
-cd server && npm test
+cd server && bun run test
 
 # With coverage
-cd client && npm run test:coverage
-cd server && npm run test:coverage
+cd client && bun run test:coverage
+cd server && bun run test:coverage
 ```
 
 Coverage target is **100%** across all v8 metrics (statements, lines, branches, functions).
@@ -186,7 +189,7 @@ Coverage target is **100%** across all v8 metrics (statements, lines, branches, 
 Custom lexicons live in `server/lexicons/`. Generated TypeScript types are in `server/src/lexicon/` (**do not edit them manually**). Regenerate with:
 
 ```bash
-cd server && npm run lexgen
+cd server && bun run lexgen
 ```
 
 > **Windows users:** Run `lexgen` in WSL2. Running it natively on Windows may delete the generated files.
@@ -204,7 +207,7 @@ The repo uses [Husky](https://typicode.github.io/husky/) to run checks automatic
 | Type check client | `tsc --noEmit` | Blocks commit if there are TypeScript errors |
 | Type check server | `tsc --noEmit` | Blocks commit if there are TypeScript errors |
 
-The hook is installed automatically when you run `npm install` (via the `prepare` script).
+The hook is installed automatically when you run `bun install` (via the `prepare` script).
 
 To skip it in an emergency:
 

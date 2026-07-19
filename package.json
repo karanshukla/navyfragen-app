@@ -6,7 +6,7 @@
         "server"
     ],
     "scripts": {
-        "dev": "concurrently \"npm:dev --workspace=client\" \"npm:dev --workspace=server\" \"npm --prefix html-to-image start\"",
+        "dev": "concurrently \"bun run --cwd client dev\" \"bun run --cwd server dev\" \"npm --prefix html-to-image start\"",
         "html-to-image": "docker compose -f docker/docker-compose.yml up html-to-image --build",
         "prepare": "husky || true",
         "test:e2e": "playwright test",

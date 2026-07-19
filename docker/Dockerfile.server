@@ -4,20 +4,24 @@ WORKDIR /app
 # Build tools required for better-sqlite3 and sharp native bindings
 RUN apk add --no-cache python3 make g++
 
-# Copy workspace manifests so npm ci can use the root lock file
-COPY package.json package-lock.json ./
+# Bun is the installer (issue #250); Node stays the production runtime
+# (the bun-runtime canary in Tests.yml tracks issue #251 separately).
+RUN npm install -g bun
+
+# Copy workspace manifests so bun install can use the root lock file
+COPY package.json bun.lock ./
 COPY server/package.json ./server/
 COPY client/package.json ./client/
 
 # --ignore-scripts skips postinstall (tsup) — source isn't here yet
-RUN npm ci --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts
 
 # Copy server source and compile
 COPY server/ ./server/
-RUN npm run build --workspace=server
+RUN bun run build --workspace=server
 
 # Strip devDependencies before copying to the runtime image
-RUN npm prune --omit=dev --ignore-scripts
+RUN bun install --production --frozen-lockfile
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
 FROM node:24-alpine

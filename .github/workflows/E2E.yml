@@ -21,13 +21,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm install
+        run: bun install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: Create docker/.env with generated secrets
         run: |
@@ -81,7 +85,7 @@ jobs:
           echo "All containers are running"
 
       - name: Run Playwright tests
-        run: npm run test:e2e
+        run: bun run test:e2e
         env:
           E2E_HANDLE: ${{ secrets.E2E_HANDLE }}
           E2E_APP_PASSWORD: ${{ secrets.E2E_APP_PASSWORD }}
