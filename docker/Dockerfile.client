@@ -1,13 +1,18 @@
 FROM node:24-alpine
 WORKDIR /app
 
-# Copy workspace manifests so npm ci can use the root lock file
-COPY package.json package-lock.json ./
+# Bun is the installer (issue #250); Node stays the runtime for the build
+# (vite) and for serving the static bundle in the final image.
+RUN npm install -g bun
+
+# Copy workspace manifests so bun install can use the root lock file
+COPY package.json bun.lock ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
-# --ignore-scripts skips any postinstall hooks during install
-RUN npm ci --ignore-scripts
+# --frozen-lockfile mirrors npm ci (exact versions, no lockfile mutation).
+# --ignore-scripts skips any postinstall hooks during install.
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY client/ ./client/
 
@@ -19,10 +24,10 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_SHORTLINK_URL=$VITE_SHORTLINK_URL
 ENV VITE_E2E_TESTING=$VITE_E2E_TESTING
 
-RUN npm run build --workspace=client
+RUN bun run --cwd client build
 
 EXPOSE 3000
 
-# npm resolves serve from root node_modules/.bin when run inside the workspace
+# bun resolves serve from root node_modules/.bin when run inside the workspace
 WORKDIR /app/client
-CMD ["npm", "start"]
+CMD ["bun", "run", "start"]

@@ -16,33 +16,35 @@ npm workspaces with two packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-Root-level `npm run dev` runs both concurrently via `concurrently`.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250). **Node remains the runtime** for both the client (Vite dev/build, Vitest) and the production server. The Bun runtime as a server execution environment is tracked separately by a non-blocking CI canary (issue #251) — `better-sqlite3` is currently unsupported by Bun, so the production server must stay on Node.
+
+Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
 
 ## Commands
 
 ### Root (runs both)
 ```bash
-npm install        # install all workspaces
-npm run dev        # start client (port 5173) and server (port 3000) together
+bun install        # install all workspaces
+bun run dev        # start client (port 5173) and server (port 3000) together
 ```
 
 ### Client (`cd client`)
 ```bash
-npm run dev        # Vite dev server
-npm run build      # tsc + vite build
-npm run lint       # oxlint
-npm run test       # Vitest (single run)
-npm run test:watch # Vitest watch mode
+bun run dev        # Vite dev server
+bun run build      # tsc + vite build
+bun run lint       # oxlint
+bun run test       # Vitest (single run)
+bun run test:watch # Vitest watch mode
 ```
 
 ### Server (`cd server`)
 ```bash
-npm run dev        # tsx watch with pino-pretty
-npm run build      # tsup
-npm run lint       # oxlint
-npm run test       # Node.js built-in test runner (single run)
-npm run test:watch # Node.js built-in test runner watch mode
-npm run lexgen     # Regenerate AT Protocol lexicon types from ./lexicons/*.json
+bun run dev        # tsx watch with pino-pretty
+bun run build      # tsup
+bun run lint       # oxlint
+bun run test       # Node.js built-in test runner (single run)
+bun run test:watch # Node.js built-in test runner watch mode
+bun run lexgen     # Regenerate AT Protocol lexicon types from ./lexicons/*.json
 ```
 
 To run a single server test file:
@@ -79,7 +81,7 @@ Key tables: `message` (tid, message, createdAt, recipient DID), `user_profile` (
 
 ### AT Protocol / Lexicons
 
-Custom lexicon `app.navyfragen.message` defines the record type for messages. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `npm run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.
+Custom lexicon `app.navyfragen.message` defines the record type for messages. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `bun run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.
 
 The `#/` path alias maps to `src/` (configured in `tsconfig.json` `paths`).
 
@@ -163,10 +165,10 @@ cd html-to-image && node --test app.test.js
 
 ```bash
 # Server (from server/)
-npm run test:coverage
+bun run test:coverage
 
 # Client (from client/)
-npm run test -- --coverage
+bun run test -- --coverage
 ```
 
 Target is 100% across all four v8 metrics: statements, lines, branches, functions.

@@ -1470,6 +1470,12 @@ describe("Messages page", () => {
     expect(() => fireEvent.keyDown(document, { key: "ArrowDown" })).not.toThrow();
   });
 
+  // Historically flaky: the responding-Tid effect in Messages.tsx schedules a
+  // 150ms setTimeout to scroll the card into view. Before that effect gained a
+  // clearTimeout cleanup, the timer could outlive the test that scheduled it
+  // and fire here — tripping this test's scrollIntoView spy. The component now
+  // clears its timer on re-render/unmount, so the spy below should stay clean;
+  // if it fires again, suspect a new un-cleaned async scroll path in Messages.tsx.
   it("does not scroll into view when the newest message target is already visible in the viewport", async () => {
     // window.innerHeight varies by test environment/CI runner, so pin it explicitly rather
     // than relying on the ambient default — the "visible" rect below (top:100, bottom:200)

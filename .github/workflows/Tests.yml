@@ -18,18 +18,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Bun is the installer (issue #250 — package-manager swap only, not a
+      # runtime swap). Node stays the runtime for vitest, so setup-node remains.
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "npm"
-          cache-dependency-path: "client/package.json"
 
-      - name: Install client dependencies
-        run: cd client && npm ci
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Run client tests with coverage
-        run: cd client && npm run test:coverage
+        run: cd client && bun run test:coverage
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -65,19 +70,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Installer swapped to bun (issue #250); runtime stays Node — this is the
+      # production-truth baseline. The bun-runtime canary lives in its own job.
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "npm"
-          cache-dependency-path: "server/package.json"
 
-      - name: Install server dependencies
-        run: cd server && npm ci
+      - name: Install dependencies
+        # Native addons (better-sqlite3, sharp) need their build scripts; bun
+        # blocks dep lifecycle scripts by default, so trust the ones we need.
+        run: bun install --frozen-lockfile
 
       - name: Run server tests with coverage
         id: server-tests
-        run: cd server && npm run test:coverage 2>&1 | tee /tmp/server-test-output.txt
+        run: cd server && bun run test:coverage 2>&1 | tee /tmp/server-test-output.txt
         continue-on-error: true
 
       - name: Report coverage on PR
@@ -141,6 +153,84 @@ jobs:
       - name: Fail if tests failed
         if: steps.server-tests.outcome == 'failure'
         run: exit 1
+
+  # Non-blocking canary for issue #251: validate the server's native/SDK deps
+  # under the Bun runtime. Known incompatible as of the findings in the pilot
+  # PR (better-sqlite3 is unsupported by Bun; node:test mock.module patterns
+  # don't translate). This job exists to surface regressions — if Bun ships
+  # support, the probe below will start passing and the canary can be promoted.
+  server-tests-bun-runtime:
+    name: Server Tests (Bun runtime canary)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Probe native/SDK deps under Bun runtime
+        id: probe
+        working-directory: server
+        run: |
+          set +e
+          {
+            echo "## Bun runtime canary — dependency probe"
+            echo
+            echo "Each line shows whether the module loads + exercises under Bun."
+            echo
+          } > "$GITHUB_STEP_SUMMARY"
+          for spec in better-sqlite3 sharp web-push; do
+            echo "<details><summary><code>${spec}</code></summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            if [ "$spec" = "better-sqlite3" ]; then
+              bun -e "import('better-sqlite3').then(m=>{const db=new (m.default)(':memory:');db.exec('CREATE TABLE t(x)');db.prepare('INSERT INTO t VALUES (?)').run(1);console.log('OK',db.prepare('SELECT x FROM t').get())}).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1
+            elif [ "$spec" = "sharp" ]; then
+              bun -e "import('sharp').then(m=>console.log('OK sharp',m.default.versions.sharp)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1
+            elif [ "$spec" = "web-push" ]; then
+              bun -e "import('web-push').then(m=>console.log('OK web-push',typeof m.generateVAPIDKeys)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1
+            fi
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Attempt server test suite under Bun runtime
+        id: bun-tests
+        working-directory: server
+        continue-on-error: true
+        run: |
+          # The suite is written for node:test + tsx + mock.module; Bun's
+          # runner differs. Capture whatever happens as findings.
+          bun --experimental-test-module-mocks \
+              --import ./src/tests/test-bootstrap.js \
+              --import tsx \
+              --test 'src/**/*.test.ts' > /tmp/bun-runtime-test-output.txt 2>&1 || true
+          {
+            echo "<details><summary>Test runner attempt</summary>"
+            echo ""
+            echo '```'
+            tail -n 40 /tmp/bun-runtime-test-output.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload canary output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bun-runtime-canary-output
+          path: /tmp/bun-runtime-test-output.txt
+          retention-days: 14
+          if-no-files-found: ignore
 
   opengraph-tests:
     name: OpenGraph Service (Go) Tests

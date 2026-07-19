@@ -1,15 +1,16 @@
 # Configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 #
-# This repo uses npm workspaces with a single root-level package-lock.json.
-# Dependabot MUST point at the workspace root ("/") so it resolves the full
-# workspace dependency graph and updates the shared root lockfile. Pointing it
-# at "/server" or "/client" instead leaves the root lockfile out of sync and
-# breaks `npm ci` in CI (see dependabot-core #6270).
+# This repo uses npm workspaces with a single root-level bun.lock (the installer
+# was swapped from npm to bun — see issue #250). Dependabot's dedicated `bun`
+# ecosystem updates bun.lock natively; the `npm` ecosystem does NOT update
+# bun.lock correctly for workspaces (dependabot-core #14223), so this MUST stay
+# on `bun` and point at the workspace root ("/") so the full workspace graph is
+# resolved against the shared root lockfile.
 
 version: 2
 updates:
-  - package-ecosystem: "npm"
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"

@@ -4,29 +4,44 @@ WORKDIR /app
 # Build tools required for better-sqlite3 and sharp native bindings
 RUN apk add --no-cache python3 make g++
 
-# Copy workspace manifests so npm ci can use the root lock file
-COPY package.json package-lock.json ./
+# Bun is the installer (issue #250); Node stays the production runtime
+# (the bun-runtime canary in Tests.yml tracks issue #251 separately).
+RUN npm install -g bun
+
+# Copy workspace manifests so bun install can use the root lock file
+COPY package.json bun.lock ./
 COPY server/package.json ./server/
 COPY client/package.json ./client/
 
 # --ignore-scripts skips postinstall (tsup) — source isn't here yet
-RUN npm ci --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts
 
 # Copy server source and compile
 COPY server/ ./server/
-RUN npm run build --workspace=server
+RUN bun run --cwd server build
 
-# Strip devDependencies before copying to the runtime image
-RUN npm prune --omit=dev --ignore-scripts
+# Strip devDependencies before copying to the runtime image. Use --omit dev
+# (not --production): --omit dev traverses workspaces, so the server workspace's
+# prod deps are kept; --production only prunes to the root package's deps and
+# drops the workspace's runtime dependencies.
+RUN bun install --frozen-lockfile --omit dev
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
+# Bun's isolated node_modules layout puts each workspace's deps under
+# <workspace>/node_modules as symlinks into the shared /app/node_modules/.bun
+# store. The runtime image therefore preserves that layout: the store at
+# /app/node_modules, the server workspace's symlinks at /app/server/node_modules,
+# and dist/ at /app/server/dist. Node resolves imports from /app/server/dist
+# via /app/server/node_modules (symlinks) -> /app/node_modules/.bun (store).
 FROM node:24-alpine
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/server/dist ./dist
-COPY server/package.json ./package.json
+COPY --from=builder /app/server/node_modules ./server/node_modules
+COPY --from=builder /app/server/dist ./server/dist
+COPY server/package.json ./server/package.json
 
+WORKDIR /app/server
 EXPOSE 3000
 
 CMD ["node", "dist/index.js"]
