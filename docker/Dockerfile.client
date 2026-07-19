@@ -24,7 +24,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_SHORTLINK_URL=$VITE_SHORTLINK_URL
 ENV VITE_E2E_TESTING=$VITE_E2E_TESTING
 
-RUN bun run build --workspace=client
+RUN bun run --cwd client build
 
 EXPOSE 3000
 

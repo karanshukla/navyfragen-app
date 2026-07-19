@@ -18,7 +18,7 @@ RUN bun install --frozen-lockfile --ignore-scripts
 
 # Copy server source and compile
 COPY server/ ./server/
-RUN bun run build --workspace=server
+RUN bun run --cwd server build
 
 # Strip devDependencies before copying to the runtime image
 RUN bun install --production --frozen-lockfile
