@@ -52,12 +52,12 @@
     ]
   },
   "dependencies": {
-    "@atproto/api": "^0.20.28",
+    "@atproto/api": "^0.20.30",
     "@atproto/common": "^0.7.2",
     "@atproto/identity": "^0.5.6",
     "@atproto/lexicon": "^0.7.4",
-    "@atproto/oauth-client-node": "^0.4.8",
-    "@atproto/sync": "^0.3.10",
+    "@atproto/oauth-client-node": "^0.4.9",
+    "@atproto/sync": "^0.3.12",
     "@atproto/syntax": "^0.7.0",
     "@atproto/xrpc-server": "^0.11.6",
     "@axiomhq/pino": "^1.8.0",
