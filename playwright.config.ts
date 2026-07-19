@@ -3,7 +3,7 @@ import { config as loadEnv } from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
 
 // Load credentials from the same file Docker Compose reads — no manual env sourcing needed.
-// dotenv is hoisted from server/package.json in this npm workspace.
+// dotenv is a direct root devDep so it resolves regardless of installer hoisting.
 loadEnv({ path: resolve(__dirname, "docker/.env") });
 
 export default defineConfig({
