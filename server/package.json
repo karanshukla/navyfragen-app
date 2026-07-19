@@ -76,7 +76,7 @@
     "express-rate-limit": "^8.6.0",
     "express-validator": "^7.3.2",
     "iron-session": "^8.0.4",
-    "kysely": "^0.29.3",
+    "kysely": "^0.29.4",
     "multiformats": "^14.0.4",
     "pg": "^8.22.0",
     "pino": "^10.3.1",
