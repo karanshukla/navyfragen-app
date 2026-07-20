@@ -8,9 +8,9 @@
   },
   "dependencies": {
     "cors": "^2.8.6",
-    "express": "^4.22.2",
-    "express-rate-limit": "^8.5.2",
-    "puppeteer": "^23.11.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.0",
+    "puppeteer": "^25.3.0",
     "tmp": "^0.2.7"
   }
 }
