@@ -29,8 +29,9 @@ dist-ssr
 *.sqlite
 
 #claude
-.claude
-settings.local.json
+.claude/*
+!.claude/settings.json
+.claude/settings.local.json
 
 # Playwright
 playwright-report/
