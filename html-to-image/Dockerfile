@@ -1,9 +1,7 @@
-FROM alpine:3
+FROM node:24-alpine
 
 RUN apk add --no-cache \
       chromium \
-      nodejs \
-      npm \
       nss \
       freetype \
       harfbuzz \
