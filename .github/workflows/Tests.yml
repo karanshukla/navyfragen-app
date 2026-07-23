@@ -241,14 +241,16 @@ jobs:
         working-directory: server
         continue-on-error: true
         run: |
-          # The suite is written for node:test + tsx + mock.module; Bun's
-          # runner differs. Capture whatever happens as findings.
-          bun --experimental-test-module-mocks \
-              --import ./src/tests/test-bootstrap.js \
-              --import tsx \
-              --test 'src/**/*.test.ts' > /tmp/bun-runtime-test-output.txt 2>&1 || true
+          # Bun's native `bun test` (not `bun --test`) recognizes node:test's
+          # describe/test/before/after, but does NOT implement the `mock` API
+          # (mock.fn / mock.module), which 13/14 test files use for DB/agent
+          # faking. So the suite is expected to mostly fail here today; this
+          # step captures the real pass/fail split as findings rather than a
+          # silent error. Tracked by #263 as out of scope (mock migration).
+          bun test --preload ./src/tests/test-bootstrap.js src/tests/ \
+              > /tmp/bun-runtime-test-output.txt 2>&1 || true
           {
-            echo "<details><summary>Test runner attempt</summary>"
+            echo "<details><summary>Test runner attempt (expected to mostly fail — see note)</summary>"
             echo ""
             echo '```'
             tail -n 40 /tmp/bun-runtime-test-output.txt
