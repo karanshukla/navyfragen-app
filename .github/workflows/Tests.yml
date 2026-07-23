@@ -192,9 +192,14 @@ jobs:
             echo
           } > "$GITHUB_STEP_SUMMARY"
 
-          # SQLite data layer — the unblocked path from #263. This MUST print
-          # OK; if it regresses the whole canary should fail (acceptance #2).
+          # SQLite data layer — the unblocked path from #263. The bun command
+          # exits non-zero on any failure (mismatch or thrown error), and prints
+          # "OK" on success. We gate on the exit code (authoritative) and also
+          # confirm "OK" appeared, since the dotenv banner can prepend lines.
+          set +e
           sqlite_out=$(bun -e "import('./src/database/db.ts').then(async ({createDb,migrateToLatest})=>{const db=await createDb(':memory:');await migrateToLatest(db);await db.insertInto('message').values({tid:'t1',message:'hi',createdAt:'2024-01-01',recipient:'did:web:x'}).execute();const row=await db.selectFrom('message').selectAll().executeTakeFirstOrThrow();await db.destroy();if(row.tid!=='t1')throw new Error('row mismatch '+JSON.stringify(row));console.log('OK',JSON.stringify(row))}).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1)
+          sqlite_exit=$?
+          set -e
           echo "$sqlite_out" | tee /dev/stderr >/dev/null
           {
             echo "<details><summary><code>bun-sqlite-data-layer</code> (acceptance #263)</summary>"
@@ -205,7 +210,6 @@ jobs:
             echo ""
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "sqlite_ok=$(echo "$sqlite_out" | grep -c '^OK ')" >> "$GITHUB_OUTPUT"
 
           # The remaining probes are informational; they don't gate the job.
           for spec in sharp web-push; do
@@ -222,11 +226,13 @@ jobs:
             echo "</details>" >> "$GITHUB_STEP_SUMMARY"
           done
 
-          # Gate the SQLite path specifically. A regression here fails the job;
-          # the node:test-under-Bun step below keeps its own continue-on-error
-          # (still expected to fail, out of scope per #263).
-          if [ "${sqlite_ok}" != "1" ]; then
-            echo "::error::SQLite data layer did not print OK under Bun (regression of #263)"
+          # Gate the SQLite path. The bun command's exit code is authoritative
+          # (non-zero means it threw or the row mismatched); the OK-string check
+          # is a belt-and-suspenders confirmation. A regression here fails the
+          # job; the node:test-under-Bun step below keeps its own
+          # continue-on-error (still expected to fail, out of scope per #263).
+          if [ "$sqlite_exit" -ne 0 ] || ! echo "$sqlite_out" | grep -q 'OK '; then
+            echo "::error::SQLite data layer did not pass under Bun (regression of #263)"
             exit 1
           fi
 
