@@ -79,10 +79,6 @@ export default function Customise() {
               Beta
             </Badge>
           </Group>
-          <Text c="dimmed" fz={15} mb="xl" style={{ maxWidth: "60ch", lineHeight: 1.5 }}>
-            Control how your inbox presents itself to the world, grouped by who each setting
-            affects.
-          </Text>
 
           <Section
             eyebrow="Your public profile"
@@ -265,9 +261,6 @@ function ProfileThemeSwatches({
     <div
       style={{
         display: "grid",
-        // minmax(0, 1fr) so the longest label ("Verdant") doesn't push its
-        // column wider than the others — a plain 1fr uses minmax(auto, 1fr),
-        // which lets content min-width break column equality.
         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
         gap: 10,
       }}
@@ -302,9 +295,6 @@ function ProfileThemeSwatches({
                 background: theme.gradient,
               }}
             />
-            <Text size="xs" fw={600} ta="center" style={{ color: "var(--mantine-color-text)" }}>
-              {theme.label}
-            </Text>
           </button>
         );
       })}
