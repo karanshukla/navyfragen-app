@@ -23,6 +23,15 @@ import { touchpointLocales } from "../lib/touchpointTranslations";
 
 const MAX_PROMPT_LENGTH = 100;
 
+/**
+ * Coerce a `user_settings` boolean column to a real boolean. The Kysely row
+ * type says `number | boolean`: SQLite returns 0/1, Postgres returns false/true
+ * for a `boolean` column. Treat anything that isn't 1/true as off.
+ */
+function on(value: number | boolean | null | undefined): boolean {
+  return value === 1 || value === true;
+}
+
 export default function Customise() {
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
   const { data: session, isLoading: sessionLoading } = useSession();
@@ -173,7 +182,7 @@ export default function Customise() {
                 ) : (
                   <Switch
                     label="Accepting messages"
-                    checked={userSettings?.inboxEnabled !== 0}
+                    checked={on(userSettings?.inboxEnabled)}
                     onChange={(e) =>
                       updateSettings.mutate({ inboxEnabled: e.currentTarget.checked })
                     }
@@ -197,7 +206,7 @@ export default function Customise() {
                 ) : (
                   <Switch
                     label="Filter enabled"
-                    checked={userSettings?.profanityFilterEnabled === 1}
+                    checked={on(userSettings?.profanityFilterEnabled)}
                     onChange={(e) =>
                       updateSettings.mutate({
                         profanityFilterEnabled: e.currentTarget.checked,
