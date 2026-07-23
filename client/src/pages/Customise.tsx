@@ -88,7 +88,7 @@ export default function Customise() {
             eyebrow="Your public profile"
             help="What visitors see before they send you an anonymous message."
           >
-            <Grid.Col span={{ base: 12, lg: 8 }} style={{ display: "flex" }}>
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Profile prompt"
                 description="The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”."
@@ -116,7 +116,7 @@ export default function Customise() {
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col span={{ base: 12, lg: 4 }} style={{ display: "flex" }}>
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Message language"
                 description="Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience."
@@ -143,7 +143,7 @@ export default function Customise() {
               </SettingsCard>
             </Grid.Col>
 
-            <Grid.Col span={{ base: 12, lg: 6 }} style={{ display: "flex" }}>
+            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Profile card colour"
                 description="The colour treatment of your ask card. Curated presets keep the text and button legible on every option."
