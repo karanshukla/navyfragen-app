@@ -1,8 +1,9 @@
 /* v8 ignore start */
-import { RichText, Agent } from "@atproto/api";
+import { AppBskyEmbedImages, AppBskyFeedPost, RichText, Agent } from "@atproto/api";
 import { Logger } from "pino";
 
 import { type Database } from "../database/db";
+import { errorMessage } from "../lib/errors";
 import { ids } from "../lexicon/lexicons";
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message";
 import { imageGenerator } from "../lib/image-generator";
@@ -206,7 +207,7 @@ export class MessageService {
       const rt = new RichText({ text: response });
       await rt.detectFacets(agent);
 
-      const postRecord: any = {
+      const postRecord: Partial<AppBskyFeedPost.Record> = {
         text: rt.text,
         facets: rt.facets || [],
         createdAt: new Date().toISOString(),
@@ -245,7 +246,7 @@ export class MessageService {
         const uploadedImage = await agent.uploadBlob(imageBlob, {
           encoding: "image/png",
         });
-        const imageEmbed: any = {
+        const imageEmbed: AppBskyEmbedImages.Image = {
           image: uploadedImage.data.blob,
           alt: imageAltText || "Image of the anonymous question",
         };
@@ -409,11 +410,11 @@ export class MessageService {
             record: recordToCreate,
           });
           syncedCount++;
-        } catch (err: any) {
+        } catch (err: unknown) {
           errorCount++;
           syncErrors.push({
             tid: dbMessage.tid,
-            error: err.message || "Unknown error during PDS record creation",
+            error: errorMessage(err) || "Unknown error during PDS record creation",
           });
         }
       }
@@ -434,11 +435,11 @@ export class MessageService {
             .onConflict((oc) => oc.column("tid").doNothing())
             .execute();
           importedCount++;
-        } catch (err: any) {
+        } catch (err: unknown) {
           errorCount++;
           syncErrors.push({
             tid: pdsRecord.rkey,
-            error: err.message || "Unknown error during DB import",
+            error: errorMessage(err) || "Unknown error during DB import",
           });
         }
       }
@@ -455,7 +456,7 @@ export class MessageService {
         errorCount,
         errors: syncErrors,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.logger.error({ did: userDid, error: err }, "Error during message sync process");
       throw new Error("Failed to sync messages to PDS", { cause: err });
     }

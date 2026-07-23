@@ -87,6 +87,8 @@
   "devDependencies": {
     "@atproto/lex-cli": "^0.10.6",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/bun": "1.3.14",
+    "@types/node": "^24.10.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/pg": "^8.20.0",
@@ -109,6 +111,7 @@
     "format": "esm",
     "splitting": false,
     "sourcemap": true,
-    "clean": true
+    "clean": true,
+    "external": ["bun:sqlite"]
   }
 }

@@ -1,7 +1,7 @@
 /* v8 ignore start */
 import { Agent } from "@atproto/api";
 
-import { getE2EAgent } from "./e2e-agent-store";
+import { getE2EAgent, type E2EAgent } from "./e2e-agent-store";
 
 import type { AppContext } from "../index";
 
@@ -14,7 +14,10 @@ import type { AppContext } from "../index";
  * enables multi-account switching without a fresh OAuth round-trip.
  */
 /* v8 ignore stop */
-export async function initializeAgentForDid(ctx: AppContext, did: string): Promise<Agent | null> {
+export async function initializeAgentForDid(
+  ctx: AppContext,
+  did: string
+): Promise<E2EAgent | null> {
   // E2E sessions bypass OAuth — agent is stored in-process by the e2e login route.
   const e2eAgent = getE2EAgent(did);
   if (e2eAgent) {
@@ -42,7 +45,7 @@ export async function initializeAgentForDid(ctx: AppContext, did: string): Promi
 export async function initializeAgentFromSession(
   req: Express.Request,
   ctx: AppContext
-): Promise<Agent | null> {
+): Promise<E2EAgent | null> {
   if (!req.session?.did) {
     return null;
   }

@@ -5,7 +5,11 @@ import { NotificationService } from "../services/notification-service";
 
 import type { AppContext } from "../index";
 
-export function notificationRoutes(ctx: AppContext, handler: any, checkValidation: any) {
+export function notificationRoutes(
+  ctx: AppContext,
+  handler: (fn: express.Handler) => express.Handler,
+  checkValidation: express.RequestHandler
+) {
   const notificationService = new NotificationService(ctx.db, ctx.resolver, ctx.logger);
   const notificationController = new NotificationController(notificationService, ctx.logger);
 

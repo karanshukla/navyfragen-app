@@ -1,7 +1,8 @@
 /* v8 ignore start */
 import { AtpAgent, Agent } from "@atproto/api";
-import { Kysely } from "kysely";
 import { Logger } from "pino";
+
+import type { Database } from "../database/db";
 
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
@@ -12,7 +13,7 @@ export class ProfileService {
   private agent: AtpAgent;
 
   constructor(
-    private db: Kysely<any>,
+    private db: Database,
     private resolver: ProfileResolver,
     private logger: Logger
   ) {
@@ -26,7 +27,7 @@ export class ProfileService {
    * @returns The user's public profile and whether they're registered on Navyfragen
    */
   async getPublicProfile(did: string): Promise<{
-    profile: any;
+    profile: Awaited<ReturnType<AtpAgent["getProfile"]>>["data"];
     exists: boolean;
   }> {
     let profileResponse: Awaited<ReturnType<typeof this.agent.getProfile>>;

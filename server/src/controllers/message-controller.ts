@@ -5,6 +5,7 @@ import { Logger } from "pino";
 
 import { MessageService } from "../services/message-service";
 import { NotificationService } from "../services/notification-service";
+import { errorMessage } from "../lib/errors";
 
 import type { AppContext } from "../index";
 
@@ -108,12 +109,12 @@ export class MessageController {
         replyTo
       );
       return res.json(result);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.logger.error(
         { err, tid, did },
         "Error in /messages/respond endpoint while trying to post to Bluesky"
       );
-      return res.status(500).json({ error: err.message || "Failed to post to Bluesky" });
+      return res.status(500).json({ error: errorMessage(err) || "Failed to post to Bluesky" });
     }
   };
 
@@ -148,10 +149,11 @@ export class MessageController {
           this.logger.error({ err, did: recipient }, "Failed to send push notification")
         );
       return res.json(result);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.logger.error({ err, recipient }, "Failed to send message");
-      return res.status(err.message.includes("not found") ? 404 : 500).json({
-        error: err.message || "Failed to send message",
+      const msg = errorMessage(err);
+      return res.status(msg.includes("not found") ? 404 : 500).json({
+        error: msg || "Failed to send message",
       });
     }
   };
@@ -169,8 +171,8 @@ export class MessageController {
     try {
       const messages = await this.messageService.getMessages(recipient);
       return res.json({ messages });
-    } catch (err: any) {
-      if (err.message.includes("not exist")) {
+    } catch (err: unknown) {
+      if (errorMessage(err).includes("not exist")) {
         return res.status(404).json({ error: "User not found (user profile does not exist)" });
       }
       this.logger.error({ err, recipient }, "Failed to fetch messages");
@@ -205,14 +207,11 @@ export class MessageController {
     try {
       await this.messageService.deleteMessage(tid, userSessionDid, agent);
       return res.json({ success: true });
-    } catch (err: any) {
-      const status = err.message.includes("not found")
-        ? 404
-        : err.message.includes("Not authorized")
-          ? 403
-          : 500;
+    } catch (err: unknown) {
+      const msg = errorMessage(err);
+      const status = msg.includes("not found") ? 404 : msg.includes("Not authorized") ? 403 : 500;
 
-      return res.status(status).json({ error: err.message || "Failed to delete message" });
+      return res.status(status).json({ error: msg || "Failed to delete message" });
     }
   };
 
@@ -247,9 +246,9 @@ export class MessageController {
       req.session = null;
       this.logger.info({ did: userSessionDid }, "Account and all data deleted");
       return res.json({ success: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.logger.error({ err, did: userSessionDid }, "Failed to delete account data");
-      return res.status(500).json({ error: err.message || "Failed to delete account data" });
+      return res.status(500).json({ error: errorMessage(err) || "Failed to delete account data" });
     }
   };
 
@@ -286,11 +285,11 @@ export class MessageController {
     try {
       const syncResult = await this.messageService.syncMessages(userSessionDid, agent);
       return res.json(syncResult);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.logger.error({ err, did: userSessionDid }, "Failed to sync messages to PDS");
       return res.status(500).json({
         error: "Failed to sync messages to PDS",
-        details: err.message,
+        details: errorMessage(err),
       });
     }
   };

@@ -6,7 +6,11 @@ import { NotificationService } from "../services/notification-service";
 
 import type { AppContext } from "../index";
 
-export function messageRoutes(ctx: AppContext, handler: any, checkValidation: any) {
+export function messageRoutes(
+  ctx: AppContext,
+  handler: (fn: express.Handler) => express.Handler,
+  checkValidation: express.RequestHandler
+) {
   // Initialize service and controller
   const messageService = new MessageService(ctx.db, ctx.resolver, ctx.logger);
   const notificationService = new NotificationService(ctx.db, ctx.resolver, ctx.logger);

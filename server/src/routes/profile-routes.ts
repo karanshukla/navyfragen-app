@@ -5,7 +5,11 @@ import { ProfileService } from "../services/profile-service";
 
 import type { AppContext } from "../index";
 
-export function profileRoutes(ctx: AppContext, handler: any, checkValidation: any) {
+export function profileRoutes(
+  ctx: AppContext,
+  handler: (fn: express.Handler) => express.Handler,
+  checkValidation: express.RequestHandler
+) {
   // Initialize service and controller
   const profileService = new ProfileService(ctx.db, ctx.resolver, ctx.logger);
   const profileController = new ProfileController(profileService, ctx.logger, ctx);
