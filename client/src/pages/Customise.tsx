@@ -262,7 +262,16 @@ function ProfileThemeSwatches({
   onPick: (value: string) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+    <div
+      style={{
+        display: "grid",
+        // minmax(0, 1fr) so the longest label ("Verdant") doesn't push its
+        // column wider than the others — a plain 1fr uses minmax(auto, 1fr),
+        // which lets content min-width break column equality.
+        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+        gap: 10,
+      }}
+    >
       {Object.entries(profileCardThemes).map(([themeValue, theme]) => {
         const selected = (value ?? "royal") === themeValue;
         return (
@@ -284,8 +293,6 @@ function ProfileThemeSwatches({
               display: "flex",
               flexDirection: "column",
               gap: 6,
-              flex: "1 1 90px",
-              minWidth: 90,
             }}
           >
             <div
