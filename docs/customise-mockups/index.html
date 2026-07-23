@@ -1,0 +1,478 @@
+<title>Customise page — design mockups · Navyfragen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* ── Navyfragen tokens, lifted verbatim from client/src/index.css + Theme.tsx ── */
+  :root {
+    --nf-royal: #3b5bff;
+    --nf-purple: #8b5cf6;
+    --nf-lavender: #c4b5fd;
+    --nf-sunshine: #facc15;
+    --nf-midnight: #1e1b4b;
+    --nf-grad-mark: linear-gradient(135deg, #3349e0 0%, #6b3fd4 55%, #4f1fa6 100%);
+    --nf-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    /* light (default) */
+    --page: #fdf8ff;
+    --card: #f2ebff;
+    --card-ghost: #faf7ff;
+    --input: #ffffff;
+    --border: #e6ddff;
+    --text: #1e1b4b;
+    --dimmed: #5b5680;
+    --nav-active-bg: #ede9ff;
+    --nav-active-color: #1e1b4b;
+    --boundary: rgba(30, 27, 75, 0.14);
+    --harness: #ffffff;
+    --harness-border: #e6ddff;
+  }
+  :root[data-theme="dark"] {
+    --page: #0b0a24;
+    --card: #17182b;
+    --card-ghost: #121327;
+    --input: #15192b;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #fdf8ff;
+    --dimmed: rgba(253, 248, 255, 0.55);
+    --nav-active-bg: rgba(107, 63, 212, 0.22);
+    --nav-active-color: #fdf8ff;
+    --boundary: rgba(255, 255, 255, 0.14);
+    --harness: #121327;
+    --harness-border: rgba(255, 255, 255, 0.1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--nf-font);
+    background: var(--page);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Mockup harness (not part of the app) ── */
+  .harness {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 18px;
+    background: var(--harness);
+    border-bottom: 1px solid var(--harness-border);
+  }
+  .harness .brand {
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+    margin-right: auto;
+  }
+  .harness .brand span { color: var(--dimmed); font-weight: 500; }
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    gap: 2px;
+  }
+  .seg button {
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--dimmed);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] {
+    background: var(--input);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(20, 18, 58, 0.08);
+  }
+  :root[data-theme="dark"] .seg button[aria-pressed="true"] { box-shadow: none; }
+  .harness label { font-size: 12px; color: var(--dimmed); font-weight: 600; }
+
+  /* ── App boundary column ── */
+  .app {
+    max-width: 1400px;
+    margin: 0 auto;
+    border-left: 1px solid var(--boundary);
+    border-right: 1px solid var(--boundary);
+    min-height: calc(100vh - 45px);
+  }
+  .app-header {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
+  .wink {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--nf-grad-mark);
+    display: grid; place-items: center;
+    color: #fff; font-size: 14px; font-weight: 800;
+  }
+  .app-body { display: flex; align-items: stretch; }
+  .navbar {
+    width: 250px;
+    flex-shrink: 0;
+    padding: 16px;
+    border-right: 1px solid var(--border);
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 16px; font-weight: 500;
+    color: var(--text);
+    margin: 2px 0;
+    text-decoration: none;
+  }
+  .nav-item .ico { width: 16px; height: 16px; opacity: 0.75; }
+  .nav-item.active { background: var(--nav-active-bg); color: var(--nav-active-color); font-weight: 600; }
+  .nav-item .badge {
+    margin-left: auto;
+    background: var(--nf-sunshine); color: var(--nf-midnight);
+    font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+  }
+  .nav-eyebrow { font-size: 11px; font-weight: 600; color: var(--dimmed); text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 2px 8px; }
+  .friend { display: flex; align-items: center; gap: 10px; padding: 4px; }
+  .friend .av { width: 28px; height: 28px; border-radius: 50%; background: var(--nf-grad-mark); flex-shrink: 0; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; }
+  .friend .fn { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .friend .fh { font-size: 10px; color: var(--dimmed); line-height: 1.3; }
+
+  .main { flex: 1; min-width: 0; padding: 28px clamp(16px, 4vw, 40px); }
+  @media (max-width: 820px) { .navbar { display: none; } }
+
+  h1.page-title { font-size: 42px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 6px; line-height: 1.1; }
+  .page-sub { color: var(--dimmed); font-size: 15px; margin: 0 0 28px; max-width: 60ch; line-height: 1.5; }
+
+  /* ── SettingsCard shell (client/src/components/SettingsCard.tsx) ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .card h3 { font-size: 18px; font-weight: 700; margin: 0 0 10px; }
+  .card p.desc { color: var(--dimmed); font-size: 13px; line-height: 1.5; margin: 0 0 16px; flex-grow: 1; }
+
+  /* Grids */
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); }
+  .grid .col-2 { grid-column: span 2; }
+  .grid .col-3 { grid-column: span 3; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } .grid .col-2, .grid .col-3 { grid-column: span 2; } }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } .grid .col-2, .grid .col-3 { grid-column: span 1; } }
+
+  /* Sections (Design B) */
+  .section { margin-bottom: 34px; }
+  .section-eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dimmed); margin: 0 0 4px; }
+  .section-help { font-size: 13px; color: var(--dimmed); margin: 0 0 16px; }
+
+  /* ── Mantine-like controls ── */
+  .btn {
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    border-radius: 8px; padding: 9px 16px; cursor: pointer;
+    border: 1px solid transparent; width: 100%;
+  }
+  .btn-filled { background: var(--nf-royal); color: #fff; }
+  .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+  .label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; }
+  .input, .select {
+    width: 100%; font-family: inherit; font-size: 14px;
+    background: var(--input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px;
+  }
+  .select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--dimmed) 50%), linear-gradient(135deg, var(--dimmed) 50%, transparent 50%); background-position: right 14px center, right 9px center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  .counter { font-size: 11px; color: var(--dimmed); margin-top: 5px; text-align: right; }
+
+  .switch-row { display: flex; align-items: center; gap: 12px; }
+  .switch { --on: var(--nf-royal); position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border); flex-shrink: 0; cursor: pointer; transition: background 150ms; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 150ms; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .switch[data-on="true"] { background: var(--on); }
+  .switch[data-on="true"]::after { transform: translateX(20px); }
+  .switch-label { font-size: 14px; font-weight: 500; }
+  .switch-state { font-size: 12px; color: var(--dimmed); margin-left: auto; }
+
+  /* SegmentedControl (profanity reject/mask) */
+  .segctl { display: inline-flex; padding: 3px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; gap: 2px; width: 100%; }
+  .segctl button { flex: 1; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--dimmed); background: transparent; border: 0; border-radius: 6px; padding: 7px; cursor: pointer; }
+  .segctl button[aria-pressed="true"] { background: var(--nf-royal); color: #fff; }
+  .open-q { font-size: 11px; color: var(--nf-purple); font-weight: 600; margin-top: 8px; }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* Design C two-column */
+  .split { display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-items: start; }
+  @media (max-width: 1000px) { .split { grid-template-columns: 1fr; } .preview-wrap { position: static !important; } }
+  .preview-wrap { position: sticky; top: 70px; }
+  .preview-eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dimmed); margin: 0 0 10px; }
+  .askcard {
+    background: var(--nf-grad-mark);
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 26px;
+    color: #fff;
+  }
+  .askcard .prompt { font-size: 21px; font-weight: 700; text-align: center; letter-spacing: -0.01em; margin: 0 0 18px; line-height: 1.25; }
+  .askcard .ta { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 12px; color: rgba(255,255,255,0.85); font-size: 14px; min-height: 54px; }
+  .askcard .send-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .askcard .send { background: var(--nf-sunshine); color: var(--nf-midnight); font-weight: 700; font-size: 13px; border: 0; border-radius: 8px; padding: 8px 16px; }
+  .askcard.closed { text-align: center; }
+  .askcard .closed-msg { font-size: 15px; font-weight: 600; padding: 14px 4px; }
+  .preview-note { font-size: 12px; color: var(--dimmed); margin-top: 12px; line-height: 1.5; }
+  .live { font-size: 11px; font-weight: 700; color: var(--nf-royal); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .hidden { display: none !important; }
+  .field-note { font-size: 12px; color: var(--dimmed); margin-top: 8px; line-height: 1.5; }
+</style>
+
+<div class="harness">
+  <div class="brand">navyfragen&nbsp;·&nbsp;<span>/customise design mockups</span></div>
+  <div class="seg" role="group" aria-label="Design">
+    <button data-design="A" aria-pressed="false">Design A</button>
+    <button data-design="B" aria-pressed="true">Design B</button>
+    <button data-design="C" aria-pressed="false">Design C</button>
+  </div>
+  <label>Theme</label>
+  <div class="seg" role="group" aria-label="Theme">
+    <button data-theme-btn="light" aria-pressed="true">Light</button>
+    <button data-theme-btn="dark" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="app-header">
+    <div class="logo"><span class="wink">n</span> navyfragen</div>
+  </div>
+  <div class="app-body">
+    <nav class="navbar">
+      <a class="nav-item" href="#"><span class="ico">⌂</span> Home</a>
+      <a class="nav-item" href="#"><span class="ico">✉</span> Messages <span class="badge">3</span></a>
+      <a class="nav-item active" href="#"><span class="ico">⚙</span> Customise</a>
+      <a class="nav-item" href="#"><span class="ico">⚙</span> Settings</a>
+      <div class="nav-eyebrow">Moots</div>
+      <div class="friend"><span class="av">AK</span><div><div class="fn">Ada K.</div><div class="fh">@ada.bsky.social</div></div></div>
+      <div class="friend"><span class="av">JR</span><div><div class="fn">Jun R.</div><div class="fh">@jun.bsky.social</div></div></div>
+    </nav>
+
+    <main class="main">
+      <!-- ============ DESIGN A ============ -->
+      <div data-variant="A" class="hidden">
+        <h1 class="page-title">Customise</h1>
+        <p class="page-sub">Control how your inbox looks and behaves for the people who visit your profile.</p>
+        <div class="grid">
+          <div class="card col-2">
+            <h3>Profile prompt</h3>
+            <p class="desc">The headline visitors see on your public profile above the message box. Leave blank to use the default.</p>
+            <input class="input" value="Ask me anything — I answer the good ones ✨" maxlength="100" />
+            <div class="counter">44 / 100</div>
+          </div>
+          <div class="card">
+            <h3>Message language</h3>
+            <p class="desc">Language of the prompt, share text, and disclaimer shown to visitors.</p>
+            <select class="select"><option>English</option><option>Español</option><option>Deutsch</option><option>日本語</option></select>
+          </div>
+          <div class="card">
+            <h3>Inbox</h3>
+            <p class="desc">Turn off to stop receiving new anonymous messages without deleting your account.</p>
+            <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Accepting messages</span></div>
+          </div>
+          <div class="card">
+            <h3>Profanity filter</h3>
+            <p class="desc">Screen incoming messages against a wordlist before they reach your inbox.</p>
+            <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Filter enabled</span></div>
+            <div style="margin-top:14px"><div class="segctl"><button aria-pressed="true">Reject message</button><button aria-pressed="false">Mask words</button></div><div class="open-q">Open question (#58): reject vs. mask</div></div>
+          </div>
+          <div class="card">
+            <h3>Notifications</h3>
+            <p class="desc">Choose which events send a push notification. Only appears if #192 adopts per-type toggles.</p>
+            <div class="stack">
+              <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">New message</span></div>
+              <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Reply posted</span></div>
+              <div class="switch-row"><span class="switch" data-on="false"></span><span class="switch-label">Daily digest</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ DESIGN B ============ -->
+      <div data-variant="B" class="hidden">
+        <h1 class="page-title">Customise</h1>
+        <p class="page-sub">Control how your inbox presents itself to the world — grouped by who each setting affects.</p>
+
+        <div class="section">
+          <p class="section-eyebrow">Your public profile</p>
+          <p class="section-help">What visitors see before they send you an anonymous message.</p>
+          <div class="grid">
+            <div class="card col-2">
+              <h3>Profile prompt</h3>
+              <p class="desc">The headline above your message box. Leave blank to fall back to “Send [you] an anonymous message”.</p>
+              <input class="input" value="Ask me anything — I answer the good ones ✨" maxlength="100" />
+              <div class="counter">44 / 100</div>
+            </div>
+            <div class="card">
+              <h3>Message language</h3>
+              <p class="desc">Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience.</p>
+              <select class="select"><option>English</option><option>Español</option><option>Deutsch</option><option>日本語</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-eyebrow">Message intake</p>
+          <p class="section-help">Who can reach your inbox, and what gets through.</p>
+          <div class="grid">
+            <div class="card">
+              <h3>Inbox</h3>
+              <p class="desc">Turn off to stop receiving new messages while keeping your account, history, and settings intact.</p>
+              <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Accepting messages</span><span class="switch-state">On</span></div>
+            </div>
+            <div class="card">
+              <h3>Profanity filter</h3>
+              <p class="desc">Screen incoming messages against a wordlist before they reach you. No AI, just a list.</p>
+              <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Filter enabled</span></div>
+              <div style="margin-top:14px"><div class="segctl"><button aria-pressed="true">Reject message</button><button aria-pressed="false">Mask words</button></div><div class="open-q">Open question (#58): reject vs. mask</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-bottom:0">
+          <p class="section-eyebrow">Notifications</p>
+          <p class="section-help">Per-type push controls. Lands here only if #192 grows granular toggles; the single on/off button stays in Settings.</p>
+          <div class="grid">
+            <div class="card">
+              <h3>What sends a push</h3>
+              <p class="desc">The one-tap Enable / Disable control stays on the Settings page; these refine it.</p>
+              <div class="stack">
+                <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">New message</span></div>
+                <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Reply posted</span></div>
+                <div class="switch-row"><span class="switch" data-on="false"></span><span class="switch-label">Daily digest</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ DESIGN C ============ -->
+      <div data-variant="C" class="hidden">
+        <h1 class="page-title">Customise</h1>
+        <p class="page-sub">Edit the profile-facing settings on the left and watch the preview update — it's exactly what a visitor sees.</p>
+        <div class="split">
+          <div>
+            <div class="section">
+              <p class="section-eyebrow">Your public profile</p>
+              <div class="grid" style="grid-template-columns:1fr">
+                <div class="card">
+                  <h3>Profile prompt</h3>
+                  <p class="desc">The headline above your message box. Leave blank for the default.</p>
+                  <input class="input" id="c-prompt" value="Ask me anything — I answer the good ones ✨" maxlength="100" />
+                  <div class="counter"><span id="c-count">44</span> / 100</div>
+                </div>
+                <div class="card">
+                  <h3>Message language</h3>
+                  <p class="desc">Language of the prompt, share text, and disclaimer.</p>
+                  <select class="select" id="c-lang"><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option><option value="ja">日本語</option></select>
+                </div>
+              </div>
+            </div>
+            <div class="section" style="margin-bottom:0">
+              <p class="section-eyebrow">Message intake</p>
+              <div class="grid" style="grid-template-columns:1fr 1fr">
+                <div class="card">
+                  <h3>Inbox</h3>
+                  <p class="desc">Stop receiving new messages without deleting your account.</p>
+                  <div class="switch-row"><span class="switch" id="c-inbox" data-on="true"></span><span class="switch-label">Accepting messages</span></div>
+                </div>
+                <div class="card">
+                  <h3>Profanity filter</h3>
+                  <p class="desc">Screen messages against a wordlist. Doesn't change the preview.</p>
+                  <div class="switch-row"><span class="switch" data-on="true"></span><span class="switch-label">Filter enabled</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-wrap">
+            <p class="preview-eyebrow">Public profile preview <span class="live">● live</span></p>
+            <div class="askcard" id="c-askcard">
+              <p class="prompt" id="c-preview-prompt">Ask me anything — I answer the good ones ✨</p>
+              <div class="ta">Ask something…</div>
+              <div class="send-row"><button class="send">Send</button></div>
+            </div>
+            <p class="preview-note">Reflects the prompt (#199), language (#266), and inbox state (#177) in real time — the three settings that change what a stranger actually sees. Profanity (#58) and notifications (#192) don't appear here because they don't alter the visitor's view.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  const root = document.documentElement;
+
+  function setDesign(d) {
+    document.querySelectorAll("[data-variant]").forEach((el) => el.classList.toggle("hidden", el.dataset.variant !== d));
+    document.querySelectorAll("[data-design]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.design === d)));
+  }
+  function setTheme(t) {
+    root.setAttribute("data-theme", t);
+    document.querySelectorAll("[data-theme-btn]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeBtn === t)));
+  }
+  document.querySelectorAll("[data-design]").forEach((b) => b.addEventListener("click", () => setDesign(b.dataset.design)));
+  document.querySelectorAll("[data-theme-btn]").forEach((b) => b.addEventListener("click", () => setTheme(b.dataset.themeBtn)));
+
+  // Switch toggles (visual)
+  document.addEventListener("click", (e) => {
+    const s = e.target.closest(".switch");
+    if (s) s.dataset.on = s.dataset.on === "true" ? "false" : "true";
+    const seg = e.target.closest(".segctl button");
+    if (seg) { seg.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", "false")); seg.setAttribute("aria-pressed", "true"); }
+  });
+
+  // Design C live preview
+  const translations = {
+    en: "Ask me anything — I answer the good ones ✨",
+    es: "Pregúntame lo que quieras — respondo las buenas ✨",
+    de: "Frag mich alles — die guten beantworte ich ✨",
+    ja: "なんでも聞いて — いい質問には答えます ✨",
+  };
+  const prompt = document.getElementById("c-prompt");
+  const count = document.getElementById("c-count");
+  const lang = document.getElementById("c-lang");
+  const inbox = document.getElementById("c-inbox");
+  const askcard = document.getElementById("c-askcard");
+  const previewPrompt = document.getElementById("c-preview-prompt");
+
+  function renderPreview() {
+    const custom = prompt.value.trim();
+    const open = inbox.dataset.on === "true";
+    if (!open) {
+      askcard.classList.add("closed");
+      askcard.innerHTML = '<div class="closed-msg">This inbox isn\'t accepting messages right now.</div>';
+      return;
+    }
+    askcard.classList.remove("closed");
+    askcard.innerHTML =
+      '<p class="prompt"></p><div class="ta">Ask something…</div><div class="send-row"><button class="send">Send</button></div>';
+    askcard.querySelector(".prompt").textContent = custom || translations[lang.value] || translations.en;
+  }
+  prompt.addEventListener("input", () => { count.textContent = prompt.value.length; renderPreview(); });
+  lang.addEventListener("change", () => { if (!prompt.value.trim()) {} prompt.placeholder = translations[lang.value]; renderPreview(); });
+  inbox.addEventListener("click", renderPreview);
+
+  setTheme("light");
+  setDesign("B");
+</script>
