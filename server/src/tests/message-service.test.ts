@@ -94,17 +94,31 @@ describe("MessageService", () => {
     mockDb = {
       selectFrom: mock.fn((table: string) => {
         if (table === "user_settings") {
+          // Shared row so both .selectAll() (respondToMessage) and
+          // .select(["inboxEnabled"]) (sendMessage inbox check) see the same
+          // owner settings, including the new columns. `chain` is fully
+          // chainable: .select/.selectAll return it, .where returns it, and
+          // .executeTakeFirst resolves to the row.
+          const settingsRow = {
+            did: "did:example:user",
+            pdsSyncEnabled: 1,
+            imageTheme: "ocean-breeze", // Mock a specific theme
+            inboxEnabled: 1, // Inbox open by default
+            profanityFilterEnabled: 0, // Profanity screening off by default
+            customPrompt: null,
+            profileCardTheme: null,
+            touchpointLocale: null,
+            createdAt: new Date().toISOString(),
+          };
+          const chain: any = {
+            executeTakeFirst: mock.fn(async () => settingsRow),
+            where: mock.fn(function (this: any) {
+              return this;
+            }),
+          };
           return {
-            selectAll: mock.fn(() => ({
-              where: mock.fn(() => ({
-                executeTakeFirst: mock.fn(async () => ({
-                  did: "did:example:user",
-                  pdsSyncEnabled: 1,
-                  imageTheme: "ocean-breeze", // Mock a specific theme
-                  createdAt: new Date().toISOString(),
-                })),
-              })),
-            })),
+            selectAll: mock.fn(() => chain),
+            select: mock.fn(() => chain),
           };
         }
         return mockSelectBuilder;
@@ -197,6 +211,138 @@ describe("MessageService", () => {
   test("sendMessage throws if user not found", async () => {
     mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => undefined);
     await assert.rejects(() => messageService.sendMessage("did:x", "hi"), /Recipient not found/);
+  });
+
+  test("sendMessage is rejected when the recipient's inbox is closed (#177)", async () => {
+    // Arrange — recipient exists in user_profile but has inboxEnabled = 0.
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    // Override the user_settings leg to report a closed inbox. The default
+    // mock returns inboxEnabled: 1, so we swap the row to 0 for this test.
+    mockDb.selectFrom = mock.fn((table: string) => {
+      if (table === "user_settings") {
+        const chain: any = {
+          executeTakeFirst: mock.fn(async () => ({
+            did: "did:foo",
+            pdsSyncEnabled: 1,
+            imageTheme: "default",
+            inboxEnabled: 0,
+            profanityFilterEnabled: 0,
+            customPrompt: null,
+            profileCardTheme: null,
+            touchpointLocale: null,
+            createdAt: new Date().toISOString(),
+          })),
+          where: mock.fn(function (this: any) {
+            return this;
+          }),
+        };
+        return {
+          selectAll: mock.fn(() => chain),
+          select: mock.fn(() => chain),
+        };
+      }
+      return mockSelectBuilder;
+    });
+
+    // Act & Assert — the send is rejected with the inbox-closed message, and
+    // crucially no message row is inserted (account/history stay intact).
+    await assert.rejects(
+      () => messageService.sendMessage("did:foo", "hi"),
+      /not accepting new messages/
+    );
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
+  });
+
+  test("sendMessage silently drops a flagged message when profanity filter is on (#58)", async () => {
+    // Arrange — recipient exists, inbox open, profanity filter ON.
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    mockDb.selectFrom = mock.fn((table: string) => {
+      if (table === "user_settings") {
+        const chain: any = {
+          executeTakeFirst: mock.fn(async () => ({
+            did: "did:foo",
+            pdsSyncEnabled: 1,
+            imageTheme: "default",
+            inboxEnabled: 1,
+            profanityFilterEnabled: 1,
+            customPrompt: null,
+            profileCardTheme: null,
+            touchpointLocale: null,
+            createdAt: new Date().toISOString(),
+          })),
+          where: mock.fn(function (this: any) {
+            return this;
+          }),
+        };
+        return {
+          selectAll: mock.fn(() => chain),
+          select: mock.fn(() => chain),
+        };
+      }
+      return mockSelectBuilder;
+    });
+
+    // Act — "fuck" is a canonical English blocklist entry. The send must still
+    // return success (sender sees no rejection), but no row is inserted.
+    const result = await messageService.sendMessage("did:foo", "you are a fuck");
+    assert.deepStrictEqual(result, { success: true });
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
+  });
+
+  test("sendMessage accepts a clean message even when profanity filter is on (#58)", async () => {
+    // Arrange — recipient exists, inbox open, profanity filter ON.
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    mockDb.selectFrom = mock.fn((table: string) => {
+      if (table === "user_settings") {
+        const chain: any = {
+          executeTakeFirst: mock.fn(async () => ({
+            did: "did:foo",
+            pdsSyncEnabled: 1,
+            imageTheme: "default",
+            inboxEnabled: 1,
+            profanityFilterEnabled: 1,
+            customPrompt: null,
+            profileCardTheme: null,
+            touchpointLocale: null,
+            createdAt: new Date().toISOString(),
+          })),
+          where: mock.fn(function (this: any) {
+            return this;
+          }),
+        };
+        return {
+          selectAll: mock.fn(() => chain),
+          select: mock.fn(() => chain),
+        };
+      }
+      return mockSelectBuilder;
+    });
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => ({}));
+
+    // Act — a clean message is accepted and inserted normally.
+    const result = await messageService.sendMessage("did:foo", "what's your favorite movie?");
+    assert.deepStrictEqual(result, { success: true });
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
+  });
+
+  test("sendMessage does not screen for profanity when the filter is off", async () => {
+    // Arrange — recipient exists, inbox open, profanity filter OFF (default).
+    // Even a flagged word should pass through and be inserted.
+    mockSelectBuilder.executeTakeFirst.mock.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    mockInsertBuilder.execute.mock.mockImplementationOnce(async () => ({}));
+
+    const result = await messageService.sendMessage("did:foo", "you are a fuck");
+    assert.deepStrictEqual(result, { success: true });
+    // The default mock row has profanityFilterEnabled: 0, so the message lands.
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
   });
 
   test("deleteMessage deletes from DB and fires PDS deletion in background", async () => {

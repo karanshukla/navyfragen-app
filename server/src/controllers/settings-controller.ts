@@ -85,15 +85,41 @@ export class SettingsController {
   };
 
   /**
-   * Validate request for updating settings
+   * Validate request for updating settings.
+   *
+   * Every field is optional — the /customise page persists one card's setting
+   * at a time, so only validate the keys a client actually sent. Null is a
+   * valid value for the nullable columns (it means "use the default").
    */
   validateUpdateSettings = [
-    body("pdsSyncEnabled").isBoolean().withMessage("pdsSyncEnabled must be a boolean value"),
+    body("pdsSyncEnabled")
+      .optional()
+      .isBoolean()
+      .withMessage("pdsSyncEnabled must be a boolean value"),
     body("imageTheme")
+      .optional({ nullable: true })
       .isString()
       .withMessage("imageTheme must be a string")
       .notEmpty()
       .withMessage("imageTheme cannot be empty"),
+    body("inboxEnabled").optional().isBoolean().withMessage("inboxEnabled must be a boolean value"),
+    body("profanityFilterEnabled")
+      .optional()
+      .isBoolean()
+      .withMessage("profanityFilterEnabled must be a boolean value"),
+    body("customPrompt")
+      .optional({ nullable: true })
+      .isString()
+      .isLength({ max: 100 })
+      .withMessage("customPrompt must be a string of at most 100 chars"),
+    body("profileCardTheme")
+      .optional({ nullable: true })
+      .isString()
+      .withMessage("profileCardTheme must be a string"),
+    body("touchpointLocale")
+      .optional({ nullable: true })
+      .isString()
+      .withMessage("touchpointLocale must be a string"),
   ];
   /**
    * Update the user's settings
@@ -109,14 +135,21 @@ export class SettingsController {
     }
 
     try {
-      const pdsSyncEnabled = req.body.pdsSyncEnabled === true;
-      const imageTheme = req.body.imageTheme;
-      const updatedSettings = await this.settingsService.updateSettings(
-        userSessionDid,
-        pdsSyncEnabled,
-        imageTheme
-      );
-      this.logger.info({ did: userSessionDid, pdsSyncEnabled, imageTheme }, "Settings updated");
+      const updatedSettings = await this.settingsService.updateSettings(userSessionDid, {
+        pdsSyncEnabled:
+          req.body.pdsSyncEnabled === undefined ? undefined : req.body.pdsSyncEnabled === true,
+        imageTheme: req.body.imageTheme,
+        inboxEnabled:
+          req.body.inboxEnabled === undefined ? undefined : req.body.inboxEnabled === true,
+        profanityFilterEnabled:
+          req.body.profanityFilterEnabled === undefined
+            ? undefined
+            : req.body.profanityFilterEnabled === true,
+        customPrompt: req.body.customPrompt,
+        profileCardTheme: req.body.profileCardTheme,
+        touchpointLocale: req.body.touchpointLocale,
+      });
+      this.logger.info({ did: userSessionDid, updates: req.body }, "Settings updated");
       return res.json(updatedSettings);
     } catch (err) {
       this.logger.error({ err, did: userSessionDid }, "Failed to update user settings");

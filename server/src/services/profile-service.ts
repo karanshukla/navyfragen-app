@@ -24,19 +24,44 @@ export class ProfileService {
   /**
    * Get public profile information for a given DID
    * @param did The user's DID
-   * @returns The user's public profile and whether they're registered on Navyfragen
+   * @returns The user's public profile, whether they're registered on
+   *   Navyfragen, and the public-facing subset of their settings (the
+   *   ask-card strings/theme + inbox-open state) so an anonymous visitor sees
+   *   the profile owner's customisations without a second round-trip.
    */
   async getPublicProfile(did: string): Promise<{
     profile: Awaited<ReturnType<AtpAgent["getProfile"]>>["data"];
     exists: boolean;
+    inboxEnabled: boolean;
+    customPrompt: string | null;
+    profileCardTheme: string | null;
+    touchpointLocale: string | null;
   }> {
     let profileResponse: Awaited<ReturnType<typeof this.agent.getProfile>>;
     let exists: boolean;
+    // The public-facing settings subset (inbox toggle, prompt, card theme,
+    // touchpoint locale). Fetched as a third parallel leg alongside the
+    // remote Bluesky profile + checkUserExists — user_settings.did is the PK,
+    // so this is a cheap indexed point-read that adds no measurable latency
+    // on top of the dominating remote HTTP round-trip.
+    let publicSettings:
+      | {
+          inboxEnabled: number | null;
+          customPrompt: string | null;
+          profileCardTheme: string | null;
+          touchpointLocale: string | null;
+        }
+      | undefined;
 
     try {
-      [profileResponse, exists] = await Promise.all([
+      [profileResponse, exists, publicSettings] = await Promise.all([
         this.agent.getProfile({ actor: did }),
         this.checkUserExists(did),
+        this.db
+          .selectFrom("user_settings")
+          .select(["inboxEnabled", "customPrompt", "profileCardTheme", "touchpointLocale"])
+          .where("did", "=", did)
+          .executeTakeFirst(),
       ]);
     } catch (err) {
       this.logger.error({ err, did }, "Failed to fetch profile by DID");
@@ -47,7 +72,25 @@ export class ProfileService {
       throw new Error("Profile not found");
     }
 
-    return { profile: profileResponse.data, exists };
+    // inboxEnabled is NOT NULL default true, so a missing row (or a null read
+    // from an older row) means the inbox is open. The other fields default to
+    // null = "use the default string/theme/locale". SQLite stores booleans as
+    // 0/1; Postgres stores them as actual booleans — normalize both so the
+    // value reaching the client is always a real boolean.
+    // NOTE: the Kysely row type declares inboxEnabled as `number` (SQLite's
+    // 0/1), but the Postgres dialect returns an actual `boolean` at runtime
+    // for a `boolean` column. Both `0` and `false` mean closed, so coerce via
+    // `unknown` to compare against both without a TS overlap error.
+    const rawInboxEnabled = publicSettings?.inboxEnabled as unknown;
+    const inboxClosed = rawInboxEnabled === 0 || rawInboxEnabled === false;
+    return {
+      profile: profileResponse.data,
+      exists,
+      inboxEnabled: !inboxClosed,
+      customPrompt: publicSettings?.customPrompt ?? null,
+      profileCardTheme: publicSettings?.profileCardTheme ?? null,
+      touchpointLocale: publicSettings?.touchpointLocale ?? null,
+    };
   }
 
   /**

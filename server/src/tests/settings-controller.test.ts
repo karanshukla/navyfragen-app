@@ -185,6 +185,41 @@ describe("SettingsController", () => {
       });
     });
 
+    test("passes only provided fields through to the service (partial update)", async () => {
+      // A /customise card mutates one field at a time; the controller must not
+      // inject defaults for fields the client didn't send (undefined = skip).
+      const svc = makeService();
+      const ctx = makeCtx();
+      const controller = new SettingsController(svc, ctx.logger, ctx);
+      const res = makeRes();
+      await controller.updateSettings(makeReq({ body: { inboxEnabled: false } }), res);
+
+      const passed = svc.updateSettings.mock.calls[0].arguments[1];
+      assert.deepStrictEqual(passed, {
+        pdsSyncEnabled: undefined,
+        imageTheme: undefined,
+        inboxEnabled: false,
+        profanityFilterEnabled: undefined,
+        customPrompt: undefined,
+        profileCardTheme: undefined,
+        touchpointLocale: undefined,
+      });
+    });
+
+    test("passes null through for nullable fields (means 'unset')", async () => {
+      const svc = makeService();
+      const ctx = makeCtx();
+      const controller = new SettingsController(svc, ctx.logger, ctx);
+      const res = makeRes();
+      await controller.updateSettings(
+        makeReq({ body: { customPrompt: null, touchpointLocale: "es" } }),
+        res
+      );
+      const passed = svc.updateSettings.mock.calls[0].arguments[1];
+      assert.strictEqual(passed.customPrompt, null); // null, not undefined
+      assert.strictEqual(passed.touchpointLocale, "es");
+    });
+
     test("returns 500 on error", async () => {
       const svc = makeService({
         updateSettings: mock.fn(async () => {

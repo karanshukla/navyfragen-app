@@ -152,7 +152,11 @@ export class MessageController {
     } catch (err: unknown) {
       this.logger.error({ err, recipient }, "Failed to send message");
       const msg = errorMessage(err);
-      return res.status(msg.includes("not found") ? 404 : 500).json({
+      // "not found" → 404 (recipient isn't a Navyfragen user); "inbox is
+      // closed" → 403 (recipient exists but disabled intake). Everything else
+      // is an internal failure.
+      const status = msg.includes("not found") ? 404 : msg.includes("not accepting") ? 403 : 500;
+      return res.status(status).json({
         error: msg || "Failed to send message",
       });
     }
