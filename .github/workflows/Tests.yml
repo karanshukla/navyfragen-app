@@ -154,15 +154,16 @@ jobs:
         if: steps.server-tests.outcome == 'failure'
         run: exit 1
 
-  # Non-blocking canary for issue #251: validate the server's native/SDK deps
-  # under the Bun runtime. Known incompatible as of the findings in the pilot
-  # PR (better-sqlite3 is unsupported by Bun; node:test mock.module patterns
-  # don't translate). This job exists to surface regressions — if Bun ships
-  # support, the probe below will start passing and the canary can be promoted.
+  # Canary for issues #251/#263: validate the server's deps under the Bun
+  # runtime. The SQLite blocker from #251 (better-sqlite3 is unsupported by
+  # Bun) is resolved by abstracting the data layer onto bun:sqlite (#263), so
+  # the SQLite probe is now a real gate — a regression there fails this job.
+  # The node:test runner remains incompatible under Bun (mock.module patterns,
+  # out of scope for #263), so that step keeps its own continue-on-error and
+  # stays informational.
   server-tests-bun-runtime:
     name: Server Tests (Bun runtime canary)
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -175,46 +176,81 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Probe native/SDK deps under Bun runtime
+      - name: Probe native/SDK deps + SQLite data layer under Bun runtime
         id: probe
         working-directory: server
+        env:
+          # createDb's SQLite branch pulls #/lib/env, which requires these at
+          # load time. Mirror src/tests/test-bootstrap.js's dummy values.
+          NODE_ENV: test
+          OAUTH_TOKEN_SECRET: 0123456789abcdef0123456789abcdef
         run: |
-          set +e
           {
             echo "## Bun runtime canary — dependency probe"
             echo
             echo "Each line shows whether the module loads + exercises under Bun."
             echo
           } > "$GITHUB_STEP_SUMMARY"
-          for spec in better-sqlite3 sharp web-push; do
+
+          # SQLite data layer — the unblocked path from #263. The bun command
+          # exits non-zero on any failure (mismatch or thrown error), and prints
+          # "OK" on success. We gate on the exit code (authoritative) and also
+          # confirm "OK" appeared, since the dotenv banner can prepend lines.
+          set +e
+          sqlite_out=$(bun -e "import('./src/database/db.ts').then(async ({createDb,migrateToLatest})=>{const db=await createDb(':memory:');await migrateToLatest(db);await db.insertInto('message').values({tid:'t1',message:'hi',createdAt:'2024-01-01',recipient:'did:web:x'}).execute();const row=await db.selectFrom('message').selectAll().executeTakeFirstOrThrow();await db.destroy();if(row.tid!=='t1')throw new Error('row mismatch '+JSON.stringify(row));console.log('OK',JSON.stringify(row))}).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1)
+          sqlite_exit=$?
+          set -e
+          echo "$sqlite_out" | tee /dev/stderr >/dev/null
+          {
+            echo "<details><summary><code>bun-sqlite-data-layer</code> (acceptance #263)</summary>"
+            echo ""
+            echo '```'
+            echo "$sqlite_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # The remaining probes are informational; they don't gate the job.
+          for spec in sharp web-push; do
             echo "<details><summary><code>${spec}</code></summary>" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
-            if [ "$spec" = "better-sqlite3" ]; then
-              bun -e "import('better-sqlite3').then(m=>{const db=new (m.default)(':memory:');db.exec('CREATE TABLE t(x)');db.prepare('INSERT INTO t VALUES (?)').run(1);console.log('OK',db.prepare('SELECT x FROM t').get())}).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1
-            elif [ "$spec" = "sharp" ]; then
-              bun -e "import('sharp').then(m=>console.log('OK sharp',m.default.versions.sharp)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1
+            if [ "$spec" = "sharp" ]; then
+              bun -e "import('sharp').then(m=>console.log('OK sharp',m.default.versions.sharp)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1 || true
             elif [ "$spec" = "web-push" ]; then
-              bun -e "import('web-push').then(m=>console.log('OK web-push',typeof m.generateVAPIDKeys)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1
+              bun -e "import('web-push').then(m=>console.log('OK web-push',typeof m.generateVAPIDKeys)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1 || true
             fi
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "</details>" >> "$GITHUB_STEP_SUMMARY"
           done
 
+          # Gate the SQLite path. The bun command's exit code is authoritative
+          # (non-zero means it threw or the row mismatched); the OK-string check
+          # is a belt-and-suspenders confirmation. A regression here fails the
+          # job; the node:test-under-Bun step below keeps its own
+          # continue-on-error (still expected to fail, out of scope per #263).
+          if [ "$sqlite_exit" -ne 0 ] || ! echo "$sqlite_out" | grep -q 'OK '; then
+            echo "::error::SQLite data layer did not pass under Bun (regression of #263)"
+            exit 1
+          fi
+
       - name: Attempt server test suite under Bun runtime
         id: bun-tests
         working-directory: server
         continue-on-error: true
         run: |
-          # The suite is written for node:test + tsx + mock.module; Bun's
-          # runner differs. Capture whatever happens as findings.
-          bun --experimental-test-module-mocks \
-              --import ./src/tests/test-bootstrap.js \
-              --import tsx \
-              --test 'src/**/*.test.ts' > /tmp/bun-runtime-test-output.txt 2>&1 || true
+          # Bun's native `bun test` (not `bun --test`) recognizes node:test's
+          # describe/test/before/after, but does NOT implement the `mock` API
+          # (mock.fn / mock.module), which 13/14 test files use for DB/agent
+          # faking. So the suite is expected to mostly fail here today; this
+          # step captures the real pass/fail split as findings rather than a
+          # silent error. Tracked by #263 as out of scope (mock migration).
+          bun test --preload ./src/tests/test-bootstrap.js src/tests/ \
+              > /tmp/bun-runtime-test-output.txt 2>&1 || true
           {
-            echo "<details><summary>Test runner attempt</summary>"
+            echo "<details><summary>Test runner attempt (expected to mostly fail — see note)</summary>"
             echo ""
             echo '```'
             tail -n 40 /tmp/bun-runtime-test-output.txt

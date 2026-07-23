@@ -1,3 +1,10 @@
+// bun:sqlite resolves only under the Bun runtime; @types/bun provides its types.
+// Scoped to this file rather than added to tsconfig `types` (which would pull
+// the Bun global into the whole Node project) — see issue #263. Triple-slash
+// directives are only honored before any statements in the file, so this must
+// stay above the imports below or TypeScript silently treats it as a comment.
+/// <reference types="bun" />
+
 import { Kysely, SqliteDialect, PostgresDialect, Generated } from "kysely";
 import type { Migration, MigrationProvider } from "kysely/migration";
 import { Migrator } from "kysely/migration";
@@ -79,6 +86,14 @@ export type PushSubscription = {
 type AuthStateJson = string;
 
 type AuthSessionJson = string;
+
+// Schema known to migration 005 when it backfills user_settings from
+// user_profile. Both tables expose {did, createdAt} at that point in the
+// migration sequence, so a narrow local type avoids Kysely<any>.
+type Migration005Schema = {
+  user_profile: { did: string; createdAt: string };
+  user_settings: { did: string; createdAt: string };
+};
 
 // Migrations
 
@@ -170,7 +185,9 @@ migrations["004"] = {
 };
 
 migrations["005"] = {
-  async up(db: Kysely<any>) {
+  // Typed for the backfill SELECT — user_profile (migration 003) and the
+  // freshly-created user_settings both expose {did, createdAt} at this point.
+  async up(db: Kysely<Migration005Schema>) {
     await db.schema
       .createTable("user_settings")
       .addColumn("did", "varchar", (col) => col.primaryKey())
@@ -192,19 +209,19 @@ migrations["005"] = {
 };
 
 migrations["006"] = {
-  async up(db: Kysely<any>) {
+  async up(db: Kysely<unknown>) {
     await db.schema
       .alterTable("user_settings")
       .addColumn("imageTheme", "varchar", (col) => col.notNull().defaultTo("default"))
       .execute();
   },
-  async down(db: Kysely<any>) {
+  async down(db: Kysely<unknown>) {
     await db.schema.alterTable("user_settings").dropColumn("imageTheme").execute();
   },
 };
 
 migrations["007"] = {
-  async up(db: Kysely<any>) {
+  async up(db: Kysely<unknown>) {
     await db.schema
       .createTable("push_subscription")
       .addColumn("id", "serial", (col) => col.primaryKey())
@@ -228,7 +245,7 @@ migrations["007"] = {
 };
 
 migrations["008"] = {
-  async up(db: Kysely<any>) {
+  async up(db: Kysely<unknown>) {
     // SQLite has no native ALTER TABLE for dropping/adding constraints, so
     // this rebuilds the table rather than altering it in place. Existing
     // push subscriptions are dropped along with it; users just need to
@@ -253,7 +270,7 @@ migrations["008"] = {
       .column("did")
       .execute();
   },
-  async down(db: Kysely<any>) {
+  async down(db: Kysely<unknown>) {
     await db.schema.dropIndex("push_subscription_did_idx").ifExists().execute();
     await db.schema.dropTable("push_subscription").ifExists().execute();
 
@@ -275,6 +292,69 @@ migrations["008"] = {
   },
 };
 
+// Kysely's SqliteDialect is duck-typed against a tiny Database/Statement
+// surface (prepare(sql) -> { reader, all, run, iterate } + close()) that
+// better-sqlite3 happens to satisfy. bun:sqlite exposes the same synchronous
+// API with two deltas: its Statement has no `reader` flag, and its methods
+// take variadic params instead of an array. The adapter below bridges those,
+// letting Kysely's stock SqliteDialect drive bun:sqlite under the Bun runtime
+// so `better-sqlite3` is never imported there (it's unsupported by Bun).
+interface KyselySqliteStatement {
+  reader: boolean;
+  all(parameters: ReadonlyArray<unknown>): unknown[];
+  run(parameters: ReadonlyArray<unknown>): {
+    changes: number | bigint;
+    lastInsertRowid: number | bigint;
+  };
+  iterate(parameters: ReadonlyArray<unknown>): IterableIterator<unknown>;
+}
+interface KyselySqliteDatabase {
+  close(): void;
+  prepare(sql: string): KyselySqliteStatement;
+}
+
+class BunSqliteStatement implements KyselySqliteStatement {
+  readonly reader: boolean;
+  #stmt: import("bun:sqlite").Statement;
+
+  constructor(stmt: import("bun:sqlite").Statement) {
+    this.#stmt = stmt;
+    // A statement is a "reader" iff it returns ≥1 column — the same rule
+    // better-sqlite3 uses internally to set its `reader` flag.
+    this.reader = stmt.columnNames.length > 0;
+  }
+
+  all(parameters: ReadonlyArray<unknown>) {
+    return this.#stmt.all(...parameters);
+  }
+
+  run(parameters: ReadonlyArray<unknown>) {
+    return this.#stmt.run(...parameters);
+  }
+
+  iterate(parameters: ReadonlyArray<unknown>) {
+    return this.#stmt.iterate(...parameters);
+  }
+}
+
+class BunSqliteDatabase implements KyselySqliteDatabase {
+  #db: import("bun:sqlite").Database;
+
+  constructor(db: import("bun:sqlite").Database) {
+    this.#db = db;
+  }
+
+  prepare(sql: string) {
+    return new BunSqliteStatement(this.#db.prepare(sql));
+  }
+
+  close() {
+    this.#db.close();
+  }
+}
+
+const isBunRuntime = typeof process.versions.bun !== "undefined";
+
 export const createDb = async (location: string): Promise<Database> => {
   if (env.POSTGRESQL_URL) {
     return new Kysely<DatabaseSchema>({
@@ -285,7 +365,18 @@ export const createDb = async (location: string): Promise<Database> => {
       }),
     });
   }
-  // Lazy import so the native binary is never loaded when PostgreSQL is in use
+  // Under Bun use bun:sqlite (better-sqlite3 is unsupported there); under
+  // Node keep better-sqlite3. Both present the same Database/Statement
+  // surface to Kysely's SqliteDialect, so behavior is identical. Imports are
+  // lazy so the unused native binary is never loaded.
+  if (isBunRuntime) {
+    const { Database } = await import("bun:sqlite");
+    return new Kysely<DatabaseSchema>({
+      dialect: new SqliteDialect({
+        database: new BunSqliteDatabase(new Database(location)),
+      }),
+    });
+  }
   const { default: SqliteDb } = await import("better-sqlite3");
   return new Kysely<DatabaseSchema>({
     dialect: new SqliteDialect({

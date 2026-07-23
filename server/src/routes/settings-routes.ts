@@ -5,7 +5,11 @@ import { SettingsService } from "../services/settings-service";
 
 import type { AppContext } from "../index";
 
-export function settingsRoutes(ctx: AppContext, handler: any, checkValidation: any) {
+export function settingsRoutes(
+  ctx: AppContext,
+  handler: (fn: express.Handler) => express.Handler,
+  checkValidation: express.RequestHandler
+) {
   // Initialize service and controller
   const settingsService = new SettingsService(ctx.db, ctx.logger);
   const settingsController = new SettingsController(settingsService, ctx.logger, ctx);

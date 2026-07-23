@@ -305,3 +305,11 @@ The following files are excluded from coverage metrics entirely. See the root-le
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and entry point
 - `src/vite-env.d.ts` — ambient declarations
 - `src/styles/tokens.ts` — pure style constants
+
+## Runtime-gated SQLite driver (`server/src/database/db.ts`)
+
+`db.ts` is already excluded from coverage (it's the Kysely migration runner). It now also contains the runtime-gated driver selection added in #263: under Bun it constructs a small `BunSqliteDatabase`/`BunSqliteStatement` adapter that bridges `bun:sqlite` to Kysely's stock `SqliteDialect`; under Node it keeps `better-sqlite3`. The adapter is not unit-tested in the Node suite because the Bun branch can't be imported under Node (`bun:sqlite` only resolves under Bun). It is instead exercised by the `server-tests-bun-runtime` canary in `.github/workflows/Tests.yml`, which runs the real `createDb` → `migrateToLatest` → insert/select path under the Bun runtime and gates on `OK`. The Node branch continues to be covered transitively by the existing server test suite's migration runs.
+
+The two API deltas the adapter bridges (both verified locally under Bun):
+- `bun:sqlite`'s `Statement` has no `reader` flag — derived as `columnNames.length > 0`, the same rule `better-sqlite3` uses internally to set its `reader` flag.
+- `bun:sqlite`'s `Statement.all/run/iterate` take variadic params, not an array — the adapter spreads the params array Kysely passes.

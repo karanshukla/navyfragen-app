@@ -9,6 +9,7 @@ import {
   toAccountEntry,
   upsertAccount,
 } from "../auth/session";
+import { errorMessage } from "../lib/errors";
 import { env } from "../lib/env";
 import { pdsRegion } from "../lib/pds-region";
 import { AuthService } from "../services/auth-service";
@@ -35,8 +36,8 @@ export class AuthController {
       const redirectUrl = await this.service.getOAuthRedirectUrl(handle);
       this.ctx.logger.info({ redirectUrl }, "OAuth authorize succeeded");
       return res.json({ redirectUrl });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || "couldn't initiate login" });
+    } catch (err: unknown) {
+      return res.status(500).json({ error: errorMessage(err) || "couldn't initiate login" });
     }
   }
 
@@ -141,7 +142,7 @@ export class AuthController {
       let token: string;
       try {
         token = this.service.encryptDid(did);
-      } catch (e: any) {
+      } catch {
         this.ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
         return res.redirect(`${env.CLIENT_URL}/login?error=server_config`);
       }
@@ -166,7 +167,7 @@ export class AuthController {
     let did: string;
     try {
       did = this.service.decryptDid(oauth_token);
-    } catch (e: any) {
+    } catch {
       this.ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
       return res.status(500).json({ error: "Server misconfiguration" });
     }

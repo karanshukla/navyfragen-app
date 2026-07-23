@@ -24,9 +24,13 @@ export class AuthService {
           "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
       });
       return url.toString();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.ctx.logger.error(
-        { handle, err: err?.message, stack: err?.stack },
+        {
+          handle,
+          err: err instanceof Error ? err.message : err,
+          stack: err instanceof Error ? err.stack : undefined,
+        },
         "[oauth] oauthClient.authorize threw"
       );
       if (err instanceof OAuthResolverError) throw new Error(err.message, { cause: err });
@@ -84,7 +88,7 @@ export class AuthService {
     await this.ctx.db
       .insertInto("user_profile")
       .values({ did, createdAt: new Date().toISOString() })
-      .onConflict((oc: any) => oc.column("did").doNothing())
+      .onConflict((oc) => oc.column("did").doNothing())
       .execute();
   }
 

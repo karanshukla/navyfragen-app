@@ -12,7 +12,11 @@ import { AuthService } from "../services/auth-service";
 
 import type { AppContext } from "../index";
 
-export function e2eAuthRoutes(ctx: AppContext, handler: any, checkValidation: any) {
+export function e2eAuthRoutes(
+  ctx: AppContext,
+  handler: (fn: express.Handler) => express.Handler,
+  checkValidation: express.RequestHandler
+) {
   const router = express.Router();
   const authService = new AuthService(ctx);
 
@@ -47,9 +51,8 @@ export function e2eAuthRoutes(ctx: AppContext, handler: any, checkValidation: an
 
       await authService.createOrConfirmUserProfile(did);
 
-      // Cast: AtpAgent implements the same API surface as Agent for our use-cases.
       const handle = agent.session?.handle || identifier;
-      setE2EAgent(did, agent as any, handle);
+      setE2EAgent(did, agent, handle);
       // Preserve any previously remembered accounts (multi-account add flow).
       req.session = req.session ?? {};
       req.session.did = did;

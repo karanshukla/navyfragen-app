@@ -16,7 +16,7 @@ npm workspaces with two packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250). **Node remains the runtime** for both the client (Vite dev/build, Vitest) and the production server. The Bun runtime as a server execution environment is tracked separately by a non-blocking CI canary (issue #251) — `better-sqlite3` is currently unsupported by Bun, so the production server must stay on Node.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250). **Node remains the runtime** for the client (Vite dev/build, Vitest) and the production server. The Bun runtime as a server execution environment is tracked by a CI canary (issues #251/#263) — the `better-sqlite3` blocker was resolved by abstracting the dev SQLite driver onto `bun:sqlite` (#263); the remaining blocker is `node:test`'s `mock.module` patterns not translating to Bun's runner.
 
 Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
 
@@ -73,7 +73,7 @@ Session is intentionally thin — Bluesky OAuth acts as the authorization proxy.
 
 ### Database
 
-Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in production (when `POSTGRESQL_URL` is set).
+Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in production (when `POSTGRESQL_URL` is set). The dev SQLite driver is runtime-gated (`src/database/db.ts`): `better-sqlite3` under Node, `bun:sqlite` behind a small adapter under Bun (so the server can run under the Bun runtime — see #263). Kysely's `SqliteDialect` is dialect-agnostic; the adapter only bridges two `bun:sqlite` API deltas (no `reader` flag → derived from `columnNames`; variadic params → spread).
 
 Schema and migrations live entirely in `src/database/db.ts`. Add new migrations as numbered keys (`"007"`, etc.) in the `migrations` object — Kysely applies them in order at startup via `migrateToLatest()`.
 

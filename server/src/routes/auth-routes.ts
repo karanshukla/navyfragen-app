@@ -5,7 +5,11 @@ import { AuthController } from "../controllers/auth-controller";
 
 import type { AppContext } from "../index";
 
-export function authRoutes(ctx: AppContext, handler: any, checkValidation: any) {
+export function authRoutes(
+  ctx: AppContext,
+  handler: (fn: express.Handler) => express.Handler,
+  checkValidation: express.RequestHandler
+) {
   const router = express.Router();
   const controller = new AuthController(ctx);
 

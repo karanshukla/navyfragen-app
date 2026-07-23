@@ -4,6 +4,7 @@ import { param, query } from "express-validator";
 import { Logger } from "pino";
 
 import { ProfileService } from "../services/profile-service";
+import { errorMessage } from "../lib/errors";
 
 import type { AppContext } from "../index";
 
@@ -36,8 +37,8 @@ export class ProfileController {
     try {
       const profileData = await this.profileService.getPublicProfile(did);
       return res.json(profileData);
-    } catch (err: any) {
-      if (err.message === "Profile not found") {
+    } catch (err: unknown) {
+      if (errorMessage(err) === "Profile not found") {
         return res.status(404).json({ error: "Profile not found" });
       }
       this.logger.error({ err, did }, "Failed to fetch public profile");
@@ -163,8 +164,8 @@ export class ProfileController {
     try {
       const did = await this.profileService.resolveHandleToDid(handle);
       return res.json({ did });
-    } catch (err: any) {
-      if (err.message === "Handle not found") {
+    } catch (err: unknown) {
+      if (errorMessage(err) === "Handle not found") {
         return res.status(404).json({ error: "Handle not found" });
       }
       this.logger.error({ err, handle }, "Failed to resolve handle");
