@@ -13,6 +13,39 @@ const FORMATS = {
   webp: { contentType: 'image/webp', args: { type: 'webp' } },
 };
 
+// Chromium's multi-process architecture spawns a new renderer subprocess per
+// tab (no --single-process). Without a cap, a burst of concurrent requests
+// spawns one renderer per request, multiplying RSS. Excess requests queue
+// instead of piling onto the browser at once.
+export const MAX_CONCURRENT_RENDERS = 3;
+
+class Semaphore {
+  constructor(max) {
+    this.max = max;
+    this.current = 0;
+    this.queue = [];
+  }
+
+  acquire() {
+    if (this.current < this.max) {
+      this.current++;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.queue.push(() => {
+        this.current++;
+        resolve();
+      });
+    });
+  }
+
+  release() {
+    this.current--;
+    const next = this.queue.shift();
+    if (next) next();
+  }
+}
+
 // Bounded deadline for waiting on images/fonts to load before a screenshot.
 // Long enough to absorb a slow CDN fetch (banners/avatars live on cdn.bsky.app,
 // fonts on fonts.googleapis.com), short enough that a hung host can't stall a
@@ -52,8 +85,9 @@ async function waitForVisualReadiness(page) {
   ]);
 }
 
-export function createApp(getBrowser) {
+export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
   const app = express();
+  const renderSemaphore = new Semaphore(MAX_CONCURRENT_RENDERS);
 
   app.use(cors());
   app.use(express.json({ limit: '2mb' }));
@@ -84,40 +118,46 @@ export function createApp(getBrowser) {
   });
 
   app.post('/', async (req, res) => {
-    let browser;
+    await renderSemaphore.acquire();
     try {
-      browser = await getBrowser();
-    } catch (err) {
-      return res.status(503).json({ error: 'Browser unavailable: ' + err.message });
-    }
-
-    const { source, format: formatName, options = {} } = req.body;
-    const format = FORMATS[formatName];
-    const tmpoutput = tmp.fileSync({ prefix: 'htmltoimage-' });
-    const tmpinput = tmp.fileSync({ prefix: 'htmltoimage-', postfix: '.html' });
-
-    try {
-      await fs.promises.writeFile(tmpinput.name, source);
-
-      const page = await browser.newPage();
+      let browser;
       try {
-        await page.setViewport({ width: options.width || 1920, height: options.height || 1080 });
-        await page.goto('file://' + tmpinput.name);
-        await waitForVisualReadiness(page);
-        await page.screenshot(Object.assign({}, options.args, format.args, { path: tmpoutput.name }));
-      } finally {
-        await page.close();
+        browser = await getBrowser();
+      } catch (err) {
+        return res.status(503).json({ error: 'Browser unavailable: ' + err.message });
       }
 
-      res.header('Content-Type', format.contentType);
-      fs.createReadStream(tmpoutput.name).pipe(res).on('close', () => {
+      const { source, format: formatName, options = {} } = req.body;
+      const format = FORMATS[formatName];
+      const tmpoutput = tmp.fileSync({ prefix: 'htmltoimage-' });
+      const tmpinput = tmp.fileSync({ prefix: 'htmltoimage-', postfix: '.html' });
+
+      try {
+        await fs.promises.writeFile(tmpinput.name, source);
+
+        const page = await browser.newPage();
+        try {
+          await page.setViewport({ width: options.width || 1920, height: options.height || 1080 });
+          await page.goto('file://' + tmpinput.name);
+          await waitForVisualReadiness(page);
+          await page.screenshot(Object.assign({}, options.args, format.args, { path: tmpoutput.name }));
+        } finally {
+          await page.close();
+        }
+
+        res.header('Content-Type', format.contentType);
+        fs.createReadStream(tmpoutput.name).pipe(res).on('close', () => {
+          tmpoutput.removeCallback();
+          tmpinput.removeCallback();
+        });
+      } catch (err) {
         tmpoutput.removeCallback();
         tmpinput.removeCallback();
-      });
-    } catch (err) {
-      tmpoutput.removeCallback();
-      tmpinput.removeCallback();
-      res.status(500).json({ error: err.message || 'Image generation failed' });
+        res.status(500).json({ error: err.message || 'Image generation failed' });
+      }
+    } finally {
+      renderSemaphore.release();
+      onRenderComplete(renderSemaphore.current);
     }
   });
 
@@ -152,7 +192,39 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return browser;
   }
 
-  const app = createApp(getBrowser);
+  // A single Chromium instance run for a long time accumulates RSS growth
+  // (cache/heap fragmentation across many renders) even though every page is
+  // closed correctly. Recycling the process periodically bounds that growth.
+  const RENDERS_BEFORE_RECYCLE = 100;
+  const BROWSER_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  let rendersSinceLaunch = 0;
+  let browserLaunchedAt = Date.now();
+
+  // Only swaps when no render is in flight (activeRenders === 0), so the
+  // browser is never pulled out from under a request that's mid-screenshot.
+  // A request that starts in the brief window between this check and the
+  // actual swap can hit a closed browser and get a 500 — an accepted
+  // tradeoff for keeping the recycle logic lock-free.
+  async function recycleBrowserIfDue(activeRenders) {
+    if (activeRenders > 0) return;
+    const due = rendersSinceLaunch >= RENDERS_BEFORE_RECYCLE || Date.now() - browserLaunchedAt >= BROWSER_MAX_AGE_MS;
+    if (!due) return;
+
+    const staleBrowserPromise = browserPromise;
+    rendersSinceLaunch = 0;
+    browserLaunchedAt = Date.now();
+    browserPromise = launchBrowser();
+
+    const staleBrowser = await staleBrowserPromise.catch(() => null);
+    if (staleBrowser) await staleBrowser.close().catch(() => {});
+  }
+
+  function onRenderComplete(activeRenders) {
+    rendersSinceLaunch++;
+    recycleBrowserIfDue(activeRenders).catch((err) => console.error('Browser recycle failed:', err));
+  }
+
+  const app = createApp(getBrowser, { onRenderComplete });
   // Bind to :: so Railway's IPv6 internal network can reach this service.
   app.listen(port, '::', () => console.log(`html-to-image listening on port ${port}`));
 
