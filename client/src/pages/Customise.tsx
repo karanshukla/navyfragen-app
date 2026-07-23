@@ -119,7 +119,7 @@ export default function Customise() {
             <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Message language"
-                description="Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience."
+                description="Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting."
                 isDark={isDark}
               >
                 {settingsLoading ? (
@@ -196,7 +196,7 @@ export default function Customise() {
             <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
               <SettingsCard
                 title="Profanity filter"
-                description="When on, incoming messages are screened against a wordlist. Flagged messages are silently dropped — the sender sees a success response, but the message never reaches your inbox."
+                description="When on, incoming messages are screened against a wordlist. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
                 isDark={isDark}
               >
                 {settingsLoading ? (
