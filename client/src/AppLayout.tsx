@@ -9,6 +9,7 @@ import { BouncingLogos } from "./components/BouncingLogos";
 import { buildAccountSwitchUrl, consumeAccountSwitchToast } from "./lib/accountSwitchToast";
 import { consumeNotificationSwitchRequest } from "./lib/notificationSwitch";
 import { Navigation } from "./Navigation";
+import Customise from "./pages/Customise";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
@@ -96,6 +97,7 @@ export function AppLayout() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/customise" element={<Customise />} />
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/profile" element={<PublicProfile />} />
                 <Route path="/profile/:handle" element={<PublicProfile />} />

@@ -8,6 +8,14 @@ export interface UserSettings {
   did: string;
   pdsSyncEnabled: number | boolean; // Server returns number (1/0), but we use as boolean
   imageTheme: string;
+  // Whether the inbox accepts new anonymous messages (1/0 from server, treated
+  // as boolean). When false, PublicProfile shows a closed-inbox state.
+  inboxEnabled: number | boolean;
+  // Whether incoming messages are screened against a profanity wordlist (#58).
+  profanityFilterEnabled: number | boolean;
+  customPrompt: string | null; // Optional ask-card headline override; null = default
+  profileCardTheme: string | null; // Optional ask-card colour preset; null = default
+  touchpointLocale: string | null; // Optional locale for ask-card/share touchpoints; null = English
   createdAt: string;
 }
 

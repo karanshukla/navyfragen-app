@@ -1591,4 +1591,55 @@ describe("Messages page", () => {
       scrollSpy.mockRestore();
     }
   });
+
+  it("localizes the owner's share payload to their touchpoint locale (#266)", async () => {
+    // The share text leaves the DOM into the OS share sheet, so it can't be
+    // reached by browser translate — it must be pre-localized from the owner's
+    // setting. Spy on navigator.share to capture what's actually handed off.
+    const shareSpy = vi.fn().mockResolvedValue(undefined);
+    const originalShare = navigator.share;
+    Object.defineProperty(navigator, "share", {
+      value: shareSpy,
+      configurable: true,
+      writable: true,
+    });
+
+    mockUseSession.mockReturnValue({ data: SESSION, isLoading: false } as any);
+    mockUseMessages.mockReturnValue({
+      data: { messages: [] },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as any);
+    mockUseDeleteMessage.mockReturnValue(noopMutation);
+    mockUseRespondToMessage.mockReturnValue(noopMutation);
+    mockUseAddExampleMessages.mockReturnValue(noopMutation);
+    mockUseUserSettings.mockReturnValue({
+      data: {
+        pdsSyncEnabled: false,
+        imageTheme: "default",
+        touchpointLocale: "es",
+      },
+      isLoading: false,
+    } as any);
+    mockUseUpdateUserSettings.mockReturnValue(noopMutation);
+
+    try {
+      renderWithProviders(<Messages />);
+      // The "Share" button in the profile header hands sharePayload to the OS.
+      const shareButtons = screen.getAllByRole("button", { name: /^share$/i });
+      fireEvent.click(shareButtons[0]);
+      await waitFor(() => expect(shareSpy).toHaveBeenCalled());
+
+      const payload = shareSpy.mock.calls[0][0];
+      // Spanish acquisition copy, parameterized with the owner's display name.
+      expect(payload.title).toBe("¡Envíame mensajes anónimos en Navyfragen!");
+      expect(payload.text).toBe("¡Envía a Karan mensajes anónimos!");
+    } finally {
+      Object.defineProperty(navigator, "share", {
+        value: originalShare,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });

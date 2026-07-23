@@ -738,4 +738,76 @@ describe("PublicProfile page", () => {
     // errObj = null → fallback message and not-404 error type
     expect(screen.getByText(/failed to resolve handle/i)).toBeInTheDocument();
   });
+
+  // ---- /customise-driven customisations (#199/#177/#275/#266) ----
+
+  function setupWithSettings(settings: Record<string, unknown>) {
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: {
+        exists: true,
+        profile: {
+          did: TEST_DID,
+          handle: "karan.bsky.social",
+          displayName: "Karan",
+          avatar: null,
+        },
+        ...settings,
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
+  }
+
+  it("renders the owner's custom prompt when set (#199)", () => {
+    setupWithSettings({ customPrompt: "Ask me about anything" });
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText(/ask me about anything/i)).toBeInTheDocument();
+    // Default headline is NOT shown when an override is present.
+    expect(screen.queryByText(/send karan an anonymous message/i)).toBeNull();
+  });
+
+  it("falls back to the default headline when the prompt is unset (#199)", () => {
+    setupWithSettings({ customPrompt: null });
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText(/send karan an anonymous message/i)).toBeInTheDocument();
+  });
+
+  it("localizes ask-card strings to the owner's touchpoint locale (#266)", () => {
+    setupWithSettings({ touchpointLocale: "es" });
+    renderWithProviders(<PublicProfile />);
+    // Spanish headline, placeholder, send button, and disclaimer.
+    expect(screen.getByText(/envía a karan un mensaje anónimo/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/pregunta algo/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /enviar/i })).toBeInTheDocument();
+    expect(screen.getByText(/tu mensaje se enviará de forma anónima/i)).toBeInTheDocument();
+  });
+
+  it("shows a closed-inbox state instead of the send form when inboxEnabled is false (#177)", () => {
+    setupWithSettings({ inboxEnabled: false });
+    renderWithProviders(<PublicProfile />);
+    // Closed message shown, no textarea / send button.
+    expect(screen.getByText(/not accepting new messages/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/ask something/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /^send$/i })).toBeNull();
+  });
+
+  it("renders the default ask-card gradient when no theme is set (#275)", () => {
+    setupWithSettings({ profileCardTheme: null });
+    const { container } = renderWithProviders(<PublicProfile />);
+    const askCard = container.querySelector("[style*='nf-grad-mark']") as HTMLElement | null;
+    expect(askCard).not.toBeNull();
+  });
+
+  it("applies the owner's selected profile card theme gradient (#275)", () => {
+    setupWithSettings({ profileCardTheme: "ember" });
+    const { container } = renderWithProviders(<PublicProfile />);
+    const askCard = container.querySelector("[style*='nf-grad-ember']") as HTMLElement | null;
+    expect(askCard).not.toBeNull();
+  });
 });

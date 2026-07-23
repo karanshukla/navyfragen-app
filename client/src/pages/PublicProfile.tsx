@@ -25,6 +25,8 @@ import { useSendMessage } from "../api/messageService";
 import { useResolveHandle, usePublicProfile } from "../api/profileService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { WinkMark } from "../components/WinkMark";
+import { profileCardGradient } from "../lib/themes";
+import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import { ghostBg } from "../styles/tokens";
 import { parseRichText } from "../utils/parseRichText";
 
@@ -84,6 +86,19 @@ export default function PublicProfile() {
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
   const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
+
+  // Profile-owner customisations read off the public-profile response — the
+  // owner's language, prompt override, ask-card colour, and inbox-open state.
+  // All default to "unset" (English / default headline / default gradient /
+  // open) when the owner never configured them.
+  const touchpointLocale = profileData?.touchpointLocale ?? null;
+  const t = getTouchpointTranslations(touchpointLocale);
+  const askCardGradient = profileCardGradient(profileData?.profileCardTheme ?? null);
+  // The server's getPublicProfile normalizes inboxEnabled to a boolean in the
+  // response (false only when the owner explicitly closed their inbox). It's
+  // undefined when the field wasn't returned, which we treat as open.
+  const inboxOpen = profileData?.inboxEnabled !== false;
+  const ownerName = profile?.displayName || profile?.handle || "";
 
   const handleSend = () => {
     setFormError(null);
@@ -320,7 +335,7 @@ export default function PublicProfile() {
                     triggerHaptic();
                     try {
                       await navigator.share({
-                        title: `Send ${profile.displayName || profile.handle} an anonymous message`,
+                        title: t.shareTitle(ownerName),
                         url: `https://fragen.navy/${profile.handle}`,
                       });
                     } catch (e) {
@@ -446,7 +461,7 @@ export default function PublicProfile() {
             style={{
               borderRadius: 18,
               padding: 28,
-              background: "var(--nf-grad-mark)",
+              background: askCardGradient,
               border: "2px solid var(--mantine-color-default-border)",
               cursor: "text",
               position: "relative",
@@ -463,7 +478,7 @@ export default function PublicProfile() {
               fz={22}
               style={{ position: "relative", letterSpacing: "-0.01em" }}
             >
-              Send {profile.displayName || profile.handle} an anonymous message
+              {profileData?.customPrompt || t.headline(ownerName)}
             </Text>
 
             <Stack gap="xs">
@@ -485,67 +500,75 @@ export default function PublicProfile() {
                   {formError}
                 </Alert>
               )}
-              <Textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => {
-                  if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
-                    setMessage(e.target.value);
-                  }
-                }}
-                minRows={2}
-                maxRows={4}
-                autosize
-                disabled={sendLoading}
-                aria-label={`Send ${profile.displayName || profile.handle} an anonymous message`}
-                placeholder="Ask something…"
-                description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey) ||
-                    (e.key === "Enter" && e.ctrlKey)
-                  ) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                radius="md"
-                styles={askCardTextareaStyles}
-              />
-              <Group justify="flex-end" gap="xs">
-                <ActionIcon
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerHaptic();
-                    setMessage("");
-                  }}
-                  variant="subtle"
-                  color="white"
-                  size="lg"
-                  radius="md"
-                  aria-label="Clear message"
-                >
-                  <IconX size={18} />
-                </ActionIcon>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerHaptic();
-                    handleSend();
-                  }}
-                  loading={sendLoading}
-                  radius="md"
-                  leftSection={<IconSend size={16} />}
-                  color="sunshine"
-                  variant="filled"
-                  style={{
-                    color: "var(--nf-midnight)",
-                    fontWeight: 700,
-                  }}
-                >
-                  Send
-                </Button>
-              </Group>
+              {inboxOpen ? (
+                <>
+                  <Textarea
+                    ref={textareaRef}
+                    value={message}
+                    onChange={(e) => {
+                      if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
+                        setMessage(e.target.value);
+                      }
+                    }}
+                    minRows={2}
+                    maxRows={4}
+                    autosize
+                    disabled={sendLoading}
+                    aria-label={t.headline(ownerName)}
+                    placeholder={t.placeholder}
+                    description={`${message.length}/${MAX_MESSAGE_LENGTH}`}
+                    onKeyDown={(e) => {
+                      if (
+                        (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.metaKey) ||
+                        (e.key === "Enter" && e.ctrlKey)
+                      ) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    radius="md"
+                    styles={askCardTextareaStyles}
+                  />
+                  <Group justify="flex-end" gap="xs">
+                    <ActionIcon
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerHaptic();
+                        setMessage("");
+                      }}
+                      variant="subtle"
+                      color="white"
+                      size="lg"
+                      radius="md"
+                      aria-label="Clear message"
+                    >
+                      <IconX size={18} />
+                    </ActionIcon>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerHaptic();
+                        handleSend();
+                      }}
+                      loading={sendLoading}
+                      radius="md"
+                      leftSection={<IconSend size={16} />}
+                      color="sunshine"
+                      variant="filled"
+                      style={{
+                        color: "var(--nf-midnight)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {t.sendLabel}
+                    </Button>
+                  </Group>
+                </>
+              ) : (
+                <Text c="white" ta="center" fz={15} style={{ opacity: 0.85 }}>
+                  {t.inboxClosed}
+                </Text>
+              )}
             </Stack>
           </Paper>
 
@@ -561,9 +584,7 @@ export default function PublicProfile() {
             }}
           >
             <Text size="xs" c="dimmed">
-              Your message will be sent anonymously to the user. They may post it publicly on
-              Bluesky, so please don&apos;t share any personal information or passwords. Be curious,
-              but respectful and kind!
+              {t.disclaimer}
             </Text>
           </Group>
 
