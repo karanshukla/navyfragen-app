@@ -17,6 +17,7 @@ import {
   IconSettings,
   IconUser,
   IconChevronDown,
+  IconAdjustments,
 } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
@@ -77,6 +78,9 @@ export function Navigation({ onLinkClick }: NavigationProps) {
             break;
           case "M":
             if (isLoggedIn) targetPath = "/messages";
+            break;
+          case "C":
+            if (isLoggedIn) targetPath = "/customise";
             break;
           case "S":
             if (isLoggedIn) targetPath = "/settings";
@@ -139,6 +143,16 @@ export function Navigation({ onLinkClick }: NavigationProps) {
                 ) : undefined
               }
               styles={navItemStyles("/messages")}
+            />
+            <NavLink
+              my={2}
+              label="Customise"
+              component={Link}
+              to="/customise"
+              active={isActive("/customise")}
+              onClick={handleClick}
+              leftSection={<IconAdjustments size={16} stroke={1.5} />}
+              styles={navItemStyles("/customise")}
             />
             <NavLink
               my={2}

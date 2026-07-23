@@ -45,6 +45,7 @@ import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import ShareButton from "../components/ShareButton";
 import { themes } from "../lib/themes";
+import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import { surfaceBg } from "../styles/tokens";
 
 // Styles for the reply textarea inside the response box (white card on dark background)
@@ -838,9 +839,14 @@ export default function Messages() {
                   )}
                 </CopyButton>
                 {(() => {
+                  // Localize the owner's own share copy in their selected
+                  // touchpoint language (#266) — this text leaves the DOM into
+                  // a tweet/DM, so Google Translate can't reach it.
+                  const ownerName = session.profile?.displayName || session.profile?.handle || "";
+                  const t = getTouchpointTranslations(userSettings?.touchpointLocale);
                   const sharePayload = {
-                    title: "Send me anonymous messages on Navyfragen!",
-                    text: `Send ${session.profile?.displayName} anonymous messages!`,
+                    title: t.inboxShareTitle,
+                    text: t.inboxShareText(ownerName),
                     url: fullUrl,
                   };
                   return <ShareButton shareData={sharePayload} />;

@@ -17,6 +17,12 @@ export interface ProfileResponse {
     banner?: string;
   } | null;
   exists: boolean;
+  // Public-facing settings subset — the profile owner's customisations shown
+  // to anonymous visitors. All default to "unset" when no user_settings row.
+  inboxEnabled?: boolean; // true unless the owner explicitly closed their inbox
+  customPrompt?: string | null; // ask-card headline override; null = default
+  profileCardTheme?: string | null; // ask-card colour preset; null = default gradient
+  touchpointLocale?: string | null; // locale for the ask-card + share touchpoints
 }
 
 export interface UserExistsResponse {

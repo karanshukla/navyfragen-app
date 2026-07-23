@@ -60,6 +60,15 @@ export type UserSettings = {
   did: string; // User's Decentralized Identifier
   pdsSyncEnabled: number; // Whether PDS sync is enabled (1=true, 0=false for SQLite compatibility)
   imageTheme: string; // The user's selected image theme
+  // Whether the inbox accepts new anonymous messages (1=true, 0=false). When
+  // false, sendMessage() rejects new sends while getMessages() keeps working.
+  inboxEnabled: number;
+  // Whether incoming messages are screened against a profanity wordlist
+  // (1=true, 0=false). A flagged message is rejected at send time (#58).
+  profanityFilterEnabled: number;
+  customPrompt: string | null; // Optional override for the ask-card headline; null = default string
+  profileCardTheme: string | null; // Optional ask-card colour preset; null = default --nf-grad-mark
+  touchpointLocale: string | null; // Optional locale for ask-card/share touchpoints; null = English
   createdAt: string; // Timestamp of when the user settings were first created
 };
 
@@ -289,6 +298,38 @@ migrations["008"] = {
       .on("push_subscription")
       .column("did")
       .execute();
+  },
+};
+
+// Adds the five /customise-page settings in one migration so the dependent
+// issues (#199/#177/#275/#266/#58) land against a single schema change.
+// - inboxEnabled NOT NULL default true — a closed inbox rejects sends but keeps
+//   the account/history (contrast with full account deletion).
+// - profanityFilterEnabled NOT NULL default false — opt-in wordlist screening
+//   of incoming messages (#58). A flagged message is rejected at send time.
+// - customPrompt/profileCardTheme/touchpointLocale nullable — null means
+//   "fall back to the default", matching how imageTheme defaults but allowing
+//   an explicit unset that the existing NOT NULL imageTheme column can't.
+migrations["009"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable("user_settings")
+      .addColumn("inboxEnabled", "boolean", (col) => col.notNull().defaultTo(true))
+      .execute();
+    await db.schema
+      .alterTable("user_settings")
+      .addColumn("profanityFilterEnabled", "boolean", (col) => col.notNull().defaultTo(false))
+      .execute();
+    await db.schema.alterTable("user_settings").addColumn("customPrompt", "varchar").execute();
+    await db.schema.alterTable("user_settings").addColumn("profileCardTheme", "varchar").execute();
+    await db.schema.alterTable("user_settings").addColumn("touchpointLocale", "varchar").execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").dropColumn("touchpointLocale").execute();
+    await db.schema.alterTable("user_settings").dropColumn("profileCardTheme").execute();
+    await db.schema.alterTable("user_settings").dropColumn("customPrompt").execute();
+    await db.schema.alterTable("user_settings").dropColumn("profanityFilterEnabled").execute();
+    await db.schema.alterTable("user_settings").dropColumn("inboxEnabled").execute();
   },
 };
 

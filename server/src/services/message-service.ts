@@ -4,6 +4,7 @@ import { Logger } from "pino";
 
 import { type Database } from "../database/db";
 import { errorMessage } from "../lib/errors";
+import { containsProfanity } from "../lib/profanity";
 import { ids } from "../lexicon/lexicons";
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message";
 import { imageGenerator } from "../lib/image-generator";
@@ -116,6 +117,29 @@ export class MessageService {
 
       if (!userProfileExists) {
         throw new Error("Recipient not found (user profile does not exist)");
+      }
+
+      // Read the recipient's intake settings in one indexed point-read:
+      // - inboxEnabled (NOT NULL default true) — a closed inbox rejects sends.
+      // - profanityFilterEnabled (NOT NULL default false) — opt-in wordlist
+      //   screening. Defaults apply when a user_settings row is absent.
+      const recipientSettings = await this.db
+        .selectFrom("user_settings")
+        .select(["inboxEnabled", "profanityFilterEnabled"])
+        .where("did", "=", recipient)
+        .executeTakeFirst();
+
+      if (recipientSettings && !recipientSettings.inboxEnabled) {
+        throw new Error("This inbox is closed and not accepting new messages");
+      }
+
+      // Profanity screening (#58): when the recipient has opted in, a flagged
+      // message is silently dropped — the sender still gets a success response
+      // (so there's no "your message was rejected" UX to game), but the message
+      // is never inserted into the recipient's inbox.
+      if (recipientSettings?.profanityFilterEnabled && containsProfanity(message)) {
+        this.logger.info({ recipient }, "Message silently dropped (profanity filter)");
+        return { success: true };
       }
 
       const tid = `anon-${Date.now()}-${Math.floor(Math.random() * 10000)}`;

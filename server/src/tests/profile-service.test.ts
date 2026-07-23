@@ -14,7 +14,9 @@ describe("ProfileService", () => {
     debug: mock.fn(),
   };
 
-  // Mock database query builders
+  // Mock database query builders. Two separate builders so the user_profile
+  // (checkUserExists) and user_settings (public-facing subset) legs of
+  // getPublicProfile's Promise.all can return independent values.
   const mockSelectBuilder = {
     select() {
       return this;
@@ -26,8 +28,22 @@ describe("ProfileService", () => {
     execute: async () => [] as any[], // Will be overridden in tests that need it
   };
 
+  // Separate builder for the user_settings leg so it can return its own row
+  // independently of the user_profile existence check.
+  const mockSettingsSelectBuilder = {
+    select() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    executeTakeFirst: async () => undefined as any, // Will be overridden in tests
+  };
+
   const mockDb = {
-    selectFrom: mock.fn(() => mockSelectBuilder),
+    selectFrom: mock.fn((table: string) =>
+      table === "user_settings" ? mockSettingsSelectBuilder : mockSelectBuilder
+    ),
   };
 
   // Mock AtpAgent response
@@ -66,6 +82,10 @@ describe("ProfileService", () => {
     mockGetProfile.mock.resetCalls();
     mockResolver.resolveDidToHandle.mock.resetCalls();
     mockResolver.resolveHandleToDid.mock.resetCalls();
+
+    // Reset both select builders' executeTakeFirst to the unset default.
+    mockSelectBuilder.executeTakeFirst = async () => undefined;
+    mockSettingsSelectBuilder.executeTakeFirst = async () => undefined;
 
     // Create a new instance of the service with our mocks
     profileService = new ProfileService(
@@ -110,6 +130,105 @@ describe("ProfileService", () => {
       // Assert
       assert.strictEqual(result.exists, true);
       assert.ok(result.profile);
+    });
+
+    it("should return the profile owner's public-facing settings when set", async () => {
+      // Arrange — user_settings row with all four customisations populated.
+      const testDid = "did:test:customised";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => ({
+        inboxEnabled: 0,
+        customPrompt: "Pregúntame algo",
+        profileCardTheme: "ember",
+        touchpointLocale: "es",
+      });
+
+      // Act
+      const result = await profileService.getPublicProfile(testDid);
+
+      // Assert — all four fields pass straight through to the response.
+      assert.strictEqual(result.inboxEnabled, false);
+      assert.strictEqual(result.customPrompt, "Pregúntame algo");
+      assert.strictEqual(result.profileCardTheme, "ember");
+      assert.strictEqual(result.touchpointLocale, "es");
+    });
+
+    it("should default public-facing fields when user_settings has no row", async () => {
+      // Arrange — no user_settings row (owner never customised). inboxEnabled
+      // is NOT NULL default true, so a missing row still reads as open; the
+      // nullable fields default to null = "use the default".
+      const testDid = "did:test:nodefaults";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => undefined;
+
+      // Act
+      const result = await profileService.getPublicProfile(testDid);
+
+      // Assert
+      assert.strictEqual(result.inboxEnabled, true); // default-open
+      assert.strictEqual(result.customPrompt, null);
+      assert.strictEqual(result.profileCardTheme, null);
+      assert.strictEqual(result.touchpointLocale, null);
+    });
+
+    it("should read inboxEnabled as closed whether Postgres returns false or SQLite returns 0", async () => {
+      // Postgres stores booleans natively; SQLite stores them as 0/1. The
+      // normalization must handle both so the client always gets a boolean.
+      const testDid = "did:test:closed";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+
+      // Postgres: actual boolean false
+      mockSettingsSelectBuilder.executeTakeFirst = async () => ({
+        inboxEnabled: false,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+      });
+      let result = await profileService.getPublicProfile(testDid);
+      assert.strictEqual(result.inboxEnabled, false);
+
+      // SQLite: numeric 0
+      mockSettingsSelectBuilder.executeTakeFirst = async () => ({
+        inboxEnabled: 0,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+      });
+      result = await profileService.getPublicProfile(testDid);
+      assert.strictEqual(result.inboxEnabled, false);
+    });
+
+    it("should read inboxEnabled as open when the row stores 1 (number)", async () => {
+      // Arrange — SQLite stores booleans as 1/0; verify the `!== 0` coercion.
+      const testDid = "did:test:openinbox";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => ({
+        inboxEnabled: 1,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+      });
+
+      const result = await profileService.getPublicProfile(testDid);
+
+      assert.strictEqual(result.inboxEnabled, true);
+    });
+
+    it("should fetch the settings subset as a third parallel leg of Promise.all", async () => {
+      // Arrange — verify the settings lookup runs against user_settings (not
+      // user_profile) and selects the public-facing columns. The mock's
+      // selectFrom returns a different builder per table, so a call against
+      // user_settings is observable via the second selectFrom call arg.
+      const testDid = "did:test:parallel";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => undefined;
+
+      await profileService.getPublicProfile(testDid);
+
+      const selectTables = mockDb.selectFrom.mock.calls.map((c) => c.arguments[0]);
+      // Two legs: checkUserExists → user_profile, settings subset → user_settings.
+      assert.ok(selectTables.includes("user_profile"));
+      assert.ok(selectTables.includes("user_settings"));
     });
 
     it("should throw 'Profile not found' when Bluesky returns success: false", async () => {
