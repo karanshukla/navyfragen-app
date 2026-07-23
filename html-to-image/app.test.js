@@ -2,17 +2,27 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import fs from 'node:fs/promises';
-import { createApp } from './app.js';
+import { createApp, MAX_CONCURRENT_RENDERS } from './app.js';
 
 // Starts the app on a random port and returns { server, url }.
-function startServer(getBrowser) {
+function startServer(getBrowser, options) {
   return new Promise((resolve, reject) => {
-    const server = http.createServer(createApp(getBrowser));
+    const server = http.createServer(createApp(getBrowser, options));
     server.listen(0, '127.0.0.1', () => {
       resolve({ server, url: `http://127.0.0.1:${server.address().port}` });
     });
     server.on('error', reject);
   });
+}
+
+// Polls a predicate until it's true, rather than sleeping a fixed amount —
+// avoids flakiness from arbitrary timing assumptions.
+async function waitFor(predicate, { timeoutMs = 2000, intervalMs = 5 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() > deadline) throw new Error('waitFor: timed out');
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
 }
 
 function stopServer(server) {
@@ -310,5 +320,105 @@ describe('POST / screenshot failure', () => {
     assert.equal(res.status, 500);
     const body = await res.json();
     assert.match(body.error, /screenshot failed/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Concurrency limiting
+// ---------------------------------------------------------------------------
+describe('POST / concurrency limiting', () => {
+  test(`caps concurrent renders at MAX_CONCURRENT_RENDERS (${MAX_CONCURRENT_RENDERS})`, async () => {
+    let inFlight = 0;
+    let maxObservedInFlight = 0;
+    let releaseGate;
+    const gate = new Promise((resolve) => { releaseGate = resolve; });
+
+    const page = {
+      setViewport: async () => {},
+      goto: async () => {},
+      evaluate: async () => {},
+      waitForFunction: async () => {},
+      screenshot: async (args) => {
+        inFlight++;
+        maxObservedInFlight = Math.max(maxObservedInFlight, inFlight);
+        await gate;
+        inFlight--;
+        if (args.path) await fs.writeFile(args.path, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+      },
+      close: async () => {},
+    };
+    const browser = { newPage: async () => page, connected: true };
+    const { server, url } = await startServer(async () => browser);
+
+    try {
+      const requestCount = MAX_CONCURRENT_RENDERS + 2;
+      const responses = Array.from({ length: requestCount }, () =>
+        post(url, { source: '<h1>hi</h1>', format: 'png' })
+      );
+
+      // Let every request attempt entry; only MAX_CONCURRENT_RENDERS should
+      // make it into the screenshot section, the rest queue on the semaphore.
+      await waitFor(() => maxObservedInFlight === MAX_CONCURRENT_RENDERS);
+      assert.equal(inFlight, MAX_CONCURRENT_RENDERS, 'excess requests should be queued, not running');
+
+      releaseGate();
+      const results = await Promise.all(responses);
+      for (const res of results) assert.equal(res.status, 200);
+      assert.equal(maxObservedInFlight, MAX_CONCURRENT_RENDERS, 'cap should never be exceeded, even across queued waves');
+    } finally {
+      await stopServer(server);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// onRenderComplete callback (browser recycling hook)
+// ---------------------------------------------------------------------------
+describe('POST / onRenderComplete callback', () => {
+  test('invokes onRenderComplete with the remaining active-render count on success', async () => {
+    const { browser } = makeMockBrowser();
+    const observed = [];
+    const { server, url } = await startServer(async () => browser, {
+      onRenderComplete: (activeRenders) => observed.push(activeRenders),
+    });
+
+    try {
+      const res = await post(url, { source: '<h1>hi</h1>', format: 'png' });
+      assert.equal(res.status, 200);
+      assert.deepEqual(observed, [0]);
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  test('invokes onRenderComplete even when the render fails', async () => {
+    const { browser } = makeMockBrowser({ failScreenshot: true });
+    const observed = [];
+    const { server, url } = await startServer(async () => browser, {
+      onRenderComplete: (activeRenders) => observed.push(activeRenders),
+    });
+
+    try {
+      const res = await post(url, { source: '<h1>hi</h1>', format: 'png' });
+      assert.equal(res.status, 500);
+      assert.deepEqual(observed, [0]);
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  test('invokes onRenderComplete when the browser is unavailable', async () => {
+    const observed = [];
+    const { server, url } = await startServer(async () => { throw new Error('crashed'); }, {
+      onRenderComplete: (activeRenders) => observed.push(activeRenders),
+    });
+
+    try {
+      const res = await post(url, { source: '<h1>hi</h1>', format: 'png' });
+      assert.equal(res.status, 503);
+      assert.deepEqual(observed, [0]);
+    } finally {
+      await stopServer(server);
+    }
   });
 });
