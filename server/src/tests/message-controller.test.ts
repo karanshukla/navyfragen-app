@@ -1,5 +1,9 @@
 import assert from "node:assert";
-import { test, describe, mock, afterEach } from "node:test";
+import { test, describe, afterEach } from "node:test";
+
+// `mock` is runtime-agnostic (node:test under Node, the shim under Bun's runner,
+// which doesn't implement node:test's mock API). See `./mock-shim.ts`.
+import { mock } from "./mock-shim";
 
 import { MessageController } from "../controllers/message-controller";
 

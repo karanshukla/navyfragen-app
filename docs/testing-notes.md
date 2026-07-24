@@ -313,3 +313,23 @@ The following files are excluded from coverage metrics entirely. See the root-le
 The two API deltas the adapter bridges (both verified locally under Bun):
 - `bun:sqlite`'s `Statement` has no `reader` flag — derived as `columnNames.length > 0`, the same rule `better-sqlite3` uses internally to set its `reader` flag.
 - `bun:sqlite`'s `Statement.all/run/iterate` take variadic params, not an array — the adapter spreads the params array Kysely passes.
+
+## Dual-runtime server tests (#269, epic #268)
+
+The server test suite runs green under both Node (`bun run test`) and the Bun runtime (`bun run test:bun`). Bun's runner recognizes `node:test`'s `test`/`describe`/`before*`/`after*`/`assert` but does **not** implement its `mock` API, so `mock` is imported from a runtime-agnostic shim (`server/src/tests/mock-shim.ts`) instead of `node:test`. The shim reimplements node:test's exact mock surface (`mock.fn`, `mock.method`, `mock.timers`, `.mock.calls[i].arguments`, `mockImplementation/Once`, `resetCalls`) and delegates `mock.module`/`restoreAll` to the host runner — node:test under Node, bun:test under Bun (adapting the two runners' opposite `mock.module` signatures). Test files change only the `mock` import source; no call-site logic differs. See CLAUDE.md "Module Mocking in Server Tests".
+
+### `bun run test:bun` flags
+
+- **`--isolate`** — Bun's `mock.module` is process-global and **not restorable** (`clearAllMocks` clears `mock.fn` call history but does not unmock modules), whereas node:test scopes module mocks per file. `--isolate` gives each test file a fresh module registry so a file's `mock.module` (e.g. `auth-service.test.ts` mocking `session-agent`) can't leak into other files that import the real module (e.g. `session-agent.test.ts`, which tests `initializeAgentFromSession` for real). This is also why `mock.module` calls should mirror the **full** export surface of the mocked module — see the `auth-service.test.ts` note in CLAUDE.md.
+- **`--no-env-file`** — Bun auto-loads `server/.env` (which carries real VAPID keys), and `test-bootstrap.js`'s `process.env.X ||= "..."` defaults can't override already-set values. Without this flag the "VAPID not configured" notification-service test fails because the service reads `process.env` live. Node's runner doesn't auto-load `.env`, so the Node path is unaffected.
+- **`--preload ./src/tests/mock-bun-preload.js`** — see below.
+
+### `server/src/tests/mock-bun-preload.js` — undici@8 stub
+
+`auth-controller.test.ts` and `auth-service.test.ts` transitively load `src/services/auth-service.ts` → `@atproto/oauth-client-node` → `@atproto-labs/fetch-node/dist/unicast.js` → `import { Agent } from "undici_v8"` (8.7.0). undici 8.x's `CacheStorage` constructor throws `webidl.util.markAsUncloneable is not a function` under Bun 1.3.x at **module-load** time (the static import evaluates undici's top-level code before any version-check logic runs). This is a runtime incompatibility — not a test/mock concern, and not solvable by the runner choice.
+
+The preload stubs `@atproto-labs/fetch-node` (the nearest seam) with passthroughs to `globalThis.fetch` so `undici_v8` never loads. The auth tests mock the atproto agent/session layer directly and never exercise unicast SSRF protection, so a passthrough is sufficient. **This is test-only** — production needs the real `@atproto-labs/fetch-node`, so the same incompatibility blocks the real server boot under Bun (tracked on #270). Node ignores the preload entirely (the Node test scripts don't reference it).
+
+### Coverage under Bun
+
+`c8` wraps the **Node** runner (`test:coverage`), which remains the production-truth coverage baseline and the path that publishes to Coveralls. The Bun path (`test:bun`) does not yet produce coverage; confirming `bun test --coverage` meets the 100%/97% thresholds (or documenting a c8-under-Bun path) is deferred to a later #268 step.

@@ -1,5 +1,9 @@
 import assert from "node:assert";
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach } from "node:test";
+
+// `mock` is runtime-agnostic (node:test under Node, the shim under Bun's runner,
+// which doesn't implement node:test's mock API). See `./mock-shim.ts`.
+import { mock } from "./mock-shim";
 
 import { SettingsService, UserSettings } from "../services/settings-service";
 

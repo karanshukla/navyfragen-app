@@ -154,13 +154,13 @@ jobs:
         if: steps.server-tests.outcome == 'failure'
         run: exit 1
 
-  # Canary for issues #251/#263: validate the server's deps under the Bun
-  # runtime. The SQLite blocker from #251 (better-sqlite3 is unsupported by
-  # Bun) is resolved by abstracting the data layer onto bun:sqlite (#263), so
-  # the SQLite probe is now a real gate — a regression there fails this job.
-  # The node:test runner remains incompatible under Bun (mock.module patterns,
-  # out of scope for #263), so that step keeps its own continue-on-error and
-  # stays informational.
+  # Bun-runtime gate for the server (issues #251/#263/#269). Two real checks:
+  #   1. SQLite data layer probe (#263) — createDb → migrate → insert/select.
+  #   2. The full server test suite under `bun test` (#269) — node:test's hooks
+  #      plus the runtime-agnostic mock shim. Both gate the job; a regression in
+  #      either fails it. (The suite was previously non-blocking/informational
+  #      because Bun's runner didn't implement node:test's mock API; the shim in
+  #      src/tests/mock-shim.ts resolved that.)
   server-tests-bun-runtime:
     name: Server Tests (Bun runtime canary)
     runs-on: ubuntu-latest
@@ -229,28 +229,36 @@ jobs:
           # Gate the SQLite path. The bun command's exit code is authoritative
           # (non-zero means it threw or the row mismatched); the OK-string check
           # is a belt-and-suspenders confirmation. A regression here fails the
-          # job; the node:test-under-Bun step below keeps its own
-          # continue-on-error (still expected to fail, out of scope per #263).
+          # job, as does a suite failure in the bun-test step below.
           if [ "$sqlite_exit" -ne 0 ] || ! echo "$sqlite_out" | grep -q 'OK '; then
             echo "::error::SQLite data layer did not pass under Bun (regression of #263)"
             exit 1
           fi
 
-      - name: Attempt server test suite under Bun runtime
+      - name: Run server test suite under Bun runtime
         id: bun-tests
         working-directory: server
-        continue-on-error: true
         run: |
-          # Bun's native `bun test` (not `bun --test`) recognizes node:test's
-          # describe/test/before/after, but does NOT implement the `mock` API
-          # (mock.fn / mock.module), which 13/14 test files use for DB/agent
-          # faking. So the suite is expected to mostly fail here today; this
-          # step captures the real pass/fail split as findings rather than a
-          # silent error. Tracked by #263 as out of scope (mock migration).
-          bun test --preload ./src/tests/test-bootstrap.js src/tests/ \
+          # The full server suite now runs green under Bun (#269). `bun test`
+          # recognizes node:test's describe/test/before*/after* hooks; the
+          # `mock` API comes from a runtime-agnostic shim (src/tests/mock-shim.ts)
+          # that delegates mock.module/restoreAll to the host runner. Two Bun-
+          # specific flags make it pass:
+          #   --isolate      — fresh module registry per file, so a file's
+          #                    mock.module (process-global + non-restorable under
+          #                    Bun, unlike node:test's file-scoped mocks) can't
+          #                    leak into other files.
+          #   --no-env-file  — Bun auto-loads server/.env (real VAPID keys);
+          #                   the suite expects test-bootstrap.js's dummy env.
+          # The mock-bun-preload.js stubs @atproto-labs/fetch-node so undici_v8
+          # (8.x CacheStorage throws under Bun) never loads for the auth tests.
+          bun test --isolate --no-env-file \
+              --preload ./src/tests/test-bootstrap.js \
+              --preload ./src/tests/mock-bun-preload.js \
+              src/tests/ \
               > /tmp/bun-runtime-test-output.txt 2>&1 || true
           {
-            echo "<details><summary>Test runner attempt (expected to mostly fail — see note)</summary>"
+            echo "<details><summary>Server test suite under Bun runtime</summary>"
             echo ""
             echo '```'
             tail -n 40 /tmp/bun-runtime-test-output.txt
@@ -258,6 +266,11 @@ jobs:
             echo ""
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
+          # Gate: the suite must pass. `bun test` exits non-zero on any failure.
+          if ! grep -q '0 fail' /tmp/bun-runtime-test-output.txt; then
+            echo "::error::Server test suite failed under the Bun runtime (regression of #269)"
+            exit 1
+          fi
 
       - name: Upload canary output
         uses: actions/upload-artifact@v4

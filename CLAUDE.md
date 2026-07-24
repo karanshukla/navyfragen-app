@@ -166,7 +166,7 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 ## Testing Conventions
 
-**Server**: Uses Node.js built-in `node:test` + `node:assert`. Test setup via `src/tests/test-bootstrap.js` which sets dummy env vars. Mock the DB with chainable builder objects (see existing test files for the pattern).
+**Server**: Uses Node.js built-in `node:test` + `node:assert`. The suite is **dual-runtime**: it runs green under both Node (`bun run test`) and Bun (`bun run test:bun`, issue #269), so Bun's runner can serve as a CI gate for the #268 Bun-runtime epic. Test setup via `src/tests/test-bootstrap.js` which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with the runtime-agnostic `mock` shim (see "Module Mocking in Server Tests" below).
 
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
@@ -223,7 +223,17 @@ Do **not** use it to skip real business logic. Document any usage in `docs/testi
 
 ### Module Mocking in Server Tests
 
-`node:test`'s `mock.module()` (still flagged `--experimental-test-module-mocks` on Node 24) lets a test replace a module's exports before the system-under-test imports it. The test scripts (`test`, `test:watch`, `test:coverage`) already pass the flag. The default mocking strategy is dependency injection (chainable DB builders passed into constructors); `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
+The server test suite is **dual-runtime** (Node `bun run test` and Bun `bun run test:bun`, #269). Bun's runner recognizes `node:test`'s `test`/`describe`/`before*`/`after*`/`assert` but does **not** implement its `mock` API, so `mock` is imported from a runtime-agnostic shim instead:
+
+```typescript
+import assert from "node:assert";
+import { test, describe, beforeEach, afterEach } from "node:test";
+import { mock } from "./mock-shim"; // node:test's mock under Node, the shim under Bun
+```
+
+`src/tests/mock-shim.ts` reimplements `node:test`'s exact mock surface in pure JS (`mock.fn`, `mock.method`, `mock.timers`, `.mock.calls[i].arguments`, `mockImplementation/Once`, `resetCalls`) and delegates `mock.module`/`restoreAll` to the host runner (node:test under Node, bun:test under Bun — the two have **opposite** `mock.module` signatures: node:test takes `{ exports }`, bun:test takes `() => exports`; the shim adapts). Test files only swap the `mock` import — no call-site logic changes.
+
+The default mocking strategy is **dependency injection** (chainable DB builders passed into constructors). `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
 
 ```typescript
 let AuthService: typeof import("../services/auth-service").AuthService;
@@ -242,7 +252,14 @@ before(async () => {
 ```
 
 Notes:
-- `mock.module` is called on the **test context** (`t.mock.module`) inside a test, or on the top-level `mock` import inside `before()`. It must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `before()`, never a top-level static import.
+- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `before()`, never a top-level static import.
 - Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
+- **Mirror the full export surface of the mocked module.** node:test scopes `mock.module` to the test file; Bun's is **process-global and not restorable** (`clearAllMocks` does not unmock modules). The `test:bun` script passes `--isolate` (fresh module registry per file) so mocks don't leak, but a partial mock can still break a file that imports the same module's *other* exports — so a `mock.module` call should re-export every public function (e.g. `auth-service.test.ts` mocks both `initializeAgentForDid` and `initializeAgentFromSession`), delegating the un-mocked ones to the real module.
 - The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
 - Use the `exports` option key, not the deprecated `namedExports`.
+
+#### Bun-runtime specifics (#269)
+
+- `bun run test:bun` adds `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation).
+- `src/tests/mock-bun-preload.js` is a Bun-only preload that stubs `@atproto-labs/fetch-node` so `undici_v8` (8.x) never loads — its `CacheStorage` ctor throws under Bun (`webidl.util.markAsUncloneable is not a function`). This is a **runtime** incompatibility in the `@atproto/oauth-client-node` chain, not a test/mock concern; it also blocks the production server boot (#270). The preload is test-only; Node ignores it.
+- `c8` coverage stays on the Node path (`test:coverage`); the Bun path does not yet produce coverage.

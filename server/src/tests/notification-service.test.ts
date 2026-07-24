@@ -5,7 +5,11 @@ import fs from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
-import { test, describe, before, after, beforeEach, afterEach, mock } from "node:test";
+import { test, describe, before, after, beforeEach, afterEach } from "node:test";
+
+// `mock` is runtime-agnostic (node:test under Node, the shim under Bun's runner,
+// which doesn't implement node:test's mock API). See `./mock-shim.ts`.
+import { mock } from "./mock-shim";
 
 // web-push is CJS whose named exports aren't statically detectable by Node's
 // ESM loader (cjs-module-lexer), so import the default and destructure.

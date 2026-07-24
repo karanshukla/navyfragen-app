@@ -20,6 +20,8 @@
     "test": "node --experimental-test-module-mocks --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
     "test:watch": "node --experimental-test-module-mocks --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts",
     "test:coverage": "c8 node --experimental-test-module-mocks --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
+    "test:bun": "bun test --isolate --no-env-file --preload ./src/tests/test-bootstrap.js --preload ./src/tests/mock-bun-preload.js src/tests/",
+    "test:bun:watch": "bun test --isolate --no-env-file --watch --preload ./src/tests/test-bootstrap.js --preload ./src/tests/mock-bun-preload.js src/tests/",
     "publish-lexicons": "tsx --tsconfig tsconfig.json src/scripts/publish-lexicons.ts"
   },
   "lint-staged": {

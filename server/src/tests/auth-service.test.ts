@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { test, describe, before, beforeEach, afterEach } from "node:test";
+import { test, describe, before, after, beforeEach, afterEach } from "node:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 
@@ -24,11 +24,23 @@ let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 before(async () => {
   mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
   await mock.module("../auth/session-agent", {
+    // Export BOTH of session-agent's public functions. Under node:test,
+    // mock.module is scoped to this file and torn down automatically; under
+    // Bun it persists process-wide (clearAllMocks does not unmock modules), so
+    // a partial mock would leak into other files (message/profile/settings
+    // controllers import the real `initializeAgentFromSession`). Mirroring the
+    // full export surface — with initializeAgentFromSession delegating to the
+    // mocked initializeAgentForDid — keeps the mock faithful and isolation-safe.
     exports: {
       initializeAgentForDid: async (ctx: any, did: string) => {
         const restored = await ctx.oauthClient.restore(did);
         if (!restored) return null;
         return mockAgent;
+      },
+      initializeAgentFromSession: async (req: any, ctx: any) => {
+        if (!req.session?.did) return null;
+        const { initializeAgentForDid } = await import("../auth/session-agent");
+        return initializeAgentForDid(ctx, req.session.did);
       },
     },
   });
@@ -39,6 +51,17 @@ before(async () => {
   /* v8 ignore next */
   const mod = await import("../services/auth-service");
   AuthService = mod.AuthService;
+});
+
+// Restore the `session-agent` module mock after this file's tests. node:test
+// scopes mock.module to the test file and tears it down automatically between
+// files; Bun's mock.module persists process-wide until cleared, so without
+// this the (partial — initializeAgentForDid only) mock leaks into other files
+// (e.g. message-controller, which imports the real session-agent and needs its
+// initializeAgentFromSession export). restoreAll() delegates to the host
+// runner's clear (node:test restoreAll / bun clearAllMocks) via the shim.
+after(() => {
+  mock.restoreAll();
 });
 
 describe("AuthService", () => {
