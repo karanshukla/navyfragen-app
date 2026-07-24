@@ -47,7 +47,7 @@ describe("fetchWithRetry", () => {
     await assert.rejects(() => fetchWithRetry("http://test/", {}, 50), networkError);
   });
 
-  test("does not retry on HTTP error responses", async () => {
+  test("does not retry a 500 — the service answered, the render itself failed", async () => {
     let callCount = 0;
     mock.method(globalThis, "fetch", async () => {
       callCount++;
@@ -58,6 +58,86 @@ describe("fetchWithRetry", () => {
 
     assert.strictEqual(result.status, 500);
     assert.strictEqual(callCount, 1);
+  });
+
+  test("retries a 502 from Railway's edge while the service is waking", async () => {
+    // A slept Railway service answers the first request from the edge with a
+    // 502 before the container is back. Treating that as final would make every
+    // wake a user-visible image-generation failure.
+    const mockResponse = new Response("ok", { status: 200 });
+    let callCount = 0;
+    mock.method(globalThis, "fetch", async () => {
+      callCount++;
+      if (callCount < 3) return new Response("Application failed to respond", { status: 502 });
+      return mockResponse;
+    });
+
+    const result = await fetchWithRetry("http://test/", {}, 5000);
+
+    assert.strictEqual(result, mockResponse);
+    assert.strictEqual(callCount, 3);
+  });
+
+  test("retries a 503 emitted while Chromium is still launching", async () => {
+    const mockResponse = new Response("ok", { status: 200 });
+    let callCount = 0;
+    mock.method(globalThis, "fetch", async () => {
+      callCount++;
+      if (callCount < 2) {
+        return new Response(JSON.stringify({ error: "Browser unavailable" }), { status: 503 });
+      }
+      return mockResponse;
+    });
+
+    const result = await fetchWithRetry("http://test/", {}, 5000);
+
+    assert.strictEqual(result, mockResponse);
+    assert.strictEqual(callCount, 2);
+  });
+
+  test("retries 408 and 504 but never a 4xx the payload caused", async () => {
+    for (const status of [408, 504]) {
+      let callCount = 0;
+      mock.method(globalThis, "fetch", async () => {
+        callCount++;
+        if (callCount < 2) return new Response("", { status });
+        return new Response("ok", { status: 200 });
+      });
+      const result = await fetchWithRetry("http://test/", {}, 5000);
+      assert.strictEqual(result.status, 200, `status ${status} should have been retried`);
+      assert.strictEqual(callCount, 2);
+      mock.restoreAll();
+    }
+
+    // 400 is a rejected payload and 429 is a limiter already shedding load —
+    // both fail identically on retry, so neither is worth another attempt.
+    for (const status of [400, 429]) {
+      let callCount = 0;
+      mock.method(globalThis, "fetch", async () => {
+        callCount++;
+        return new Response("nope", { status });
+      });
+      const result = await fetchWithRetry("http://test/", {}, 5000);
+      assert.strictEqual(result.status, status);
+      assert.strictEqual(callCount, 1, `status ${status} must not be retried`);
+      mock.restoreAll();
+    }
+  });
+
+  test("returns the last wake response, not a throw, when the deadline expires", async () => {
+    // The caller logs response.status/body on failure. Throwing here would
+    // replace a diagnosable "502 from the edge" with a generic error.
+    let callCount = 0;
+    mock.method(globalThis, "fetch", async () => {
+      callCount++;
+      return new Response("Application failed to respond", { status: 502 });
+    });
+
+    const result = await fetchWithRetry("http://test/", {}, 50);
+
+    assert.strictEqual(result.status, 502);
+    assert.strictEqual(await result.text(), "Application failed to respond");
+    assert.ok(callCount >= 1);
   });
 
   test("breaks without sleeping when deadline expires during a failed fetch attempt", async () => {

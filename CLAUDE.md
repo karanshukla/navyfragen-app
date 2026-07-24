@@ -104,6 +104,15 @@ The image-gen service runs on Railway with Serverless (app-sleeping) enabled, wh
 
 - Do not prewarm the browser at startup or on a timer — that reintroduces the exact problem.
 - A request arriving after an idle stretch pays a container wake plus a browser launch, which is why `IMAGE_SERVICE_DEADLINE_MS` in `image-generator.ts` is 30s rather than a warm-render budget.
+- The Dockerfile runs `tini` as PID 1. Chromium's children are reparented to PID 1 on browser exit and Node does not reap orphans, so without an init the launch/close cycle leaks zombie PIDs until the table is exhausted. Do not drop the `ENTRYPOINT`.
+
+Railway builds this service from `html-to-image/Dockerfile`. That is now pinned in `html-to-image/railway.json` — previously it relied on Railway's "a Dockerfile always wins" auto-detection while the dashboard/API still reported the `RAILPACK` default, which reads as though the Dockerfile were dead config.
+
+#### Calling the image service
+
+Both callers — `fetchWithRetry` in `server/src/lib/image-generator.ts` and `HTMLToImageRenderer.Render` in `opengraph-service/internal/shim/renderer.go` — must retry on **wake-shaped HTTP statuses** (408/502/503/504), not just on network errors. A sleeping service answers before it is ready: Railway's edge returns 502 while the container boots, and the service itself returns 503 while Chromium launches. Both are HTTP responses, so treating any response as final turns every wake into a user-visible failure. 4xx and 429 are deliberately *not* retried — a rejected payload fails identically every time, and retrying a limiter that is already shedding only adds load.
+
+Retry budgets are per-attempt, not per-loop: a single hung connection must not consume the whole deadline and starve the retry that would have succeeded.
 
 ## Client Architecture
 

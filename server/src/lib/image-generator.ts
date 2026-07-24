@@ -36,10 +36,19 @@ const BASE_CSS = `
 // deadline has to cover both, not just a warm render.
 const IMAGE_SERVICE_DEADLINE_MS = 30_000;
 
-// Retries a fetch on network errors (ECONNREFUSED, ETIMEDOUT, etc.) for up to
-// timeoutMs. Does not retry HTTP error responses — those mean the service is up.
-// Each individual request is bounded by an AbortController so a hanging
-// connection cannot block the loop past the overall deadline.
+// A sleeping service answers before it is ready, and those answers are HTTP
+// responses rather than network errors: Railway's edge returns 502 while the
+// container is still waking, and the image service itself returns 503 while
+// Chromium is still launching. Treating any response as final would turn every
+// wake into a user-visible failure. 4xx is excluded on purpose — a rejected
+// payload fails identically on every attempt — as is 429, where retrying only
+// adds load to a limiter that is already shedding.
+const WAKE_RETRYABLE_STATUSES = new Set([408, 502, 503, 504]);
+
+// Retries on network errors (ECONNREFUSED, ETIMEDOUT, etc.) and on the
+// not-awake-yet statuses above, for up to timeoutMs. Each individual request is
+// bounded by an AbortController so a hanging connection cannot block the loop
+// past the overall deadline.
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
@@ -48,6 +57,7 @@ export async function fetchWithRetry(
   const deadline = Date.now() + timeoutMs;
   let delay = 500;
   let lastError: unknown;
+  let lastRetryableResponse: { status: number; statusText: string; body: string } | undefined;
   while (true) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
@@ -55,8 +65,20 @@ export async function fetchWithRetry(
     const abortTimer = setTimeout(() => controller.abort(), remaining);
     try {
       const response = await fetch(url, { ...init, signal: controller.signal });
+      if (!WAKE_RETRYABLE_STATUSES.has(response.status)) {
+        clearTimeout(abortTimer);
+        return response;
+      }
+      // Drain the body before discarding the response, so the connection is
+      // released back to the pool instead of being held open by the next retry.
+      // The abort timer stays armed across the drain — a body that never
+      // finishes must not outlive the deadline.
+      lastRetryableResponse = {
+        status: response.status,
+        statusText: response.statusText,
+        body: await response.text(),
+      };
       clearTimeout(abortTimer);
-      return response;
     } catch (err) {
       clearTimeout(abortTimer);
       lastError = err;
@@ -65,6 +87,12 @@ export async function fetchWithRetry(
     if (remainingAfter <= 0) break;
     await new Promise((r) => setTimeout(r, Math.min(delay, remainingAfter)));
     delay = Math.min(Math.ceil(delay * 1.5), 2000);
+  }
+  // Exhausted while the service was still waking: hand back the last real
+  // response so the caller logs the actual status instead of a generic throw.
+  if (lastRetryableResponse) {
+    const { status, statusText, body } = lastRetryableResponse;
+    return new Response(body, { status, statusText });
   }
   throw lastError;
 }
