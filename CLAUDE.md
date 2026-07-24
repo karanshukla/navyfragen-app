@@ -16,7 +16,7 @@ npm workspaces with two packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250). **Node remains the runtime** for the client (Vite dev/build, Vitest) and the production server. The Bun runtime as a server execution environment is tracked by a CI canary (issues #251/#263) — the `better-sqlite3` blocker was resolved by abstracting the dev SQLite driver onto `bun:sqlite` (#263); the remaining blocker is `node:test`'s `mock.module` patterns not translating to Bun's runner.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), and CI all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server test suite is dual-runtime: `bun run test` (Node, the coverage/Coveralls baseline) and `bun run test:bun` (Bun, a blocking CI gate, #269). The server's Node APIs (Express, sharp, web-push, pino, node:dns/crypto) are kept as-is — they run under Bun natively; no Bun-native API rewrite.
 
 Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
 
@@ -39,11 +39,12 @@ bun run test:watch # Vitest watch mode
 
 ### Server (`cd server`)
 ```bash
-bun run dev        # tsx watch with pino-pretty
-bun run build      # tsup
+bun run dev        # bun --watch with pino-pretty (Bun runtime)
+bun run start      # bun src/index.ts (Bun runtime; no build step)
 bun run lint       # oxlint
-bun run test       # Node.js built-in test runner (single run)
+bun run test       # Node.js built-in test runner (single run) — the coverage/Coveralls baseline
 bun run test:watch # Node.js built-in test runner watch mode
+bun run test:bun   # bun test (Bun runtime; dual-runtime, see #269)
 bun run lexgen     # Regenerate AT Protocol lexicon types from ./lexicons/*.json
 ```
 

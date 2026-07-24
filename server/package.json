@@ -5,15 +5,12 @@
   "author": "Karan Shukla",
   "license": "MIT",
   "type": "module",
-  "main": "dist/index.js",
   "private": true,
   "scripts": {
-    "dev": "tsx watch --clear-screen=false src/index.ts | pino-pretty",
-    "build": "tsup",
-    "start": "node dist/index.js",
-    "postinstall": "bun run build",
+    "dev": "bun --watch --no-clear-screen src/index.ts | pino-pretty",
+    "start": "bun src/index.ts",
     "lexgen": "lex gen-server ./src/lexicon ./lexicons/*",
-    "clean": "rimraf dist coverage",
+    "clean": "rimraf coverage",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
@@ -101,21 +98,7 @@
     "pino-pretty": "^13.1.3",
     "rimraf": "^6.1.3",
     "ts-node": "^10.9.2",
-    "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^7.0.2"
-  },
-  "tsup": {
-    "entry": [
-      "src",
-      "!src/**/__tests__/**",
-      "!src/**/*.test.*",
-      "!src/tests/**"
-    ],
-    "format": "esm",
-    "splitting": false,
-    "sourcemap": true,
-    "clean": true,
-    "external": ["bun:sqlite", "bun:test"]
   }
 }
