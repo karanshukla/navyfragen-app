@@ -85,6 +85,147 @@ async function waitForVisualReadiness(page) {
   ]);
 }
 
+// Railway's Serverless (app-sleeping) detects inactivity from *outbound
+// packets*: no packets for 10 minutes puts the service to sleep. A resident
+// Chromium never goes that quiet — its background services (component updater,
+// safe-browsing lists, field trials, domain reliability uploads) and its local
+// media-route discovery (mDNS/SSDP multicast for DIAL/Cast) all emit traffic on
+// timers with no page open. These flags shut those subsystems off so an idle
+// container is genuinely silent; the rest trim per-render RSS.
+export const CHROMIUM_LAUNCH_ARGS = [
+  '--no-sandbox',
+  '--no-zygote',
+  '--headless',
+  '--disable-gpu',
+  '--disable-background-networking',
+  '--disable-component-update',
+  '--disable-domain-reliability',
+  '--disable-client-side-phishing-detection',
+  '--disable-sync',
+  '--safebrowsing-disable-auto-update',
+  '--no-pings',
+  '--no-first-run',
+  '--no-default-browser-check',
+  '--disable-default-apps',
+  '--disable-breakpad',
+  '--metrics-recording-only',
+  '--disable-features=Translate,BackForwardCache,MediaRouter,DialMediaRouteProvider,OptimizationHints,InterestFeedContentSuggestions,AcceptCHFrame',
+  '--disable-dev-shm-usage',
+  '--disable-extensions',
+  '--disable-software-rasterizer',
+  '--mute-audio',
+];
+
+// How long the browser may sit idle before it's closed. Must be comfortably
+// under Railway's 10-minute inactivity window so a silent stretch can actually
+// accumulate after the browser exits.
+export const BROWSER_IDLE_TIMEOUT_MS = 90_000;
+
+// A Chromium instance accumulates RSS across many renders (cache/heap
+// fragmentation) even with every page closed. Under sustained traffic the idle
+// timer never fires, so this bounds growth by forcing a close at the first
+// moment nothing is in flight.
+export const RENDERS_BEFORE_RECYCLE = 100;
+
+// createBrowserPool owns the Chromium lifecycle: launch on first use, close
+// once idle. Keeping the browser out of the process while nothing is rendering
+// is what lets the container fall silent (and drops idle RSS from ~500MB to
+// just the Node process).
+export function createBrowserPool({
+  launch,
+  idleTimeoutMs = BROWSER_IDLE_TIMEOUT_MS,
+  rendersBeforeRecycle = RENDERS_BEFORE_RECYCLE,
+  log = () => {},
+} = {}) {
+  let browserPromise = null;
+  let rendersSinceLaunch = 0;
+  let idleTimer = null;
+
+  function cancelIdleClose() {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+  }
+
+  function scheduleIdleClose() {
+    cancelIdleClose();
+    idleTimer = setTimeout(() => {
+      idleTimer = null;
+      closeBrowser('idle');
+    }, idleTimeoutMs);
+    // Never let the idle timer be the reason the process stays alive.
+    idleTimer.unref?.();
+  }
+
+  function startBrowser() {
+    rendersSinceLaunch = 0;
+    log('Launching browser...');
+    browserPromise = launch().then((browser) => {
+      log('Browser ready.');
+      return browser;
+    });
+    return browserPromise;
+  }
+
+  async function discard(promise) {
+    const browser = await promise.catch(() => null);
+    if (browser) await browser.close().catch(() => {});
+  }
+
+  function closeBrowser(reason) {
+    cancelIdleClose();
+    const stale = browserPromise;
+    browserPromise = null;
+    if (!stale) return Promise.resolve();
+    log(`Closing browser (${reason}).`);
+    return discard(stale);
+  }
+
+  // A rejected launch must not be cached, or every later request inherits the
+  // same failure and the service never recovers without a redeploy.
+  async function resolveOrForget(promise) {
+    try {
+      return await promise;
+    } catch (err) {
+      if (browserPromise === promise) browserPromise = null;
+      throw err;
+    }
+  }
+
+  async function getBrowser() {
+    cancelIdleClose();
+    const pending = browserPromise ?? startBrowser();
+    const browser = await resolveOrForget(pending);
+    if (browser.connected) return browser;
+
+    // The browser crashed out from under us. Relaunch, unless a concurrent
+    // caller already noticed and did so.
+    if (browserPromise === pending) {
+      discard(pending);
+      startBrowser();
+    }
+    return resolveOrForget(browserPromise ?? startBrowser());
+  }
+
+  function onRenderComplete(activeRenders) {
+    rendersSinceLaunch++;
+    // Closing mid-render would pull the browser out from under a request.
+    if (activeRenders > 0) return;
+    if (rendersSinceLaunch >= rendersBeforeRecycle) {
+      closeBrowser(`recycle after ${rendersSinceLaunch} renders`);
+    } else {
+      scheduleIdleClose();
+    }
+  }
+
+  return {
+    getBrowser,
+    onRenderComplete,
+    shutdown: () => closeBrowser('shutdown'),
+  };
+}
+
 export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
   const app = express();
   const renderSemaphore = new Semaphore(MAX_CONCURRENT_RENDERS);
@@ -172,65 +313,22 @@ export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = 3033;
 
-  function launchBrowser() {
-    console.log('Launching browser...');
-    return puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-      defaultViewport: { width: 1920, height: 1080 },
-      args: ['--no-sandbox', '--no-zygote', '--headless', '--disable-gpu'],
-    }).then(b => { console.log('Browser ready.'); return b; });
-  }
+  const pool = createBrowserPool({
+    launch: () =>
+      puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+        defaultViewport: { width: 1920, height: 1080 },
+        args: CHROMIUM_LAUNCH_ARGS,
+      }),
+    log: (message) => console.log(message),
+  });
 
-  let browserPromise = launchBrowser();
-
-  async function getBrowser() {
-    const browser = await browserPromise;
-    if (!browser.connected) {
-      browserPromise = launchBrowser();
-      return browserPromise;
-    }
-    return browser;
-  }
-
-  // A single Chromium instance run for a long time accumulates RSS growth
-  // (cache/heap fragmentation across many renders) even though every page is
-  // closed correctly. Recycling the process periodically bounds that growth.
-  const RENDERS_BEFORE_RECYCLE = 100;
-  const BROWSER_MAX_AGE_MS = 6 * 60 * 60 * 1000;
-  let rendersSinceLaunch = 0;
-  let browserLaunchedAt = Date.now();
-
-  // Only swaps when no render is in flight (activeRenders === 0), so the
-  // browser is never pulled out from under a request that's mid-screenshot.
-  // A request that starts in the brief window between this check and the
-  // actual swap can hit a closed browser and get a 500 — an accepted
-  // tradeoff for keeping the recycle logic lock-free.
-  async function recycleBrowserIfDue(activeRenders) {
-    if (activeRenders > 0) return;
-    const due = rendersSinceLaunch >= RENDERS_BEFORE_RECYCLE || Date.now() - browserLaunchedAt >= BROWSER_MAX_AGE_MS;
-    if (!due) return;
-
-    const staleBrowserPromise = browserPromise;
-    rendersSinceLaunch = 0;
-    browserLaunchedAt = Date.now();
-    browserPromise = launchBrowser();
-
-    const staleBrowser = await staleBrowserPromise.catch(() => null);
-    if (staleBrowser) await staleBrowser.close().catch(() => {});
-  }
-
-  function onRenderComplete(activeRenders) {
-    rendersSinceLaunch++;
-    recycleBrowserIfDue(activeRenders).catch((err) => console.error('Browser recycle failed:', err));
-  }
-
-  const app = createApp(getBrowser, { onRenderComplete });
+  const app = createApp(pool.getBrowser, { onRenderComplete: pool.onRenderComplete });
   // Bind to :: so Railway's IPv6 internal network can reach this service.
   app.listen(port, '::', () => console.log(`html-to-image listening on port ${port}`));
 
   async function shutdown() {
-    const browser = await browserPromise.catch(() => null);
-    if (browser) await browser.close().catch(() => {});
+    await pool.shutdown();
     process.exit(0);
   }
 

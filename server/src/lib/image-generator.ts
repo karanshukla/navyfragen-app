@@ -30,6 +30,12 @@ const BASE_CSS = `
   body { overflow: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-synthesis: none; }
 `;
 
+// The image service runs with Railway's Serverless (app-sleeping) enabled and
+// launches Chromium lazily, so a request that arrives after an idle stretch
+// pays a container wake plus a browser launch before it can render. The
+// deadline has to cover both, not just a warm render.
+const IMAGE_SERVICE_DEADLINE_MS = 30_000;
+
 // Retries a fetch on network errors (ECONNREFUSED, ETIMEDOUT, etc.) for up to
 // timeoutMs. Does not retry HTTP error responses — those mean the service is up.
 // Each individual request is bounded by an AbortController so a hanging
@@ -108,7 +114,7 @@ export async function generateQuestionImage(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       },
-      10_000
+      IMAGE_SERVICE_DEADLINE_MS
     );
 
     if (response.ok) {
