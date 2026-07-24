@@ -24,23 +24,17 @@ let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 before(async () => {
   mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
   await mock.module("../auth/session-agent", {
-    // Export BOTH of session-agent's public functions. Under node:test,
-    // mock.module is scoped to this file and torn down automatically; under
-    // Bun it persists process-wide (clearAllMocks does not unmock modules), so
-    // a partial mock would leak into other files (message/profile/settings
-    // controllers import the real `initializeAgentFromSession`). Mirroring the
-    // full export surface — with initializeAgentFromSession delegating to the
-    // mocked initializeAgentForDid — keeps the mock faithful and isolation-safe.
+    // Only initializeAgentForDid is mocked — AuthService is the sole consumer
+    // in this file. The other public export (initializeAgentFromSession) is
+    // left to the real module: node:test scopes mock.module to this file, and
+    // Bun's `--isolate` flag (in the test:bun script) gives each file a fresh
+    // module registry, so the mock can't leak into files that import the real
+    // initializeAgentFromSession (session-agent/message/profile/settings tests).
     exports: {
       initializeAgentForDid: async (ctx: any, did: string) => {
         const restored = await ctx.oauthClient.restore(did);
         if (!restored) return null;
         return mockAgent;
-      },
-      initializeAgentFromSession: async (req: any, ctx: any) => {
-        if (!req.session?.did) return null;
-        const { initializeAgentForDid } = await import("../auth/session-agent");
-        return initializeAgentForDid(ctx, req.session.did);
       },
     },
   });
