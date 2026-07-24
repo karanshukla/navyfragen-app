@@ -96,6 +96,15 @@ Image themes are defined in `src/lib/themes.ts` and stored per-user in `user_set
 
 The image service call uses `fetchWithRetry(url, init, timeoutMs)` (exported from `src/lib/image-generator.ts`) which retries on network errors with exponential backoff until the overall deadline is reached. Each individual request is bounded by an `AbortController`. If retries are exhausted the function throws — image generation failure is **not** silently downgraded to a text-only reply; the whole response attempt fails with the specific error message surfaced to the frontend.
 
+#### Chromium lifecycle (Railway app-sleeping)
+
+The image-gen service runs on Railway with Serverless (app-sleeping) enabled, which sleeps a service after 10 minutes with **no outbound packets**. Chromium must therefore be absent, not merely idle, between renders — a resident browser emits background traffic (component updater, safe-browsing lists, domain reliability, and mDNS/SSDP multicast from MediaRouter/DIAL discovery) that keeps resetting that window, and holds ~500MB RSS while doing nothing.
+
+`createBrowserPool` in `html-to-image/app.js` owns that lifecycle: the browser is launched on the first render, not at boot, and closed after `BROWSER_IDLE_TIMEOUT_MS` (90s, deliberately well under Railway's 10-minute window) or once `RENDERS_BEFORE_RECYCLE` renders have accumulated. `CHROMIUM_LAUNCH_ARGS` disables the background subsystems above so the awake window is quiet too. Two consequences to keep in mind:
+
+- Do not prewarm the browser at startup or on a timer — that reintroduces the exact problem.
+- A request arriving after an idle stretch pays a container wake plus a browser launch, which is why `IMAGE_SERVICE_DEADLINE_MS` in `image-generator.ts` is 30s rather than a warm-render budget.
+
 ## Client Architecture
 
 React Query is the data layer. Each domain (auth, messages, profile, settings) has a service file in `src/api/` that exports plain functions and React Query hooks:

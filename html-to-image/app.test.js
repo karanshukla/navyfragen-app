@@ -2,7 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import fs from 'node:fs/promises';
-import { createApp, MAX_CONCURRENT_RENDERS } from './app.js';
+import { createApp, createBrowserPool, CHROMIUM_LAUNCH_ARGS, MAX_CONCURRENT_RENDERS } from './app.js';
 
 // Starts the app on a random port and returns { server, url }.
 function startServer(getBrowser, options) {
@@ -420,5 +420,193 @@ describe('POST / onRenderComplete callback', () => {
     } finally {
       await stopServer(server);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Browser pool lifecycle
+// ---------------------------------------------------------------------------
+describe('createBrowserPool', () => {
+  // Tracks launches and closes so tests can assert on lifecycle transitions
+  // rather than on wall-clock timing.
+  function makeLaunchSpy({ failFirst = false } = {}) {
+    const launched = [];
+    const launch = async () => {
+      if (failFirst && launched.length === 0) {
+        launched.push(null);
+        throw new Error('launch failed');
+      }
+      const browser = {
+        connected: true,
+        closed: false,
+        close: async () => { browser.closed = true; browser.connected = false; },
+      };
+      launched.push(browser);
+      return browser;
+    };
+    return { launch, launched };
+  }
+
+  test('does not launch a browser until the first render is requested', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    createBrowserPool({ launch });
+    assert.equal(launched.length, 0, 'browser must not launch at boot — an idle Chromium keeps Railway awake');
+  });
+
+  test('launches on first getBrowser and reuses the same instance', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch });
+
+    const first = await pool.getBrowser();
+    const second = await pool.getBrowser();
+
+    assert.equal(launched.length, 1);
+    assert.equal(first, second);
+  });
+
+  test('closes the browser once idle so the container falls silent', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 5 });
+
+    await pool.getBrowser();
+    pool.onRenderComplete(0);
+
+    await waitFor(() => launched[0].closed);
+    assert.ok(launched[0].closed);
+  });
+
+  test('does not close while a render is still in flight', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 5 });
+
+    await pool.getBrowser();
+    pool.onRenderComplete(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(launched[0].closed, false);
+  });
+
+  test('a new request before the idle deadline cancels the close', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 30 });
+
+    const first = await pool.getBrowser();
+    pool.onRenderComplete(0);
+    const second = await pool.getBrowser();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(first, second);
+    assert.equal(launched.length, 1);
+    assert.equal(launched[0].closed, false, 'idle timer should have been cancelled by the new request');
+  });
+
+  test('relaunches after an idle close', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 5 });
+
+    await pool.getBrowser();
+    pool.onRenderComplete(0);
+    await waitFor(() => launched[0].closed);
+
+    const revived = await pool.getBrowser();
+    assert.equal(launched.length, 2);
+    assert.equal(revived, launched[1]);
+    assert.equal(revived.closed, false);
+  });
+
+  test('closes immediately once the render budget is spent', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 60_000, rendersBeforeRecycle: 2 });
+
+    await pool.getBrowser();
+    pool.onRenderComplete(0);
+    assert.equal(launched[0].closed, false);
+
+    pool.onRenderComplete(0);
+    await waitFor(() => launched[0].closed);
+  });
+
+  test('the render budget resets on relaunch', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 60_000, rendersBeforeRecycle: 2 });
+
+    await pool.getBrowser();
+    pool.onRenderComplete(0);
+    pool.onRenderComplete(0);
+    await waitFor(() => launched[0].closed);
+
+    await pool.getBrowser();
+    pool.onRenderComplete(0);
+    assert.equal(launched[1].closed, false, 'counter should restart with the new browser');
+  });
+
+  test('a failed launch is not cached — the next request retries', async () => {
+    const { launch, launched } = makeLaunchSpy({ failFirst: true });
+    const pool = createBrowserPool({ launch });
+
+    await assert.rejects(() => pool.getBrowser(), /launch failed/);
+    const browser = await pool.getBrowser();
+
+    assert.equal(launched.length, 2);
+    assert.equal(browser.connected, true);
+  });
+
+  test('replaces a crashed browser', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch });
+
+    const first = await pool.getBrowser();
+    first.connected = false;
+
+    const second = await pool.getBrowser();
+    assert.notEqual(second, first);
+    assert.equal(second.connected, true);
+    assert.equal(launched.length, 2);
+  });
+
+  test('shutdown closes a running browser', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch });
+
+    await pool.getBrowser();
+    await pool.shutdown();
+
+    assert.equal(launched[0].closed, true);
+  });
+
+  test('shutdown is a no-op when no browser was ever launched', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch });
+
+    await pool.shutdown();
+    assert.equal(launched.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chromium launch flags
+// ---------------------------------------------------------------------------
+describe('CHROMIUM_LAUNCH_ARGS', () => {
+  test('disables the background subsystems that keep the container chattering', () => {
+    // Each of these emits outbound packets on a timer with no page open, which
+    // resets Railway's 10-minute inactivity window and blocks app-sleeping.
+    for (const flag of [
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-domain-reliability',
+      '--safebrowsing-disable-auto-update',
+      '--no-pings',
+    ]) {
+      assert.ok(CHROMIUM_LAUNCH_ARGS.includes(flag), `missing ${flag}`);
+    }
+    // MediaRouter/DIAL do mDNS + SSDP multicast discovery on a loop.
+    const features = CHROMIUM_LAUNCH_ARGS.find((arg) => arg.startsWith('--disable-features='));
+    assert.match(features, /MediaRouter/);
+    assert.match(features, /DialMediaRouteProvider/);
+  });
+
+  test('keeps the container-required sandbox and shm flags', () => {
+    assert.ok(CHROMIUM_LAUNCH_ARGS.includes('--no-sandbox'));
+    assert.ok(CHROMIUM_LAUNCH_ARGS.includes('--disable-dev-shm-usage'));
   });
 });
