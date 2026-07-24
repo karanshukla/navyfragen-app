@@ -107,12 +107,13 @@
     "entry": [
       "src",
       "!src/**/__tests__/**",
-      "!src/**/*.test.*"
+      "!src/**/*.test.*",
+      "!src/tests/**"
     ],
     "format": "esm",
     "splitting": false,
     "sourcemap": true,
     "clean": true,
-    "external": ["bun:sqlite"]
+    "external": ["bun:sqlite", "bun:test"]
   }
 }
