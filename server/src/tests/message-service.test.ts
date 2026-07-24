@@ -1,5 +1,9 @@
 import assert from "node:assert";
-import { test, describe, beforeEach, afterEach, mock } from "node:test";
+import { test, describe, beforeEach, afterEach } from "node:test";
+
+// `mock` is runtime-agnostic (node:test under Node, the shim under Bun's runner,
+// which doesn't implement node:test's mock API). See `./mock-shim.ts`.
+import { mock } from "./mock-shim";
 
 import { type Agent } from "@atproto/api";
 import { type Logger } from "pino";

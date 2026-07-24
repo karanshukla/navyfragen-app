@@ -1,7 +1,11 @@
 import assert from "node:assert";
-import { test, describe, before, beforeEach, afterEach, mock } from "node:test";
+import { test, describe, before, beforeEach, afterEach } from "node:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
+
+// `mock` is runtime-agnostic (node:test under Node, the shim under Bun's runner,
+// which doesn't implement node:test's mock API). See `./mock-shim.ts`.
+import { mock } from "./mock-shim";
 
 import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 
