@@ -170,7 +170,9 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
-CI runs all tests in a single unified workflow `.github/workflows/Tests.yml` targeting Node 24. The workflow has separate jobs for client, server, and html-to-image tests.
+CI runs all tests in a single unified workflow `.github/workflows/Tests.yml` targeting Node 24, with separate jobs for client, server, the Bun-runtime canary, `opengraph-service` (Go), and `html-to-image`.
+
+The `html-to-image` job installs with `npm ci` rather than the root `bun install` — the service is deliberately outside the workspaces — and sets `PUPPETEER_SKIP_DOWNLOAD=true`, since its tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser.
 
 The `html-to-image/` service at the repo root is a standalone Express + Puppeteer image renderer. It has its own `app.test.js` using Node.js built-in `node:test`. Run its tests with:
 ```bash
