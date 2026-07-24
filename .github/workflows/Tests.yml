@@ -250,11 +250,12 @@ jobs:
           #                    leak into other files.
           #   --no-env-file  — Bun auto-loads server/.env (real VAPID keys);
           #                   the suite expects test-bootstrap.js's dummy env.
-          # The mock-bun-preload.js stubs @atproto-labs/fetch-node so undici_v8
-          # (8.x CacheStorage throws under Bun) never loads for the auth tests.
+          # The undici_v8 module-load crash (8.x CacheStorage throws under Bun)
+          # is resolved by a patched @atproto-labs/fetch-node (see
+          # patches/@atproto-labs%2Ffetch-node@0.3.5.patch + #270), so no test
+          # preload is needed.
           bun test --isolate --no-env-file \
               --preload ./src/tests/test-bootstrap.js \
-              --preload ./src/tests/mock-bun-preload.js \
               src/tests/ \
               > /tmp/bun-runtime-test-output.txt 2>&1 || true
           {

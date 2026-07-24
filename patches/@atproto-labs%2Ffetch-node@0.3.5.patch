@@ -1,0 +1,62 @@
+--- a/dist/unicast.js
++++ b/dist/unicast.js
+@@ -1,8 +1,9 @@
+ import { lookup } from 'node:dns';
++import { createRequire } from 'node:module';
++const require = createRequire(import.meta.url);
+ import ipaddr from 'ipaddr.js';
+ import { Agent as Undici6Agent } from 'undici_v6'; // NodeJS 22
+ import { Agent as Undici7Agent } from 'undici_v7'; // NodeJS 24
+-import { Agent as Undici8Agent } from 'undici_v8'; // NodeJS 26
+ import { FetchRequestError, asRequest, extractUrl, } from '@atproto-labs/fetch';
+ import { compareVersions, isUnicastIpHostname, parseVersion } from './util.js';
+ const { IPv4, IPv6 } = ipaddr;
+@@ -10,6 +11,31 @@
+  * @see {@link https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/}
+  */
+ export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
++    // Bun does not expose process.versions.undici (it implements fetch natively,
++    // not via undici), so the Node-undici SSRF guard below is unreachable and the
++    // undici_v8 top-level import would crash at load (its CacheStorage ctor throws
++    // "webidl.util.markAsUncloneable is not a function" under Bun). Under Bun,
++    // return the plain fetch (Bun's native fetch provides its own protections).
++    // SSRF defense is reduced vs. Node's unicast lookup, but the atproto handle
++    // resolver only fetches well-known AT Protocol / Bluesky endpoints.
++    if (process.versions.bun) {
++        return async function (input, init) {
++            if (init != null && 'dispatcher' in init && init.dispatcher != null) {
++                const request = asRequest(input, init);
++                await request.body?.cancel();
++                const cause = new FetchRequestError(request, 500, 'SSRF protection cannot be used with a custom request dispatcher');
++                throw new TypeError('fetch failed', { cause });
++            }
++            const url = extractUrl(input);
++            if (url.hostname && isUnicastIpHostname(url.hostname) === false) {
++                const request = asRequest(input, init);
++                await request.body?.cancel();
++                const cause = new FetchRequestError(request, 400, 'Hostname is a non-unicast address');
++                throw new TypeError('fetch failed', { cause });
++            }
++            return fetch.call(this, input, init);
++        };
++    }
+     // @NOTE we parse here instead of top-level to allow version mocking in tests.
+     const nodeUndiciVersion = parseVersion(process.versions.undici);
+     if (!nodeUndiciVersion ||
+@@ -20,13 +46,14 @@
+     // @NOTE Since major versions of undici are not guaranteed to be backwards
+     // compatible, we need to check the major version and use the appropriate
+     // Agent class for that version, to ensure that the dispatcher interface is
+-    // compatible with the version of undici being used.
++    // compatible with the version of undici being used. undici_v8 is loaded
++    // lazily (createRequire) so its CacheStorage ctor only runs on the v8 branch.
+     const dispatcher = nodeUndiciVersion[0] === 6
+         ? new Undici6Agent({ connect: { lookup: unicastLookup } })
+         : nodeUndiciVersion[0] === 7
+             ? new Undici7Agent({ connect: { lookup: unicastLookup } })
+             : nodeUndiciVersion[0] === 8
+-                ? new Undici8Agent({ connect: { lookup: unicastLookup } })
++                ? new (require('undici_v8').Agent)({ connect: { lookup: unicastLookup } })
+                 : null;
+     // @NOTE Because this is a security feature, we don't want to fallback to
+     // using Agent8 to "future proof" this package. Although future version of

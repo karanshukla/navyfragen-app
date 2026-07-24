@@ -258,8 +258,8 @@ Notes:
 - The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
 - Use the `exports` option key, not the deprecated `namedExports`.
 
-#### Bun-runtime specifics (#269)
+#### Bun-runtime specifics (#269, #270)
 
 - `bun run test:bun` adds `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation).
-- `src/tests/mock-bun-preload.js` is a Bun-only preload that stubs `@atproto-labs/fetch-node` so `undici_v8` (8.x) never loads — its `CacheStorage` ctor throws under Bun (`webidl.util.markAsUncloneable is not a function`). This is a **runtime** incompatibility in the `@atproto/oauth-client-node` chain, not a test/mock concern; it also blocks the production server boot (#270). The preload is test-only; Node ignores it.
+- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and, under Bun, returns Bun's native fetch from `unicastFetchWrap` instead of the Node-undici SSRF dispatcher. This lets the server boot end-to-end under Bun (#270). SSRF defense is reduced vs. Node's unicast lookup, but the atproto handle resolver only fetches well-known AT Protocol / Bluesky endpoints.
 - `c8` coverage stays on the Node path (`test:coverage`); the Bun path does not yet produce coverage.

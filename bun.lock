@@ -121,6 +121,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@atproto-labs/fetch-node@0.3.5": "patches/@atproto-labs%2Ffetch-node@0.3.5.patch",
+  },
   "overrides": {
     "esbuild": ">=0.28.1",
   },
