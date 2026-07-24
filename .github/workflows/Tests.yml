@@ -297,6 +297,35 @@ jobs:
         # the race detector; setup-go enables it by default on linux.
         run: go test -race -count=1 ./...
 
+  html-to-image-tests:
+    name: HTML-to-Image Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: html-to-image
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # html-to-image is deliberately outside the bun workspaces (it ships as a
+      # standalone container), so it carries its own package-lock.json and
+      # installs with npm rather than the root bun install.
+      - name: Install dependencies
+        # The tests never launch a browser — they drive createApp/createBrowserPool
+        # through fakes — so the ~150MB Chrome download is pure CI cost. The
+        # production image supplies Alpine's system Chromium instead.
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: npm ci --no-audit --no-fund
+
+      - name: Run tests
+        run: node --test app.test.js
+
   coveralls-finish:
     name: Coveralls Finish
     needs: [client-tests, server-tests]
