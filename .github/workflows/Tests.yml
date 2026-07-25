@@ -239,25 +239,13 @@ jobs:
         id: bun-tests
         working-directory: server
         run: |
-          # The full server suite now runs green under Bun (#269). `bun test`
-          # recognizes node:test's describe/test/before*/after* hooks; the
-          # `mock` API comes from a runtime-agnostic shim (src/tests/mock-shim.ts)
-          # that delegates mock.module/restoreAll to the host runner. Two Bun-
-          # specific flags make it pass:
-          #   --isolate      — fresh module registry per file, so a file's
-          #                    mock.module (process-global + non-restorable under
-          #                    Bun, unlike node:test's file-scoped mocks) can't
-          #                    leak into other files.
-          #   --no-env-file  — Bun auto-loads server/.env (real VAPID keys);
-          #                   the suite expects test-bootstrap.js's dummy env.
-          # The undici_v8 module-load crash (8.x CacheStorage throws under Bun)
-          # is resolved by a patched @atproto-labs/fetch-node (see
-          # patches/@atproto-labs%2Ffetch-node@0.3.5.patch + #270), so no test
-          # preload is needed.
-          bun test --isolate --no-env-file \
-              --preload ./src/tests/test-bootstrap.js \
-              src/tests/ \
-              > /tmp/bun-runtime-test-output.txt 2>&1 || true
+          # The full server suite now runs green under Bun (#269). Run it through
+          # the package script so CI and a developer's `bun run test:bun` cannot
+          # drift apart — the Bun-specific flags and their rationale live there.
+          set +e
+          bun run test:bun > /tmp/bun-runtime-test-output.txt 2>&1
+          suite_exit=$?
+          set -e
           {
             echo "<details><summary>Server test suite under Bun runtime</summary>"
             echo ""
@@ -267,8 +255,11 @@ jobs:
             echo ""
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
-          # Gate: the suite must pass. `bun test` exits non-zero on any failure.
-          if ! grep -q '0 fail' /tmp/bun-runtime-test-output.txt; then
+          # Gate on the exit code, which is the only signal that covers both a
+          # failing test and a file that dies before its tests register (a load
+          # error still prints "0 fail"). Matching the summary text instead would
+          # also read "10 fail" as a pass, since it contains "0 fail".
+          if [ "$suite_exit" -ne 0 ]; then
             echo "::error::Server test suite failed under the Bun runtime (regression of #269)"
             exit 1
           fi

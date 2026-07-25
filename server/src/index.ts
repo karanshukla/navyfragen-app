@@ -19,10 +19,16 @@ import type { IdResolver } from "@atproto/identity";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import type http from "node:http";
 
-// Node.js on Windows hangs on DNS TXT record lookups via the system resolver.
-// Force the built-in dns module to use public nameservers before any resolver
-// or OAuth client is created.
-dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+// Node.js on Windows hangs on DNS TXT record lookups via the system resolver,
+// so point the built-in dns module at public nameservers before any resolver or
+// OAuth client is created. Windows-only: under Node this rebinds the dns.resolve*
+// family and leaves dns.lookup on getaddrinfo, but Bun routes dns.lookup through
+// the same server list, so applying it everywhere makes the runtime forget every
+// name the system resolver owns — container DNS included, which is how the
+// Postgres hostname stopped resolving under the Bun runtime image.
+if (process.platform === "win32") {
+  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+}
 
 import { createClient } from "#/auth/client";
 import { env } from "#/lib/env";
@@ -138,8 +144,11 @@ export class Server {
       });
     });
 
-    // Bind our server to the port
-    const server = app.listen(env.PORT, "::");
+    // HOST is required in production and already reported on the line below, so
+    // bind it rather than a hardcoded address. Set it to "::" for dual-stack
+    // ingress; a hardcoded "::" fails under Bun on IPv6-less container networks,
+    // where the bind reports a spurious EADDRINUSE instead of falling back.
+    const server = app.listen(PORT, HOST);
     await events.once(server, "listening");
     logger.info(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}`);
 

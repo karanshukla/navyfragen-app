@@ -2,16 +2,16 @@
 //
 // Bun's test runner recognizes `node:test`'s `test`/`describe`/`before*`/`after*`
 // hooks, but does NOT implement its `mock` API (mock.fn, mock.method, mock.module,
-// mock.restoreAll, …). `node:test`'s `mock`, conversely, is unavailable under Bun.
-// This shim presents node:test's exact mock surface on both runtimes so test
+// mock.restoreAll, …). This shim presents that surface on both runtimes so test
 // files can stay dual-runtime (green under both `node --test` and `bun test`)
 // by swapping a single import — see CLAUDE.md "Module Mocking in Server Tests".
 //
 // Strategy:
-//  - `mock.fn` / `mock.method` / `mock.timers` are reimplemented here in pure JS,
-//    reproducing node:test's observable shape (`.mock.calls` as `[{ arguments }]`,
+//  - `mock.fn` / `mock.method` are reimplemented here in pure JS, reproducing
+//    node:test's observable shape (`.mock.calls` as `[{ arguments }]`,
 //    `mockImplementation/Once`, `mockReturnValue(/Once)`, `resetCalls`). The same
-//    implementation runs under both runtimes — no behavior fork.
+//    implementation runs under both runtimes — no behavior fork. `mock.timers` is
+//    only stubbed far enough for the suite's `.reset()`; the rest throws.
 //  - `mock.module` and `mock.restoreAll` can't be reimplemented portably (module
 //    registry + property restoration belong to the host runner), so they delegate
 //    to the host: node:test under Node, bun:test under Bun. The host import is a
@@ -188,6 +188,15 @@ async function resolveHostMock(): Promise<HostMock> {
   return hostMockPromise;
 }
 
+function unimplementedTimer(name: string): () => never {
+  return () => {
+    throw new Error(
+      `mock.timers.${name}() is not implemented by the dual-runtime mock shim. ` +
+        `Add a portable implementation to src/tests/mock-shim.ts before using it.`
+    );
+  };
+}
+
 export const mock = {
   /**
    * node:test's `mock.fn`. Records calls (with `arguments`), results, and
@@ -207,7 +216,15 @@ export const mock = {
   ): MockFunction {
     const descriptor = Object.getOwnPropertyDescriptor(target, methodName);
     const original = target[methodName];
-    const spy = createMockFunction(implementation);
+    // node:test treats an absent implementation as "spy on it": calls are
+    // recorded and still reach the original. Defaulting to undefined instead
+    // would silently stub the method out.
+    const spy = createMockFunction(
+      implementation ??
+        function (this: any, ...args: any[]) {
+          return original.apply(this ?? target, args);
+        }
+    );
     methodBindings.push({
       target,
       methodName,
@@ -219,16 +236,18 @@ export const mock = {
   },
 
   /**
-   * node:test's `mock.timers`. The suite only ever calls `.reset()` (and never
-   * after `.enable()`), so a no-op reset is sufficient; enable/tick/runAll are
-   * stubbed in case future tests reach for them.
+   * node:test's `mock.timers`. The suite only calls `.reset()`, and only to undo
+   * an `.enable()` that never happened, so resetting nothing is correct. Faking
+   * timers portably is not implemented — the rest of the surface throws rather
+   * than returning quietly, because a silently ignored `.enable()` would leave a
+   * test waiting on real timers and failing somewhere unrelated.
    */
   timers: {
-    enable() {},
     reset() {},
-    tick() {},
-    setTime() {},
-    runAll() {},
+    enable: unimplementedTimer("enable"),
+    tick: unimplementedTimer("tick"),
+    setTime: unimplementedTimer("setTime"),
+    runAll: unimplementedTimer("runAll"),
   },
 
   /**

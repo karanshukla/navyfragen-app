@@ -3,9 +3,7 @@ import { test, describe, before, after, beforeEach, afterEach } from "node:test"
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 
-// `mock` is runtime-agnostic (node:test under Node, the shim under Bun's runner,
-// which doesn't implement node:test's mock API). See `./mock-shim.ts`.
-import { mock } from "./mock-shim";
+import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
 
 import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 
@@ -23,14 +21,19 @@ let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 
 before(async () => {
   mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
+  // Spread the real module so every export it has keeps working and only
+  // initializeAgentForDid is swapped. node:test scopes mock.module to this file
+  // and Bun's --isolate gives each file a fresh registry, but neither is load
+  // bearing this way: a Bun build that doesn't understand --isolate ignores the
+  // flag silently rather than erroring, and a partial mock leaking into the
+  // files that import the real initializeAgentFromSession takes them out with a
+  // missing-export SyntaxError. Re-exporting the real binding costs no coverage
+  // — it is the same function session-agent.test.ts already exercises.
+  /* v8 ignore next */ // tsx dynamic-import interop branch; see the note below
+  const realSessionAgent = await import("../auth/session-agent");
   await mock.module("../auth/session-agent", {
-    // Only initializeAgentForDid is mocked — AuthService is the sole consumer
-    // in this file. The other public export (initializeAgentFromSession) is
-    // left to the real module: node:test scopes mock.module to this file, and
-    // Bun's `--isolate` flag (in the test:bun script) gives each file a fresh
-    // module registry, so the mock can't leak into files that import the real
-    // initializeAgentFromSession (session-agent/message/profile/settings tests).
     exports: {
+      ...realSessionAgent,
       initializeAgentForDid: async (ctx: any, did: string) => {
         const restored = await ctx.oauthClient.restore(did);
         if (!restored) return null;
@@ -47,13 +50,11 @@ before(async () => {
   AuthService = mod.AuthService;
 });
 
-// Restore the `session-agent` module mock after this file's tests. node:test
-// scopes mock.module to the test file and tears it down automatically between
-// files; Bun's mock.module persists process-wide until cleared, so without
-// this the (partial — initializeAgentForDid only) mock leaks into other files
-// (e.g. message-controller, which imports the real session-agent and needs its
-// initializeAgentFromSession export). restoreAll() delegates to the host
-// runner's clear (node:test restoreAll / bun clearAllMocks) via the shim.
+// Drop the mock.fn call history and, under Node, any method spies this file
+// registered. Note that neither runner unmocks modules here — node:test tears
+// its module mocks down per file on its own, and Bun's clearAllMocks leaves the
+// module registry alone — so this is cleanup, not the thing keeping the
+// session-agent mock out of the other files.
 after(() => {
   mock.restoreAll();
 });
