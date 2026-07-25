@@ -2,7 +2,13 @@ services:
 
   # ── Entry points ────────────────────────────────────────────────────────────
 
-  # Bot-protection WAF.  Main app entry point — http://localhost:8080
+  # Bot-protection WAF, matching the production topology — http://localhost:8080
+  # Anubis's PoW check requires an upstream proxy to set X-Real-Ip (production:
+  # Railway's edge; CI: DockerSmoke sets it explicitly). A plain browser hitting
+  # this port directly gets a "[misconfiguration] X-Real-Ip header is not set"
+  # error instead of the challenge page. For everyday local dev, use caddy
+  # directly (below) — this is here for testing Anubis itself or the full
+  # production-like chain.
   anubis:
     build: ../anubis
     ports:
@@ -31,8 +37,14 @@ services:
   # synthesize per-profile OG responses for the Bluesky Cardyb crawler while
   # passing all other /* traffic through unchanged. /api/* is split by Caddy
   # upstream and never reaches the shim.
+  #
+  # Published directly on 8082 (distinct from Anubis's 8080) as the default
+  # local dev entry point — skips Anubis's PoW/X-Real-Ip check entirely, so a
+  # plain browser just works.
   caddy:
     build: ../caddy
+    ports:
+      - "8082:80"
     environment:
       PORT: 80
       FRONTEND_DOMAIN: opengraph-service
@@ -64,10 +76,16 @@ services:
     restart: unless-stopped
 
   # Express API
+  #
+  # Published directly on 3000: the loopback OAuth client format below
+  # redirects the browser to http://127.0.0.1:3000/oauth/callback, which only
+  # resolves if this port reaches the host — not just the compose network.
   server:
     build:
       context: ..
       dockerfile: docker/Dockerfile.server
+    ports:
+      - "3000:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
