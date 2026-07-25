@@ -130,7 +130,12 @@ export default function Customise() {
                         ? userSettings!.touchpointLocale!
                         : "en"
                     }
-                    onChange={(value) => updateSettings.mutate({ touchpointLocale: value || null })}
+                    onChange={(value) =>
+                      updateSettings.mutate({
+                        /* v8 ignore next */
+                        touchpointLocale: value || null,
+                      })
+                    }
                     disabled={busy}
                     allowDeselect={false}
                     aria-label="Message language"
