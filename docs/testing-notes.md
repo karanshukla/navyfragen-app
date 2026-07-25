@@ -40,6 +40,14 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Not worth pursuing — would require mocking `document.body.style` property assignment to throw, which doesn't reflect any real browser behavior.
 
+### `client/src/pages/Customise.tsx` — unreachable `null` fallback in the locale `Select`'s `onChange`
+
+**Line:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange` handler.
+
+**Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. This `Select` is rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty locale codes from `touchpointLocales` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
+
+**What it would take to test:** Call the `Select`'s `onChange` prop directly (bypassing rendering) with `null`, e.g. by extracting the handler to a named, exported function, or by asserting on the prop passed to a mocked `Select`.
+
 ### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
 
 **Line:** `if (!installPrompt) return;` inside `handleInstallClick`.
