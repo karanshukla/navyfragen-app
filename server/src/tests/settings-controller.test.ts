@@ -222,6 +222,16 @@ describe("SettingsController", () => {
       assert.strictEqual(passed.touchpointLocale, "es");
     });
 
+    test("coerces profanityFilterEnabled to a strict boolean when provided", async () => {
+      const svc = makeService();
+      const ctx = makeCtx();
+      const controller = new SettingsController(svc, ctx.logger, ctx);
+      const res = makeRes();
+      await controller.updateSettings(makeReq({ body: { profanityFilterEnabled: true } }), res);
+      const passed = svc.updateSettings.mock.calls[0].arguments[1];
+      assert.strictEqual(passed.profanityFilterEnabled, true);
+    });
+
     test("returns 500 on error", async () => {
       const svc = makeService({
         updateSettings: mock.fn(async () => {
