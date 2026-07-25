@@ -157,6 +157,9 @@ interface HostMock {
   restoreAll: () => void;
 }
 let hostMockPromise: Promise<HostMock> | null = null;
+// Mirrors the resolved value so `restoreAll` can stay synchronous. Null means
+// `mock.module` was never awaited, and therefore nothing host-side to restore.
+let resolvedHostMock: HostMock | null = null;
 
 function isBun(): boolean {
   return typeof (globalThis as any).Bun !== "undefined" || !!(process.versions as any).bun;
@@ -184,6 +187,9 @@ async function resolveHostMock(): Promise<HostMock> {
         restoreAll: () => nodeMock.restoreAll(),
       } satisfies HostMock;
     })();
+    hostMockPromise.then((host) => {
+      resolvedHostMock = host;
+    });
   }
   return hostMockPromise;
 }
@@ -254,6 +260,13 @@ export const mock = {
    * Replace a module's exports before it's imported. Delegates to the host
    * runner. Accepts node:test's `{ exports }` shape; the Bun host adapter wraps
    * it in the factory bun:test expects.
+   *
+   * A relative `specifier` resolves against **this file**, not the caller —
+   * both runners resolve it from wherever the call is made, and that is now the
+   * shim. It works today only because the shim sits in `src/tests/` alongside
+   * every test that uses it, so `"../auth/session-agent"` means the same thing
+   * either way. Keep it there, or a caller in a subdirectory will silently mock
+   * a different path than it names.
    */
   async module(specifier: string, options: { exports: Record<string, unknown> }): Promise<void> {
     const host = await resolveHostMock();
@@ -265,23 +278,17 @@ export const mock = {
    * then the `mock.method` bindings tracked by this shim.
    */
   restoreAll(): void {
-    // Run host restore first; then undo our own method replacements. Do it
-    // synchronously where possible — node:test's restoreAll is sync; bun's
-    // clearAllMocks is sync. resolveHostMock is async, so kick it off and also
-    // restore synchronously what we can.
-    resolveHostMock()
-      .then((host) => {
-        try {
-          host.restoreAll();
-        } catch {
-          /* host restore is best-effort */
-        }
-      })
-      .catch(() => {
-        /* ignore — Node path below still restores method bindings */
-      });
-    // Always restore our method bindings synchronously so afterEach teardown is
-    // deterministic even if the host promise hasn't settled.
+    // Fully synchronous, so an afterEach/after hook that doesn't await sees the
+    // restore complete before the next test runs. Both hosts' restores are sync;
+    // only *reaching* one is async, so use the already-resolved handle and skip
+    // when there is none — no host mock can exist if it was never resolved.
+    if (resolvedHostMock) {
+      try {
+        resolvedHostMock.restoreAll();
+      } catch {
+        /* host restore is best-effort */
+      }
+    }
     while (methodBindings.length) {
       const { target, methodName, original, descriptor } = methodBindings.pop()!;
       if (descriptor) {
