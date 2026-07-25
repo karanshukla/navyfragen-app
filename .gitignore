@@ -42,3 +42,6 @@ e2e/.auth/
 docs/superpowers/
 /.zcode
 /.playwright-mcp
+
+# Local-only compose overrides (e.g. exposing a service's port for debugging)
+docker/docker-compose.override.yml
