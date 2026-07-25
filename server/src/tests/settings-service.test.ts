@@ -217,6 +217,38 @@ describe("SettingsService", () => {
       assert.strictEqual(lastValuesArg.customPrompt, null);
     });
 
+    it("should fall back to defaults on insert when optional fields are omitted or falsy", async () => {
+      // Arrange — pdsSyncEnabled/imageTheme omitted (falsy ternary / ?? fallback),
+      // inboxEnabled/profanityFilterEnabled explicitly set to their non-default
+      // outcome, covering the insert-path branches the "with defaults" test
+      // above doesn't exercise.
+      executeTakeFirstQueue.push(undefined);
+      executeTakeFirstQueue.push({
+        did: "user456",
+        pdsSyncEnabled: 0,
+        imageTheme: "default",
+        inboxEnabled: 0,
+        profanityFilterEnabled: 1,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+        createdAt: "2025-06-07T12:00:00.000Z",
+      });
+      (mockInsertBuilder.execute as any) = async () => ({});
+
+      // Act
+      await settingsService.updateSettings("user456", {
+        inboxEnabled: false,
+        profanityFilterEnabled: true,
+      });
+
+      // Assert
+      assert.strictEqual(lastValuesArg.pdsSyncEnabled, 0);
+      assert.strictEqual(lastValuesArg.imageTheme, "default");
+      assert.strictEqual(lastValuesArg.inboxEnabled, 0);
+      assert.strictEqual(lastValuesArg.profanityFilterEnabled, 1);
+    });
+
     it("should update only the provided fields on an existing row (partial update)", async () => {
       // Arrange
       executeTakeFirstQueue.push({
@@ -295,6 +327,39 @@ describe("SettingsService", () => {
         customPrompt: "Ask me anything",
         profileCardTheme: "ember",
         touchpointLocale: "es",
+      });
+    });
+
+    it("should coerce truthy pdsSyncEnabled/inboxEnabled and falsy profanityFilterEnabled on update", async () => {
+      // Arrange — the other update tests only exercise the opposite boolean
+      // outcome for these three fields; this covers the remaining branches.
+      const baseRow = {
+        did: "user123",
+        pdsSyncEnabled: 1,
+        imageTheme: "default",
+        inboxEnabled: 1,
+        profanityFilterEnabled: 0,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+        createdAt: "2025-06-07T12:00:00.000Z",
+      };
+      executeTakeFirstQueue.push({ ...baseRow });
+      executeTakeFirstQueue.push({ ...baseRow });
+      (mockUpdateBuilder.execute as any) = async () => ({});
+
+      // Act
+      await settingsService.updateSettings("user123", {
+        pdsSyncEnabled: true,
+        inboxEnabled: true,
+        profanityFilterEnabled: false,
+      });
+
+      // Assert
+      assert.deepStrictEqual(lastSetArg, {
+        pdsSyncEnabled: 1,
+        inboxEnabled: 1,
+        profanityFilterEnabled: 0,
       });
     });
 

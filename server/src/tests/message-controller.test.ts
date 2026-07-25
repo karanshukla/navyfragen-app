@@ -291,6 +291,19 @@ describe("MessageController", () => {
       assert.strictEqual(res.status.mock.calls[0].arguments[0], 404);
     });
 
+    test("returns 403 when service throws with 'not accepting'", async () => {
+      const svc = makeService({
+        sendMessage: mock.fn(async () => {
+          throw new Error("Recipient is not accepting messages");
+        }),
+      });
+      const logger = { info: mock.fn(), error: mock.fn(), warn: mock.fn(), debug: mock.fn() };
+      const controller = new MessageController(svc, logger, makeCtx());
+      const res = makeRes();
+      await controller.sendMessage(makeReq({ body: { recipient: "did:foo", message: "hi" } }), res);
+      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+    });
+
     test("returns 500 when service throws other error", async () => {
       const svc = makeService({
         sendMessage: mock.fn(async () => {
