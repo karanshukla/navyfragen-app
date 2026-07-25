@@ -56,6 +56,44 @@ function createLogger(): pino.Logger {
   return pino({ name: "navyfragen" }, transport);
 }
 
+const WILDCARD_HOSTS = new Set(["::", "0.0.0.0"]);
+
+async function listenOn(app: Express, port: number, host: string): Promise<http.Server> {
+  const server = app.listen(port, host);
+  try {
+    await events.once(server, "listening");
+    return server;
+  } catch (err) {
+    server.close();
+    throw err;
+  }
+}
+
+/**
+ * Binds a wildcard HOST as "::" so one dual-stack listener serves IPv4 and IPv6,
+ * because Railway's private network — the only way Caddy reaches this service —
+ * is IPv6-only. Falls back to "0.0.0.0" where the network has no IPv6 at all,
+ * which is every Docker bridge network in CI and local compose; Bun reports that
+ * as a spurious EADDRINUSE (errno 0) rather than degrading the way Node does.
+ * A non-wildcard HOST is bound verbatim so `HOST=127.0.0.1` still means loopback.
+ */
+async function listenPreferringDualStack(
+  app: Express,
+  port: number,
+  host: string,
+  logger: pino.Logger
+): Promise<{ server: http.Server; boundHost: string }> {
+  if (!WILDCARD_HOSTS.has(host)) {
+    return { server: await listenOn(app, port, host), boundHost: host };
+  }
+  try {
+    return { server: await listenOn(app, port, "::"), boundHost: "::" };
+  } catch (err) {
+    logger.warn({ err, host }, "IPv6 wildcard bind failed, falling back to 0.0.0.0");
+    return { server: await listenOn(app, port, "0.0.0.0"), boundHost: "0.0.0.0" };
+  }
+}
+
 // Application state passed to the router and elsewhere
 export type AppContext = {
   db: Database;
@@ -144,13 +182,8 @@ export class Server {
       });
     });
 
-    // HOST is required in production and already reported on the line below, so
-    // bind it rather than a hardcoded address. Set it to "::" for dual-stack
-    // ingress; a hardcoded "::" fails under Bun on IPv6-less container networks,
-    // where the bind reports a spurious EADDRINUSE instead of falling back.
-    const server = app.listen(PORT, HOST);
-    await events.once(server, "listening");
-    logger.info(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}`);
+    const { server, boundHost } = await listenPreferringDualStack(app, PORT, HOST, logger);
+    logger.info(`Server (${NODE_ENV}) running on port http://${boundHost}:${PORT}`);
 
     return new Server(app, server, ctx);
   }
