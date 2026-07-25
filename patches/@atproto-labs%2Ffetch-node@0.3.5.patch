@@ -1,0 +1,102 @@
+diff --git a/node_modules/@atproto-labs/fetch-node/.bun-tag-d3164fca44050840 b/.bun-tag-d3164fca44050840
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/@atproto-labs/fetch-node/.bun-tag-e3dae270cf7f8001 b/.bun-tag-e3dae270cf7f8001
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/unicast.js b/dist/unicast.js
+index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..f9b69246767072270aa05c242840cc65b53a1ede 100644
+--- a/dist/unicast.js
++++ b/dist/unicast.js
+@@ -1,8 +1,9 @@
+ import { lookup } from 'node:dns';
++import { createRequire } from 'node:module';
++const require = createRequire(import.meta.url);
+ import ipaddr from 'ipaddr.js';
+ import { Agent as Undici6Agent } from 'undici_v6'; // NodeJS 22
+ import { Agent as Undici7Agent } from 'undici_v7'; // NodeJS 24
+-import { Agent as Undici8Agent } from 'undici_v8'; // NodeJS 26
+ import { FetchRequestError, asRequest, extractUrl, } from '@atproto-labs/fetch';
+ import { compareVersions, isUnicastIpHostname, parseVersion } from './util.js';
+ const { IPv4, IPv6 } = ipaddr;
+@@ -10,6 +11,63 @@ const { IPv4, IPv6 } = ipaddr;
+  * @see {@link https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/}
+  */
+ export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
++    // Bun implements fetch natively rather than via undici, so it exposes no
++    // process.versions.undici (the version gate below would throw) and offers no
++    // connect-time lookup hook to hang the dispatcher on. The undici_v8 import is
++    // also fatal under Bun: its CacheStorage ctor throws "webidl.util
++    // .markAsUncloneable is not a function" at module load, which is why the v8
++    // Agent is required lazily further down.
++    //
++    // Bun therefore runs the same unicastLookup checks ahead of the request
++    // instead of during connect. The guard is equivalent for a hostname that
++    // resolves consistently, but it is validated before the connection rather
++    // than on the socket, so a name that changes answers between the check and
++    // the connect (DNS rebinding) is not caught the way the Node path catches it.
++    if (process.versions.bun) {
++        return async function (input, init) {
++            if (init != null && 'dispatcher' in init && init.dispatcher != null) {
++                const request = asRequest(input, init);
++                await request.body?.cancel();
++                const cause = new FetchRequestError(request, 500, 'SSRF protection cannot be used with a custom request dispatcher');
++                throw new TypeError('fetch failed', { cause });
++            }
++            const url = extractUrl(input);
++            // Fail closed on anything that isn't HTTP(S). The checks below are all
++            // keyed on url.hostname, which is "" for schemes like file:, so they
++            // would wave such a URL through — and Bun's fetch, unlike Node's, will
++            // happily read file: URLs. Callers do validate schemes before reaching
++            // here (@atproto/common-web's validateUrl, oauth-types' webUriSchema),
++            // so this is the backstop for that validation regressing, not a
++            // reachable hole today.
++            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
++                const request = asRequest(input, init);
++                await request.body?.cancel();
++                const cause = new FetchRequestError(request, 400, `Unsupported protocol "${url.protocol}"`);
++                throw new TypeError('fetch failed', { cause });
++            }
++            if (url.hostname && isUnicastIpHostname(url.hostname) === false) {
++                const request = asRequest(input, init);
++                await request.body?.cancel();
++                const cause = new FetchRequestError(request, 400, 'Hostname is a non-unicast address');
++                throw new TypeError('fetch failed', { cause });
++            }
++            // isUnicastIpHostname only parses literal IPs — it returns undefined for
++            // a DNS name, so without this every name that resolves to a private or
++            // loopback address would pass straight through to Bun's fetch.
++            if (url.hostname && isUnicastIpHostname(url.hostname) === undefined) {
++                const rejection = await new Promise((resolve) => {
++                    unicastLookup(url.hostname, { all: true }, (err) => resolve(err));
++                });
++                if (rejection) {
++                    const request = asRequest(input, init);
++                    await request.body?.cancel();
++                    const cause = new FetchRequestError(request, 400, rejection.message);
++                    throw new TypeError('fetch failed', { cause });
++                }
++            }
++            return fetch.call(this, input, init);
++        };
++    }
+     // @NOTE we parse here instead of top-level to allow version mocking in tests.
+     const nodeUndiciVersion = parseVersion(process.versions.undici);
+     if (!nodeUndiciVersion ||
+@@ -20,13 +78,14 @@ export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
+     // @NOTE Since major versions of undici are not guaranteed to be backwards
+     // compatible, we need to check the major version and use the appropriate
+     // Agent class for that version, to ensure that the dispatcher interface is
+-    // compatible with the version of undici being used.
++    // compatible with the version of undici being used. undici_v8 is loaded
++    // lazily (createRequire) so its CacheStorage ctor only runs on the v8 branch.
+     const dispatcher = nodeUndiciVersion[0] === 6
+         ? new Undici6Agent({ connect: { lookup: unicastLookup } })
+         : nodeUndiciVersion[0] === 7
+             ? new Undici7Agent({ connect: { lookup: unicastLookup } })
+             : nodeUndiciVersion[0] === 8
+-                ? new Undici8Agent({ connect: { lookup: unicastLookup } })
++                ? new (require('undici_v8').Agent)({ connect: { lookup: unicastLookup } })
+                 : null;
+     // @NOTE Because this is a security feature, we don't want to fallback to
+     // using Agent8 to "future proof" this package. Although future version of

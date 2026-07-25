@@ -5,8 +5,11 @@ WORKDIR /app
 # (vite) and for serving the static bundle in the final image.
 RUN npm install -g bun
 
-# Copy workspace manifests so bun install can use the root lock file
+# Copy workspace manifests so bun install can use the root lock file.
+# patches/ must be present too: patchedDependencies in package.json applies
+# patches/@atproto-labs%2Ffetch-node@0.3.5.patch during bun install (#270).
 COPY package.json bun.lock ./
+COPY patches/ ./patches/
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 

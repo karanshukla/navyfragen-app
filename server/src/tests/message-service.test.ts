@@ -1,5 +1,7 @@
 import assert from "node:assert";
-import { test, describe, beforeEach, afterEach, mock } from "node:test";
+import { test, describe, beforeEach, afterEach } from "node:test";
+
+import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
 
 import { type Agent } from "@atproto/api";
 import { type Logger } from "pino";

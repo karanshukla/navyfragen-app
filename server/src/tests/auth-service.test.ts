@@ -1,7 +1,9 @@
 import assert from "node:assert";
-import { test, describe, before, beforeEach, afterEach, mock } from "node:test";
+import { test, describe, before, after, beforeEach, afterEach } from "node:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
+
+import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
 
 import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 
@@ -19,8 +21,19 @@ let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 
 before(async () => {
   mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
+  // Spread the real module so every export it has keeps working and only
+  // initializeAgentForDid is swapped. node:test scopes mock.module to this file
+  // and Bun's --isolate gives each file a fresh registry, but neither is load
+  // bearing this way: a Bun build that doesn't understand --isolate ignores the
+  // flag silently rather than erroring, and a partial mock leaking into the
+  // files that import the real initializeAgentFromSession takes them out with a
+  // missing-export SyntaxError. Re-exporting the real binding costs no coverage
+  // — it is the same function session-agent.test.ts already exercises.
+  /* v8 ignore next */ // tsx dynamic-import interop branch; see the note below
+  const realSessionAgent = await import("../auth/session-agent");
   await mock.module("../auth/session-agent", {
     exports: {
+      ...realSessionAgent,
       initializeAgentForDid: async (ctx: any, did: string) => {
         const restored = await ctx.oauthClient.restore(did);
         if (!restored) return null;
@@ -35,6 +48,15 @@ before(async () => {
   /* v8 ignore next */
   const mod = await import("../services/auth-service");
   AuthService = mod.AuthService;
+});
+
+// Drop the mock.fn call history and, under Node, any method spies this file
+// registered. Note that neither runner unmocks modules here — node:test tears
+// its module mocks down per file on its own, and Bun's clearAllMocks leaves the
+// module registry alone — so this is cleanup, not the thing keeping the
+// session-agent mock out of the other files.
+after(() => {
+  mock.restoreAll();
 });
 
 describe("AuthService", () => {

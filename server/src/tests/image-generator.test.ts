@@ -1,5 +1,7 @@
 import assert from "node:assert";
-import { test, describe, mock, afterEach } from "node:test";
+import { test, describe, afterEach } from "node:test";
+
+import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
 
 import {
   fetchWithRetry,

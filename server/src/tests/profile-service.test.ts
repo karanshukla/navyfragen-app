@@ -1,5 +1,7 @@
 import assert from "node:assert";
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach } from "node:test";
+
+import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
 
 import { Kysely } from "kysely";
 

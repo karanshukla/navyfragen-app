@@ -19,10 +19,16 @@ import type { IdResolver } from "@atproto/identity";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import type http from "node:http";
 
-// Node.js on Windows hangs on DNS TXT record lookups via the system resolver.
-// Force the built-in dns module to use public nameservers before any resolver
-// or OAuth client is created.
-dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+// Node.js on Windows hangs on DNS TXT record lookups via the system resolver,
+// so point the built-in dns module at public nameservers before any resolver or
+// OAuth client is created. Windows-only: under Node this rebinds the dns.resolve*
+// family and leaves dns.lookup on getaddrinfo, but Bun routes dns.lookup through
+// the same server list, so applying it everywhere makes the runtime forget every
+// name the system resolver owns — container DNS included, which is how the
+// Postgres hostname stopped resolving under the Bun runtime image.
+if (process.platform === "win32") {
+  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+}
 
 import { createClient } from "#/auth/client";
 import { env } from "#/lib/env";
@@ -48,6 +54,44 @@ function createLogger(): pino.Logger {
     ],
   });
   return pino({ name: "navyfragen" }, transport);
+}
+
+const WILDCARD_HOSTS = new Set(["::", "0.0.0.0"]);
+
+async function listenOn(app: Express, port: number, host: string): Promise<http.Server> {
+  const server = app.listen(port, host);
+  try {
+    await events.once(server, "listening");
+    return server;
+  } catch (err) {
+    server.close();
+    throw err;
+  }
+}
+
+/**
+ * Binds a wildcard HOST as "::" so one dual-stack listener serves IPv4 and IPv6,
+ * because Railway's private network — the only way Caddy reaches this service —
+ * is IPv6-only. Falls back to "0.0.0.0" where the network has no IPv6 at all,
+ * which is every Docker bridge network in CI and local compose; Bun reports that
+ * as a spurious EADDRINUSE (errno 0) rather than degrading the way Node does.
+ * A non-wildcard HOST is bound verbatim so `HOST=127.0.0.1` still means loopback.
+ */
+async function listenPreferringDualStack(
+  app: Express,
+  port: number,
+  host: string,
+  logger: pino.Logger
+): Promise<{ server: http.Server; boundHost: string }> {
+  if (!WILDCARD_HOSTS.has(host)) {
+    return { server: await listenOn(app, port, host), boundHost: host };
+  }
+  try {
+    return { server: await listenOn(app, port, "::"), boundHost: "::" };
+  } catch (err) {
+    logger.warn({ err, host }, "IPv6 wildcard bind failed, falling back to 0.0.0.0");
+    return { server: await listenOn(app, port, "0.0.0.0"), boundHost: "0.0.0.0" };
+  }
 }
 
 // Application state passed to the router and elsewhere
@@ -138,10 +182,8 @@ export class Server {
       });
     });
 
-    // Bind our server to the port
-    const server = app.listen(env.PORT, "::");
-    await events.once(server, "listening");
-    logger.info(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}`);
+    const { server, boundHost } = await listenPreferringDualStack(app, PORT, HOST, logger);
+    logger.info(`Server (${NODE_ENV}) running on port http://${boundHost}:${PORT}`);
 
     return new Server(app, server, ctx);
   }

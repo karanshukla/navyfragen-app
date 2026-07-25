@@ -16,7 +16,7 @@ npm workspaces with two packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250). **Node remains the runtime** for the client (Vite dev/build, Vitest) and the production server. The Bun runtime as a server execution environment is tracked by a CI canary (issues #251/#263) — the `better-sqlite3` blocker was resolved by abstracting the dev SQLite driver onto `bun:sqlite` (#263); the remaining blocker is `node:test`'s `mock.module` patterns not translating to Bun's runner.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), and CI all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server test suite is dual-runtime: `bun run test` (Node, the coverage/Coveralls baseline) and `bun run test:bun` (Bun, a blocking CI gate, #269). The server's Node APIs (Express, sharp, web-push, pino, node:dns/crypto) are kept as-is — they run under Bun natively; no Bun-native API rewrite.
 
 Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
 
@@ -39,11 +39,12 @@ bun run test:watch # Vitest watch mode
 
 ### Server (`cd server`)
 ```bash
-bun run dev        # tsx watch with pino-pretty
-bun run build      # tsup
+bun run dev        # bun --watch with pino-pretty (Bun runtime)
+bun run start      # bun src/index.ts (Bun runtime; no build step)
 bun run lint       # oxlint
-bun run test       # Node.js built-in test runner (single run)
+bun run test       # Node.js built-in test runner (single run) — the coverage/Coveralls baseline
 bun run test:watch # Node.js built-in test runner watch mode
+bun run test:bun   # bun test (Bun runtime; dual-runtime, see #269)
 bun run lexgen     # Regenerate AT Protocol lexicon types from ./lexicons/*.json
 ```
 
@@ -166,7 +167,7 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 ## Testing Conventions
 
-**Server**: Uses Node.js built-in `node:test` + `node:assert`. Test setup via `src/tests/test-bootstrap.js` which sets dummy env vars. Mock the DB with chainable builder objects (see existing test files for the pattern).
+**Server**: Uses Node.js built-in `node:test` + `node:assert`. The suite is **dual-runtime**: it runs green under both Node (`bun run test`) and Bun (`bun run test:bun`, issue #269), so Bun's runner can serve as a CI gate for the #268 Bun-runtime epic. Test setup via `src/tests/test-bootstrap.js` which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with the runtime-agnostic `mock` shim (see "Module Mocking in Server Tests" below).
 
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
@@ -223,7 +224,17 @@ Do **not** use it to skip real business logic. Document any usage in `docs/testi
 
 ### Module Mocking in Server Tests
 
-`node:test`'s `mock.module()` (still flagged `--experimental-test-module-mocks` on Node 24) lets a test replace a module's exports before the system-under-test imports it. The test scripts (`test`, `test:watch`, `test:coverage`) already pass the flag. The default mocking strategy is dependency injection (chainable DB builders passed into constructors); `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
+The server test suite is **dual-runtime** (Node `bun run test` and Bun `bun run test:bun`, #269). Bun's runner recognizes `node:test`'s `test`/`describe`/`before*`/`after*`/`assert` but does **not** implement its `mock` API, so `mock` is imported from a runtime-agnostic shim instead:
+
+```typescript
+import assert from "node:assert";
+import { test, describe, beforeEach, afterEach } from "node:test";
+import { mock } from "./mock-shim"; // node:test's mock under Node, the shim under Bun
+```
+
+`src/tests/mock-shim.ts` reimplements `node:test`'s exact mock surface in pure JS (`mock.fn`, `mock.method`, `mock.timers`, `.mock.calls[i].arguments`, `mockImplementation/Once`, `resetCalls`) and delegates `mock.module`/`restoreAll` to the host runner (node:test under Node, bun:test under Bun — the two have **opposite** `mock.module` signatures: node:test takes `{ exports }`, bun:test takes `() => exports`; the shim adapts). Test files only swap the `mock` import — no call-site logic changes.
+
+The default mocking strategy is **dependency injection** (chainable DB builders passed into constructors). `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
 
 ```typescript
 let AuthService: typeof import("../services/auth-service").AuthService;
@@ -242,7 +253,17 @@ before(async () => {
 ```
 
 Notes:
-- `mock.module` is called on the **test context** (`t.mock.module`) inside a test, or on the top-level `mock` import inside `before()`. It must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `before()`, never a top-level static import.
+- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `before()`, never a top-level static import.
 - Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
+- **`mock.module` is file-scoped under Node, process-global under Bun.** node:test scopes it to the test file natively. Bun's is process-wide and **not restorable** (`clearAllMocks` clears `mock.fn` history but does not unmock modules), so `test:bun` passes `--isolate` for a fresh per-file module registry. Do not let `--isolate` be the only thing keeping a mock contained: **spread the real module into the mock** (`exports: { ...realModule, theOneYouAreFaking }`) so a partial mock can't take out files that import the real exports. Bun accepts unknown flags silently, so a Bun that predates `--isolate` drops it without a word — `test:bun` runs `src/tests/assert-bun-version.js` first to turn that into a clear error instead of scattered failures.
 - The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
 - Use the `exports` option key, not the deprecated `namedExports`.
+
+#### Bun-runtime specifics (#269, #270)
+
+- `bun run test:bun` adds `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation). Bun **1.3.14+** is required; `src/tests/assert-bun-version.js` enforces it.
+- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces the unicast rules**: it runs the package's own `unicastLookup` before the request, so a handle resolving to a loopback/private/link-local address is rejected exactly as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname` returns `undefined` for a DNS name, so on its own it lets `http://internal.example.com/` straight through, and handle resolution fetches user-supplied hostnames. The branch also rejects non-HTTP(S) schemes, which the Node path gets for free from undici: every unicast check keys on `url.hostname`, which is `""` for `file:`, and Bun's `fetch` reads `file:` URLs where Node's refuses them. The one gap versus Node: the check runs before the connection rather than on the socket, so DNS rebinding between check and connect is not caught.
+- **Never call `dns.setServers()` unconditionally.** Under Node it only rebinds the `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; under Bun it steers `dns.lookup` too, so the process forgets every name the system resolver owns — container DNS included. `src/index.ts` keeps its Windows TXT-lookup workaround gated behind `process.platform === "win32"` for that reason.
+- **The listen address is negotiated, not hardcoded** (`listenPreferringDualStack` in `src/index.ts`). A wildcard `HOST` (`"::"` or `"0.0.0.0"`) binds `"::"` so a single dual-stack listener serves both families — required in production, where Caddy reaches this service only over Railway's private network and that network is IPv6-only (`BACKEND_DOMAIN = ${{Backend.RAILWAY_PRIVATE_DOMAIN}}`). Where the network has no IPv6 at all — every Docker bridge network in CI and local compose — the bind falls back to `"0.0.0.0"`; Bun surfaces that case as a spurious `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does. A non-wildcard `HOST` is bound verbatim, so `HOST=127.0.0.1` still means loopback. Deployments therefore do not depend on `HOST` being set to exactly the right wildcard.
+- **The OAuth login path has its own CI probe** (`Probe OAuth handle resolution under Bun runtime` in `Tests.yml`). E2E signs in through `/auth/e2e-login` with an app password and never resolves a handle, so without this the one production surface that runs through the patched `fetch-node` would be untested. Its Bun failure mode is silent — bluesky-social/atproto#3511 has resolution returning `undefined`, surfacing only as "does not resolve to a DID" — so the probe asserts a `did:` string comes back rather than trusting the call not to throw.
+- `c8` coverage stays on the Node path (`test:coverage`); the Bun path does not yet produce coverage.
