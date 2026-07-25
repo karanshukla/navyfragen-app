@@ -1,3 +1,8 @@
+diff --git a/node_modules/@atproto-labs/fetch-node/.bun-tag-e3dae270cf7f8001 b/.bun-tag-e3dae270cf7f8001
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/unicast.js b/dist/unicast.js
+index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..fc1f102368037af0514d94a85005f338d8c44fa1 100644
 --- a/dist/unicast.js
 +++ b/dist/unicast.js
 @@ -1,8 +1,9 @@
@@ -11,17 +16,22 @@
  import { FetchRequestError, asRequest, extractUrl, } from '@atproto-labs/fetch';
  import { compareVersions, isUnicastIpHostname, parseVersion } from './util.js';
  const { IPv4, IPv6 } = ipaddr;
-@@ -10,6 +11,31 @@
+@@ -10,6 +11,50 @@ const { IPv4, IPv6 } = ipaddr;
   * @see {@link https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/}
   */
  export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
-+    // Bun does not expose process.versions.undici (it implements fetch natively,
-+    // not via undici), so the Node-undici SSRF guard below is unreachable and the
-+    // undici_v8 top-level import would crash at load (its CacheStorage ctor throws
-+    // "webidl.util.markAsUncloneable is not a function" under Bun). Under Bun,
-+    // return the plain fetch (Bun's native fetch provides its own protections).
-+    // SSRF defense is reduced vs. Node's unicast lookup, but the atproto handle
-+    // resolver only fetches well-known AT Protocol / Bluesky endpoints.
++    // Bun implements fetch natively rather than via undici, so it exposes no
++    // process.versions.undici (the version gate below would throw) and offers no
++    // connect-time lookup hook to hang the dispatcher on. The undici_v8 import is
++    // also fatal under Bun: its CacheStorage ctor throws "webidl.util
++    // .markAsUncloneable is not a function" at module load, which is why the v8
++    // Agent is required lazily further down.
++    //
++    // Bun therefore runs the same unicastLookup checks ahead of the request
++    // instead of during connect. The guard is equivalent for a hostname that
++    // resolves consistently, but it is validated before the connection rather
++    // than on the socket, so a name that changes answers between the check and
++    // the connect (DNS rebinding) is not caught the way the Node path catches it.
 +    if (process.versions.bun) {
 +        return async function (input, init) {
 +            if (init != null && 'dispatcher' in init && init.dispatcher != null) {
@@ -37,13 +47,27 @@
 +                const cause = new FetchRequestError(request, 400, 'Hostname is a non-unicast address');
 +                throw new TypeError('fetch failed', { cause });
 +            }
++            // isUnicastIpHostname only parses literal IPs — it returns undefined for
++            // a DNS name, so without this every name that resolves to a private or
++            // loopback address would pass straight through to Bun's fetch.
++            if (url.hostname && isUnicastIpHostname(url.hostname) === undefined) {
++                const rejection = await new Promise((resolve) => {
++                    unicastLookup(url.hostname, { all: true }, (err) => resolve(err));
++                });
++                if (rejection) {
++                    const request = asRequest(input, init);
++                    await request.body?.cancel();
++                    const cause = new FetchRequestError(request, 400, rejection.message);
++                    throw new TypeError('fetch failed', { cause });
++                }
++            }
 +            return fetch.call(this, input, init);
 +        };
 +    }
      // @NOTE we parse here instead of top-level to allow version mocking in tests.
      const nodeUndiciVersion = parseVersion(process.versions.undici);
      if (!nodeUndiciVersion ||
-@@ -20,13 +46,14 @@
+@@ -20,13 +65,14 @@ export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
      // @NOTE Since major versions of undici are not guaranteed to be backwards
      // compatible, we need to check the major version and use the appropriate
      // Agent class for that version, to ensure that the dispatcher interface is

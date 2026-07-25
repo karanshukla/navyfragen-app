@@ -46,16 +46,33 @@ jobs:
       - name: Wait for remaining services to stabilise
         run: sleep 30
 
+      # "Exit" alone misses a crash loop: every service sets restart:
+      # unless-stopped, so a container that dies on boot and is restarted for
+      # ever reports "Restarting (1)" and never "Exited". A server that could
+      # not reach Postgres passed this step for exactly that reason.
       - name: Check no containers have crashed
         run: |
-          EXITED=$(docker compose -f docker/docker-compose.yml ps -a | grep -iE '\bExit' || true)
-          if [ -n "$EXITED" ]; then
-            echo "The following containers exited unexpectedly:"
-            echo "$EXITED"
+          BAD=$(docker compose -f docker/docker-compose.yml ps -a \
+            --format '{{.Name}}\t{{.State}}\t{{.Status}}' \
+            | grep -iE '\b(exit|restarting|dead)' || true)
+          if [ -n "$BAD" ]; then
+            echo "The following containers are not running cleanly:"
+            echo "$BAD"
             docker compose -f docker/docker-compose.yml logs --tail=50
             exit 1
           fi
           echo "All containers are running"
+
+      # The two public smoke tests below only exercise the frontend and the
+      # redirector, so the API can be entirely dead and still pass them. Hit the
+      # server directly on the compose network, and use curl -f so a 5xx fails
+      # rather than merely proving something answered.
+      - name: Smoke test — server API on the compose network
+        run: |
+          docker run --rm --network docker_default curlimages/curl:latest \
+            -fsS --retry 5 --retry-delay 3 --retry-connrefused \
+            http://server:3000/client-metadata.json > /dev/null
+          echo "server:3000/client-metadata.json → OK"
 
       # /robots.txt is in the Anubis ALLOW list so the request passes
       # through Anubis → Caddy → client without triggering a PoW challenge.

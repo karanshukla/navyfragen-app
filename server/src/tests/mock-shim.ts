@@ -2,16 +2,16 @@
 //
 // Bun's test runner recognizes `node:test`'s `test`/`describe`/`before*`/`after*`
 // hooks, but does NOT implement its `mock` API (mock.fn, mock.method, mock.module,
-// mock.restoreAll, …). `node:test`'s `mock`, conversely, is unavailable under Bun.
-// This shim presents node:test's exact mock surface on both runtimes so test
+// mock.restoreAll, …). This shim presents that surface on both runtimes so test
 // files can stay dual-runtime (green under both `node --test` and `bun test`)
 // by swapping a single import — see CLAUDE.md "Module Mocking in Server Tests".
 //
 // Strategy:
-//  - `mock.fn` / `mock.method` / `mock.timers` are reimplemented here in pure JS,
-//    reproducing node:test's observable shape (`.mock.calls` as `[{ arguments }]`,
+//  - `mock.fn` / `mock.method` are reimplemented here in pure JS, reproducing
+//    node:test's observable shape (`.mock.calls` as `[{ arguments }]`,
 //    `mockImplementation/Once`, `mockReturnValue(/Once)`, `resetCalls`). The same
-//    implementation runs under both runtimes — no behavior fork.
+//    implementation runs under both runtimes — no behavior fork. `mock.timers` is
+//    only stubbed far enough for the suite's `.reset()`; the rest throws.
 //  - `mock.module` and `mock.restoreAll` can't be reimplemented portably (module
 //    registry + property restoration belong to the host runner), so they delegate
 //    to the host: node:test under Node, bun:test under Bun. The host import is a
@@ -157,6 +157,9 @@ interface HostMock {
   restoreAll: () => void;
 }
 let hostMockPromise: Promise<HostMock> | null = null;
+// Mirrors the resolved value so `restoreAll` can stay synchronous. Null means
+// `mock.module` was never awaited, and therefore nothing host-side to restore.
+let resolvedHostMock: HostMock | null = null;
 
 function isBun(): boolean {
   return typeof (globalThis as any).Bun !== "undefined" || !!(process.versions as any).bun;
@@ -184,8 +187,20 @@ async function resolveHostMock(): Promise<HostMock> {
         restoreAll: () => nodeMock.restoreAll(),
       } satisfies HostMock;
     })();
+    hostMockPromise.then((host) => {
+      resolvedHostMock = host;
+    });
   }
   return hostMockPromise;
+}
+
+function unimplementedTimer(name: string): () => never {
+  return () => {
+    throw new Error(
+      `mock.timers.${name}() is not implemented by the dual-runtime mock shim. ` +
+        `Add a portable implementation to src/tests/mock-shim.ts before using it.`
+    );
+  };
 }
 
 export const mock = {
@@ -207,7 +222,15 @@ export const mock = {
   ): MockFunction {
     const descriptor = Object.getOwnPropertyDescriptor(target, methodName);
     const original = target[methodName];
-    const spy = createMockFunction(implementation);
+    // node:test treats an absent implementation as "spy on it": calls are
+    // recorded and still reach the original. Defaulting to undefined instead
+    // would silently stub the method out.
+    const spy = createMockFunction(
+      implementation ??
+        function (this: any, ...args: any[]) {
+          return original.apply(this ?? target, args);
+        }
+    );
     methodBindings.push({
       target,
       methodName,
@@ -219,22 +242,31 @@ export const mock = {
   },
 
   /**
-   * node:test's `mock.timers`. The suite only ever calls `.reset()` (and never
-   * after `.enable()`), so a no-op reset is sufficient; enable/tick/runAll are
-   * stubbed in case future tests reach for them.
+   * node:test's `mock.timers`. The suite only calls `.reset()`, and only to undo
+   * an `.enable()` that never happened, so resetting nothing is correct. Faking
+   * timers portably is not implemented — the rest of the surface throws rather
+   * than returning quietly, because a silently ignored `.enable()` would leave a
+   * test waiting on real timers and failing somewhere unrelated.
    */
   timers: {
-    enable() {},
     reset() {},
-    tick() {},
-    setTime() {},
-    runAll() {},
+    enable: unimplementedTimer("enable"),
+    tick: unimplementedTimer("tick"),
+    setTime: unimplementedTimer("setTime"),
+    runAll: unimplementedTimer("runAll"),
   },
 
   /**
    * Replace a module's exports before it's imported. Delegates to the host
    * runner. Accepts node:test's `{ exports }` shape; the Bun host adapter wraps
    * it in the factory bun:test expects.
+   *
+   * A relative `specifier` resolves against **this file**, not the caller —
+   * both runners resolve it from wherever the call is made, and that is now the
+   * shim. It works today only because the shim sits in `src/tests/` alongside
+   * every test that uses it, so `"../auth/session-agent"` means the same thing
+   * either way. Keep it there, or a caller in a subdirectory will silently mock
+   * a different path than it names.
    */
   async module(specifier: string, options: { exports: Record<string, unknown> }): Promise<void> {
     const host = await resolveHostMock();
@@ -246,23 +278,17 @@ export const mock = {
    * then the `mock.method` bindings tracked by this shim.
    */
   restoreAll(): void {
-    // Run host restore first; then undo our own method replacements. Do it
-    // synchronously where possible — node:test's restoreAll is sync; bun's
-    // clearAllMocks is sync. resolveHostMock is async, so kick it off and also
-    // restore synchronously what we can.
-    resolveHostMock()
-      .then((host) => {
-        try {
-          host.restoreAll();
-        } catch {
-          /* host restore is best-effort */
-        }
-      })
-      .catch(() => {
-        /* ignore — Node path below still restores method bindings */
-      });
-    // Always restore our method bindings synchronously so afterEach teardown is
-    // deterministic even if the host promise hasn't settled.
+    // Fully synchronous, so an afterEach/after hook that doesn't await sees the
+    // restore complete before the next test runs. Both hosts' restores are sync;
+    // only *reaching* one is async, so use the already-resolved handle and skip
+    // when there is none — no host mock can exist if it was never resolved.
+    if (resolvedHostMock) {
+      try {
+        resolvedHostMock.restoreAll();
+      } catch {
+        /* host restore is best-effort */
+      }
+    }
     while (methodBindings.length) {
       const { target, methodName, original, descriptor } = methodBindings.pop()!;
       if (descriptor) {
