@@ -235,6 +235,49 @@ jobs:
             exit 1
           fi
 
+      # The OAuth login path is the one production surface with no other CI
+      # coverage: E2E signs in through /auth/e2e-login with an app password, so
+      # it never resolves a handle. That path runs through the patched
+      # fetch-node (safeFetchWrap -> unicastFetchWrap), and its known Bun failure
+      # mode is silent — bluesky-social/atproto#3511 reports resolution quietly
+      # returning undefined, which the caller reports as "does not resolve to a
+      # DID". Resolve a real handle so a regression there is loud.
+      - name: Probe OAuth handle resolution under Bun runtime
+        id: oauth-probe
+        working-directory: server
+        run: |
+          set +e
+          # AtprotoHandleResolverNode is re-exported by @atproto/oauth-client-node
+          # (a direct dependency) and is the same resolver the login flow uses.
+          # Assert the shape rather than a fixed DID: the failure being guarded
+          # against returns undefined, and pinning a value would break this step
+          # if the account were ever migrated.
+          probe_out=$(bun -e "
+            import { AtprotoHandleResolverNode } from '@atproto/oauth-client-node';
+            const did = await new AtprotoHandleResolverNode({}).resolve('bsky.app');
+            if (typeof did !== 'string' || !did.startsWith('did:')) {
+              console.error('FAIL handle resolved to', JSON.stringify(did));
+              process.exit(1);
+            }
+            console.log('OK oauth-handle-resolution bsky.app ->', did);
+          " 2>&1)
+          probe_exit=$?
+          set -e
+          echo "$probe_out"
+          {
+            echo "<details><summary><code>oauth-handle-resolution</code> (patched fetch-node, #270)</summary>"
+            echo ""
+            echo '```'
+            echo "$probe_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$probe_exit" -ne 0 ]; then
+            echo "::error::OAuth handle resolution failed under Bun — see bluesky-social/atproto#3511"
+            exit 1
+          fi
+
       - name: Run server test suite under Bun runtime
         id: bun-tests
         working-directory: server
