@@ -38,6 +38,7 @@
     "exclude": [
       "src/lexicon/**",
       "src/index.ts",
+      "src/lib/assert-fetch-node-patch.ts",
       "src/auth/client.ts",
       "src/auth/e2e-agent-store.ts",
       "src/auth/storage.ts",

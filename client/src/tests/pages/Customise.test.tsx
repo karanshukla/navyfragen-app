@@ -132,6 +132,14 @@ describe("Customise page", () => {
     expect(mutate).toHaveBeenCalledWith({ touchpointLocale: "es" });
   });
 
+  it("shows the matching label when touchpointLocale is already set to a known locale", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ touchpointLocale: "es" }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: /message language/i })).toHaveValue("Español");
+  });
+
   it("picking a profile card theme swatch fires updateSettings with profileCardTheme", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());
     const mutate = mockMutation();
@@ -174,6 +182,31 @@ describe("Customise page", () => {
     fireEvent.blur(input);
 
     expect(mutate).toHaveBeenCalledWith({ customPrompt: null });
+  });
+
+  it("shows skeletons in every card while settings are loading", () => {
+    mockUseUserSettings.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as any);
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByText(/customise/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/profile prompt/i)).toBeNull();
+    expect(screen.queryByLabelText(/message language/i)).toBeNull();
+    expect(screen.queryByLabelText(/accepting messages/i)).toBeNull();
+  });
+
+  it("disables the profile theme swatches while a mutation is pending", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+    } as any);
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByLabelText(/ember theme/i)).toBeDisabled();
   });
 
   it("renders correctly in dark mode", () => {

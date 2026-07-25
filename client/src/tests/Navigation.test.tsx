@@ -281,6 +281,32 @@ describe("Navigation", () => {
       expect(screen.getByTestId("location")).toHaveTextContent("/messages");
     });
 
+    it("Alt+C navigates to customise when logged in", () => {
+      mockSession({ isLoggedIn: true });
+      renderWithProviders(
+        <>
+          <Navigation />
+          <LocationDisplay />
+        </>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "C", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/customise");
+    });
+
+    it("Alt+C does not navigate when logged out", () => {
+      mockSession({ isLoggedIn: false });
+      renderWithProviders(
+        <>
+          <Navigation />
+          <LocationDisplay />
+        </>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "C", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
     it("Alt+S navigates to settings when logged in", () => {
       mockSession({ isLoggedIn: true });
       renderWithProviders(
