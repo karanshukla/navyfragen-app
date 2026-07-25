@@ -1,3 +1,8 @@
+// Must stay the first import: it front-runs the @atproto/oauth-client-node
+// import graph so an unpatched @atproto-labs/fetch-node fails with the actual
+// cause rather than an undici stack trace. See the module for why.
+import "#/lib/assert-fetch-node-patch";
+
 import dns from "node:dns";
 import events from "node:events";
 
