@@ -350,6 +350,8 @@ Both are resolved by `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied v
 
 Residual difference vs. Node: Node validates the address at connect time through the dispatcher's `lookup` hook, whereas Bun exposes no such hook, so the patch resolves and validates just before calling `fetch`. A name that returns a public address to the check and a private one to the connection (DNS rebinding) is caught on Node and not on Bun. Closing that would require a connect-level hook Bun does not currently offer.
 
+**The Bun branch also rejects any non-HTTP(S) scheme**, which the Node path gets for free from undici. Every unicast check is keyed on `url.hostname`, and `new URL("file:///etc/passwd").hostname` is `""`, so a `file:` URL would skip all of them — and Bun's `fetch` reads `file:` URLs where Node's refuses the scheme outright (verified on Bun 1.3.14 and Node 24). Callers do validate schemes before reaching this wrapper — `validateUrl` in `@atproto/common-web` rejects DID-document `serviceEndpoint`s that aren't `http(s)://`, and `@atproto/oauth-types`' `webUriSchema` constrains authorization-server metadata to https-or-loopback — so this is a backstop for that validation regressing, not a reachable hole. It is cheap and fails closed, which is the right default for the one place in the stack whose entire job is deciding what the server is allowed to fetch.
+
 ### Coverage under Bun
 
 `c8` wraps the **Node** runner (`test:coverage`), which remains the production-truth coverage baseline and the path that publishes to Coveralls. The Bun path (`test:bun`) does not yet produce coverage; confirming `bun test --coverage` meets the 100%/97% thresholds (or documenting a c8-under-Bun path) is deferred to a later #268 step.
