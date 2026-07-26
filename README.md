@@ -109,6 +109,8 @@ navyfragen-app/
 
    > **Windows users:** Use `http://127.0.0.1:5173`. Cookies may not work correctly with `localhost` on Windows.
 
+   > **Logging in fails?** See [Local Development: 127.0.0.1 vs localhost](#local-development-127001-vs-localhost) below — the AT Protocol OAuth flow requires `127.0.0.1`, not `localhost`, and this affects every platform, not just Windows.
+
 ---
 
 ## Image Generation
@@ -215,6 +217,21 @@ To skip it in an emergency:
 git commit --no-verify -m "your message"
 ```
 
-### Windows & Cookies
+### Local Development: 127.0.0.1 vs localhost
 
-Use `http://127.0.0.1` (not `localhost`) for both the app URL and any callback URLs in your `.env`. Cookie `SameSite` handling differs between the two on Windows.
+AT Protocol's OAuth implementation follows [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252) loopback rules: a local client's `redirect_uri` must use the IP literal `127.0.0.1`, not the hostname `localhost`. `server/src/auth/client.ts` already hardcodes the OAuth `redirect_uri` to `http://127.0.0.1:<PORT>` for local dev, so if the server itself is bound to `localhost` instead of `127.0.0.1`, the OAuth callback silently fails — `localhost` and `127.0.0.1` can resolve to different addresses (`::1` vs `127.0.0.1`), so the server ends up listening on one while the callback hits the other.
+
+Cookies are also host-specific: a session cookie set for `127.0.0.1` will not be sent by the browser to `localhost`, even though both point at the same machine. So every layer needs to agree on `127.0.0.1`:
+
+1. **`server/.env`:**
+   ```bash
+   HOST="127.0.0.1"
+   CLIENT_URL="http://127.0.0.1:5173"
+   ```
+2. **`client/.env`** (create if it doesn't exist):
+   ```bash
+   VITE_API_URL=http://127.0.0.1:8080
+   ```
+3. **Browser:** open the app at `http://127.0.0.1:5173`, not `http://localhost:5173`.
+
+This applies on every platform. Windows has an additional wrinkle on top: cookie `SameSite` handling differs between `127.0.0.1` and `localhost`, so Windows users should use `127.0.0.1` even when not debugging OAuth specifically.
