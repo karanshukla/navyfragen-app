@@ -56,7 +56,7 @@
     "@tanstack/react-query": "^5.101.3",
     "@tanstack/react-query-devtools": "^5.101.3",
     "@types/react-router-dom": "^5.3.3",
-    "react": "^19.2.0",
+    "react": "^19.2.8",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.18.1",
     "serve": "^14.2.6",
