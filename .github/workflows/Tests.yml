@@ -80,8 +80,10 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        # Native addons (better-sqlite3, sharp) need their build scripts; bun
-        # blocks dep lifecycle scripts by default, so trust the ones we need.
+        # Native addons (sharp) need their build scripts; bun blocks dep
+        # lifecycle scripts by default, so trust the ones we need. (better-sqlite3
+        # was removed in #288 — SQLite now runs through bun:sqlite, which ships
+        # inside the Bun runtime and needs no native build.)
         run: bun install --frozen-lockfile
 
       # Runtime probes that guard Bun-specific regressions not covered by the
