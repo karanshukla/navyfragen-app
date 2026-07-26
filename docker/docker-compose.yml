@@ -17,7 +17,32 @@ services:
       BIND: :8080
       TARGET: http://caddy:80
     depends_on:
-      - caddy
+      caddy:
+        condition: service_started
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Anubis's challenge store. Anubis validates the store during config parsing —
+  # it dials and PINGs before serving — so an unreachable Valkey is a boot
+  # failure, not a degraded mode. Hence condition: service_healthy above.
+  #
+  # The hostname alias is not cosmetic: Anubis cannot interpolate env vars into
+  # its policy file (TecharoHQ/anubis#1152), so the store URL is one committed
+  # literal shared by local and production. The alias makes
+  # valkey.railway.internal resolve here too, matching Railway's private domain.
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    networks:
+      default:
+        aliases:
+          - valkey.railway.internal
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
 
   # Short-URL redirector.  fragen.navy equivalent — http://localhost:8081
