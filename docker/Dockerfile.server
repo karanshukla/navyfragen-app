@@ -3,11 +3,11 @@
 FROM oven/bun:1.3-alpine AS builder
 WORKDIR /app
 
-# node-gyp toolchain for the native addons that build from source on musl.
-# better-sqlite3 needs it: it stays a runtime dependency for the Node code path
-# in db.ts, even though this image never reaches it (Bun takes the bun:sqlite
-# branch, and production is Postgres regardless).
-RUN apk add --no-cache python3 make g++
+# No node-gyp toolchain here: better-sqlite3 (the only dependency that needed
+# one to build from source on musl) was removed entirely in #288 when the Node
+# code path in db.ts was retired — SQLite now runs through bun:sqlite, which
+# ships inside the Bun runtime and needs no compile step. sharp ships prebuilt
+# musl binaries and needs no compile step either.
 
 # Copy workspace manifests so bun install can use the root lock file. patches/
 # must be present: patchedDependencies in package.json applies
