@@ -1,7 +1,5 @@
 import assert from "node:assert";
-import { test, describe, afterEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { test, describe, afterEach, mock } from "bun:test";
 
 import { Agent } from "@atproto/api";
 
@@ -17,10 +15,10 @@ describe("initializeAgentFromSession", () => {
     test("returns the stored E2E agent without calling oauthClient.restore", async () => {
       const e2eAgent = {} as Agent;
       setE2EAgent("did:e2e", e2eAgent, "e2e-user.bsky.social");
-      const restoreMock = mock.fn(async () => ({}));
+      const restoreMock = mock(async () => ({}));
       const ctx: any = {
         oauthClient: { restore: restoreMock },
-        logger: { warn: mock.fn() },
+        logger: { warn: mock() },
       };
       const result = await initializeAgentFromSession({ session: { did: "did:e2e" } } as any, ctx);
       assert.strictEqual(result, e2eAgent);
@@ -40,18 +38,18 @@ describe("initializeAgentFromSession", () => {
 
   test("returns null when oauthClient.restore returns null", async () => {
     const ctx: any = {
-      oauthClient: { restore: mock.fn(async () => null) },
-      logger: { warn: mock.fn() },
+      oauthClient: { restore: mock(async () => null) },
+      logger: { warn: mock() },
     };
     const result = await initializeAgentFromSession({ session: { did: "did:foo" } } as any, ctx);
     assert.strictEqual(result, null);
   });
 
   test("returns null and logs warn when restore throws", async () => {
-    const warnMock = mock.fn();
+    const warnMock = mock();
     const ctx: any = {
       oauthClient: {
-        restore: mock.fn(async () => {
+        restore: mock(async () => {
           throw new Error("restore failed");
         }),
       },
@@ -64,8 +62,8 @@ describe("initializeAgentFromSession", () => {
 
   test("returns Agent instance when restore succeeds", async () => {
     const ctx: any = {
-      oauthClient: { restore: mock.fn(async () => ({})) },
-      logger: { warn: mock.fn() },
+      oauthClient: { restore: mock(async () => ({})) },
+      logger: { warn: mock() },
     };
     const result = await initializeAgentFromSession({ session: { did: "did:foo" } } as any, ctx);
     assert.ok(result instanceof Agent);

@@ -1,7 +1,5 @@
 import assert from "node:assert";
-import { test, describe, afterEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { test, describe, afterEach, mock, spyOn } from "bun:test";
 
 import {
   fetchWithRetry,
@@ -12,12 +10,12 @@ import {
 
 describe("fetchWithRetry", () => {
   afterEach(() => {
-    mock.restoreAll();
+    mock.restore();
   });
 
   test("returns response immediately on first successful attempt", async () => {
     const mockResponse = new Response("ok", { status: 200 });
-    mock.method(globalThis, "fetch", async () => mockResponse);
+    spyOn(globalThis, "fetch").mockImplementation(async () => mockResponse);
 
     const result = await fetchWithRetry("http://test/", {}, 5000);
 
@@ -28,7 +26,7 @@ describe("fetchWithRetry", () => {
   test("retries on network error and returns response when service comes up", async () => {
     const mockResponse = new Response("ok", { status: 200 });
     let callCount = 0;
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       callCount++;
       if (callCount < 3) throw new Error("ECONNREFUSED");
       return mockResponse;
@@ -42,7 +40,7 @@ describe("fetchWithRetry", () => {
 
   test("throws the last network error after timeout is exhausted", async () => {
     const networkError = new Error("connect ECONNREFUSED 127.0.0.1:3033");
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       throw networkError;
     });
 
@@ -51,7 +49,7 @@ describe("fetchWithRetry", () => {
 
   test("does not retry a 500 — the service answered, the render itself failed", async () => {
     let callCount = 0;
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       callCount++;
       return new Response("internal error", { status: 500 });
     });
@@ -68,7 +66,7 @@ describe("fetchWithRetry", () => {
     // wake a user-visible image-generation failure.
     const mockResponse = new Response("ok", { status: 200 });
     let callCount = 0;
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       callCount++;
       if (callCount < 3) return new Response("Application failed to respond", { status: 502 });
       return mockResponse;
@@ -83,7 +81,7 @@ describe("fetchWithRetry", () => {
   test("retries a 503 emitted while Chromium is still launching", async () => {
     const mockResponse = new Response("ok", { status: 200 });
     let callCount = 0;
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       callCount++;
       if (callCount < 2) {
         return new Response(JSON.stringify({ error: "Browser unavailable" }), { status: 503 });
@@ -100,7 +98,7 @@ describe("fetchWithRetry", () => {
   test("retries 408 and 504 but never a 4xx the payload caused", async () => {
     for (const status of [408, 504]) {
       let callCount = 0;
-      mock.method(globalThis, "fetch", async () => {
+      spyOn(globalThis, "fetch").mockImplementation(async () => {
         callCount++;
         if (callCount < 2) return new Response("", { status });
         return new Response("ok", { status: 200 });
@@ -108,21 +106,21 @@ describe("fetchWithRetry", () => {
       const result = await fetchWithRetry("http://test/", {}, 5000);
       assert.strictEqual(result.status, 200, `status ${status} should have been retried`);
       assert.strictEqual(callCount, 2);
-      mock.restoreAll();
+      mock.restore();
     }
 
     // 400 is a rejected payload and 429 is a limiter already shedding load —
     // both fail identically on retry, so neither is worth another attempt.
     for (const status of [400, 429]) {
       let callCount = 0;
-      mock.method(globalThis, "fetch", async () => {
+      spyOn(globalThis, "fetch").mockImplementation(async () => {
         callCount++;
         return new Response("nope", { status });
       });
       const result = await fetchWithRetry("http://test/", {}, 5000);
       assert.strictEqual(result.status, status);
       assert.strictEqual(callCount, 1, `status ${status} must not be retried`);
-      mock.restoreAll();
+      mock.restore();
     }
   });
 
@@ -130,7 +128,7 @@ describe("fetchWithRetry", () => {
     // The caller logs response.status/body on failure. Throwing here would
     // replace a diagnosable "502 from the edge" with a generic error.
     let callCount = 0;
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       callCount++;
       return new Response("Application failed to respond", { status: 502 });
     });
@@ -144,7 +142,7 @@ describe("fetchWithRetry", () => {
 
   test("breaks without sleeping when deadline expires during a failed fetch attempt", async () => {
     let fetchCallCount = 0;
-    mock.method(globalThis, "fetch", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
       fetchCallCount++;
       // Simulate a fetch that takes 50ms — longer than the 10ms overall timeout
       await new Promise((r) => setTimeout(r, 50));
@@ -164,7 +162,7 @@ describe("fetchWithRetry", () => {
   test("passes url and init options through to fetch, adding an AbortSignal", async () => {
     const mockResponse = new Response("ok", { status: 200 });
     const capturedArgs: any[] = [];
-    mock.method(globalThis, "fetch", async (...args: any[]) => {
+    spyOn(globalThis, "fetch").mockImplementation(async (...args: any[]) => {
       capturedArgs.push(args);
       return mockResponse;
     });

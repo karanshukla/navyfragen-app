@@ -14,41 +14,15 @@
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
-    "test": "node --experimental-test-module-mocks --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
-    "test:watch": "node --experimental-test-module-mocks --import ./src/tests/test-bootstrap.js --import tsx --watch --test src/**/*.test.ts",
-    "test:coverage": "c8 node --experimental-test-module-mocks --import ./src/tests/test-bootstrap.js --import tsx --test src/**/*.test.ts",
-    "test:bun": "bun src/tests/assert-bun-version.js && bun test --isolate --no-env-file --preload ./src/tests/test-bootstrap.js src/tests/",
-    "test:bun:watch": "bun src/tests/assert-bun-version.js && bun test --isolate --no-env-file --watch --preload ./src/tests/test-bootstrap.js src/tests/",
+    "test": "bun test --isolate --no-env-file --preload ./src/tests/test-bootstrap.js src/tests/",
+    "test:watch": "bun test --isolate --no-env-file --watch --preload ./src/tests/test-bootstrap.js src/tests/",
+    "test:coverage": "bun test --isolate --no-env-file --coverage --preload ./src/tests/test-bootstrap.js src/tests/",
     "publish-lexicons": "tsx --tsconfig tsconfig.json src/scripts/publish-lexicons.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
       "prettier --write",
       "oxlint --fix"
-    ]
-  },
-  "c8": {
-    "reporter": [
-      "text",
-      "lcov"
-    ],
-    "include": [
-      "src/**"
-    ],
-    "exclude": [
-      "src/lexicon/**",
-      "src/index.ts",
-      "src/lib/assert-fetch-node-patch.ts",
-      "src/auth/client.ts",
-      "src/auth/e2e-agent-store.ts",
-      "src/auth/storage.ts",
-      "src/auth/session.ts",
-      "src/database/db.ts",
-      "src/lib/id-resolver.ts",
-      "src/lib/env.ts",
-      "src/routes.ts",
-      "src/routes/*.ts",
-      "src/scripts/**"
     ]
   },
   "dependencies": {
@@ -65,7 +39,6 @@
     "@types/cookie-session": "^2.0.49",
     "@types/cryptr": "^4.0.3",
     "@types/web-push": "^3.6.4",
-    "better-sqlite3": "^12.11.1",
     "cookie-parser": "^1.4.7",
     "cookie-session": "^2.1.1",
     "cors": "^2.8.6",
@@ -87,18 +60,15 @@
   },
   "devDependencies": {
     "@atproto/lex-cli": "^0.10.6",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "1.3.14",
-    "@types/node": "^24.10.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/node": "^24.10.1",
     "@types/pg": "^8.20.0",
     "@types/serve-static": "^2.2.0",
-    "c8": "^12.0.0",
     "oxlint": "^1.75.0",
     "pino-pretty": "^13.1.3",
     "rimraf": "^6.1.3",
-    "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "typescript": "^7.0.2"
   }

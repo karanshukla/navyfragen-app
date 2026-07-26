@@ -5,9 +5,7 @@ import fs from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
-import { test, describe, before, after, beforeEach, afterEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { test, describe, beforeAll, afterAll, beforeEach, afterEach, mock } from "bun:test";
 
 // web-push is CJS whose named exports aren't statically detectable by Node's
 // ESM loader (cjs-module-lexer), so import the default and destructure.
@@ -19,44 +17,44 @@ import { NotificationService, createConcurrencyLimiter } from "../services/notif
 // Chainable DB builder mocks — match the pattern used across the server tests.
 function makeSelectBuilder(existing: any, rows: any[]) {
   return {
-    selectAll: mock.fn(function (this: any) {
+    selectAll: mock(function (this: any) {
       return this;
     }),
-    where: mock.fn(function (this: any) {
+    where: mock(function (this: any) {
       return this;
     }),
-    executeTakeFirst: mock.fn(async () => existing),
-    execute: mock.fn(async () => rows),
+    executeTakeFirst: mock(async () => existing),
+    execute: mock(async () => rows),
   };
 }
 
 function makeInsertBuilder() {
   return {
-    values: mock.fn(function (this: any) {
+    values: mock(function (this: any) {
       return this;
     }),
-    execute: mock.fn(async () => ({})),
+    execute: mock(async () => ({})),
   };
 }
 
 function makeDeleteBuilder() {
   return {
-    where: mock.fn(function (this: any) {
+    where: mock(function (this: any) {
       return this;
     }),
-    execute: mock.fn(async () => ({})),
+    execute: mock(async () => ({})),
   };
 }
 
 function makeUpdateBuilder() {
   return {
-    set: mock.fn(function (this: any) {
+    set: mock(function (this: any) {
       return this;
     }),
-    where: mock.fn(function (this: any) {
+    where: mock(function (this: any) {
       return this;
     }),
-    execute: mock.fn(async () => ({})),
+    execute: mock(async () => ({})),
   };
 }
 
@@ -80,19 +78,19 @@ describe("NotificationService", () => {
 
   beforeEach(() => {
     mockLogger = {
-      info: mock.fn(),
-      error: mock.fn(),
-      warn: mock.fn(),
-      debug: mock.fn(),
+      info: mock(),
+      error: mock(),
+      warn: mock(),
+      debug: mock(),
     };
     mockResolver = {
-      resolveDidToHandle: mock.fn(async () => "alice.test"),
+      resolveDidToHandle: mock(async () => "alice.test"),
     };
     mockDb = {
-      selectFrom: mock.fn(() => makeSelectBuilder(undefined, [])),
-      insertInto: mock.fn(() => makeInsertBuilder()),
-      deleteFrom: mock.fn(() => makeDeleteBuilder()),
-      updateTable: mock.fn(() => makeUpdateBuilder()),
+      selectFrom: mock(() => makeSelectBuilder(undefined, [])),
+      insertInto: mock(() => makeInsertBuilder()),
+      deleteFrom: mock(() => makeDeleteBuilder()),
+      updateTable: mock(() => makeUpdateBuilder()),
     };
     service = new NotificationService(mockDb, mockResolver, mockLogger);
   });
@@ -100,30 +98,30 @@ describe("NotificationService", () => {
   describe("saveSubscription", () => {
     test("inserts a new subscription when endpoint doesn't exist", async () => {
       const insertBuilder = makeInsertBuilder();
-      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, []));
-      mockDb.insertInto = mock.fn(() => insertBuilder);
+      mockDb.selectFrom = mock(() => makeSelectBuilder(undefined, []));
+      mockDb.insertInto = mock(() => insertBuilder);
 
       await service.saveSubscription("did:foo", "https://push.example/sub", "p256", "auth");
 
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
-      const valuesArg = insertBuilder.values.mock.calls[0].arguments[0];
+      const valuesArg = insertBuilder.values.mock.calls[0][0];
       assert.strictEqual(valuesArg.did, "did:foo");
       assert.strictEqual(valuesArg.endpoint, "https://push.example/sub");
     });
 
     test("updates an existing subscription instead of inserting", async () => {
       const updateBuilder = makeUpdateBuilder();
-      mockDb.selectFrom = mock.fn(() =>
+      mockDb.selectFrom = mock(() =>
         makeSelectBuilder({ endpoint: "https://push.example/sub" }, [])
       );
-      mockDb.insertInto = mock.fn(() => makeInsertBuilder());
-      mockDb.updateTable = mock.fn(() => updateBuilder);
+      mockDb.insertInto = mock(() => makeInsertBuilder());
+      mockDb.updateTable = mock(() => updateBuilder);
 
       await service.saveSubscription("did:foo", "https://push.example/sub", "newp256", "newauth");
 
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
       assert.strictEqual(mockDb.updateTable.mock.calls.length, 1);
-      const setArg = updateBuilder.set.mock.calls[0].arguments[0];
+      const setArg = updateBuilder.set.mock.calls[0][0];
       assert.strictEqual(setArg.p256dh, "newp256");
     });
   });
@@ -135,7 +133,7 @@ describe("NotificationService", () => {
     });
 
     test("no-ops when none of the accounts have an existing subscription", async () => {
-      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, []));
+      mockDb.selectFrom = mock(() => makeSelectBuilder(undefined, []));
       await service.syncSubscriptionsAcrossAccounts(["did:foo", "did:bar"]);
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
     });
@@ -144,14 +142,14 @@ describe("NotificationService", () => {
       const rows = [
         { did: "did:foo", endpoint: "https://push.example/dev", p256dh: "p256", auth: "auth" },
       ];
-      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, rows));
+      mockDb.selectFrom = mock(() => makeSelectBuilder(undefined, rows));
       const insertBuilder = makeInsertBuilder();
-      mockDb.insertInto = mock.fn(() => insertBuilder);
+      mockDb.insertInto = mock(() => insertBuilder);
 
       await service.syncSubscriptionsAcrossAccounts(["did:foo", "did:bar"]);
 
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
-      const valuesArg = insertBuilder.values.mock.calls[0].arguments[0];
+      const valuesArg = insertBuilder.values.mock.calls[0][0];
       assert.strictEqual(valuesArg.did, "did:bar");
       assert.strictEqual(valuesArg.endpoint, "https://push.example/dev");
       assert.strictEqual(valuesArg.p256dh, "p256");
@@ -162,9 +160,9 @@ describe("NotificationService", () => {
         { did: "did:foo", endpoint: "https://push.example/dev", p256dh: "p256", auth: "auth" },
         { did: "did:bar", endpoint: "https://push.example/dev", p256dh: "p256", auth: "auth" },
       ];
-      mockDb.selectFrom = mock.fn(() => makeSelectBuilder(undefined, rows));
+      mockDb.selectFrom = mock(() => makeSelectBuilder(undefined, rows));
       const insertBuilder = makeInsertBuilder();
-      mockDb.insertInto = mock.fn(() => insertBuilder);
+      mockDb.insertInto = mock(() => insertBuilder);
 
       await service.syncSubscriptionsAcrossAccounts(["did:foo", "did:bar"]);
 
@@ -175,7 +173,7 @@ describe("NotificationService", () => {
   describe("deleteSubscription", () => {
     test("deletes from push_subscription by did + endpoint", async () => {
       const deleteBuilder = makeDeleteBuilder();
-      mockDb.deleteFrom = mock.fn(() => deleteBuilder);
+      mockDb.deleteFrom = mock(() => deleteBuilder);
 
       await service.deleteSubscription("did:foo", "https://push.example/sub");
 
@@ -188,7 +186,7 @@ describe("NotificationService", () => {
   describe("deleteAllSubscriptionsForUser", () => {
     test("deletes all subscriptions for a did", async () => {
       const deleteBuilder = makeDeleteBuilder();
-      mockDb.deleteFrom = mock.fn(() => deleteBuilder);
+      mockDb.deleteFrom = mock(() => deleteBuilder);
 
       await service.deleteAllSubscriptionsForUser("did:foo");
 
@@ -278,10 +276,9 @@ describe("NotificationService", () => {
 
     // These tests exercise the real `web-push` `sendNotification` call against a
     // local HTTPS server (self-signed cert) rather than mocking the module, so
-    // they cover web-push's actual HTTP/encryption behavior end-to-end. (The
-    // test scripts now pass --experimental-test-module-mocks, so `mock.module()`
-    // is available — these could be converted to mocks later if the local-server
-    // setup becomes a maintenance burden.)
+    // they cover web-push's actual HTTP/encryption behavior end-to-end.
+    // (`mock.module()` is available under bun:test — these could be converted
+    // to mocks later if the local-server setup becomes a maintenance burden.)
     describe("against a local HTTPS push endpoint", () => {
       let server: https.Server;
       let port: number;
@@ -289,7 +286,7 @@ describe("NotificationService", () => {
       let prevEnv: { pub?: string; priv?: string; subj?: string };
       let prevGlobalAgent: typeof https.globalAgent;
 
-      before(() => {
+      beforeAll(() => {
         const certDir = fs.mkdtempSync(path.join(os.tmpdir(), "wp-test-certs-"));
         const keyPath = path.join(certDir, "key.pem");
         const certPath = path.join(certDir, "cert.pem");
@@ -341,7 +338,7 @@ describe("NotificationService", () => {
         });
       });
 
-      after(() => {
+      afterAll(() => {
         https.globalAgent = prevGlobalAgent;
         return new Promise<void>((resolve) => server.close(() => resolve()));
       });
@@ -359,7 +356,7 @@ describe("NotificationService", () => {
         process.env.VAPID_SUBJECT = "mailto:test@example.com";
 
         const subKeys = makeSubscriptionKeys();
-        mockDb.selectFrom = mock.fn(() =>
+        mockDb.selectFrom = mock(() =>
           makeSelectBuilder(undefined, [
             {
               did: "did:recipient",
@@ -385,7 +382,7 @@ describe("NotificationService", () => {
       });
 
       test("falls back to a generic no-op when handle resolution fails, but still sends", async () => {
-        mockResolver.resolveDidToHandle = mock.fn(async () => {
+        mockResolver.resolveDidToHandle = mock(async () => {
           throw new Error("resolution failed");
         });
 
@@ -397,7 +394,7 @@ describe("NotificationService", () => {
       test("deletes the subscription when the push service reports 410 Gone", async () => {
         nextStatus = 410;
         const deleteBuilder = makeDeleteBuilder();
-        mockDb.deleteFrom = mock.fn(() => deleteBuilder);
+        mockDb.deleteFrom = mock(() => deleteBuilder);
 
         await service.sendNewMessageNotification("did:recipient");
 
@@ -409,7 +406,7 @@ describe("NotificationService", () => {
       test("deletes the subscription when the push service reports 404 Not Found", async () => {
         nextStatus = 404;
         const deleteBuilder = makeDeleteBuilder();
-        mockDb.deleteFrom = mock.fn(() => deleteBuilder);
+        mockDb.deleteFrom = mock(() => deleteBuilder);
 
         await service.sendNewMessageNotification("did:recipient");
 
@@ -429,7 +426,7 @@ describe("NotificationService", () => {
         // A malformed subscription key fails web-push's own client-side validation
         // synchronously, before any network call — the resulting error has no
         // `statusCode` field, exercising the `undefined` fallback.
-        mockDb.selectFrom = mock.fn(() =>
+        mockDb.selectFrom = mock(() =>
           makeSelectBuilder(undefined, [
             {
               did: "did:recipient",

@@ -70,22 +70,94 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Installer swapped to bun (issue #250); runtime stays Node — this is the
-      # production-truth baseline. The bun-runtime canary lives in its own job.
+      # Bun is both the installer (#250) and the server test runtime. The Node
+      # `node --test` path and the runtime-agnostic mock shim were retired in
+      # #288 — the suite now runs wholesale under `bun test`, and coverage comes
+      # from Bun's built-in reporter (#287, configured in server/bunfig.toml).
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
       - name: Install dependencies
-        # Native addons (better-sqlite3, sharp) need their build scripts; bun
-        # blocks dep lifecycle scripts by default, so trust the ones we need.
+        # Native addons (sharp) need their build scripts; bun blocks dep
+        # lifecycle scripts by default, so trust the ones we need. (better-sqlite3
+        # was removed in #288 — SQLite now runs through bun:sqlite, which ships
+        # inside the Bun runtime and needs no native build.)
         run: bun install --frozen-lockfile
+
+      # Runtime probes that guard Bun-specific regressions not covered by the
+      # test suite itself. Both gate the job.
+      - name: Probe SQLite data layer + OAuth handle resolution under Bun
+        id: probe
+        working-directory: server
+        env:
+          # createDb's SQLite branch pulls #/lib/env, which requires these at
+          # load time. Mirror src/tests/test-bootstrap.js's dummy values.
+          NODE_ENV: test
+          OAUTH_TOKEN_SECRET: 0123456789abcdef0123456789abcdef
+        run: |
+          {
+            echo "## Bun runtime probes"
+            echo
+          } > "$GITHUB_STEP_SUMMARY"
+
+          # SQLite data layer — the bun:sqlite adapter bridged onto Kysely
+          # (#263). The bun command exits non-zero on any failure (mismatch or
+          # thrown error) and prints "OK" on success. Gate on the exit code
+          # (authoritative) and confirm "OK" appeared (the dotenv banner can
+          # prepend lines).
+          set +e
+          sqlite_out=$(bun -e "import('./src/database/db.ts').then(async ({createDb,migrateToLatest})=>{const db=await createDb(':memory:');await migrateToLatest(db);await db.insertInto('message').values({tid:'t1',message:'hi',createdAt:'2024-01-01',recipient:'did:web:x'}).execute();const row=await db.selectFrom('message').selectAll().executeTakeFirstOrThrow();await db.destroy();if(row.tid!=='t1')throw new Error('row mismatch '+JSON.stringify(row));console.log('OK',JSON.stringify(row))}).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1)
+          sqlite_exit=$?
+          set -e
+          echo "$sqlite_out" | tee /dev/stderr >/dev/null
+          {
+            echo "<details><summary><code>bun-sqlite-data-layer</code> (#263)</summary>"
+            echo ""
+            echo '```'
+            echo "$sqlite_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$sqlite_exit" -ne 0 ] || ! echo "$sqlite_out" | grep -q 'OK '; then
+            echo "::error::SQLite data layer did not pass under Bun (regression of #263)"
+            exit 1
+          fi
+
+          # OAuth handle resolution — the one production surface with no other CI
+          # coverage. E2E signs in with an app password and never resolves a
+          # handle, so this path (patched fetch-node → unicastFetchWrap) is only
+          # exercised here. Its Bun failure mode is silent (resolution returns
+          # undefined, surfacing only as "does not resolve to a DID"), so assert
+          # a did: string comes back rather than trusting the call not to throw.
+          set +e
+          probe_out=$(bun -e "
+            import { AtprotoHandleResolverNode } from '@atproto/oauth-client-node';
+            const did = await new AtprotoHandleResolverNode({}).resolve('bsky.app');
+            if (typeof did !== 'string' || !did.startsWith('did:')) {
+              console.error('FAIL handle resolved to', JSON.stringify(did));
+              process.exit(1);
+            }
+            console.log('OK oauth-handle-resolution bsky.app ->', did);
+          " 2>&1)
+          probe_exit=$?
+          set -e
+          echo "$probe_out"
+          {
+            echo "<details><summary><code>oauth-handle-resolution</code> (patched fetch-node, #270)</summary>"
+            echo ""
+            echo '```'
+            echo "$probe_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$probe_exit" -ne 0 ]; then
+            echo "::error::OAuth handle resolution failed under Bun — see bluesky-social/atproto#3511"
+            exit 1
+          fi
 
       - name: Run server tests with coverage
         id: server-tests
@@ -101,7 +173,8 @@ jobs:
             const fs = require('fs');
             const output = fs.readFileSync('/tmp/server-test-output.txt', 'utf8');
 
-            // c8 text reporter outputs a table starting with a "---|---" separator line
+            // Bun's text reporter outputs a table starting with a "---|---" separator
+            // line, the same shape c8 produced — the regex is unchanged.
             const coverageIdx = output.search(/^-+\|/m);
             if (coverageIdx === -1) {
               console.log('No coverage data found in output');
@@ -113,7 +186,7 @@ jobs:
             const coverageText = output.slice(coverageIdx).trim();
 
             const marker = '<!-- server-coverage-comment -->';
-            const body = `${marker}\n### Server Test Coverage\n\n\`\`\`\n${coverageText}\n\`\`\``;
+            const body = `${marker}\n### Server Test Coverage (bun:test — lines & functions; Bun reports no branch data)\n\n\`\`\`\n${coverageText}\n\`\`\``;
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -148,173 +221,17 @@ jobs:
           flag-name: server
           base-path: server
           parallel: true
+          # Bun's lcov carries line + function coverage only (no branch records),
+          # so the server flag reports branch% as 0/N/A on Coveralls. The real
+          # gate is Bun's own `coverageThreshold = 0.97` in bunfig.toml (which
+          # fails the run below threshold); this Coveralls gate is a secondary
+          # line-of-coverage defense and tolerates the missing branch metric.
           coverage-threshold-percent: 97
 
       - name: Fail if tests failed
         if: steps.server-tests.outcome == 'failure'
         run: exit 1
 
-  # Bun-runtime gate for the server (issues #251/#263/#269). Two real checks:
-  #   1. SQLite data layer probe (#263) — createDb → migrate → insert/select.
-  #   2. The full server test suite under `bun test` (#269) — node:test's hooks
-  #      plus the runtime-agnostic mock shim. Both gate the job; a regression in
-  #      either fails it. (The suite was previously non-blocking/informational
-  #      because Bun's runner didn't implement node:test's mock API; the shim in
-  #      src/tests/mock-shim.ts resolved that.)
-  server-tests-bun-runtime:
-    name: Server Tests (Bun runtime canary)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Probe native/SDK deps + SQLite data layer under Bun runtime
-        id: probe
-        working-directory: server
-        env:
-          # createDb's SQLite branch pulls #/lib/env, which requires these at
-          # load time. Mirror src/tests/test-bootstrap.js's dummy values.
-          NODE_ENV: test
-          OAUTH_TOKEN_SECRET: 0123456789abcdef0123456789abcdef
-        run: |
-          {
-            echo "## Bun runtime canary — dependency probe"
-            echo
-            echo "Each line shows whether the module loads + exercises under Bun."
-            echo
-          } > "$GITHUB_STEP_SUMMARY"
-
-          # SQLite data layer — the unblocked path from #263. The bun command
-          # exits non-zero on any failure (mismatch or thrown error), and prints
-          # "OK" on success. We gate on the exit code (authoritative) and also
-          # confirm "OK" appeared, since the dotenv banner can prepend lines.
-          set +e
-          sqlite_out=$(bun -e "import('./src/database/db.ts').then(async ({createDb,migrateToLatest})=>{const db=await createDb(':memory:');await migrateToLatest(db);await db.insertInto('message').values({tid:'t1',message:'hi',createdAt:'2024-01-01',recipient:'did:web:x'}).execute();const row=await db.selectFrom('message').selectAll().executeTakeFirstOrThrow();await db.destroy();if(row.tid!=='t1')throw new Error('row mismatch '+JSON.stringify(row));console.log('OK',JSON.stringify(row))}).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1)
-          sqlite_exit=$?
-          set -e
-          echo "$sqlite_out" | tee /dev/stderr >/dev/null
-          {
-            echo "<details><summary><code>bun-sqlite-data-layer</code> (acceptance #263)</summary>"
-            echo ""
-            echo '```'
-            echo "$sqlite_out"
-            echo '```'
-            echo ""
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # The remaining probes are informational; they don't gate the job.
-          for spec in sharp web-push; do
-            echo "<details><summary><code>${spec}</code></summary>" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            if [ "$spec" = "sharp" ]; then
-              bun -e "import('sharp').then(m=>console.log('OK sharp',m.default.versions.sharp)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1 || true
-            elif [ "$spec" = "web-push" ]; then
-              bun -e "import('web-push').then(m=>console.log('OK web-push',typeof m.generateVAPIDKeys)).catch(e=>{console.error('FAIL',e.message);process.exit(1)})" 2>&1 || true
-            fi
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
-          done
-
-          # Gate the SQLite path. The bun command's exit code is authoritative
-          # (non-zero means it threw or the row mismatched); the OK-string check
-          # is a belt-and-suspenders confirmation. A regression here fails the
-          # job, as does a suite failure in the bun-test step below.
-          if [ "$sqlite_exit" -ne 0 ] || ! echo "$sqlite_out" | grep -q 'OK '; then
-            echo "::error::SQLite data layer did not pass under Bun (regression of #263)"
-            exit 1
-          fi
-
-      # The OAuth login path is the one production surface with no other CI
-      # coverage: E2E signs in through /auth/e2e-login with an app password, so
-      # it never resolves a handle. That path runs through the patched
-      # fetch-node (safeFetchWrap -> unicastFetchWrap), and its known Bun failure
-      # mode is silent — bluesky-social/atproto#3511 reports resolution quietly
-      # returning undefined, which the caller reports as "does not resolve to a
-      # DID". Resolve a real handle so a regression there is loud.
-      - name: Probe OAuth handle resolution under Bun runtime
-        id: oauth-probe
-        working-directory: server
-        run: |
-          set +e
-          # AtprotoHandleResolverNode is re-exported by @atproto/oauth-client-node
-          # (a direct dependency) and is the same resolver the login flow uses.
-          # Assert the shape rather than a fixed DID: the failure being guarded
-          # against returns undefined, and pinning a value would break this step
-          # if the account were ever migrated.
-          probe_out=$(bun -e "
-            import { AtprotoHandleResolverNode } from '@atproto/oauth-client-node';
-            const did = await new AtprotoHandleResolverNode({}).resolve('bsky.app');
-            if (typeof did !== 'string' || !did.startsWith('did:')) {
-              console.error('FAIL handle resolved to', JSON.stringify(did));
-              process.exit(1);
-            }
-            console.log('OK oauth-handle-resolution bsky.app ->', did);
-          " 2>&1)
-          probe_exit=$?
-          set -e
-          echo "$probe_out"
-          {
-            echo "<details><summary><code>oauth-handle-resolution</code> (patched fetch-node, #270)</summary>"
-            echo ""
-            echo '```'
-            echo "$probe_out"
-            echo '```'
-            echo ""
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$probe_exit" -ne 0 ]; then
-            echo "::error::OAuth handle resolution failed under Bun — see bluesky-social/atproto#3511"
-            exit 1
-          fi
-
-      - name: Run server test suite under Bun runtime
-        id: bun-tests
-        working-directory: server
-        run: |
-          # The full server suite now runs green under Bun (#269). Run it through
-          # the package script so CI and a developer's `bun run test:bun` cannot
-          # drift apart — the Bun-specific flags and their rationale live there.
-          set +e
-          bun run test:bun > /tmp/bun-runtime-test-output.txt 2>&1
-          suite_exit=$?
-          set -e
-          {
-            echo "<details><summary>Server test suite under Bun runtime</summary>"
-            echo ""
-            echo '```'
-            tail -n 40 /tmp/bun-runtime-test-output.txt
-            echo '```'
-            echo ""
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
-          # Gate on the exit code, which is the only signal that covers both a
-          # failing test and a file that dies before its tests register (a load
-          # error still prints "0 fail"). Matching the summary text instead would
-          # also read "10 fail" as a pass, since it contains "0 fail".
-          if [ "$suite_exit" -ne 0 ]; then
-            echo "::error::Server test suite failed under the Bun runtime (regression of #269)"
-            exit 1
-          fi
-
-      - name: Upload canary output
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bun-runtime-canary-output
-          path: /tmp/bun-runtime-test-output.txt
-          retention-days: 14
-          if-no-files-found: ignore
 
   opengraph-tests:
     name: OpenGraph Service (Go) Tests

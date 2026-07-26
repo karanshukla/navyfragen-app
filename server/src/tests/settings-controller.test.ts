@@ -1,40 +1,38 @@
 import assert from "node:assert";
-import { test, describe, afterEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { test, describe, afterEach, mock } from "bun:test";
 
 import { SettingsController } from "../controllers/settings-controller";
 
 describe("SettingsController", () => {
   afterEach(() => {
-    mock.restoreAll();
+    mock.clearAllMocks();
   });
 
   function makeCtx(): any {
     return {
       oauthClient: {
-        restore: mock.fn(async () => ({ sub: "did:foo" })),
+        restore: mock(async () => ({ sub: "did:foo" })),
       },
       idResolver: {},
       logger: {
-        info: mock.fn(),
-        error: mock.fn(),
-        warn: mock.fn(),
-        debug: mock.fn(),
+        info: mock(),
+        error: mock(),
+        warn: mock(),
+        debug: mock(),
       },
     };
   }
 
   function makeService(overrides: any = {}): any {
     return {
-      getUserSettings: mock.fn(async () => ({ pdsSyncEnabled: true, imageTheme: "default" })),
-      createDefaultSettings: mock.fn(async () => ({
+      getUserSettings: mock(async () => ({ pdsSyncEnabled: true, imageTheme: "default" })),
+      createDefaultSettings: mock(async () => ({
         pdsSyncEnabled: false,
         imageTheme: "default",
       })),
-      getStats: mock.fn(async () => ({ messageCount: 0 })),
-      getPdsInfo: mock.fn(async () => ({ pdsUrl: "https://bsky.social", count: 0 })),
-      updateSettings: mock.fn(async () => ({ pdsSyncEnabled: true, imageTheme: "compressed" })),
+      getStats: mock(async () => ({ messageCount: 0 })),
+      getPdsInfo: mock(async () => ({ pdsUrl: "https://bsky.social", count: 0 })),
+      updateSettings: mock(async () => ({ pdsSyncEnabled: true, imageTheme: "compressed" })),
       ...overrides,
     };
   }
@@ -45,8 +43,8 @@ describe("SettingsController", () => {
 
   function makeRes(): any {
     const res: any = {};
-    res.status = mock.fn(() => res);
-    res.json = mock.fn(() => res);
+    res.status = mock(() => res);
+    res.json = mock(() => res);
     return res;
   }
 
@@ -56,7 +54,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.getSettings(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(res.status.mock.calls[0][0], 403);
     });
 
     test("returns existing settings when found", async () => {
@@ -68,7 +66,7 @@ describe("SettingsController", () => {
     });
 
     test("creates and returns default settings when none exist", async () => {
-      const svc = makeService({ getUserSettings: mock.fn(async () => null) });
+      const svc = makeService({ getUserSettings: mock(async () => null) });
       const ctx = makeCtx();
       const controller = new SettingsController(svc, ctx.logger, ctx);
       const res = makeRes();
@@ -78,7 +76,7 @@ describe("SettingsController", () => {
 
     test("returns 500 on error", async () => {
       const svc = makeService({
-        getUserSettings: mock.fn(async () => {
+        getUserSettings: mock(async () => {
           throw new Error("db");
         }),
       });
@@ -86,7 +84,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(svc, ctx.logger, ctx);
       const res = makeRes();
       await controller.getSettings(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.status.mock.calls[0][0], 500);
     });
   });
 
@@ -96,7 +94,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.getStats(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(res.status.mock.calls[0][0], 403);
     });
 
     test("returns stats on success", async () => {
@@ -104,12 +102,12 @@ describe("SettingsController", () => {
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.getStats(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { messageCount: 0 });
+      assert.deepStrictEqual(res.json.mock.calls[0][0], { messageCount: 0 });
     });
 
     test("returns 500 on error", async () => {
       const svc = makeService({
-        getStats: mock.fn(async () => {
+        getStats: mock(async () => {
           throw new Error("db");
         }),
       });
@@ -117,7 +115,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(svc, ctx.logger, ctx);
       const res = makeRes();
       await controller.getStats(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.status.mock.calls[0][0], 500);
     });
   });
 
@@ -127,16 +125,16 @@ describe("SettingsController", () => {
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.getPdsInfo(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(res.status.mock.calls[0][0], 403);
     });
 
     test("returns 401 when agent is null", async () => {
       const ctx = makeCtx();
-      ctx.oauthClient.restore = mock.fn(async () => null);
+      ctx.oauthClient.restore = mock(async () => null);
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.getPdsInfo(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 401);
+      assert.strictEqual(res.status.mock.calls[0][0], 401);
     });
 
     test("returns PDS info on success", async () => {
@@ -144,7 +142,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.getPdsInfo(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+      assert.deepStrictEqual(res.json.mock.calls[0][0], {
         pdsUrl: "https://bsky.social",
         count: 0,
       });
@@ -152,7 +150,7 @@ describe("SettingsController", () => {
 
     test("returns 500 on error", async () => {
       const svc = makeService({
-        getPdsInfo: mock.fn(async () => {
+        getPdsInfo: mock(async () => {
           throw new Error("err");
         }),
       });
@@ -160,7 +158,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(svc, ctx.logger, ctx);
       const res = makeRes();
       await controller.getPdsInfo(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.status.mock.calls[0][0], 500);
     });
   });
 
@@ -170,7 +168,7 @@ describe("SettingsController", () => {
       const controller = new SettingsController(makeService(), ctx.logger, ctx);
       const res = makeRes();
       await controller.updateSettings(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(res.status.mock.calls[0][0], 403);
     });
 
     test("returns updated settings on success", async () => {
@@ -181,7 +179,7 @@ describe("SettingsController", () => {
         makeReq({ body: { pdsSyncEnabled: true, imageTheme: "compressed" } }),
         res
       );
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+      assert.deepStrictEqual(res.json.mock.calls[0][0], {
         pdsSyncEnabled: true,
         imageTheme: "compressed",
       });
@@ -196,7 +194,7 @@ describe("SettingsController", () => {
       const res = makeRes();
       await controller.updateSettings(makeReq({ body: { inboxEnabled: false } }), res);
 
-      const passed = svc.updateSettings.mock.calls[0].arguments[1];
+      const passed = svc.updateSettings.mock.calls[0][1];
       assert.deepStrictEqual(passed, {
         pdsSyncEnabled: undefined,
         imageTheme: undefined,
@@ -217,7 +215,7 @@ describe("SettingsController", () => {
         makeReq({ body: { customPrompt: null, touchpointLocale: "es" } }),
         res
       );
-      const passed = svc.updateSettings.mock.calls[0].arguments[1];
+      const passed = svc.updateSettings.mock.calls[0][1];
       assert.strictEqual(passed.customPrompt, null); // null, not undefined
       assert.strictEqual(passed.touchpointLocale, "es");
     });
@@ -228,13 +226,13 @@ describe("SettingsController", () => {
       const controller = new SettingsController(svc, ctx.logger, ctx);
       const res = makeRes();
       await controller.updateSettings(makeReq({ body: { profanityFilterEnabled: true } }), res);
-      const passed = svc.updateSettings.mock.calls[0].arguments[1];
+      const passed = svc.updateSettings.mock.calls[0][1];
       assert.strictEqual(passed.profanityFilterEnabled, true);
     });
 
     test("returns 500 on error", async () => {
       const svc = makeService({
-        updateSettings: mock.fn(async () => {
+        updateSettings: mock(async () => {
           throw new Error("db");
         }),
       });
@@ -245,7 +243,7 @@ describe("SettingsController", () => {
         makeReq({ body: { pdsSyncEnabled: false, imageTheme: "default" } }),
         res
       );
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.status.mock.calls[0][0], 500);
     });
   });
 });

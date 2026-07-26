@@ -66,9 +66,9 @@ navyfragen-app/
 - [Bun](https://bun.sh) (package manager / installer — see [issue #250](https://github.com/karanshukla/navyfragen-app/issues/250))
 - A modern web browser
 
-> **Runtime note:** Bun is the *installer* only. Node remains the runtime for the client (Vite dev/build, Vitest) and the production server. The Bun-runtime canary for the server is tracked separately in [issue #251](https://github.com/karanshukla/navyfragen-app/issues/251).
+> **Runtime note:** Bun is the *installer* and the **server runtime** (dev, production, and tests — #268/#288). Node remains the runtime for the client only (Vite dev/build, Vitest).
 
-> **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `better-sqlite3` and `sharp`). WSL2 is recommended for the best experience.
+> **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `sharp`). WSL2 is recommended for the best experience. (`better-sqlite3` was removed in #288 when the Node code path was retired — SQLite now runs through `bun:sqlite`, which ships inside the Bun runtime and needs no native build.)
 
 ### Installation
 

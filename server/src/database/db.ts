@@ -334,12 +334,12 @@ migrations["009"] = {
 };
 
 // Kysely's SqliteDialect is duck-typed against a tiny Database/Statement
-// surface (prepare(sql) -> { reader, all, run, iterate } + close()) that
-// better-sqlite3 happens to satisfy. bun:sqlite exposes the same synchronous
-// API with two deltas: its Statement has no `reader` flag, and its methods
-// take variadic params instead of an array. The adapter below bridges those,
-// letting Kysely's stock SqliteDialect drive bun:sqlite under the Bun runtime
-// so `better-sqlite3` is never imported there (it's unsupported by Bun).
+// surface (prepare(sql) -> { reader, all, run, iterate } + close()). bun:sqlite
+// exposes the same synchronous API with two deltas: its Statement has no
+// `reader` flag, and its methods take variadic params instead of an array. The
+// adapter below bridges those, letting Kysely's stock SqliteDialect drive
+// bun:sqlite (the server's only SQLite driver now that the Node path and its
+// better-sqlite3 dependency were retired in #288).
 interface KyselySqliteStatement {
   reader: boolean;
   all(parameters: ReadonlyArray<unknown>): unknown[];
@@ -394,8 +394,6 @@ class BunSqliteDatabase implements KyselySqliteDatabase {
   }
 }
 
-const isBunRuntime = typeof process.versions.bun !== "undefined";
-
 export const createDb = async (location: string): Promise<Database> => {
   if (env.POSTGRESQL_URL) {
     return new Kysely<DatabaseSchema>({
@@ -406,22 +404,15 @@ export const createDb = async (location: string): Promise<Database> => {
       }),
     });
   }
-  // Under Bun use bun:sqlite (better-sqlite3 is unsupported there); under
-  // Node keep better-sqlite3. Both present the same Database/Statement
-  // surface to Kysely's SqliteDialect, so behavior is identical. Imports are
-  // lazy so the unused native binary is never loaded.
-  if (isBunRuntime) {
-    const { Database } = await import("bun:sqlite");
-    return new Kysely<DatabaseSchema>({
-      dialect: new SqliteDialect({
-        database: new BunSqliteDatabase(new Database(location)),
-      }),
-    });
-  }
-  const { default: SqliteDb } = await import("better-sqlite3");
+  // The server runs exclusively under Bun (dev, prod, CI — #268/#288), so the
+  // SQLite driver is `bun:sqlite` unconditionally, bridged onto Kysely's stock
+  // `SqliteDialect` via the `BunSqliteDatabase`/`BunSqliteStatement` adapter
+  // above. `better-sqlite3` (the former Node driver) was removed in #288 when
+  // the Node code path was retired; the Node-only branch is gone with it.
+  const { Database } = await import("bun:sqlite");
   return new Kysely<DatabaseSchema>({
     dialect: new SqliteDialect({
-      database: new SqliteDb(location),
+      database: new BunSqliteDatabase(new Database(location)),
     }),
   });
 };
