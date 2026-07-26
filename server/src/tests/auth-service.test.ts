@@ -1,9 +1,7 @@
 import assert from "node:assert";
-import { test, describe, before, after, beforeEach, afterEach } from "node:test";
+import { test, describe, beforeAll, afterAll, beforeEach, afterEach, mock } from "bun:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
 
 import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 
@@ -19,44 +17,38 @@ import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 let AuthService: typeof import("../services/auth-service").AuthService;
 let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 
-before(async () => {
-  mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
+beforeAll(async () => {
+  mockAgent = { getProfile: mock(async () => ({ data: undefined })) };
   // Spread the real module so every export it has keeps working and only
-  // initializeAgentForDid is swapped. node:test scopes mock.module to this file
-  // and Bun's --isolate gives each file a fresh registry, but neither is load
-  // bearing this way: a Bun build that doesn't understand --isolate ignores the
-  // flag silently rather than erroring, and a partial mock leaking into the
-  // files that import the real initializeAgentFromSession takes them out with a
-  // missing-export SyntaxError. Re-exporting the real binding costs no coverage
-  // — it is the same function session-agent.test.ts already exercises.
-  /* v8 ignore next */ // tsx dynamic-import interop branch; see the note below
+  // initializeAgentForDid is swapped. Bun's `mock.module` is process-global and
+  // not restorable (`clearAllMocks` clears mock call history but does not unmock
+  // modules), so `--isolate` (passed in the package script) gives each test
+  // file a fresh module registry. Do not let `--isolate` be the only thing
+  // keeping this mock contained: spreading the real binding means a partial
+  // mock can't take out files that import the real initializeAgentFromSession
+  // (e.g. session-agent.test.ts) with a missing-export SyntaxError. Re-exporting
+  // the real binding costs no coverage — it is the same function session-agent
+  // .test.ts already exercises.
   const realSessionAgent = await import("../auth/session-agent");
-  await mock.module("../auth/session-agent", {
-    exports: {
-      ...realSessionAgent,
-      initializeAgentForDid: async (ctx: any, did: string) => {
-        const restored = await ctx.oauthClient.restore(did);
-        if (!restored) return null;
-        return mockAgent;
-      },
+  mock.module("../auth/session-agent", () => ({
+    ...realSessionAgent,
+    initializeAgentForDid: async (ctx: any, did: string) => {
+      const restored = await ctx.oauthClient.restore(did);
+      if (!restored) return null;
+      return mockAgent;
     },
-  });
-  // v8 ignore: tsx's ESM interop shim for dynamic `import()` compiles to a
-  // branch (module-namespace vs. default-only) that's structurally
-  // unreachable here — the target path is static and always resolves the
-  // same way.
-  /* v8 ignore next */
+  }));
   const mod = await import("../services/auth-service");
   AuthService = mod.AuthService;
 });
 
-// Drop the mock.fn call history and, under Node, any method spies this file
-// registered. Note that neither runner unmocks modules here — node:test tears
-// its module mocks down per file on its own, and Bun's clearAllMocks leaves the
-// module registry alone — so this is cleanup, not the thing keeping the
-// session-agent mock out of the other files.
-after(() => {
-  mock.restoreAll();
+// Drop the mock() call history. Bun's `clearAllMocks` does not unmock modules
+// (the session-agent mock above stays registered for the process), but
+// `--isolate` gives each test file its own module registry so the mock never
+// leaks into other files regardless. This is call-history cleanup, not the
+// thing keeping the session-agent mock contained.
+afterAll(() => {
+  mock.clearAllMocks();
 });
 
 describe("AuthService", () => {
@@ -66,24 +58,24 @@ describe("AuthService", () => {
   function makeMockCtx(overrides: any = {}) {
     return {
       oauthClient: {
-        authorize: mock.fn(async () => new URL("https://example.com/redirect")),
-        revoke: mock.fn(async () => {}),
-        callback: mock.fn(async () => ({ session: { did: "did:foo" } })),
+        authorize: mock(async () => new URL("https://example.com/redirect")),
+        revoke: mock(async () => {}),
+        callback: mock(async () => ({ session: { did: "did:foo" } })),
         clientMetadata: { foo: "bar" },
       },
       db: {
-        deleteFrom: mock.fn(() => ({
-          where: mock.fn(function (this: any) {
+        deleteFrom: mock(() => ({
+          where: mock(function (this: any) {
             return this as any;
           }),
-          execute: mock.fn(async () => ({})),
+          execute: mock(async () => ({})),
         })),
       },
       logger: {
-        error: mock.fn(),
-        warn: mock.fn(),
-        info: mock.fn(),
-        debug: mock.fn(),
+        error: mock(),
+        warn: mock(),
+        info: mock(),
+        debug: mock(),
       },
       ...overrides,
     };
@@ -105,7 +97,7 @@ describe("AuthService", () => {
   });
 
   test("getOAuthRedirectUrl re-throws OAuthResolverError message", async () => {
-    ctx.oauthClient.authorize = mock.fn(async () => {
+    ctx.oauthClient.authorize = mock(async () => {
       throw new OAuthResolverError("handle not found");
     });
     await assert.rejects(
@@ -115,7 +107,7 @@ describe("AuthService", () => {
   });
 
   test("getOAuthRedirectUrl throws generic error for non-OAuthResolverError", async () => {
-    ctx.oauthClient.authorize = mock.fn(async () => {
+    ctx.oauthClient.authorize = mock(async () => {
       throw new Error("unexpected");
     });
     await assert.rejects(
@@ -147,7 +139,7 @@ describe("AuthService", () => {
       await service.revokeSession("did:e2e");
       assert.strictEqual(ctx.oauthClient.revoke.mock.calls.length, 0);
       assert.strictEqual(ctx.db.deleteFrom.mock.calls.length, 1);
-      assert.strictEqual(ctx.db.deleteFrom.mock.calls[0].arguments[0], "auth_session");
+      assert.strictEqual(ctx.db.deleteFrom.mock.calls[0][0], "auth_session");
     });
   });
 
@@ -158,14 +150,14 @@ describe("AuthService", () => {
   });
 
   test("findUserByDid returns user", async () => {
-    ctx.db.selectFrom = mock.fn(() => ({
-      selectAll: mock.fn(function (this: any) {
+    ctx.db.selectFrom = mock(() => ({
+      selectAll: mock(function (this: any) {
         return this as any;
       }),
-      where: mock.fn(function (this: any) {
+      where: mock(function (this: any) {
         return this as any;
       }),
-      executeTakeFirst: mock.fn(async () => ({ did: "did:foo" })),
+      executeTakeFirst: mock(async () => ({ did: "did:foo" })),
     }));
     const user = await service.findUserByDid("did:foo");
     assert.deepStrictEqual(user, { did: "did:foo" });
@@ -173,46 +165,46 @@ describe("AuthService", () => {
 
   describe("checkSession", () => {
     test("returns null when no db session exists", async () => {
-      ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
           return this as any;
         }),
-        where: mock.fn(function (this: any) {
+        where: mock(function (this: any) {
           return this as any;
         }),
-        executeTakeFirst: mock.fn(async () => undefined),
+        executeTakeFirst: mock(async () => undefined),
       }));
       const result = await service.checkSession("did:foo");
       assert.strictEqual(result, null);
     });
 
     test("returns null when oauthClient.restore returns null (no agent)", async () => {
-      ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
           return this as any;
         }),
-        where: mock.fn(function (this: any) {
+        where: mock(function (this: any) {
           return this as any;
         }),
-        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+        executeTakeFirst: mock(async () => ({ key: "did:foo" })),
       }));
-      ctx.oauthClient.restore = mock.fn(async () => null);
+      ctx.oauthClient.restore = mock(async () => null);
       const result = await service.checkSession("did:foo");
       assert.strictEqual(result, null);
     });
 
     test("returns the mapped profile when getProfile resolves with data", async () => {
-      ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
           return this as any;
         }),
-        where: mock.fn(function (this: any) {
+        where: mock(function (this: any) {
           return this as any;
         }),
-        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+        executeTakeFirst: mock(async () => ({ key: "did:foo" })),
       }));
-      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
-      mockAgent.getProfile = mock.fn(async () => ({
+      ctx.oauthClient.restore = mock(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock(async () => ({
         data: {
           did: "did:foo",
           handle: "foo.bsky.social",
@@ -233,23 +225,23 @@ describe("AuthService", () => {
         banner: "https://example.com/b.png",
         createdAt: "2024-01-01T00:00:00.000Z",
       });
-      assert.deepStrictEqual(mockAgent.getProfile.mock.calls[0].arguments[0], {
+      assert.deepStrictEqual(mockAgent.getProfile.mock.calls[0][0], {
         actor: "did:foo",
       });
     });
 
     test("coerces absent optional profile fields to empty string / undefined", async () => {
-      ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
           return this as any;
         }),
-        where: mock.fn(function (this: any) {
+        where: mock(function (this: any) {
           return this as any;
         }),
-        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+        executeTakeFirst: mock(async () => ({ key: "did:foo" })),
       }));
-      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
-      mockAgent.getProfile = mock.fn(async () => ({
+      ctx.oauthClient.restore = mock(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock(async () => ({
         data: {
           did: "did:foo",
           handle: "foo.bsky.social",
@@ -273,33 +265,33 @@ describe("AuthService", () => {
     });
 
     test("returns null when getProfile resolves but data is falsy", async () => {
-      ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
           return this as any;
         }),
-        where: mock.fn(function (this: any) {
+        where: mock(function (this: any) {
           return this as any;
         }),
-        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+        executeTakeFirst: mock(async () => ({ key: "did:foo" })),
       }));
-      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
-      mockAgent.getProfile = mock.fn(async () => ({ data: null }));
+      ctx.oauthClient.restore = mock(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock(async () => ({ data: null }));
       const result = await service.checkSession("did:foo");
       assert.strictEqual(result, null);
     });
 
     test("rethrows when getProfile rejects", async () => {
-      ctx.db.selectFrom = mock.fn(() => ({
-        selectAll: mock.fn(function (this: any) {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
           return this as any;
         }),
-        where: mock.fn(function (this: any) {
+        where: mock(function (this: any) {
           return this as any;
         }),
-        executeTakeFirst: mock.fn(async () => ({ key: "did:foo" })),
+        executeTakeFirst: mock(async () => ({ key: "did:foo" })),
       }));
-      ctx.oauthClient.restore = mock.fn(async () => ({ sub: "did:foo" }));
-      mockAgent.getProfile = mock.fn(async () => {
+      ctx.oauthClient.restore = mock(async () => ({ sub: "did:foo" }));
+      mockAgent.getProfile = mock(async () => {
         throw new Error("network down");
       });
       await assert.rejects(() => service.checkSession("did:foo"), /network down/);
@@ -311,14 +303,14 @@ describe("AuthService", () => {
       });
 
       test("returns a synthetic profile built from the stored E2E handle", async () => {
-        ctx.db.selectFrom = mock.fn(() => ({
-          selectAll: mock.fn(function (this: any) {
+        ctx.db.selectFrom = mock(() => ({
+          selectAll: mock(function (this: any) {
             return this as any;
           }),
-          where: mock.fn(function (this: any) {
+          where: mock(function (this: any) {
             return this as any;
           }),
-          executeTakeFirst: mock.fn(async () => ({ key: "did:e2e" })),
+          executeTakeFirst: mock(async () => ({ key: "did:e2e" })),
         }));
         setE2EAgent("did:e2e", {} as any, "e2e-user.bsky.social");
 
@@ -336,14 +328,14 @@ describe("AuthService", () => {
       });
 
       test("falls back to the did as the handle when no E2E handle was stored", async () => {
-        ctx.db.selectFrom = mock.fn(() => ({
-          selectAll: mock.fn(function (this: any) {
+        ctx.db.selectFrom = mock(() => ({
+          selectAll: mock(function (this: any) {
             return this as any;
           }),
-          where: mock.fn(function (this: any) {
+          where: mock(function (this: any) {
             return this as any;
           }),
-          executeTakeFirst: mock.fn(async () => ({ key: "did:e2e" })),
+          executeTakeFirst: mock(async () => ({ key: "did:e2e" })),
         }));
         setE2EAgent("did:e2e", {} as any, "");
 
@@ -356,20 +348,20 @@ describe("AuthService", () => {
 
   describe("createOrConfirmUserProfile", () => {
     test("calls insertInto user_profile with did and createdAt", async () => {
-      const executesMock = mock.fn(async () => ({}));
-      const onConflictMock = mock.fn(function (this: any, cb?: (oc: any) => any) {
+      const executesMock = mock(async () => ({}));
+      const onConflictMock = mock(function (this: any, cb?: (oc: any) => any) {
         if (typeof cb === "function") {
           const oc = { column: (_col: string) => ({ doNothing: () => this }) };
           cb(oc);
         }
         return this as any;
       });
-      const valuesMock = mock.fn(function (this: any) {
+      const valuesMock = mock(function (this: any) {
         (this as any).execute = executesMock;
         (this as any).onConflict = onConflictMock;
         return this as any;
       });
-      ctx.db.insertInto = mock.fn(() => ({
+      ctx.db.insertInto = mock(() => ({
         values: valuesMock,
         onConflict: onConflictMock,
         execute: executesMock,
@@ -377,8 +369,8 @@ describe("AuthService", () => {
 
       await service.createOrConfirmUserProfile("did:foo");
 
-      assert.strictEqual(ctx.db.insertInto.mock.calls[0].arguments[0], "user_profile");
-      const valuesArg = valuesMock.mock.calls[0].arguments[0];
+      assert.strictEqual(ctx.db.insertInto.mock.calls[0][0], "user_profile");
+      const valuesArg = valuesMock.mock.calls[0][0];
       assert.strictEqual(valuesArg.did, "did:foo");
       assert.ok(typeof valuesArg.createdAt === "string");
     });
@@ -386,7 +378,7 @@ describe("AuthService", () => {
 
   describe("getOAuthRedirectUrl with non-Error thrown", () => {
     test("covers err?.message and err?.stack optional chains when err is null", async () => {
-      ctx.oauthClient.authorize = mock.fn(async () => {
+      ctx.oauthClient.authorize = mock(async () => {
         throw null;
       });
       await assert.rejects(
@@ -397,7 +389,7 @@ describe("AuthService", () => {
     });
 
     test("covers err?.message when err is a plain string", async () => {
-      ctx.oauthClient.authorize = mock.fn(async () => {
+      ctx.oauthClient.authorize = mock(async () => {
         throw "authorize failed";
       });
       await assert.rejects(

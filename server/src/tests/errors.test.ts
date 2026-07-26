@@ -1,6 +1,6 @@
 /* v8 ignore start */
 import assert from "node:assert";
-import { test, describe } from "node:test";
+import { test, describe } from "bun:test";
 
 import { errorMessage } from "../lib/errors";
 /* v8 ignore stop */

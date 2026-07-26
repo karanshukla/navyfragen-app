@@ -1,7 +1,5 @@
 import assert from "node:assert";
-import { describe, it, beforeEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { describe, it, beforeEach, mock } from "bun:test";
 
 import { SettingsService, UserSettings } from "../services/settings-service";
 
@@ -11,10 +9,10 @@ interface MockDB {
 
 describe("SettingsService", () => {
   const mockLogger = {
-    error: mock.fn(),
-    info: mock.fn(),
-    debug: mock.fn(),
-    warn: mock.fn(),
+    error: mock(),
+    info: mock(),
+    debug: mock(),
+    warn: mock(),
   };
 
   const mockSelectBuilder = {
@@ -55,23 +53,23 @@ describe("SettingsService", () => {
   };
 
   const mockDb = {
-    selectFrom: mock.fn(() => mockSelectBuilder),
-    insertInto: mock.fn(() => mockInsertBuilder),
-    updateTable: mock.fn(() => mockUpdateBuilder),
+    selectFrom: mock(() => mockSelectBuilder),
+    insertInto: mock(() => mockInsertBuilder),
+    updateTable: mock(() => mockUpdateBuilder),
   };
 
   let settingsService: SettingsService;
   let executeTakeFirstQueue: Array<UserSettings | undefined> = [];
 
   beforeEach(() => {
-    mockLogger.error.mock.resetCalls();
-    mockLogger.info.mock.resetCalls();
-    mockLogger.debug.mock.resetCalls();
-    mockLogger.warn.mock.resetCalls();
+    mockLogger.error.mockClear();
+    mockLogger.info.mockClear();
+    mockLogger.debug.mockClear();
+    mockLogger.warn.mockClear();
 
-    mockDb.selectFrom.mock.resetCalls();
-    mockDb.insertInto.mock.resetCalls();
-    mockDb.updateTable.mock.resetCalls();
+    mockDb.selectFrom.mockClear();
+    mockDb.insertInto.mockClear();
+    mockDb.updateTable.mockClear();
 
     executeTakeFirstQueue = [];
     mockSelectBuilder.executeTakeFirst = async () => executeTakeFirstQueue.shift();
@@ -103,7 +101,7 @@ describe("SettingsService", () => {
       // Assert
       assert.deepStrictEqual(result, mockUserSettings);
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
-      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0].arguments, ["user_settings"]);
+      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0], ["user_settings"]);
     });
 
     it("should throw an error when the database query fails", async () => {
@@ -145,7 +143,7 @@ describe("SettingsService", () => {
         `createdAt (${result.createdAt}) should be between ${beforeDate} and ${afterDate}`
       );
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
-      assert.deepStrictEqual(mockDb.insertInto.mock.calls[0].arguments, ["user_settings"]);
+      assert.deepStrictEqual(mockDb.insertInto.mock.calls[0], ["user_settings"]);
       assert.strictEqual(lastValuesArg.did, "user123");
       assert.strictEqual(lastValuesArg.pdsSyncEnabled, 1);
       assert.strictEqual(lastValuesArg.inboxEnabled, 1);
@@ -410,7 +408,7 @@ describe("SettingsService", () => {
         com: {
           atproto: {
             repo: {
-              listRecords: mock.fn(async () => ({
+              listRecords: mock(async () => ({
                 success: successOverride,
                 data: { records, cursor },
               })),
@@ -423,7 +421,7 @@ describe("SettingsService", () => {
     function makeIdResolver(pds: string | null, throws?: boolean) {
       return {
         did: {
-          resolveAtprotoData: mock.fn(async () => {
+          resolveAtprotoData: mock(async () => {
             if (throws) throw new Error("resolve failed");
             return { pds };
           }),
@@ -455,7 +453,7 @@ describe("SettingsService", () => {
       const agent = makeAgent([]);
       const idResolver = {
         did: {
-          resolveAtprotoData: mock.fn(async () => ({ pds: null })),
+          resolveAtprotoData: mock(async () => ({ pds: null })),
         },
       };
 
@@ -469,7 +467,7 @@ describe("SettingsService", () => {
       const agent = makeAgent([]);
       const idResolver = {
         did: {
-          resolveAtprotoData: mock.fn(async () => ({})),
+          resolveAtprotoData: mock(async () => ({})),
         },
       };
 
@@ -494,7 +492,7 @@ describe("SettingsService", () => {
         com: {
           atproto: {
             repo: {
-              listRecords: mock.fn(async () => {
+              listRecords: mock(async () => {
                 throw new Error("list failed");
               }),
             },
@@ -515,7 +513,7 @@ describe("SettingsService", () => {
         com: {
           atproto: {
             repo: {
-              listRecords: mock.fn(async () => {
+              listRecords: mock(async () => {
                 callCount++;
                 if (callCount === 1) {
                   return {
@@ -554,7 +552,7 @@ describe("SettingsService", () => {
       const agent = makeAgent([]);
       const idResolver = {
         did: {
-          resolveAtprotoData: mock.fn(async () => null),
+          resolveAtprotoData: mock(async () => null),
         },
       };
 
@@ -570,7 +568,7 @@ describe("SettingsService", () => {
         com: {
           atproto: {
             repo: {
-              listRecords: mock.fn(async () => {
+              listRecords: mock(async () => {
                 callCount++;
                 return {
                   success: true,

@@ -1,7 +1,5 @@
 import assert from "node:assert";
-import { describe, it, beforeEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { describe, it, beforeEach, mock } from "bun:test";
 
 import { Kysely } from "kysely";
 
@@ -10,10 +8,10 @@ import { ProfileService, ProfileResolver } from "../services/profile-service";
 describe("ProfileService", () => {
   // Mock Logger
   const mockLogger = {
-    error: mock.fn(),
-    warn: mock.fn(),
-    info: mock.fn(),
-    debug: mock.fn(),
+    error: mock(),
+    warn: mock(),
+    info: mock(),
+    debug: mock(),
   };
 
   // Mock database query builders. Two separate builders so the user_profile
@@ -43,13 +41,13 @@ describe("ProfileService", () => {
   };
 
   const mockDb = {
-    selectFrom: mock.fn((table: string) =>
+    selectFrom: mock((table: string) =>
       table === "user_settings" ? mockSettingsSelectBuilder : mockSelectBuilder
     ),
   };
 
   // Mock AtpAgent response
-  const mockGetProfile = mock.fn(async () => ({
+  const mockGetProfile = mock(async () => ({
     success: true,
     data: {
       did: "did:test:user123",
@@ -65,8 +63,8 @@ describe("ProfileService", () => {
 
   // Mock ProfileResolver
   const mockResolver = {
-    resolveDidToHandle: mock.fn(async (did) => `handle-for-${did}`),
-    resolveHandleToDid: mock.fn(async (handle) =>
+    resolveDidToHandle: mock(async (did) => `handle-for-${did}`),
+    resolveHandleToDid: mock(async (handle) =>
       handle === "not-found" ? undefined : `did-for-${handle}`
     ),
   };
@@ -75,15 +73,15 @@ describe("ProfileService", () => {
 
   beforeEach(() => {
     // Reset all mocks
-    mockLogger.error.mock.resetCalls();
-    mockLogger.warn.mock.resetCalls();
-    mockLogger.info.mock.resetCalls();
-    mockLogger.debug.mock.resetCalls();
+    mockLogger.error.mockClear();
+    mockLogger.warn.mockClear();
+    mockLogger.info.mockClear();
+    mockLogger.debug.mockClear();
 
-    mockDb.selectFrom.mock.resetCalls();
-    mockGetProfile.mock.resetCalls();
-    mockResolver.resolveDidToHandle.mock.resetCalls();
-    mockResolver.resolveHandleToDid.mock.resetCalls();
+    mockDb.selectFrom.mockClear();
+    mockGetProfile.mockClear();
+    mockResolver.resolveDidToHandle.mockClear();
+    mockResolver.resolveHandleToDid.mockClear();
 
     // Reset both select builders' executeTakeFirst to the unset default.
     mockSelectBuilder.executeTakeFirst = async () => undefined;
@@ -117,7 +115,7 @@ describe("ProfileService", () => {
         displayName: "Test User",
       });
       assert.strictEqual(mockGetProfile.mock.calls.length, 1);
-      assert.deepStrictEqual(mockGetProfile.mock.calls[0].arguments, [{ actor: testDid }]);
+      assert.deepStrictEqual(mockGetProfile.mock.calls[0], [{ actor: testDid }]);
       assert.strictEqual(mockResolver.resolveDidToHandle.mock.calls.length, 0);
     });
 
@@ -227,7 +225,7 @@ describe("ProfileService", () => {
 
       await profileService.getPublicProfile(testDid);
 
-      const selectTables = mockDb.selectFrom.mock.calls.map((c) => c.arguments[0]);
+      const selectTables = mockDb.selectFrom.mock.calls.map((c) => c[0]);
       // Two legs: checkUserExists → user_profile, settings subset → user_settings.
       assert.ok(selectTables.includes("user_profile"));
       assert.ok(selectTables.includes("user_settings"));
@@ -236,7 +234,7 @@ describe("ProfileService", () => {
     it("should throw 'Profile not found' when Bluesky returns success: false", async () => {
       // Arrange
       const testDid = "did:test:notfound";
-      const tempMockGetProfile = mock.fn(async () => ({ success: false }));
+      const tempMockGetProfile = mock(async () => ({ success: false }));
       (profileService as any).agent.getProfile = tempMockGetProfile;
 
       // Act & Assert
@@ -248,7 +246,7 @@ describe("ProfileService", () => {
     it("should throw an error when the API call fails", async () => {
       // Arrange
       const testDid = "did:test:error";
-      const tempMockGetProfile = mock.fn(async () => {
+      const tempMockGetProfile = mock(async () => {
         throw new Error("API call failed");
       });
       (profileService as any).agent.getProfile = tempMockGetProfile;
@@ -273,7 +271,7 @@ describe("ProfileService", () => {
       // Assert
       assert.strictEqual(result, true);
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 1);
-      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0].arguments, ["user_profile"]);
+      assert.deepStrictEqual(mockDb.selectFrom.mock.calls[0], ["user_profile"]);
     });
 
     it("should return false when user does not exist", async () => {
@@ -316,7 +314,7 @@ describe("ProfileService", () => {
       // Assert
       assert.strictEqual(result, expectedDid);
       assert.strictEqual(mockResolver.resolveHandleToDid.mock.calls.length, 1);
-      assert.deepStrictEqual(mockResolver.resolveHandleToDid.mock.calls[0].arguments, [testHandle]);
+      assert.deepStrictEqual(mockResolver.resolveHandleToDid.mock.calls[0], [testHandle]);
     });
 
     it("should throw 'Handle not found' when resolver returns undefined", async () => {
@@ -334,7 +332,7 @@ describe("ProfileService", () => {
     it("should throw an error when resolver fails", async () => {
       // Arrange
       const testHandle = "error.bsky.app";
-      mockResolver.resolveHandleToDid = mock.fn(async () => {
+      mockResolver.resolveHandleToDid = mock(async () => {
         throw new Error("Resolver operation failed");
       });
 
@@ -349,7 +347,7 @@ describe("ProfileService", () => {
   describe("checkFollowsBot", () => {
     it("should return true when agent is following the bot", async () => {
       const mockAgent = {
-        getProfile: mock.fn(async () => ({
+        getProfile: mock(async () => ({
           success: true,
           data: { viewer: { following: "at://did:bot/app.bsky.graph.follow/rkey" } },
         })),
@@ -362,7 +360,7 @@ describe("ProfileService", () => {
 
     it("should return false when agent is not following the bot", async () => {
       const mockAgent = {
-        getProfile: mock.fn(async () => ({
+        getProfile: mock(async () => ({
           success: true,
           data: { viewer: { following: undefined } },
         })),
@@ -375,7 +373,7 @@ describe("ProfileService", () => {
 
     it("should return false when getProfile returns success: false", async () => {
       const mockAgent = {
-        getProfile: mock.fn(async () => ({ success: false, data: {} })),
+        getProfile: mock(async () => ({ success: false, data: {} })),
       };
 
       const result = await profileService.checkFollowsBot(mockAgent as any, "did:bot:123");
@@ -385,7 +383,7 @@ describe("ProfileService", () => {
 
     it("should return false and log error when getProfile throws", async () => {
       const mockAgent = {
-        getProfile: mock.fn(async () => {
+        getProfile: mock(async () => {
           throw new Error("network error");
         }),
       };
@@ -398,7 +396,7 @@ describe("ProfileService", () => {
 
     it("should return false when viewer is undefined in profile response", async () => {
       const mockAgent = {
-        getProfile: mock.fn(async () => ({
+        getProfile: mock(async () => ({
           success: true,
           data: { viewer: undefined },
         })),
@@ -412,7 +410,7 @@ describe("ProfileService", () => {
 
   describe("searchActorsTypeahead", () => {
     it("should map the agent's search results to the trimmed actor shape", async () => {
-      const searchMock = mock.fn(async () => ({
+      const searchMock = mock(async () => ({
         data: {
           actors: [
             {
@@ -443,11 +441,11 @@ describe("ProfileService", () => {
         },
         { did: "did:user:2", handle: "user2.bsky.app", displayName: undefined, avatar: undefined },
       ]);
-      assert.deepStrictEqual(searchMock.mock.calls[0].arguments, [{ q: "user", limit: 8 }]);
+      assert.deepStrictEqual(searchMock.mock.calls[0], [{ q: "user", limit: 8 }]);
     });
 
     it("should return an empty array when there are no matching actors", async () => {
-      (profileService as any).agent.searchActorsTypeahead = mock.fn(async () => ({
+      (profileService as any).agent.searchActorsTypeahead = mock(async () => ({
         data: { actors: [] },
       }));
 
@@ -482,12 +480,12 @@ describe("ProfileService", () => {
           bsky: {
             graph: {
               getFollows: getFollowsImpl
-                ? mock.fn(getFollowsImpl)
-                : mock.fn(async () => ({
+                ? mock(getFollowsImpl)
+                : mock(async () => ({
                     success: true,
                     data: { follows, cursor: undefined },
                   })),
-              getFollowers: mock.fn(async () => ({
+              getFollowers: mock(async () => ({
                 success: true,
                 data: { followers, cursor: undefined },
               })),
@@ -610,7 +608,7 @@ describe("ProfileService", () => {
       assert.strictEqual(result.following.length, 2);
       // Verify cursor was forwarded on the second call
       const secondCallArgs = ((profileService as any).agent.app.bsky.graph.getFollows as any).mock
-        .calls[1].arguments[0];
+        .calls[1][0];
       assert.strictEqual(secondCallArgs.cursor, "page2-cursor");
     });
 
@@ -619,8 +617,8 @@ describe("ProfileService", () => {
         app: {
           bsky: {
             graph: {
-              getFollows: mock.fn(async () => ({ success: false, data: {} })),
-              getFollowers: mock.fn(async () => ({
+              getFollows: mock(async () => ({ success: false, data: {} })),
+              getFollowers: mock(async () => ({
                 success: true,
                 data: { followers: [], cursor: undefined },
               })),
@@ -667,11 +665,11 @@ describe("ProfileService", () => {
         app: {
           bsky: {
             graph: {
-              getFollows: mock.fn(async () => ({
+              getFollows: mock(async () => ({
                 success: true,
                 data: { cursor: undefined },
               })),
-              getFollowers: mock.fn(async () => ({
+              getFollowers: mock(async () => ({
                 success: true,
                 data: { followers: [], cursor: undefined },
               })),

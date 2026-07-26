@@ -1,31 +1,29 @@
 import assert from "node:assert";
-import { test, describe, afterEach } from "node:test";
-
-import { mock } from "./mock-shim"; // not node:test — Bun's runner has no mock API
+import { test, describe, afterEach, mock } from "bun:test";
 
 import { NotificationController } from "../controllers/notification-controller";
 
 describe("NotificationController", () => {
   afterEach(() => {
-    mock.restoreAll();
+    mock.clearAllMocks();
   });
 
   function makeService(overrides: any = {}): any {
     return {
-      getVapidPublicKey: mock.fn(() => "vapid-key"),
-      saveSubscription: mock.fn(async () => {}),
-      syncSubscriptionsAcrossAccounts: mock.fn(async () => {}),
-      deleteSubscription: mock.fn(async () => {}),
+      getVapidPublicKey: mock(() => "vapid-key"),
+      saveSubscription: mock(async () => {}),
+      syncSubscriptionsAcrossAccounts: mock(async () => {}),
+      deleteSubscription: mock(async () => {}),
       ...overrides,
     };
   }
 
   function makeLogger(): any {
     return {
-      info: mock.fn(),
-      error: mock.fn(),
-      warn: mock.fn(),
-      debug: mock.fn(),
+      info: mock(),
+      error: mock(),
+      warn: mock(),
+      debug: mock(),
     };
   }
 
@@ -35,8 +33,8 @@ describe("NotificationController", () => {
 
   function makeRes(): any {
     const res: any = {};
-    res.status = mock.fn(() => res);
-    res.json = mock.fn(() => res);
+    res.status = mock(() => res);
+    res.json = mock(() => res);
     return res;
   }
 
@@ -45,18 +43,18 @@ describe("NotificationController", () => {
       const controller = new NotificationController(makeService(), makeLogger());
       const res = makeRes();
       await controller.getVapidPublicKey(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { vapidPublicKey: "vapid-key" });
+      assert.deepStrictEqual(res.json.mock.calls[0][0], { vapidPublicKey: "vapid-key" });
     });
 
     test("returns 501 when VAPID is not configured", async () => {
       const controller = new NotificationController(
-        makeService({ getVapidPublicKey: mock.fn(() => null) }),
+        makeService({ getVapidPublicKey: mock(() => null) }),
         makeLogger()
       );
       const res = makeRes();
       await controller.getVapidPublicKey(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 501);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], {
+      assert.strictEqual(res.status.mock.calls[0][0], 501);
+      assert.deepStrictEqual(res.json.mock.calls[0][0], {
         error: "Web push not configured",
       });
     });
@@ -72,15 +70,15 @@ describe("NotificationController", () => {
       const controller = new NotificationController(makeService(), makeLogger());
       const res = makeRes();
       await controller.subscribe(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(res.status.mock.calls[0][0], 403);
     });
 
     test("returns 501 when VAPID is not configured", async () => {
-      const svc = makeService({ getVapidPublicKey: mock.fn(() => null) });
+      const svc = makeService({ getVapidPublicKey: mock(() => null) });
       const controller = new NotificationController(svc, makeLogger());
       const res = makeRes();
       await controller.subscribe(makeReq({ body: validBody }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 501);
+      assert.strictEqual(res.status.mock.calls[0][0], 501);
     });
 
     test("saves subscription and returns 201 on success", async () => {
@@ -88,9 +86,9 @@ describe("NotificationController", () => {
       const controller = new NotificationController(svc, makeLogger());
       const res = makeRes();
       await controller.subscribe(makeReq({ body: validBody }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 201);
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { ok: true });
-      const args = svc.saveSubscription.mock.calls[0].arguments;
+      assert.strictEqual(res.status.mock.calls[0][0], 201);
+      assert.deepStrictEqual(res.json.mock.calls[0][0], { ok: true });
+      const args = svc.saveSubscription.mock.calls[0];
       assert.strictEqual(args[0], "did:foo"); // did from session
       assert.strictEqual(args[1], "https://push.example.com/sub");
     });
@@ -112,8 +110,8 @@ describe("NotificationController", () => {
         }),
         res
       );
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 201);
-      assert.deepStrictEqual(svc.syncSubscriptionsAcrossAccounts.mock.calls[0].arguments[0], [
+      assert.strictEqual(res.status.mock.calls[0][0], 201);
+      assert.deepStrictEqual(svc.syncSubscriptionsAcrossAccounts.mock.calls[0][0], [
         "did:foo",
         "did:bar",
       ]);
@@ -121,14 +119,14 @@ describe("NotificationController", () => {
 
     test("returns 500 when service throws", async () => {
       const svc = makeService({
-        saveSubscription: mock.fn(async () => {
+        saveSubscription: mock(async () => {
           throw new Error("db down");
         }),
       });
       const controller = new NotificationController(svc, makeLogger());
       const res = makeRes();
       await controller.subscribe(makeReq({ body: validBody }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.status.mock.calls[0][0], 500);
     });
   });
 
@@ -137,7 +135,7 @@ describe("NotificationController", () => {
       const controller = new NotificationController(makeService(), makeLogger());
       const res = makeRes();
       await controller.unsubscribe(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 403);
+      assert.strictEqual(res.status.mock.calls[0][0], 403);
     });
 
     test("deletes subscription and returns ok on success", async () => {
@@ -148,15 +146,15 @@ describe("NotificationController", () => {
         makeReq({ body: { endpoint: "https://push.example.com/sub" } }),
         res
       );
-      assert.deepStrictEqual(res.json.mock.calls[0].arguments[0], { ok: true });
-      const args = svc.deleteSubscription.mock.calls[0].arguments;
+      assert.deepStrictEqual(res.json.mock.calls[0][0], { ok: true });
+      const args = svc.deleteSubscription.mock.calls[0];
       assert.strictEqual(args[0], "did:foo");
       assert.strictEqual(args[1], "https://push.example.com/sub");
     });
 
     test("returns 500 when service throws", async () => {
       const svc = makeService({
-        deleteSubscription: mock.fn(async () => {
+        deleteSubscription: mock(async () => {
           throw new Error("db down");
         }),
       });
@@ -166,7 +164,7 @@ describe("NotificationController", () => {
         makeReq({ body: { endpoint: "https://push.example.com/sub" } }),
         res
       );
-      assert.strictEqual(res.status.mock.calls[0].arguments[0], 500);
+      assert.strictEqual(res.status.mock.calls[0][0], 500);
     });
   });
 });
