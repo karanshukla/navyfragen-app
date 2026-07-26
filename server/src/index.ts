@@ -13,6 +13,7 @@ import { rateLimit } from "express-rate-limit";
 import pino from "pino";
 
 import { createDb, migrateToLatest } from "./database/db";
+import { assertProductionBindHost, WILDCARD_HOSTS } from "./lib/assert-production-bind-host";
 import {
   createBidirectionalResolver,
   createIdResolver,
@@ -60,8 +61,6 @@ function createLogger(): pino.Logger {
   });
   return pino({ name: "navyfragen" }, transport);
 }
-
-const WILDCARD_HOSTS = new Set(["::", "0.0.0.0"]);
 
 async function listenOn(app: Express, port: number, host: string): Promise<http.Server> {
   const server = app.listen(port, host);
@@ -117,6 +116,13 @@ export class Server {
 
   static async create() {
     const { NODE_ENV, HOST, PORT, DB_PATH } = env;
+
+    // Fail fast in production on a non-wildcard HOST before anything else runs:
+    // a loopback bind boots "healthy" but is unreachable from Caddy over
+    // Railway's private network, with no error signal in the server's own logs
+    // (#298). No-op outside production so local loopback testing is unaffected.
+    assertProductionBindHost();
+
     const logger = createLogger();
 
     // Set up the SQLite database
