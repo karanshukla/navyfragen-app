@@ -12,10 +12,26 @@
 	}
 }
 
+# For the API backends: /api/* is stateless JSON, so replaying a request that
+# may never have reached the upstream costs nothing but latency.
 (lb_settings) {
 	lb_policy round_robin
 	lb_retries 100
 	lb_try_duration 10s
+	lb_try_interval 250ms
+}
+
+# The WAF upstream cannot use the settings above. Anubis owns challenge state,
+# and /.within.website/.../pass-challenge is a GET — which Caddy treats as safe
+# to replay when a connection fails. If Anubis has already marked the challenge
+# spent and the connection then drops, Caddy cannot tell that from an unsent
+# request, so it re-sends it and Anubis answers `double_spend`: a 500 the user
+# sees as "administrator has misconfigured Anubis" (issue #306). Retries here
+# only need to cover a replica swap, not ride out a sustained outage.
+(waf_lb_settings) {
+	lb_policy round_robin
+	lb_retries 2
+	lb_try_duration 3s
 	lb_try_interval 250ms
 }
 
@@ -115,8 +131,8 @@
 			versions ipv4 ipv6
 		}
 
-		# configure load balancing settings
-		import lb_settings
+		# conservative retries — this upstream is Anubis, which owns challenge state
+		import waf_lb_settings
 
 		# configure passive health checks
 		import passive_health_checks
