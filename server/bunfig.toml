@@ -30,6 +30,7 @@ coveragePathIgnorePatterns = [
   "src/lexicon/**",       # auto-generated from AT Protocol lexicons
   "src/index.ts",         # Express boot + process signal handlers
   "src/lib/assert-fetch-node-patch.ts",  # applied via patchedDependencies; covers the @atproto-labs fetch-node patch surface
+  "src/lib/assert-production-bind-host.ts",  # production-only boot guard; the throw branch can't fire under NODE_ENV=test
   "src/auth/client.ts",   # AT Protocol OAuth wiring
   "src/auth/storage.ts",
   "src/auth/session.ts",

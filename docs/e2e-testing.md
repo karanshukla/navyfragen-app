@@ -133,6 +133,28 @@ assertions. For tests that write data:
 - **Settings** toggles write through to the server — read the initial value, toggle,
   assert, then restore via the API.
 
+#### Cross-file isolation on the shared inbox
+
+`playwright.config.ts` sets `fullyParallel: false`, which serialises tests
+*within* a file but still runs different spec files concurrently across workers.
+Two specs touch the same `E2E_HANDLE` inbox — `e2e/web/inbox.spec.ts` and
+`e2e/web/profile-send-message.spec.ts` — so a row one of them creates can land
+while the other is mid-check.
+
+To stay robust against that race:
+
+- **Own what you delete.** The inbox delete test doesn't rely on the inbox being
+  empty (an assumption that previously made it `test.skip` itself into a
+  silent green run, #289). Instead it seeds a single marker'd message via
+  `POST /messages/send` (`seedOwnedMessage`), targets only that card by its
+  marker text, asserts only *that* card disappears (not a count delta — also
+  racy), and best-effort cleans the marker up via the API in a `finally`
+  (`deleteMessagesByText`). A populated inbox is never a reason to skip.
+- **Tests that don't care which card they touch** (expand/reply, pin/unpin,
+  posting-preferences) still use `ensureExampleMessages` (seed only when empty)
+  and `cleanupAllMessages` — they operate on the first card and clean whatever
+  they seeded. These never had a skip guard and aren't affected by the race.
+
 ### Selectors
 
 There are no `data-testid` attributes in the app (the e2e login panel is the only
