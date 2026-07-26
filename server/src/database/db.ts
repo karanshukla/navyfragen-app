@@ -407,9 +407,10 @@ export const createDb = async (location: string): Promise<Database> => {
     });
   }
   // Under Bun use bun:sqlite (better-sqlite3 is unsupported there); under
-  // Node keep better-sqlite3. Both present the same Database/Statement
-  // surface to Kysely's SqliteDialect, so behavior is identical. Imports are
-  // lazy so the unused native binary is never loaded.
+  // Node keep better-sqlite3, a devDependency (#290) present only in local
+  // dev/test installs, never in the production image. Both present the same
+  // Database/Statement surface to Kysely's SqliteDialect, so behavior is
+  // identical. Imports are lazy so the unused native binary is never loaded.
   if (isBunRuntime) {
     const { Database } = await import("bun:sqlite");
     return new Kysely<DatabaseSchema>({
