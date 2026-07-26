@@ -16,7 +16,7 @@ npm workspaces with two packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), and CI all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server test suite is dual-runtime: `bun run test` (Node, the coverage/Coveralls baseline) and `bun run test:bun` (Bun, a blocking CI gate, #269). The server's Node APIs (Express, sharp, web-push, pino, node:dns/crypto) are kept as-is — they run under Bun natively; no Bun-native API rewrite.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), CI, and **the test suite** all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server test suite runs wholesale under `bun test` (#288 retired the former dual-runtime setup and the runtime-agnostic mock shim); coverage comes from Bun's built-in reporter (#287). The server's Node APIs (Express, sharp, web-push, pino, node:dns/crypto) are kept as-is — they run under Bun natively; no Bun-native API rewrite.
 
 Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
 
@@ -42,15 +42,15 @@ bun run test:watch # Vitest watch mode
 bun run dev        # bun --watch with pino-pretty (Bun runtime)
 bun run start      # bun src/index.ts (Bun runtime; no build step)
 bun run lint       # oxlint
-bun run test       # Node.js built-in test runner (single run) — the coverage/Coveralls baseline
-bun run test:watch # Node.js built-in test runner watch mode
-bun run test:bun   # bun test (Bun runtime; dual-runtime, see #269)
+bun run test       # bun test (Bun runtime; coverage off)
+bun run test:watch # bun test --watch
+bun run test:coverage # bun test --coverage (config in server/bunfig.toml)
 bun run lexgen     # Regenerate AT Protocol lexicon types from ./lexicons/*.json
 ```
 
 To run a single server test file:
 ```bash
-cd server && node --import ./src/tests/test-bootstrap.js --import tsx --test src/tests/message-service.test.ts
+cd server && bun test --isolate --no-env-file --preload ./src/tests/test-bootstrap.js src/tests/message-service.test.ts
 ```
 
 ## Server Architecture
@@ -74,7 +74,7 @@ Session is intentionally thin — Bluesky OAuth acts as the authorization proxy.
 
 ### Database
 
-Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in production (when `POSTGRESQL_URL` is set). The dev SQLite driver is runtime-gated (`src/database/db.ts`): `better-sqlite3` under Node, `bun:sqlite` behind a small adapter under Bun (so the server can run under the Bun runtime — see #263). Kysely's `SqliteDialect` is dialect-agnostic; the adapter only bridges two `bun:sqlite` API deltas (no `reader` flag → derived from `columnNames`; variadic params → spread).
+Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in production (when `POSTGRESQL_URL` is set). The SQLite driver is `bun:sqlite` (`src/database/db.ts`), bridged onto Kysely's stock `SqliteDialect` via a small adapter (#263). `better-sqlite3` (the former Node driver) was removed entirely in #288 when the Node code path was retired — the server runs exclusively under Bun. Kysely's `SqliteDialect` is dialect-agnostic; the adapter only bridges two `bun:sqlite` API deltas (no `reader` flag → derived from `columnNames`; variadic params → spread).
 
 Schema and migrations live entirely in `src/database/db.ts`. Add new migrations as numbered keys (`"007"`, etc.) in the `migrations` object — Kysely applies them in order at startup via `migrateToLatest()`.
 
@@ -167,11 +167,11 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 ## Testing Conventions
 
-**Server**: Uses Node.js built-in `node:test` + `node:assert`. The suite is **dual-runtime**: it runs green under both Node (`bun run test`) and Bun (`bun run test:bun`, issue #269), so Bun's runner can serve as a CI gate for the #268 Bun-runtime epic. Test setup via `src/tests/test-bootstrap.js` which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with the runtime-agnostic `mock` shim (see "Module Mocking in Server Tests" below).
+**Server**: Uses `bun:test` (test/describe/hooks/mock/spyOn from `bun:test`) + `node:assert` (which Bun runs natively). The suite runs wholesale under `bun test` (#288 retired the former dual-runtime Node+Bun setup); there is no `node --test` path, no `tsx` loader, and no `c8`. Test setup via `src/tests/test-bootstrap.js` (passed via `--preload`) which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with `mock`/`spyOn` from `bun:test` (see "Module Mocking in Server Tests" below).
 
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
-CI runs all tests in a single unified workflow `.github/workflows/Tests.yml` targeting Node 24, with separate jobs for client, server, the Bun-runtime canary, `opengraph-service` (Go), and `html-to-image`.
+CI runs all tests in a single unified workflow `.github/workflows/Tests.yml`, with separate jobs for client, server, `opengraph-service` (Go), and `html-to-image`. The server job runs under Bun (the runtime the server ships on) and folds the former Bun-runtime canary probes (SQLite data layer, OAuth handle resolution) in ahead of the test suite.
 
 The `html-to-image` job installs with `npm ci` rather than the root `bun install` — the service is deliberately outside the workspaces — and sets `PUPPETEER_SKIP_DOWNLOAD=true`, since its tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser.
 
@@ -192,18 +192,23 @@ bun run test:coverage
 bun run test -- --coverage
 ```
 
-Target is 100% across all four v8 metrics: statements, lines, branches, functions.
+The **client** targets 100% across all four v8 metrics (statements, lines, branches, functions) via Vitest's v8 provider.
+
+The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.97` in `server/bunfig.toml`), applied to **lines** — Bun's lcov carries line + function coverage only, with **no branch data** (verified on 1.3.14; documented in `docs/testing-notes.md`). Bun also does **not** honor `/* v8 ignore */` source annotations, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml`. These two limitations are the accepted trade-off of moving coverage onto the production runtime (#287); the prior c8/Node path that did honor `v8 ignore` and report branches was retired with the Node test path in #288.
 
 ### Coverage Exclusions
 
-**Server** — excluded via the `c8.exclude` array in `server/package.json` (coverage is collected by `c8`, which wraps the node test runner):
+**Server** — excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml` (coverage is collected by Bun's built-in reporter):
 - `src/lexicon/**` — auto-generated from AT Protocol lexicons
 - `src/index.ts` — Express boot + process signal handlers
+- `src/lib/assert-fetch-node-patch.ts` — applied via `patchedDependencies`; covers the @atproto-labs fetch-node patch surface
 - `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — AT Protocol OAuth wiring
+- `src/auth/e2e-agent-store.ts` — in-memory Map for E2E agents; trivial
 - `src/database/db.ts` — Kysely migration runner
 - `src/lib/id-resolver.ts` — AT Protocol DID/handle resolver (requires live network)
 - `src/lib/env.ts` — bootstrapped before tests run via `test-bootstrap.js`
 - `src/routes.ts`, `src/routes/*.ts` — pure Express route wiring with no logic
+- `src/scripts/**` — one-off admin scripts
 
 **Client** — excluded via `coverage.exclude` in `vite.config.ts`:
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and app entry point
@@ -222,17 +227,23 @@ Use `/* v8 ignore next */` (or `/* v8 ignore next N */` for N lines) **only** fo
 
 Do **not** use it to skip real business logic. Document any usage in `docs/testing-notes.md`.
 
+**Note on the server:** Bun's coverage reporter does **not** honor `/* v8 ignore */` annotations (verified on 1.3.14), so these markers are inert in server source. Server-side per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml` instead. The `v8 ignore` convention above applies to the **client** (Vitest's v8 provider honors them).
+
 ### Module Mocking in Server Tests
 
-The server test suite is **dual-runtime** (Node `bun run test` and Bun `bun run test:bun`, #269). Bun's runner recognizes `node:test`'s `test`/`describe`/`before*`/`after*`/`assert` but does **not** implement its `mock` API, so `mock` is imported from a runtime-agnostic shim instead:
+The server test suite runs under `bun:test` (#288). Import `test`/`describe`/hooks/`mock`/`spyOn` from `bun:test` and `assert` from `node:assert` (Bun runs `node:assert` natively):
 
 ```typescript
 import assert from "node:assert";
-import { test, describe, beforeEach, afterEach } from "node:test";
-import { mock } from "./mock-shim"; // node:test's mock under Node, the shim under Bun
+import { test, describe, beforeAll, afterEach, mock, spyOn } from "bun:test";
 ```
 
-`src/tests/mock-shim.ts` reimplements `node:test`'s exact mock surface in pure JS (`mock.fn`, `mock.method`, `mock.timers`, `.mock.calls[i].arguments`, `mockImplementation/Once`, `resetCalls`) and delegates `mock.module`/`restoreAll` to the host runner (node:test under Node, bun:test under Bun — the two have **opposite** `mock.module` signatures: node:test takes `{ exports }`, bun:test takes `() => exports`; the shim adapts). Test files only swap the `mock` import — no call-site logic changes.
+`mock` is `bun:test`'s mock factory. The API surface (and the differences from the former `node:test`/shim shape worth knowing):
+- Create a mock fn: `mock(impl?)` (was `mock.fn(...)`). Its `.mock.calls` is an array of **bare argument arrays** (`calls[0][0]`), not `[{ arguments }]` objects — read args as `m.mock.calls[0][0]`, not `.calls[0].arguments[0]`.
+- `mockImplementation`/`mockImplementationOnce`/`mockReturnValue`/`mockReturnValueOnce` live on the function directly (`m.mockImplementation(...)`), **not** under `.mock`.
+- Clear call history with `m.mockClear()` (was `m.mock.resetCalls()`); drop implementations with `m.mockReset()`; restore a spy with `m.mockRestore()`. Global cleanup: `mock.clearAllMocks()` (call history) and `mock.restore()` (restore all spies).
+- Spy on a method (e.g. `globalThis.fetch`): `spyOn(globalThis, "fetch").mockImplementation(impl)` — `spyOn` takes no implementation arg; chain the impl on. `mock.method(target, name, impl)` from the old shim maps to this.
+- `bun:test` uses `beforeAll`/`afterAll` (not `before`/`after`) for the once-per-file hooks.
 
 The default mocking strategy is **dependency injection** (chainable DB builders passed into constructors). `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
 
@@ -240,33 +251,36 @@ The default mocking strategy is **dependency injection** (chainable DB builders 
 let AuthService: typeof import("../services/auth-service").AuthService;
 let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
 
-before(async () => {
-  mockAgent = { getProfile: mock.fn(async () => ({ data: undefined })) };
+beforeAll(async () => {
+  mockAgent = { getProfile: mock(async () => ({ data: undefined })) };
+  // Spread the real module so every export it has keeps working and only
+  // initializeAgentForDid is swapped (see the note on --isolate below).
+  const realSessionAgent = await import("../auth/session-agent");
+  mock.module("../auth/session-agent", () => ({
+    ...realSessionAgent,
+    initializeAgentForDid: async (ctx, did) => { /* ... */ return mockAgent; },
+  }));
   // Register the mock BEFORE importing the module under test so its
   // transitive import of session-agent picks up the fakes.
-  await mock.module("../auth/session-agent", {
-    exports: { initializeAgentForDid: async (ctx, did) => { /* ... */ mockAgent } },
-  });
   const mod = await import("../services/auth-service");
   AuthService = mod.AuthService;
 });
 ```
 
 Notes:
-- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `before()`, never a top-level static import.
+- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `beforeAll()`, never a top-level static import. Bun's `mock.module` takes a factory `() => exports` (the opposite of node:test's `{ exports }` shape) and is synchronous (returns `void`).
 - Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
-- **`mock.module` is file-scoped under Node, process-global under Bun.** node:test scopes it to the test file natively. Bun's is process-wide and **not restorable** (`clearAllMocks` clears `mock.fn` history but does not unmock modules), so `test:bun` passes `--isolate` for a fresh per-file module registry. Do not let `--isolate` be the only thing keeping a mock contained: **spread the real module into the mock** (`exports: { ...realModule, theOneYouAreFaking }`) so a partial mock can't take out files that import the real exports. Bun accepts unknown flags silently, so a Bun that predates `--isolate` drops it without a word — `test:bun` runs `src/tests/assert-bun-version.js` first to turn that into a clear error instead of scattered failures.
+- **`mock.module` is process-global and not restorable.** `mock.restore()`/`clearAllMocks()` clear mock call history and restore spies but do **not** unmock modules, so a partial mock registered in one file leaks into every other file that imports the real module. The `test`/`test:coverage` scripts pass `--isolate` for a fresh per-file module registry. Do not let `--isolate` be the only thing keeping a mock contained: **spread the real module into the mock** (`() => ({ ...realModule, theOneYouAreFaking })`) so a partial mock can't take out files that import the real exports with a missing-export `SyntaxError`.
 - The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
-- Use the `exports` option key, not the deprecated `namedExports`.
 
-#### Bun-runtime specifics (#269, #270)
+#### Bun-runtime specifics (#269, #270, #288)
 
-- `bun run test:bun` adds `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation). Bun **1.3.14+** is required; `src/tests/assert-bun-version.js` enforces it.
-- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces the unicast rules**: it runs the package's own `unicastLookup` before the request, so a handle resolving to a loopback/private/link-local address is rejected exactly as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname` returns `undefined` for a DNS name, so on its own it lets `http://internal.example.com/` straight through, and handle resolution fetches user-supplied hostnames. The branch also rejects non-HTTP(S) schemes, which the Node path gets for free from undici: every unicast check keys on `url.hostname`, which is `""` for `file:`, and Bun's `fetch` reads `file:` URLs where Node's refuses them. The one gap versus Node: the check runs before the connection rather than on the socket, so DNS rebinding between check and connect is not caught.
+- `bun run test` / `test:coverage` add `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation). Bun **1.3.14+** is required (the floor `@types/bun` is pinned to).
+- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces the unicast rules**: it runs the package's own `unicastLookup` before the request, so a handle resolving to a loopback/private/link-local address is rejected exactly as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname` returns `undefined` for a DNS name, so on its own it lets `http://internal.example.com/` straight through, and handle resolution fetches user-supplied hostnames. The branch also rejects non-HTTP(S) schemes, which the Node path got for free from undici: every unicast check keys on `url.hostname`, which is `""` for `file:`, and Bun's `fetch` reads `file:` URLs where Node's refuses them. The one gap versus the old Node path: the check runs before the connection rather than on the socket, so DNS rebinding between check and connect is not caught.
 - **Never call `dns.setServers()` unconditionally.** Under Node it only rebinds the `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; under Bun it steers `dns.lookup` too, so the process forgets every name the system resolver owns — container DNS included. `src/index.ts` keeps its Windows TXT-lookup workaround gated behind `process.platform === "win32"` for that reason.
 - **The listen address is negotiated, not hardcoded** (`listenPreferringDualStack` in `src/index.ts`). A wildcard `HOST` (`"::"` or `"0.0.0.0"`) binds `"::"` so a single dual-stack listener serves both families — required in production, where Caddy reaches this service only over Railway's private network and that network is IPv6-only (`BACKEND_DOMAIN = ${{Backend.RAILWAY_PRIVATE_DOMAIN}}`). Where the network has no IPv6 at all — every Docker bridge network in CI and local compose — the bind falls back to `"0.0.0.0"`; Bun surfaces that case as a spurious `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does. A non-wildcard `HOST` is bound verbatim, so `HOST=127.0.0.1` still means loopback. Deployments therefore do not depend on `HOST` being set to exactly the right wildcard.
-- **The OAuth login path has its own CI probe** (`Probe OAuth handle resolution under Bun runtime` in `Tests.yml`). E2E signs in through `/auth/e2e-login` with an app password and never resolves a handle, so without this the one production surface that runs through the patched `fetch-node` would be untested. Its Bun failure mode is silent — bluesky-social/atproto#3511 has resolution returning `undefined`, surfacing only as "does not resolve to a DID" — so the probe asserts a `did:` string comes back rather than trusting the call not to throw.
-- `c8` coverage stays on the Node path (`test:coverage`); the Bun path does not yet produce coverage.
+- **The OAuth login path has its own CI probe** (`Probe SQLite data layer + OAuth handle resolution under Bun` in `Tests.yml`). E2E signs in through `/auth/e2e-login` with an app password and never resolves a handle, so without this the one production surface that runs through the patched `fetch-node` would be untested. Its Bun failure mode is silent — bluesky-social/atproto#3511 has resolution returning `undefined`, surfacing only as "does not resolve to a DID" — so the probe asserts a `did:` string comes back rather than trusting the call not to throw. The SQLite probe (`createDb` → `migrateToLatest` → insert/select through the `bun:sqlite` adapter) gates the data layer the test suite mocks around.
+- Coverage comes from Bun's built-in reporter (`bun test --coverage`, configured in `server/bunfig.toml`). It does **not** honor `/* v8 ignore */` and its lcov carries line + function coverage only (no branch data) — see "Coverage under Bun" in `docs/testing-notes.md` for the rationale and accepted trade-offs.
 
 ## Deployment (Railway)
 
