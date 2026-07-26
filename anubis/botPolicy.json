@@ -60,6 +60,12 @@
     }
   ],
   "dnsbl": false,
+  "store": {
+    "backend": "valkey",
+    "parameters": {
+      "url": "redis://valkey.railway.internal:6379/0"
+    }
+  },
   "status_codes": {
     "CHALLENGE": 200,
     "DENY": 200
