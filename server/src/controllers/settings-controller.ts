@@ -149,7 +149,14 @@ export class SettingsController {
         profileCardTheme: req.body.profileCardTheme,
         touchpointLocale: req.body.touchpointLocale,
       });
-      this.logger.info({ did: userSessionDid, updates: req.body }, "Settings updated");
+      // Log only the keys that were updated, not the full request body. The
+      // body can carry user-authored content (e.g. customPrompt) that shouldn't
+      // be shipped to Axiom verbatim, and logging just the changed field names
+      // is enough to trace what a settings update touched (#319).
+      this.logger.info(
+        { did: userSessionDid, updatedFields: Object.keys(req.body ?? {}) },
+        "Settings updated"
+      );
       return res.json(updatedSettings);
     } catch (err) {
       this.logger.error({ err, did: userSessionDid }, "Failed to update user settings");
