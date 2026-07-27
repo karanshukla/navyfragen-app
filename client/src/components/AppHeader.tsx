@@ -15,7 +15,7 @@ import {
 import { showNotification } from "@mantine/notifications";
 import { IconCheck, IconLogout, IconMoon, IconPlus, IconSun, IconUser } from "@tabler/icons-react";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useHaptic } from "use-haptic";
 
 import { ApiError } from "../api/apiClient";

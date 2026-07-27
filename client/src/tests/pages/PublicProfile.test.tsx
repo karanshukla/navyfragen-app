@@ -1,6 +1,6 @@
 import { notifications } from "@mantine/notifications";
 import { screen, fireEvent, waitFor, act, within } from "@testing-library/react";
-import * as reactRouterDom from "react-router-dom";
+import * as reactRouterDom from "react-router";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as messageService from "../../api/messageService";
@@ -8,8 +8,8 @@ import * as profileService from "../../api/profileService";
 import PublicProfile from "../../pages/PublicProfile";
 import { renderWithProviders } from "../testUtils";
 
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
   return { ...actual, useParams: vi.fn(() => ({ handle: "karan.bsky.social" })) };
 });
 

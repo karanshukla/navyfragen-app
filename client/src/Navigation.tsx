@@ -20,7 +20,7 @@ import {
   IconAdjustments,
 } from "@tabler/icons-react";
 import { useEffect } from "react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router";
 import { useHaptic } from "use-haptic";
 
 import { useSession } from "./api/authService";

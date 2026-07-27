@@ -10,8 +10,8 @@ import {
 } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 
 import { apiClient } from "../api/apiClient";
 import { authKeys } from "../api/authService";

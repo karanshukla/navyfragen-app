@@ -18,7 +18,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconSend, IconX, IconWorld, IconClipboard, IconShare } from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useHaptic } from "use-haptic";
 
 import { useSendMessage } from "../api/messageService";
