@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "serve dist --listen ${PORT:-3000}",
+    "start": "bun serve.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "typecheck": "tsc --noEmit",
@@ -59,7 +59,6 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.1",
-    "serve": "^14.2.6",
     "use-haptic": "^1.1.13",
     "zod": "^4.4.3"
   }

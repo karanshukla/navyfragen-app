@@ -115,26 +115,17 @@ export class NotificationService {
     p256dh: string,
     auth: string
   ): Promise<void> {
-    const existing = await this.db
-      .selectFrom("push_subscription")
-      .selectAll()
-      .where("endpoint", "=", endpoint)
-      .where("did", "=", did)
-      .executeTakeFirst();
-
-    if (existing) {
-      await this.db
-        .updateTable("push_subscription")
-        .set({ p256dh, auth })
-        .where("endpoint", "=", endpoint)
-        .where("did", "=", did)
-        .execute();
-    } else {
-      await this.db
-        .insertInto("push_subscription")
-        .values({ did, endpoint, p256dh, auth, createdAt: new Date().toISOString() })
-        .execute();
-    }
+    // Single-statement upsert. The earlier read-then-write (SELECT then
+    // conditional UPDATE/INSERT) was both two round-trips and racy: two
+    // concurrent saves for the same (did, endpoint) could both miss the
+    // existing row and the second INSERT would fail on the unique constraint.
+    // The `push_subscription_did_endpoint_unique` constraint (migration 008)
+    // is the conflict target; on conflict, refresh the keys.
+    await this.db
+      .insertInto("push_subscription")
+      .values({ did, endpoint, p256dh, auth, createdAt: new Date().toISOString() })
+      .onConflict((oc) => oc.columns(["did", "endpoint"]).doUpdateSet({ p256dh, auth }))
+      .execute();
     this.logger.info({ did }, "Push subscription saved");
   }
 

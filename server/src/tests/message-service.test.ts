@@ -125,6 +125,10 @@ describe("MessageService", () => {
       }),
       insertInto: mock(() => mockInsertBuilder),
       deleteFrom: mock(() => mockDeleteBuilder),
+      // deleteUserData wraps its three deletes in db.transaction().execute(cb).
+      // Run the callback synchronously against mockDb so the three deleteFrom
+      // calls register exactly as they did before the transaction wrap.
+      transaction: mock(() => ({ execute: (cb: any) => cb(mockDb) })),
     };
     Object.values(mockDb).forEach((fn: any) => fn.mockClear?.());
     mockAgent = {
@@ -195,7 +199,12 @@ describe("MessageService", () => {
     mockSelectBuilder.execute.mockImplementationOnce(async () => msgs);
     const result = await messageService.addExampleMessages("did:foo");
     assert.deepStrictEqual(result, msgs);
-    assert.strictEqual(mockDb.insertInto.mock.calls.length, 8);
+    // The 8 example rows are inserted in a single batched statement now, not
+    // one insert per row.
+    assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
+    // ...and that one statement carries all 8 rows.
+    assert.strictEqual(Array.isArray(lastInsertValues), true);
+    assert.strictEqual((lastInsertValues as any[]).length, 8);
   });
 
   test("sendMessage inserts and returns success", async () => {
