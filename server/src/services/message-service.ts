@@ -158,7 +158,10 @@ export class MessageService {
         .onConflict((oc) => oc.column("tid").doNothing())
         .execute();
 
-      this.logger.info({ recipient, tid }, "Message saved to DB");
+      // Per-send success is on the hot path of every message send. Demoted to
+      // debug so the info-level transport (Axiom/file) drops it; the
+      // debug log is still there for local tracing when needed (#319).
+      this.logger.debug({ recipient, tid }, "Message saved to DB");
       return { success: true };
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to send message");
@@ -292,7 +295,10 @@ export class MessageService {
       }
 
       const postRes = await agent.post(postRecord);
-      this.logger.info({ tid, did, uri: postRes.uri }, "Response posted to Bluesky");
+      // One info log per reply is on the per-reply hot path; demoted to debug so
+      // the info-level transport drops it. Errors still surface via the catch
+      // block below at error level (#319).
+      this.logger.debug({ tid, did, uri: postRes.uri }, "Response posted to Bluesky");
       let webUrl = null;
       let profileName = null;
       const match = postRes.uri.match(/^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/);

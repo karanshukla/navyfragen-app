@@ -42,8 +42,23 @@ import { createRouter } from "#/routes";
 
 function createLogger(): pino.Logger {
   const { AXIOM_TOKEN, AXIOM_DATASET } = env;
+  // Defense-in-depth: redact paths known to carry user-authored content so a
+  // future logger.info that logs a whole object can't leak PII to Axiom. The
+  // per-request hot-path logs have already been trimmed/demoted (#319); this
+  // catches anything that slips through. Paths use dot/bracket syntax (fast-redact).
+  const redact = [
+    "message", // message-service: logged objects sometimes carry the message text
+    "req.body.message",
+    "req.body.customPrompt",
+    "req.body.original",
+    "req.body.response",
+    "updates.message",
+    "updates.customPrompt",
+    "*.message",
+    "*.customPrompt",
+  ];
   if (!AXIOM_TOKEN || !AXIOM_DATASET) {
-    return pino({ name: "navyfragen" });
+    return pino({ name: "navyfragen", redact });
   }
   const transport = pino.transport({
     targets: [
@@ -59,7 +74,7 @@ function createLogger(): pino.Logger {
       },
     ],
   });
-  return pino({ name: "navyfragen" }, transport);
+  return pino({ name: "navyfragen", redact }, transport);
 }
 
 async function listenOn(app: Express, port: number, host: string): Promise<http.Server> {
@@ -202,7 +217,16 @@ export class Server {
   async close() {
     this.ctx.logger.info("sigint received, shutting down");
     return new Promise<void>((resolve) => {
-      this.server.close(() => {
+      this.server.close(async () => {
+        // Drain the Postgres pool (no-op for SQLite) so in-flight queries
+        // settle and connections close before the process exits. `destroy()`
+        // rejects any new queries, so it must run after the HTTP server stops
+        // accepting connections.
+        try {
+          await this.ctx.db.destroy();
+        } catch (err) {
+          this.ctx.logger.error({ err }, "Failed to drain database pool");
+        }
         this.ctx.logger.info("server closed");
         resolve();
       });

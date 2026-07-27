@@ -141,7 +141,10 @@ export class MessageController {
 
     try {
       const result = await this.messageService.sendMessage(recipient, message);
-      this.logger.info({ recipient }, "Anonymous message sent");
+      // Per-send info log is on the hot path of every message send; demoted to
+      // debug so the info-level transport drops it (#319). The push side-effect
+      // below already logs failures at error level, which is what we need.
+      this.logger.debug({ recipient }, "Anonymous message sent");
       // Fire-and-forget: a push failure must never affect the send response.
       this.notificationService
         ?.sendNewMessageNotification(recipient)

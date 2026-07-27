@@ -13,6 +13,14 @@ export const env = cleanEnv(process.env, {
   PUBLIC_URL: str({ default: "" }),
   DB_PATH: str({ devDefault: ":memory:" }),
   POSTGRESQL_URL: str({ devDefault: "" }),
+  // Postgres connection-pool sizing. A single request can briefly hold 2-4
+  // connections (the multi-query patterns in message-service.ts), and with the
+  // default `max` of 10 a burst of traffic will queue. These knobs are ignored
+  // under SQLite. statement_timeout caps slow queries so one bad query can't
+  // pin a connection indefinitely; set in ms, 0 = disabled.
+  PG_POOL_MAX: num({ default: 20 }),
+  PG_POOL_IDLE_TIMEOUT_MS: num({ default: 30000 }),
+  PG_STATEMENT_TIMEOUT_MS: num({ default: 0 }),
   COOKIE_SECRET: str({ devDefault: "00000000000000000000000000000000" }),
   CLIENT_URL: str({
     devDefault: testOnly("http://localhost:5173"),
