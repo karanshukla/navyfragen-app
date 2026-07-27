@@ -85,13 +85,15 @@ export class MessageService {
         recipient,
       }));
 
-      for (const msg of messages) {
-        await this.db
-          .insertInto("message")
-          .values(msg)
-          .onConflict((oc) => oc.column("tid").doNothing())
-          .execute();
-      }
+      // Single batched insert (one round-trip) rather than one per example row.
+      // The earlier loop issued N inserts; the rows are independent and the
+      // `tid` PK conflict target is per-row, so a single multi-row statement
+      // with the same onConflict is equivalent.
+      await this.db
+        .insertInto("message")
+        .values(messages)
+        .onConflict((oc) => oc.column("tid").doNothing())
+        .execute();
 
       return await this.getMessages(recipient);
     } catch (err) {
@@ -357,10 +359,17 @@ export class MessageService {
         });
       }
 
-      // Delete all messages, user profile, and user settings for this DID
-      await this.db.deleteFrom("message").where("recipient", "=", userDid).execute();
-      await this.db.deleteFrom("user_profile").where("did", "=", userDid).execute();
-      await this.db.deleteFrom("user_settings").where("did", "=", userDid).execute();
+      // Delete all messages, user profile, and user settings for this DID in a
+      // single transaction. Without it, a failure mid-sequence (e.g. the
+      // user_settings delete throwing) left a half-deleted user: no messages
+      // but a still-present profile/settings row. The PDS deleteRecord loop
+      // above stays outside the transaction — network calls must not hold a DB
+      // connection, and the rkeys SELECT that feeds it has already run.
+      await this.db.transaction().execute(async (trx) => {
+        await trx.deleteFrom("message").where("recipient", "=", userDid).execute();
+        await trx.deleteFrom("user_profile").where("did", "=", userDid).execute();
+        await trx.deleteFrom("user_settings").where("did", "=", userDid).execute();
+      });
 
       return { success: true };
     } catch (err) {

@@ -29,12 +29,35 @@ function makeSelectBuilder(existing: any, rows: any[]) {
 }
 
 function makeInsertBuilder() {
-  return {
+  // saveSubscription is now a single upsert:
+  //   insertInto(...).values({...})
+  //     .onConflict((oc) => oc.columns(["did","endpoint"]).doUpdateSet({...}))
+  //     .execute()
+  // Kysely calls columns/doUpdateSet on the OnConflictBuilder passed INTO the
+  // onConflict callback — not on the insert builder. The mock invokes that
+  // callback with a capturable `oc` so tests can assert the conflict target
+  // and update payload; doUpdateSet returns the insert builder so .execute()
+  // chains.
+  const builder: any = {
     values: mock(function (this: any) {
+      return this;
+    }),
+    onConflict: mock(function (this: any, cb: any) {
+      const oc = {
+        columns: mock(function (this: any) {
+          return this;
+        }),
+        doUpdateSet: mock(function (this: any) {
+          return builder;
+        }),
+      };
+      if (typeof cb === "function") cb(oc);
+      builder._lastOnConflict = oc;
       return this;
     }),
     execute: mock(async () => ({})),
   };
+  return builder;
 }
 
 function makeDeleteBuilder() {
@@ -96,33 +119,35 @@ describe("NotificationService", () => {
   });
 
   describe("saveSubscription", () => {
-    test("inserts a new subscription when endpoint doesn't exist", async () => {
+    test("upserts a subscription via a single insert + onConflict doUpdateSet", async () => {
       const insertBuilder = makeInsertBuilder();
-      mockDb.selectFrom = mock(() => makeSelectBuilder(undefined, []));
       mockDb.insertInto = mock(() => insertBuilder);
 
       await service.saveSubscription("did:foo", "https://push.example/sub", "p256", "auth");
 
+      // One statement, not a read-then-write. updateTable is still wired on
+      // mockDb (the beforeEach sets it up), but the upsert path never calls it.
       assert.strictEqual(mockDb.insertInto.mock.calls.length, 1);
+      assert.strictEqual(mockDb.updateTable.mock.calls.length, 0);
+      assert.strictEqual(mockDb.selectFrom.mock.calls.length, 0);
+
+      // The insert carries the full row...
       const valuesArg = insertBuilder.values.mock.calls[0][0];
       assert.strictEqual(valuesArg.did, "did:foo");
       assert.strictEqual(valuesArg.endpoint, "https://push.example/sub");
-    });
+      assert.strictEqual(valuesArg.p256dh, "p256");
+      assert.strictEqual(valuesArg.auth, "auth");
 
-    test("updates an existing subscription instead of inserting", async () => {
-      const updateBuilder = makeUpdateBuilder();
-      mockDb.selectFrom = mock(() =>
-        makeSelectBuilder({ endpoint: "https://push.example/sub" }, [])
-      );
-      mockDb.insertInto = mock(() => makeInsertBuilder());
-      mockDb.updateTable = mock(() => updateBuilder);
-
-      await service.saveSubscription("did:foo", "https://push.example/sub", "newp256", "newauth");
-
-      assert.strictEqual(mockDb.insertInto.mock.calls.length, 0);
-      assert.strictEqual(mockDb.updateTable.mock.calls.length, 1);
-      const setArg = updateBuilder.set.mock.calls[0][0];
-      assert.strictEqual(setArg.p256dh, "newp256");
+      // ...and the conflict target + key refresh are wired as expected.
+      // columns/doUpdateSet are called on the OnConflictBuilder passed into the
+      // onConflict callback, captured by the mock as _lastOnConflict.
+      const oc = (insertBuilder as any)._lastOnConflict;
+      assert.ok(oc, "onConflict callback was not invoked");
+      const conflictColumnsArg = oc.columns.mock.calls[0][0];
+      assert.deepStrictEqual(conflictColumnsArg, ["did", "endpoint"]);
+      const updateArg = oc.doUpdateSet.mock.calls[0][0];
+      assert.strictEqual(updateArg.p256dh, "p256");
+      assert.strictEqual(updateArg.auth, "auth");
     });
   });
 

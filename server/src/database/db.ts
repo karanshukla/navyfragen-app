@@ -333,6 +333,24 @@ migrations["009"] = {
   },
 };
 
+// Index on message.recipient — the column is the WHERE filter on every inbox
+// read, stats count, delete, and sync, but it had no index, so each did a full
+// table scan. As the message table grows this is the dominant cost on the read
+// path. Single-column index; the table's only other access pattern is the
+// `tid` PK lookup, which the existing primary key already covers.
+migrations["010"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .createIndex("message_recipient_idx")
+      .on("message")
+      .column("recipient")
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.dropIndex("message_recipient_idx").execute();
+  },
+};
+
 // Kysely's SqliteDialect is duck-typed against a tiny Database/Statement
 // surface (prepare(sql) -> { reader, all, run, iterate } + close()). bun:sqlite
 // exposes the same synchronous API with two deltas: its Statement has no
