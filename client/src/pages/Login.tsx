@@ -18,7 +18,7 @@ import {
 import { useDebouncedValue } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { useHaptic } from "use-haptic";
 import { z } from "zod";
 

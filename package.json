@@ -26,7 +26,8 @@
         "ws": "^8.21.0"
     },
     "overrides": {
-        "esbuild": ">=0.28.1"
+        "esbuild": ">=0.28.1",
+        "brace-expansion": ">=5.0.8"
     },
     "patchedDependencies": {
         "@atproto-labs/fetch-node@0.3.5": "patches/@atproto-labs%2Ffetch-node@0.3.5.patch"

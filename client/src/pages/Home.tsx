@@ -18,7 +18,7 @@ import {
 } from "@mantine/core";
 import { IconBrandGithub, IconButterfly, IconClipboard, IconShare } from "@tabler/icons-react";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { useSession } from "../api/authService";
 import { useSyncMessages } from "../api/messageService";

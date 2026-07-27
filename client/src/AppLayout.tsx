@@ -1,7 +1,7 @@
 import { AppShell, Container, Paper, Text, Title } from "@mantine/core";
 import { showNotification } from "@mantine/notifications";
 import React, { useEffect, useRef } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router";
 
 import { useSwitchAccount } from "./api/authService";
 import { AppHeader } from "./components/AppHeader";
