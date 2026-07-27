@@ -44,48 +44,60 @@ function resolveStaticFile(urlPath: string): string | null {
   }
 }
 
-const server = Bun.serve({
-  port: PORT,
-  hostname: "0.0.0.0",
-  async fetch(req) {
-    // Only GET serves content; everything else (HEAD is fine via the file
-    // path too) — keep it simple, mirror `serve`'s behaviour for the routes
-    // that actually reach this container (Caddy proxies GETs).
-    if (req.method !== "GET") {
-      return new Response("Method Not Allowed", {
-        status: 405,
-        headers: { "cache-control": "no-store" },
-      });
-    }
+// Caddy reaches this service over Railway's private network the same way it
+// reaches the backend (FRONTEND_DOMAIN = ${{Frontend.RAILWAY_PRIVATE_DOMAIN}}
+// in caddy/README.md), and that network is IPv6-only. Binding only 0.0.0.0
+// makes the container unreachable from Caddy — the same class of bug as the
+// server's HOST incident (#298), just hardcoded here instead of configurable.
+// Prefer the IPv6 wildcard so a single listener serves both families, falling
+// back to 0.0.0.0 for environments without IPv6 (local Docker bridge networks).
+function listen(fetch: (req: Request) => Response | Promise<Response>) {
+  try {
+    return Bun.serve({ port: PORT, hostname: "::", fetch });
+  } catch (err) {
+    console.warn("IPv6 wildcard bind failed, falling back to 0.0.0.0:", err);
+    return Bun.serve({ port: PORT, hostname: "0.0.0.0", fetch });
+  }
+}
 
-    const url = new URL(req.url);
-    const filePath = resolveStaticFile(url.pathname);
+const server = listen(async (req) => {
+  // Only GET serves content; everything else (HEAD is fine via the file
+  // path too) — keep it simple, mirror `serve`'s behaviour for the routes
+  // that actually reach this container (Caddy proxies GETs).
+  if (req.method !== "GET") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { "cache-control": "no-store" },
+    });
+  }
 
-    // A real static asset: serve it. Bun.file infers the MIME from the
-    // extension (.js → application/javascript, .css → text/css, .svg →
-    // image/svg+xml, .webmanifest → application/manifest+json, etc.), so the
-    // service worker, manifest, icons, and hashed bundles all get the right
-    // content-type. Hashed assets under /assets/* are immutable; everything
-    // else is served fresh (matches what `serve` did).
-    if (filePath) {
-      const isImmutable = url.pathname.startsWith("/assets/");
-      return new Response(Bun.file(filePath), {
-        headers: {
-          "cache-control": isImmutable ? "public, max-age=31536000, immutable" : "no-cache",
-        },
-      });
-    }
+  const url = new URL(req.url);
+  const filePath = resolveStaticFile(url.pathname);
 
-    // SPA fallback: react-router-dom owns client-side routing from here.
-    // index.html is served with no-cache so deploys are picked up without a
-    // hard refresh (the HTML references fresh hashed asset names anyway).
-    return new Response(Bun.file(INDEX_HTML), {
+  // A real static asset: serve it. Bun.file infers the MIME from the
+  // extension (.js → application/javascript, .css → text/css, .svg →
+  // image/svg+xml, .webmanifest → application/manifest+json, etc.), so the
+  // service worker, manifest, icons, and hashed bundles all get the right
+  // content-type. Hashed assets under /assets/* are immutable; everything
+  // else is served fresh (matches what `serve` did).
+  if (filePath) {
+    const isImmutable = url.pathname.startsWith("/assets/");
+    return new Response(Bun.file(filePath), {
       headers: {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "no-cache",
+        "cache-control": isImmutable ? "public, max-age=31536000, immutable" : "no-cache",
       },
     });
-  },
+  }
+
+  // SPA fallback: react-router-dom owns client-side routing from here.
+  // index.html is served with no-cache so deploys are picked up without a
+  // hard refresh (the HTML references fresh hashed asset names anyway).
+  return new Response(Bun.file(INDEX_HTML), {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-cache",
+    },
+  });
 });
 
 console.log(`client (bun static) listening on http://localhost:${server.port}`);
