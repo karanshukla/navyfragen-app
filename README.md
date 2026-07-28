@@ -11,8 +11,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![AT Protocol](https://img.shields.io/badge/AT%20Protocol-native-0085ff?logo=bluesky&logoColor=white)](https://atproto.com)
 
----
-
 ## Screenshots
 
 <img width="983" height="734" alt="Inbox view" src="https://github.com/user-attachments/assets/ab0e4e7a-01d6-4f86-b2bc-15fc1983f431" />
