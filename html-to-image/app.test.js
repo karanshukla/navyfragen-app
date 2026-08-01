@@ -200,6 +200,50 @@ describe('POST / HTML source', () => {
     assert.ok(calls.screenshot.length > shotIdx, 'screenshot was not called');
   });
 
+  test('evaluate callback waits on document.fonts.ready when present', async () => {
+    // page.evaluate's function argument runs inside the browser page, not in
+    // this Node process — the mock browser above only records it. Invoke it
+    // directly here (with a fake `document` global standing in for the page's)
+    // to exercise its actual logic and branches.
+    const fn = calls.evaluate[0];
+    let readAccessed = false;
+    globalThis.document = { fonts: { get ready() { readAccessed = true; return Promise.resolve(); } } };
+    try {
+      await fn();
+    } finally {
+      delete globalThis.document;
+    }
+    assert.ok(readAccessed, 'document.fonts.ready was not read');
+  });
+
+  test('evaluate callback resolves without document.fonts', async () => {
+    globalThis.document = {};
+    try {
+      await calls.evaluate[0]();
+    } finally {
+      delete globalThis.document;
+    }
+  });
+
+  test('waitForFunction predicate checks every image is complete with non-zero naturalWidth', () => {
+    // Same rationale as the evaluate-callback tests above: waitForFunction's
+    // predicate runs inside the browser page. Invoke it directly against a
+    // fake `document.images` to exercise its actual completeness check.
+    const predicate = calls.waitForFunction[0].fn;
+    globalThis.document = { images: [{ complete: true, naturalWidth: 10 }] };
+    try {
+      assert.equal(predicate(), true);
+      globalThis.document.images = [{ complete: false, naturalWidth: 0 }];
+      assert.equal(predicate(), false);
+      globalThis.document.images = [{ complete: true, naturalWidth: 0 }];
+      assert.equal(predicate(), false);
+      globalThis.document.images = [];
+      assert.equal(predicate(), true);
+    } finally {
+      delete globalThis.document;
+    }
+  });
+
   test('passes type:png to page.screenshot', () => {
     assert.equal(calls.screenshot[0].type, 'png');
     assert.ok(calls.screenshot[0].path);
@@ -211,6 +255,29 @@ describe('POST / HTML source', () => {
     try {
       await post(u, { source: 'https://evil.com', format: 'png' });
       assert.match(c.goto[0], /^file:\/\//);
+    } finally {
+      await stopServer(s);
+    }
+  });
+
+  test('a waitForFunction timeout (slow-loading images) does not fail the render', async () => {
+    // waitForVisualReadiness swallows a waitForFunction rejection so a slow
+    // CDN image doesn't turn into a 500 — the screenshot proceeds regardless.
+    const page = {
+      setViewport: async () => {},
+      goto: async () => {},
+      evaluate: async () => {},
+      waitForFunction: async () => { throw new Error('timed out waiting for images'); },
+      screenshot: async (args) => {
+        if (args.path) await fs.writeFile(args.path, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+      },
+      close: async () => {},
+    };
+    const browser = { newPage: async () => page, connected: true };
+    const { server: s, url: u } = await startServer(async () => browser);
+    try {
+      const res = await post(u, { source: '<h1>Hello</h1>', format: 'png' });
+      assert.equal(res.status, 200);
     } finally {
       await stopServer(s);
     }
@@ -562,6 +629,58 @@ describe('createBrowserPool', () => {
     assert.notEqual(second, first);
     assert.equal(second.connected, true);
     assert.equal(launched.length, 2);
+  });
+
+  test('a second caller racing a crash reuses the relaunch the first caller already started', async () => {
+    // Two concurrent getBrowser() calls both observe the same crashed browser.
+    // Only one of them should discard-and-relaunch; the other must notice the
+    // relaunch already in flight (browserPromise !== its own `pending`) rather
+    // than launching a second, redundant browser.
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch });
+
+    const first = await pool.getBrowser();
+    first.connected = false;
+
+    const [a, b] = await Promise.all([pool.getBrowser(), pool.getBrowser()]);
+    assert.equal(a, b, 'both concurrent callers should resolve to the same relaunched browser');
+    assert.equal(a.connected, true);
+    assert.equal(launched.length, 2, 'the crash must trigger exactly one relaunch, not one per caller');
+  });
+
+  test('discard swallows a rejected browser promise during close', async () => {
+    // shutdown()/idle-close call discard() on whatever browserPromise currently
+    // holds. If that promise is still a rejecting launch (nobody has awaited
+    // getBrowser() yet to surface the failure), discard must not throw.
+    const pool = createBrowserPool({ launch: async () => { throw new Error('launch failed'); } });
+
+    const pending = pool.getBrowser();
+    pending.catch(() => {}); // avoid an unhandled rejection from the in-flight call
+
+    await assert.doesNotReject(() => pool.shutdown());
+  });
+
+  test('discard swallows a browser.close() rejection during idle-close', async () => {
+    let launchCount = 0;
+    const launch = async () => {
+      launchCount++;
+      return { connected: true, close: async () => { throw new Error('close failed'); } };
+    };
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 5 });
+
+    await pool.getBrowser();
+    pool.onRenderComplete(0);
+
+    // The idle timer's closeBrowser() awaits discard(), which swallows the
+    // close() rejection internally. browserPromise is nulled synchronously
+    // before discard runs, so once the idle timer has fired, the next
+    // getBrowser() call relaunches — proving the failed close() never left
+    // the pool wedged or produced an unhandled rejection.
+    await waitFor(() => launchCount === 1);
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    const revived = await pool.getBrowser();
+    assert.equal(revived.connected, true);
+    assert.equal(launchCount, 2, 'pool should have relaunched after the idle close');
   });
 
   test('shutdown closes a running browser', async () => {
