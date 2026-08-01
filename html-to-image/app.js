@@ -310,6 +310,13 @@ export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
 }
 
 // Only run when this file is the entry point, not when imported by tests.
+// This whole block is process bootstrap (server listen + signal handlers) —
+// structurally unreachable under the test harness, since app.test.js imports
+// this module rather than executing it as the entry point. Excluded from
+// coverage the same way server/src/index.ts is excluded on the server side
+// (see CLAUDE.md "Coverage Exclusions"). Node's coverage reporter (unlike
+// Bun's) honors these disable/enable markers.
+/* node:coverage disable */
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = 3033;
 
@@ -335,3 +342,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 }
+/* node:coverage enable */
