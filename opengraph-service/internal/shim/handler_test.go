@@ -67,14 +67,14 @@ func newIntegrationHandler(t *testing.T, fetcher *FakeFetcher, renderer *FakeRen
 // banner+avatar set, and a deterministic PNG payload.
 func defaultStubs() (*FakeFetcher, *FakeRenderer) {
 	return &FakeFetcher{
-			DID: "did:plc:integration",
-			Profile: Profile{
-				DisplayName: "Integration User",
-				Handle:      "integration.test",
-				Banner:      "https://cdn.bsky.app/b.jpg",
-				Avatar:      "https://cdn.bsky.app/a.jpg",
-			},
-		}, &FakeRenderer{PNG: []byte("\x89PNG\r\n\x1a\nFAKE-PNG-BYTES")}
+		DID: "did:plc:integration",
+		Profile: Profile{
+			DisplayName: "Integration User",
+			Handle:      "integration.test",
+			Banner:      "https://cdn.bsky.app/b.jpg",
+			Avatar:      "https://cdn.bsky.app/a.jpg",
+		},
+	}, &FakeRenderer{PNG: []byte("\x89PNG\r\n\x1a\nFAKE-PNG-BYTES")}
 }
 
 // do issues a request against the handler with the given UA and path.
@@ -598,4 +598,76 @@ func TestNewHandler_BareHostnameDefaultsToHTTP(t *testing.T) {
 
 func chtimes(path string, atime, mtime time.Time) error {
 	return os.Chtimes(path, atime, mtime)
+}
+
+// --- NewHandler: url.Parse failure surfaces rather than being swallowed. ---
+
+func TestNewHandler_InvalidUpstreamURL_ReturnsError(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	cache, err := NewFileCache(t.TempDir(), 100, time.Hour)
+	if err != nil {
+		t.Fatalf("NewFileCache: %v", err)
+	}
+	gen := NewGenerator(cache, fetcher, renderer)
+
+	// Already contains "://" so NewHandler's bare-hostname default does not
+	// apply; the unbalanced bracket makes url.Parse itself fail.
+	_, err = NewHandler("http://[::1", gen, cache, "https://navyfragen.app")
+	if err == nil {
+		t.Fatal("expected an error for a malformed upstream URL")
+	}
+}
+
+// --- initSem: MaxConcurrentGenerate normalization. ---
+
+func TestHandler_InitSem_NegativeDisablesCap(t *testing.T) {
+	h := &Handler{MaxConcurrentGenerate: -1}
+	h.initSem()
+	if h.genSem != nil {
+		t.Fatal("a negative MaxConcurrentGenerate should disable the semaphore (nil genSem)")
+	}
+}
+
+func TestHandler_InitSem_ZeroFallsBackToDefault(t *testing.T) {
+	h := &Handler{MaxConcurrentGenerate: 0}
+	h.initSem()
+	if h.MaxConcurrentGenerate != DefaultMaxConcurrentGenerate {
+		t.Fatalf("MaxConcurrentGenerate = %d, want default %d", h.MaxConcurrentGenerate, DefaultMaxConcurrentGenerate)
+	}
+	if cap(h.genSem) != DefaultMaxConcurrentGenerate {
+		t.Fatalf("genSem capacity = %d, want %d", cap(h.genSem), DefaultMaxConcurrentGenerate)
+	}
+}
+
+// --- handleGenerate: defensive guards unreachable through ServeHTTP's own
+// routing (Classify already guarantees these preconditions before dispatch),
+// but exercised directly the same way other unreachable-guard tests in this
+// repo call the internal method directly. ---
+
+func TestHandler_HandleGenerate_EmptyHandleIsNotFound(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	h, _, _ := newIntegrationHandler(t, fetcher, renderer)
+
+	// A path that ServeHTTP's Classify would never route to handleGenerate
+	// (isProfilePath would be false), called directly to exercise the guard.
+	req := httptest.NewRequest(http.MethodGet, "/profile/", nil)
+	rec := httptest.NewRecorder()
+	h.handleGenerate(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 for an empty handle", rec.Code)
+	}
+	if atomic.LoadInt32(&fetcher.ResolveCalls) != 0 {
+		t.Fatal("the fetcher must not be reached when the handle is empty")
+	}
+}
+
+func TestHandler_HandleGenerate_ZeroTimeoutFallsBackToDefault(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	h, _, _ := newIntegrationHandler(t, fetcher, renderer)
+	h.GenTimeout = 0 // bypass NewHandler's 45s default to hit the fallback directly
+
+	rec := do(t, h, CardybUA, "/profile/integration.test")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (a zero GenTimeout should fall back to the 45s default, not fail)", rec.Code)
+	}
 }

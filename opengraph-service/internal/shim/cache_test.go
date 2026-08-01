@@ -2,6 +2,7 @@ package shim
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -273,5 +274,262 @@ func TestFileCache_StoreOverwritesAtomically(t *testing.T) {
 		if strings.HasPrefix(e.Name(), ".tmp-") {
 			t.Fatalf("temp file left behind after atomic Store: %s", e.Name())
 		}
+	}
+}
+
+func TestNewFileCache_NonPositiveMaxEntriesFallsBackToDefault(t *testing.T) {
+	for _, n := range []int{0, -1, -100} {
+		c, err := NewFileCache(t.TempDir(), n, time.Hour)
+		if err != nil {
+			t.Fatalf("NewFileCache(%d): %v", n, err)
+		}
+		if c.MaxEntries != DefaultCacheMaxEntries {
+			t.Errorf("MaxEntries for input %d = %d, want default %d", n, c.MaxEntries, DefaultCacheMaxEntries)
+		}
+	}
+}
+
+func TestNewFileCache_MkdirAllFailure(t *testing.T) {
+	// A regular file in the path where a directory component is expected makes
+	// MkdirAll fail.
+	parent := t.TempDir()
+	blocker := filepath.Join(parent, "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewFileCache(filepath.Join(blocker, "cache"), 100, time.Hour); err == nil {
+		t.Fatal("expected an error when a path component is a file, got nil")
+	}
+}
+
+func TestFileCache_Load_ReadFileFailureIsCacheMiss(t *testing.T) {
+	// Stat succeeds (the .png exists) but ReadFile fails: point the "png" at a
+	// directory, which os.Stat happily describes but os.ReadFile cannot read.
+	c := newTestCache(t, 100, time.Hour)
+	if err := os.MkdirAll(c.pngPath("did:plc:dir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Load("did:plc:dir"); err != ErrCacheMiss {
+		t.Fatalf("want ErrCacheMiss when the png path is a directory, got %v", err)
+	}
+}
+
+func TestFileCache_TouchLRU_NoopWhenMetaMissing(t *testing.T) {
+	// Simulates a cache entry written by an older binary with no .meta sidecar:
+	// touchLRU's Chtimes call fails (no such file) and must not panic or error.
+	c := newTestCache(t, 100, time.Hour)
+	mustStore(t, c, "did:plc:nometa", "X")
+	if err := os.Remove(c.metaPath("did:plc:nometa")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := c.Load("did:plc:nometa")
+	if err != nil {
+		t.Fatalf("load with missing sidecar should still succeed, got %v", err)
+	}
+	if got.MimeType != "image/png" {
+		t.Errorf("mime = %q, want image/png fallback", got.MimeType)
+	}
+}
+
+func TestFileCache_Store_RejectsEmptyDID(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	if err := c.Store("", []byte("x"), "image/png"); err == nil {
+		t.Fatal("expected an error for an empty did")
+	}
+}
+
+func TestFileCache_Store_WriteMetaFailurePropagates(t *testing.T) {
+	// Pre-create a directory where the .meta sidecar would be written, so the
+	// png write (a differently-named temp+rename) succeeds but writeMeta's
+	// os.WriteFile fails ("is a directory").
+	c := newTestCache(t, 100, time.Hour)
+	if err := os.MkdirAll(c.metaPath("did:plc:blocked"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Store("did:plc:blocked", []byte("x"), "image/png"); err == nil {
+		t.Fatal("expected Store to surface the writeMeta failure")
+	}
+}
+
+func TestWriteFileAtomic_CreateTempFailure(t *testing.T) {
+	// A destination directory that doesn't exist makes os.CreateTemp fail.
+	dst := filepath.Join(t.TempDir(), "missing-dir", "out.png")
+	if err := writeFileAtomic(dst, []byte("x"), 0o644); err == nil {
+		t.Fatal("expected an error when the destination directory doesn't exist")
+	}
+}
+
+func TestWriteFileAtomic_RenameFailure(t *testing.T) {
+	// An existing non-empty directory at dst makes os.Rename fail — the temp
+	// file must be cleaned up rather than left behind.
+	dir := t.TempDir()
+	dst := filepath.Join(dir, "target")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dst, "occupied"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFileAtomic(dst, []byte("x"), 0o644); err == nil {
+		t.Fatal("expected an error when dst is a non-empty directory")
+	}
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".tmp-") {
+			t.Fatalf("temp file left behind after a failed rename: %s", e.Name())
+		}
+	}
+}
+
+func TestFileCache_ReadMeta_FallsBackToDefaultMime(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+
+	t.Run("missing sidecar", func(t *testing.T) {
+		if got := c.readMeta("did:plc:missing"); got != "image/png" {
+			t.Errorf("readMeta = %q, want image/png", got)
+		}
+	})
+
+	t.Run("invalid JSON", func(t *testing.T) {
+		if err := os.WriteFile(c.metaPath("did:plc:badjson"), []byte("not json"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := c.readMeta("did:plc:badjson"); got != "image/png" {
+			t.Errorf("readMeta = %q, want image/png fallback for invalid JSON", got)
+		}
+	})
+
+	t.Run("empty mimeType field", func(t *testing.T) {
+		b, _ := json.Marshal(struct {
+			MimeType string `json:"mimeType"`
+		}{MimeType: ""})
+		if err := os.WriteFile(c.metaPath("did:plc:emptymime"), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := c.readMeta("did:plc:emptymime"); got != "image/png" {
+			t.Errorf("readMeta = %q, want image/png fallback for empty mimeType", got)
+		}
+	})
+}
+
+func TestFileCache_WriteMeta_EmptyMimeTypeDefaultsToImagePNG(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	if err := c.Store("did:plc:defaultmime", []byte("x"), ""); err != nil {
+		t.Fatal(err)
+	}
+	got, err := c.Load("did:plc:defaultmime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.MimeType != "image/png" {
+		t.Errorf("mime = %q, want image/png default", got.MimeType)
+	}
+}
+
+func TestFileCache_SafePathFromBase(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	cases := []struct {
+		name string
+		base string
+		want string
+	}{
+		{"empty base", "", ""},
+		{"root after clean", "/", ""},
+		{"parent traversal collapses to root", "../../etc/passwd.png", "passwd.png"},
+		{"missing extension is rejected", "did-plc-abc", ""},
+		{"wrong extension is rejected", "did-plc-abc.jpg", ""},
+		{"valid did-like filename", "did-plc-abc.png", "did-plc-abc.png"},
+		{"colon-bearing DID is re-sanitized", "did:plc:abc.png", "did-plc-abc.png"},
+		{"nested path collapses to basename", "sub/dir.png", "dir.png"},
+		{"empty stem after SafeDID is rejected", ".png", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := c.SafePathFromBase(tc.base); got != tc.want {
+				t.Errorf("SafePathFromBase(%q) = %q, want %q", tc.base, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFileCache_LoadByPath_ExpiredIsCacheMiss(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	mustStore(t, c, "did:plc:expired", "X")
+	p := c.pngPath("did:plc:expired")
+	past := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(p, past, past); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.LoadByPath(p); err != ErrCacheMiss {
+		t.Fatalf("want ErrCacheMiss for an expired entry, got %v", err)
+	}
+}
+
+func TestFileCache_LoadByPath_ReadFileFailureIsCacheMiss(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	dirAsPng := filepath.Join(c.dir, "not-a-file.png")
+	if err := os.MkdirAll(dirAsPng, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.LoadByPath(dirAsPng); err != ErrCacheMiss {
+		t.Fatalf("want ErrCacheMiss when the path is a directory, got %v", err)
+	}
+}
+
+func TestFileCache_EvictIfNeeded_ReadDirFailureIsNoop(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	if err := os.RemoveAll(c.dir); err != nil {
+		t.Fatal(err)
+	}
+	// Must not panic when the cache directory itself has been removed out from
+	// under it.
+	c.evictIfNeeded()
+}
+
+func TestFileCache_EvictIfNeeded_RemovesOrphanedMetaAndSkipsSubdirs(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	mustStore(t, c, "did:plc:a", "A")
+
+	// An orphaned .meta with no matching .png (e.g. a Store interrupted between
+	// writing the sidecar and the image).
+	orphan := filepath.Join(c.dir, "orphan.meta")
+	if err := os.WriteFile(orphan, []byte(`{"mimeType":"image/png"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A stray subdirectory must be skipped, not treated as an entry.
+	if err := os.MkdirAll(filepath.Join(c.dir, "stray-subdir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Store triggers evictIfNeeded.
+	mustStore(t, c, "did:plc:b", "B")
+
+	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
+		t.Errorf("orphaned .meta should have been removed, stat err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(c.dir, "stray-subdir")); err != nil {
+		t.Errorf("subdirectory should have been left alone: %v", err)
+	}
+}
+
+func TestFileCache_EvictIfNeeded_FallsBackToPngModTimeWhenMetaMissing(t *testing.T) {
+	// An entry missing its .meta sidecar (older binary, or manually removed)
+	// must still participate in LRU ordering via its .png ModTime, rather than
+	// being skipped or crashing eviction.
+	c := newTestCache(t, 2, time.Hour)
+	mustStore(t, c, "did:plc:a", "A")
+	if err := os.Remove(c.metaPath("did:plc:a")); err != nil {
+		t.Fatal(err)
+	}
+	// Backdate "a"'s .png so it is the oldest by the fallback clock.
+	past := time.Now().Add(-time.Hour / 2)
+	if err := os.Chtimes(c.pngPath("did:plc:a"), past, past); err != nil {
+		t.Fatal(err)
+	}
+	mustStore(t, c, "did:plc:b", "B")
+	// Exceeding capacity must evict "a" (oldest by png-modtime fallback).
+	mustStore(t, c, "did:plc:c", "C")
+	if _, err := c.Load("did:plc:a"); err != ErrCacheMiss {
+		t.Fatalf("did:plc:a should have been evicted via the png-modtime fallback, got %v", err)
 	}
 }

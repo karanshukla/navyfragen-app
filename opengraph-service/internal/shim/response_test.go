@@ -85,3 +85,39 @@ func TestAbsoluteImageURL_TrailingSlashOriginNotDoubled(t *testing.T) {
 		t.Fatalf("double slash in %q", got)
 	}
 }
+
+func TestAbsoluteImageURL_EmptyImageURL(t *testing.T) {
+	if got := AbsoluteImageURL("https://navyfragen.app", ""); got != "" {
+		t.Fatalf("got %q, want empty string", got)
+	}
+}
+
+func TestAbsoluteImageURL_EmptyOriginReturnsImageURLUnchanged(t *testing.T) {
+	in := "/og-cache/x.png"
+	if got := AbsoluteImageURL("", in); got != in {
+		t.Fatalf("got %q, want %q unchanged when origin is empty", got, in)
+	}
+}
+
+func TestAbsoluteImageURL_ProtocolRelative_UsesOriginScheme(t *testing.T) {
+	got := AbsoluteImageURL("http://navyfragen.app", "//cdn.example.com/x.png")
+	if got != "http://cdn.example.com/x.png" {
+		t.Fatalf("got %q, want the origin's http scheme applied", got)
+	}
+}
+
+func TestAbsoluteImageURL_ProtocolRelative_DefaultsToHTTPSWhenOriginHasNoScheme(t *testing.T) {
+	got := AbsoluteImageURL("navyfragen.app", "//cdn.example.com/x.png")
+	if got != "https://cdn.example.com/x.png" {
+		t.Fatalf("got %q, want the https default when origin has no parseable scheme", got)
+	}
+}
+
+func TestBuildOGResponse_TitleFallsBackToNavyfragenWhenNothingIdentifying(t *testing.T) {
+	got := BuildOGResponse(ResponseInput{
+		ImageURL: "https://x/y.png",
+		Origin:   "https://navyfragen.app",
+	})
+	mustContain(t, got, "<title>Navyfragen - Navyfragen</title>")
+	mustContain(t, got, `content="Navyfragen"`)
+}

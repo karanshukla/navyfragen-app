@@ -297,6 +297,19 @@ No `/* v8 ignore */` annotations are added for these because the underlying logi
 
 **What it would take to test:** Use Playwright (which runs against a real Chromium instance) to type in the login handle field, wait for the suggestion dropdown to appear, and assert that each option shows the avatar, display name, and `@handle` text. This is a UI-layer concern that unit tests cannot reach.
 
+## `opengraph-service` (Go, `go test -coverprofile`)
+
+CI (`opengraph-tests` in `.github/workflows/Tests.yml`) runs `go test -race -count=1 ./...` with no coverage flag and no threshold gate — coverage here is a local diagnostic, not an enforced bar, unlike the client's 100%-on-all-metrics gate or the server's 97%-lines gate. Go's toolchain also has no inline per-line coverage-ignore directive (no `/* v8 ignore */` or `node:coverage disable` equivalent), so gaps below are accepted and documented rather than suppressed.
+
+Work so far has raised `internal/shim` package coverage from 78.8% to 92.6% (`cache.go`, `fetcher.go`, `generate.go`, `handler.go`, `response.go` — `caddyproxy.go`, `renderer.go`, `shim.go` not yet done). Remaining gaps in the five files touched:
+
+- **`cache.go` — `writeFileAtomic`'s write/sync/close error branches (and the combined `if err != nil` block that depends on them).** `os.File.Write`/`.Sync`/`.Close` on a freshly-created temp file in a writable directory do not fail under normal test conditions; forcing them would need a fake/wrapped `io.Writer` (the function takes a real `*os.File` internally) or a full/quota-limited filesystem, neither portable in CI. The `CreateTemp` and `Rename` failure branches ARE tested (missing destination directory; an existing non-empty directory at the rename target, respectively).
+- **`cache.go` — `writeMeta`'s `json.Marshal` failure branch.** Marshaling `struct{ MimeType string }` with a plain Go string field cannot fail; there is no invalid state reachable through `Store`'s public API that would make it error.
+- **`cache.go` — `evictIfNeeded`'s `e.Info()` error branch in the second (eviction) loop.** `DirEntry.Info()` fails only on a TOCTOU race — the entry disappearing between `os.ReadDir` and the `.Info()` call — not reproducible deterministically in a single-process test.
+- **`generate.go` — `Generate`'s `!ok` type-assertion guard** on the singleflight return value. `generateOnce` (the only function ever passed to `group.Do`) always returns `(GenerateResult, error)`, so the failed-assertion arm is unreachable without changing that contract. The source comment already documents this as defense against "a future refactor"; `TestGenerate_TypeAssertionGuard` exercises the happy path to confirm the guard doesn't false-positive, but cannot reach the guard itself.
+- **`handler.go` — `NewHandler`'s `newCaddyProxy` error branch.** `newCaddyProxy` fails only if the process-wide embedded Caddy engine (`ensureCaddyEngine`, guarded by a `sync.Once`) fails to start. Once any test in the package successfully constructs a `Handler` (nearly all of `handler_test.go` does, via `newIntegrationHandler`), the engine is up for the rest of the test binary's life — there is no way to force a fresh failure afterward without restructuring the engine lifecycle away from `sync.Once`.
+- **`response.go` — `AbsoluteImageURL`'s second `if imageURL == "" { return base }` check.** This is dead code: the function's first statement already returns `""` when `imageURL == ""` (line 64-66), so by the time execution reaches line 77 `imageURL` cannot be empty. Left as-is (not deleted) since removing it is a source-behavior change outside the scope of a test-coverage pass, not a test gap to close.
+
 ## Coverage Exclusions (via config)
 
 The following files are excluded from coverage metrics entirely. See the root-level notes in `CLAUDE.md` under "Coverage Exclusions".
