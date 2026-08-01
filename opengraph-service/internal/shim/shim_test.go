@@ -78,6 +78,16 @@ func TestProfileHandle_NestedPath_Empty(t *testing.T) {
 	}
 }
 
+func TestProfileHandle_TrailingSlashOnlyBecomesEmptyAfterTrim(t *testing.T) {
+	// TrimPrefix leaves a non-empty "/" (so the earlier rest=="" check doesn't
+	// fire); TrimSuffix("/") then collapses it to "", which must still be
+	// rejected as "no handle" rather than falling through to the nested-path
+	// check with an empty string.
+	if got := ProfileHandle("/profile//"); got != "" {
+		t.Fatalf("got %q, want empty", got)
+	}
+}
+
 // --- Cache TTL logic ---
 
 func TestCacheEntry_NilNeverFresh(t *testing.T) {
@@ -221,6 +231,17 @@ func TestBuildOGTemplate_PromptHTMLEscaped(t *testing.T) {
 	})
 	mustNotContain(t, html, "<script>")
 	mustContain(t, html, "&lt;script&gt;")
+}
+
+func TestBuildOGTemplate_EmptyPrompt_FallsBackToDefault(t *testing.T) {
+	for _, prompt := range []string{"", "   ", "\t\n"} {
+		html := BuildOGTemplate(OGInput{
+			DisplayName: "X",
+			Handle:      "x.bsky.social",
+			Prompt:      prompt,
+		})
+		mustContain(t, html, DefaultPrompt)
+	}
 }
 
 func mustContain(t *testing.T, s, sub string) {
