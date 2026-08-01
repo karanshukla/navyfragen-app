@@ -232,6 +232,22 @@ func TestGenerate_RendererFailure_ReturnsErrRenderFailed(t *testing.T) {
 	}
 }
 
+func TestGenerate_ProfileFetchFailure_AfterCacheMiss(t *testing.T) {
+	cache, fetcher, renderer := newDeps(t)
+	fetcher.ProfileErr = errors.New("appview unavailable")
+	gen := NewGenerator(cache, fetcher, renderer)
+
+	_, err := gen.Generate(context.Background(), "test.bsky.social")
+	if err == nil || !strings.Contains(err.Error(), "appview unavailable") {
+		t.Fatalf("want the FetchProfile error to propagate, got %v", err)
+	}
+	// The renderer must not have been reached — the pipeline stops at the
+	// profile-read failure.
+	if atomic.LoadInt32(&renderer.Calls) != 0 {
+		t.Fatal("renderer must not be called when FetchProfile fails")
+	}
+}
+
 // --- isNotFound: the indigo xrpc.Error shape drives the 404 mapping ---
 
 func TestIsNotFound_XRPC400_IsNotFound(t *testing.T) {
@@ -387,5 +403,46 @@ func TestGenerate_TypeAssertionGuard(t *testing.T) {
 	}
 	if got.DID != "did:plc:test" {
 		t.Fatalf("DID = %q", got.DID)
+	}
+}
+
+// --- detachContext: the "no ctx" test-only path (concern noted in its doc). ---
+
+func TestDetachContext_NilContext(t *testing.T) {
+	detached, cancel := detachContext(nil)
+	defer cancel()
+	if detached == nil {
+		t.Fatal("detachContext(nil) returned a nil context")
+	}
+	if _, ok := detached.Deadline(); ok {
+		t.Fatal("a detached context built from nil should have no deadline")
+	}
+	select {
+	case <-detached.Done():
+		t.Fatal("detached context from nil should not already be done")
+	default:
+	}
+}
+
+// --- AsHTTPStatus: orchestrator error -> HTTP status mapping. ---
+
+func TestAsHTTPStatus(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want int
+	}{
+		{"nil error is 200", nil, 200},
+		{"ErrProfileNotFound is 404", ErrProfileNotFound, 404},
+		{"wrapped ErrProfileNotFound is 404", fmt.Errorf("resolve: %w", ErrProfileNotFound), 404},
+		{"ErrRenderFailed is 502", ErrRenderFailed, 502},
+		{"unknown error defaults to 502", errors.New("boom"), 502},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := AsHTTPStatus(tc.err); got != tc.want {
+				t.Errorf("AsHTTPStatus(%v) = %d, want %d", tc.err, got, tc.want)
+			}
+		})
 	}
 }
