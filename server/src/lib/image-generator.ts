@@ -164,7 +164,6 @@ export async function generateQuestionImage(
       }
       return {};
     }
-    /* v8 ignore next 4 */
   } catch (imgErr) {
     logger.error(imgErr, "Error during image generation process");
     return {};

@@ -90,4 +90,15 @@ describe("generateQuestionImage", () => {
     const result = await generateQuestionImage("Hello", makeLogger());
     assert.deepStrictEqual(result, {});
   });
+
+  test("returns empty object when image processing throws", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(Buffer.from("not a real png"), { status: 200 })
+    );
+    const logger = makeLogger();
+    const result = await generateQuestionImage("Hello", logger);
+    assert.deepStrictEqual(result, {});
+    assert.strictEqual(logger.error.mock.calls.length, 1);
+    assert.strictEqual(logger.error.mock.calls[0][1], "Error during image generation process");
+  });
 });
