@@ -314,9 +314,10 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   // --- POST /auth/e2e-login (E2E only, never in production) ----------------
   // Extracted to src/hono/e2e-auth-routes.ts (its own module so it can be
   // excluded from the unit-coverage gate — it makes live network calls).
-  if (env.E2E_TESTING && env.NODE_ENV !== "production") {
-    app.route("/", createE2EAuthHono(ctx, service));
-  }
+  // Mount only outside production when E2E testing is opted in.
+  const e2eSubApp =
+    env.E2E_TESTING && env.NODE_ENV !== "production" ? createE2EAuthHono(ctx, service) : null;
+  if (e2eSubApp) app.route("/", e2eSubApp);
 
   // --- helpers -------------------------------------------------------------
 

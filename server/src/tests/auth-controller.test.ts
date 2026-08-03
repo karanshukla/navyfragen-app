@@ -266,6 +266,24 @@ describe("Auth (Hono)", () => {
       const body = await res.json();
       assert.deepStrictEqual(body, { isLoggedIn: false, profile: null, did: null });
     });
+
+    test("removes the fallback account too when its session is also invalid", async () => {
+      // Active account invalid → fall back to first remembered account → that
+      // one is ALSO invalid → both removed, session cleared.
+      const { app, headers } = makeApp({
+        session: {
+          did: "did:foo",
+          accounts: [
+            { did: "did:bar", handle: "bar.bsky.social" },
+            { did: "did:foo", handle: "foo.bsky.social" },
+          ],
+        },
+        serviceOverride: { checkSession: mock(async () => null) },
+      });
+      const res = await app.request("/session", { headers });
+      const body = await res.json();
+      assert.strictEqual(body.isLoggedIn, false);
+    });
   });
 
   describe("GET /client-metadata.json", () => {
@@ -348,6 +366,33 @@ describe("Auth (Hono)", () => {
       // Fire-and-forget push-subscription sync across all remembered accounts.
       await new Promise((resolve) => setImmediate(resolve));
       assert.strictEqual(notifications.syncSubscriptionsAcrossAccounts.mock.calls.length, 1);
+    });
+
+    test("logs an error when the push-subscription sync rejects (fire-and-forget)", async () => {
+      const { app, ctx, headers } = makeApp({
+        session: {
+          did: "did:plc:foo",
+          accounts: [
+            { did: "did:plc:foo", handle: "foo.bsky.social" },
+            { did: "did:plc:bar", handle: "bar.bsky.social" },
+          ],
+        },
+        serviceOverride: {
+          checkSession: mock(async () => ({ did: "did:plc:bar", handle: "bar.bsky.social" })),
+        },
+        notificationOverride: {
+          syncSubscriptionsAcrossAccounts: mock(async () => {
+            throw new Error("push sync failed");
+          }),
+        },
+      });
+      await app.request("/accounts/switch", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ did: "did:plc:bar" }),
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.strictEqual((ctx.logger.error as any).mock.calls.length, 1);
     });
 
     test("returns 401 and drops the account when its token has expired", async () => {

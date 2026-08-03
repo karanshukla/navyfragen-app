@@ -44,5 +44,6 @@ coveragePathIgnorePatterns = [
   "src/lib/env.ts",                       # bootstrapped before tests via test-bootstrap.js
   "src/hono/session-middleware.ts",       # signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
   "src/hono/e2e-auth-routes.ts",          # E2E-only login; makes live network calls, exercised by the Playwright overlay
+  "src/tests/helpers/**",                 # test infrastructure (session-injection wrapper), not production code
   "src/scripts/**",                       # one-off admin scripts (publish-lexicons etc.)
 ]

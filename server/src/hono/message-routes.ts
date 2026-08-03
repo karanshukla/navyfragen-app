@@ -118,9 +118,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     ),
     async (c) => {
       const { recipient, message } = c.req.valid("json");
-      if (!recipient || !message) {
-        return c.json({ error: "Recipient and message required" }, 400);
-      }
       try {
         const result = await messageService.sendMessage(recipient, message);
         ctx.logger.debug({ recipient }, "Anonymous message sent");
