@@ -1,7 +1,7 @@
-// Bun-runtime canary for issue #314 — gates the html-to-image-tests CI job.
-// This service still runs on Node in production; this probe is the evidence
-// that decides whether the migration to Bun can proceed. It exercises the two
-// surfaces in the render path that are genuinely under-verified under Bun:
+// Bun-runtime regression canary for issue #314 — gates the html-to-image-tests
+// CI job. The service runs on Bun in production; this probe protects against
+// regressions of the two surfaces in the render path that were the load-bearing
+// risk of the Node→Bun migration:
 //   1. the child_process.spawn of Chromium (Puppeteer launches the browser via
 //      child_process), and
 //   2. the CDP WebSocket transport between puppeteer and Chromium.

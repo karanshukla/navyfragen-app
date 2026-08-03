@@ -25,7 +25,7 @@ Session management is kept intentionally thin on the server side for speed and s
 
 ## AT Protocol / Lexicons
 
-A custom lexicon `app.navyfragen.message` defines the record type for messages stored on the user's PDS. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `npm run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.
+A custom lexicon `app.navyfragen.message` defines the record type for messages stored on the user's PDS. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `bun run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.
 
 The `#/` path alias maps to `src/` (configured in `tsconfig.json`).
 
