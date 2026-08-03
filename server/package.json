@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "bun --watch --no-clear-screen src/index.ts | pino-pretty",
     "start": "bun src/index.ts",
+    "dev:hono": "bun --watch --no-clear-screen src/index-hono.ts | pino-pretty",
+    "start:hono": "bun src/index-hono.ts",
     "lexgen": "lex gen-server ./src/lexicon ./lexicons/*",
     "clean": "rimraf coverage",
     "lint": "oxlint .",
@@ -35,6 +37,7 @@
     "@atproto/syntax": "^0.7.0",
     "@atproto/xrpc-server": "^0.11.6",
     "@axiomhq/pino": "^1.8.0",
+    "@hono/zod-validator": "^0.9.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cookie-session": "^2.0.49",
     "@types/cryptr": "^4.0.3",
@@ -48,6 +51,8 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.1",
     "express-validator": "^7.3.2",
+    "hono": "^4.12.34",
+    "hono-rate-limiter": "^0.5.3",
     "iron-session": "^8.0.4",
     "kysely": "^0.29.4",
     "multiformats": "^14.0.5",
@@ -56,7 +61,8 @@
     "pino": "^10.3.1",
     "sharp": "^0.35.3",
     "uhtml": "^5.0.9",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@atproto/lex-cli": "^0.10.6",
