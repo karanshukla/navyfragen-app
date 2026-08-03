@@ -23,6 +23,12 @@ import { createDb, migrateToLatest } from "./database/db";
 import { assertProductionBindHost, WILDCARD_HOSTS } from "./lib/assert-production-bind-host";
 import { createBidirectionalResolver, createIdResolver } from "./lib/id-resolver";
 import { createAuthHono } from "./hono/auth-routes";
+import {
+  createMessageHono,
+  createNotificationHono,
+  createProfileHono,
+  createSettingsHono,
+} from "./hono/message-routes";
 import { sessionMiddleware, type SessionVars } from "./hono/session-middleware";
 
 import type { Database } from "./database/db";
@@ -142,8 +148,13 @@ class HonoServer {
       c.header("Cache-Control", "no-store");
     });
 
-    // 4. The auth routes (login/session/logout/switch) with Zod validators.
+    // 4. Routes. Auth first (login/session/logout/switch/oauth/e2e), then the
+    //    remaining domains — each a Hono sub-app with Zod validators.
     app.route("/", createAuthHono(ctx));
+    app.route("/", createMessageHono(ctx));
+    app.route("/", createProfileHono(ctx));
+    app.route("/", createSettingsHono(ctx));
+    app.route("/", createNotificationHono(ctx));
 
     // 404 — matches the Express catch-all shape.
     app.notFound((c) =>
