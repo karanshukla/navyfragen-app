@@ -1,9 +1,6 @@
-// Hono message/profile/settings/notification routes for the #316 spike.
-//
-// Ports every handler from controllers/{message,profile,settings,notification}-
-// controller.ts to Hono's Context. Business logic stays in the services (reused
-// unchanged); only the req/res I/O moves from Express to Hono. Validation moves
-// from express-validator chains to Zod schemas (the client already uses Zod v4).
+// Message, profile, settings, and notification route handlers. Business logic
+// stays in the services (reused unchanged); only the req/res I/O is Hono's
+// Context. Validation uses Zod schemas (the client already uses Zod v4).
 
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -14,7 +11,8 @@ import { MessageService } from "#/services/message-service";
 import { NotificationService } from "#/services/notification-service";
 import { ProfileService } from "#/services/profile-service";
 import { SettingsService } from "#/services/settings-service";
-import { getSession } from "./session-middleware";
+import { getAccounts } from "#/auth/session";
+import { clearSession, getSession } from "./session-middleware";
 import { initializeAgentFromHonoSession } from "./session-agent-hono";
 
 import type { AppContext } from "#/index";
@@ -205,8 +203,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
         .catch((err) =>
           ctx.logger.error({ err, did: userSessionDid }, "Failed to delete push subscriptions")
         );
-      // Clear the session — mirrors req.session = null in the Express controller.
-      const { clearSession } = await import("./session-middleware");
       clearSession(c);
       ctx.logger.info({ did: userSessionDid }, "Account and all data deleted");
       return c.json({ success: true });
@@ -527,7 +523,6 @@ export function createNotificationHono(ctx: AppContext, deps: NotificationDeps =
       const { endpoint, keys } = c.req.valid("json");
       try {
         await notificationService.saveSubscription(did, endpoint, keys.p256dh, keys.auth);
-        const { getAccounts } = await import("#/auth/session");
         const session = getSession(c);
         const dids = getAccounts(session).map((account) => account.did);
         await notificationService.syncSubscriptionsAcrossAccounts(dids);

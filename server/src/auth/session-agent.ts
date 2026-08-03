@@ -36,24 +36,3 @@ export async function initializeAgentForDid(
     return null;
   }
 }
-
-/**
- * Restores the AT Protocol Agent for the session's currently active account.
- * Thin wrapper over {@link initializeAgentForDid} using `req.session.did`.
- *
- * Takes a minimal structural shape rather than `Express.Request` so it has no
- * dependency on the (now-removed) Express global type augmentation. The Hono
- * layer uses `initializeAgentFromHonoSession` in src/hono/session-agent-hono.ts;
- * this signature survives for the session-agent unit test.
- */
-/* v8 ignore next 1 */
-export async function initializeAgentFromSession(
-  req: { session?: { did?: string } | null },
-  ctx: AppContext
-): Promise<E2EAgent | null> {
-  if (!req.session?.did) {
-    return null;
-  }
-
-  return initializeAgentForDid(ctx, req.session.did);
-}

@@ -1,13 +1,8 @@
-// Hono auth-route handlers for the Express→Bun spike (#316).
-//
-// Ports the four auth-path handlers from controllers/auth-controller.ts to
-// Hono's Context: login, session, logout, switchAccount. Business logic stays
-// in AuthService (reused unchanged); only the req/res I/O moves from
-// Express's (req, res) to Hono's (c).
-//
-// Validation moves from express-validator chains to @hono/zod-validator. The
-// client already uses Zod v4, so this also consolidates the schema stack —
-// one of the dep-reduction wins the spike is meant to quantify.
+// Auth route handlers (login, session, logout, switchAccount, OAuth callback/
+// consume, client-metadata, E2E login). Business logic stays in AuthService
+// and NotificationService (reused unchanged); only the req/res I/O is Hono's
+// Context. Validation uses @hono/zod-validator (the client already uses Zod v4,
+// so this consolidates the schema stack).
 
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -26,6 +21,7 @@ import { errorMessage } from "#/lib/errors";
 import { env } from "#/lib/env";
 import { pdsRegion } from "#/lib/pds-region";
 import { AuthService } from "#/services/auth-service";
+import { NotificationService } from "#/services/notification-service";
 import { clearSession, getSession, setSession } from "./session-middleware";
 
 import type { AppContext } from "#/index";
@@ -34,11 +30,14 @@ import type { AppSessionData } from "#/auth/session";
 /** Optional injected services — production omits this (uses real services); tests pass mocks. */
 export interface AuthDeps {
   service?: AuthService;
+  notificationService?: NotificationService;
 }
 
 export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   const app = new Hono();
   const service = deps.service ?? new AuthService(ctx);
+  const notificationService =
+    deps.notificationService ?? new NotificationService(ctx.db, ctx.resolver, ctx.logger);
 
   // --- POST /login ---------------------------------------------------------
   // Zod v4: custom messages on .min() use { error: "..." }.
@@ -73,7 +72,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   app.get("/session", async (c) => {
     let session = getSession(c);
     if (!session?.did) {
-      await clearSessionIfNeeded(c);
+      clearSession(c);
       ctx.logger.debug("No session cookie, returning not logged in");
       return c.json({ isLoggedIn: false, profile: null, did: null });
     }
@@ -113,7 +112,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       }
 
       if (!profile) {
-        await clearSessionIfNeeded(c);
+        clearSession(c);
         return c.json({ isLoggedIn: false, profile: null, did: null });
       }
 
@@ -125,7 +124,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
         accounts: getAccounts(finalSession),
       });
     } catch (err) {
-      await clearSessionIfNeeded(c);
+      clearSession(c);
       ctx.logger.error({ err }, "Error fetching profile");
       return c.json({ isLoggedIn: false, profile: null, did: null });
     }
@@ -154,7 +153,10 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       return c.json({ message: "Logged out, switched account", switched: true });
     }
     clearSession(c);
-    c.header("Set-Cookie", expireNfRegionCookie());
+    // Append (not replace) the nf-region expiry so both Set-Cookie headers
+    // reach the browser — clearSession already wrote nf-session's expiry, and
+    // c.header without append would clobber it.
+    c.header("Set-Cookie", expireNfRegionCookie(), { append: true });
     return c.json({ message: "Logged out successfully" });
   });
 
@@ -199,6 +201,14 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
           mutateSession(updated, (s) => upsertAccount(s, toAccountEntry(profile)))
         );
         ctx.logger.info({ did }, "Switched active account");
+        // Fire-and-forget: if this device already has push enabled for another
+        // remembered account, extend it to the one just switched to. Never block
+        // the switch response on this.
+        notificationService
+          .syncSubscriptionsAcrossAccounts(getAccounts(updated).map((a) => a.did))
+          .catch((err) =>
+            ctx.logger.error({ err, did }, "Failed to sync push subscriptions across accounts")
+          );
         return c.json({ success: true, did });
       } catch (err) {
         ctx.logger.error({ err, did }, "Failed to switch account");
@@ -355,10 +365,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     };
     fn(copy);
     return copy;
-  }
-
-  async function clearSessionIfNeeded(c: Parameters<typeof clearSession>[0]): Promise<void> {
-    clearSession(c);
   }
 
   /** The Express build clears the `nf-region` routing cookie on logout. */

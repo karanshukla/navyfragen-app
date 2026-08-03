@@ -44,13 +44,28 @@ describe("Auth (Hono)", () => {
     } as unknown as AuthService;
   }
 
+  function makeNotificationService(overrides: any = {}): any {
+    return {
+      syncSubscriptionsAcrossAccounts: mock(async () => {}),
+      ...overrides,
+    };
+  }
+
   function makeApp(
-    opts: { ctxOverrides?: any; serviceOverride?: any; session?: AppSessionData | null } = {}
+    opts: {
+      ctxOverrides?: any;
+      serviceOverride?: any;
+      notificationOverride?: any;
+      session?: AppSessionData | null;
+    } = {}
   ) {
     const ctx = makeCtx(opts.ctxOverrides);
     const service = makeService(opts.serviceOverride);
-    const app = withTestSession(createAuthHono(ctx, { service } as AuthDeps));
-    return { app, service, ctx, headers: sessionHeader(opts.session ?? null) };
+    const notifications = makeNotificationService(opts.notificationOverride);
+    const app = withTestSession(
+      createAuthHono(ctx, { service, notificationService: notifications } as AuthDeps)
+    );
+    return { app, service, notifications, ctx, headers: sessionHeader(opts.session ?? null) };
   }
 
   const jsonHeaders = (h: Record<string, string>) => ({ ...h, "Content-Type": "application/json" });
@@ -275,7 +290,7 @@ describe("Auth (Hono)", () => {
     });
 
     test("switches active DID when account is remembered and token is valid", async () => {
-      const { app, headers } = makeApp({
+      const { app, notifications, headers } = makeApp({
         session: {
           did: "did:plc:foo",
           accounts: [
@@ -299,6 +314,9 @@ describe("Auth (Hono)", () => {
       });
       const body = await res.json();
       assert.deepStrictEqual(body, { success: true, did: "did:plc:bar" });
+      // Fire-and-forget push-subscription sync across all remembered accounts.
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.strictEqual(notifications.syncSubscriptionsAcrossAccounts.mock.calls.length, 1);
     });
 
     test("returns 401 and drops the account when its token has expired", async () => {

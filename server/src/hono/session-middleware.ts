@@ -1,15 +1,12 @@
-// Signed-cookie session middleware for the Hono auth-path spike (#316).
+// Signed-cookie session middleware. The session is stored in a single
+// HMAC-SHA256 signed cookie read/written via Hono's cookie helpers, and
+// surfaced through Hono context variables (c.var.session).
 //
-// Replaces Express's `cookie-session` (which exposes `req.session`). Here the
-// session is stored in a single HMAC-SHA256 signed cookie read/written via
-// Hono's cookie helpers, and surfaced through Hono context variables.
-//
-// NOTE on the cookie-format change: the Express build used cookie-session +
-// keygrip, which stores the payload in `navyfragen` and a separate SHA1
-// signature in `navyfragen.sig`. Hono's signed cookies use a single
-// `name=value.signature` cookie with SHA256. The two are NOT wire-compatible,
-// so this spike requires a fresh login — that is one of the real costs the
-// spike is meant to surface (see the decision note in index-hono.ts).
+// Cookie-format note: this uses Hono's single `name=value.signature` SHA256
+// cookie (nf-session). The former Express build used cookie-session + keygrip
+// (dual navyfragen + navyfragen.sig cookies, SHA1). The two are NOT
+// wire-compatible — the migration invalidated existing sessions, requiring a
+// one-time re-login.
 
 import { getSignedCookie, setSignedCookie, deleteCookie } from "hono/cookie";
 import { env } from "#/lib/env";
@@ -17,7 +14,7 @@ import type { Context, MiddlewareHandler } from "hono";
 import type { AppSessionData } from "#/auth/session";
 
 const SESSION_COOKIE = "nf-session";
-// 14 days, matching cookie-session's maxAge in the Express build.
+// 14 days, matching the former cookie-session maxAge.
 const MAX_AGE = 14 * 24 * 60 * 60; // seconds (Hono cookie maxAge is in seconds)
 
 export const SESSION_VAR = "session";

@@ -60,10 +60,6 @@ function createLogger(): pino.Logger {
   // catches anything that slips through. Paths use dot/bracket syntax (fast-redact).
   const redact = [
     "message", // message-service: logged objects sometimes carry the message text
-    "req.body.message",
-    "req.body.customPrompt",
-    "req.body.original",
-    "req.body.response",
     "updates.message",
     "updates.customPrompt",
     "*.message",
@@ -151,10 +147,12 @@ class Server {
           limit: RATE_LIMIT_MAX,
           standardHeaders: "draft-6",
           message: "Too many requests, please try again later.",
+          // Trust the proxy hop (Caddy/Railway set x-forwarded-for). In local
+          // dev there's no proxy header, so all requests share one bucket —
+          // fine since local dev is single-user.
           keyGenerator: (c) => {
             const xff = c.req.header("x-forwarded-for");
-            if (xff) return xff.split(",")[0].trim();
-            return c.req.raw.headers.get("x-real-ip") ?? "127.0.0.1";
+            return xff ? xff.split(",")[0].trim() : "local";
           },
         })
       );

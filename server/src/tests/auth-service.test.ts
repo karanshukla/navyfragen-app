@@ -25,7 +25,7 @@ beforeAll(async () => {
   // modules), so `--isolate` (passed in the package script) gives each test
   // file a fresh module registry. Do not let `--isolate` be the only thing
   // keeping this mock contained: spreading the real binding means a partial
-  // mock can't take out files that import the real initializeAgentFromSession
+  // mock can't take out files that import the real initializeAgentForDid
   // (e.g. session-agent.test.ts) with a missing-export SyntaxError. Re-exporting
   // the real binding costs no coverage — it is the same function session-agent
   // .test.ts already exercises.
