@@ -437,14 +437,21 @@ export function createSettingsHono(ctx: AppContext): Hono {
       if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
       const body = c.req.valid("json");
       try {
+        // Preserve `null` vs `undefined` semantics: the service treats null as
+        // "clear this field" and undefined as "don't touch it" (the original
+        // Express controller passed req.body values straight through). Coercing
+        // null → undefined here would make clearing customPrompt/profileCardTheme/
+        // touchpointLocale/imageTheme a no-op — the customise E2E caught this.
         const updatedSettings = await settingsService.updateSettings(userSessionDid, {
           pdsSyncEnabled: body.pdsSyncEnabled,
+          // imageTheme is NOT nullable in the service (string only); coerce null
+          // → undefined ("don't touch"), matching the original .notEmpty() guard.
           imageTheme: body.imageTheme ?? undefined,
           inboxEnabled: body.inboxEnabled,
           profanityFilterEnabled: body.profanityFilterEnabled,
-          customPrompt: body.customPrompt ?? undefined,
-          profileCardTheme: body.profileCardTheme ?? undefined,
-          touchpointLocale: body.touchpointLocale ?? undefined,
+          customPrompt: body.customPrompt,
+          profileCardTheme: body.profileCardTheme,
+          touchpointLocale: body.touchpointLocale,
         });
         ctx.logger.info(
           { did: userSessionDid, updatedFields: Object.keys(body ?? {}) },
