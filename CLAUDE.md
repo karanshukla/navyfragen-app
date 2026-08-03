@@ -12,13 +12,14 @@ NF messages (stored in the centralised DB) are deliberately kept separate from B
 
 ## Monorepo Structure
 
-npm workspaces with two packages:
+npm workspaces with three packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
 - `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
+- `html-to-image/` — Bun + Puppeteer image renderer (headless Chromium OG-image generation)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), CI, and **the test suite** all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client stays on Node for Vite dev/build + Vitest. The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
 
-Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
+Root-level `bun run dev` runs all three workspaces concurrently via `concurrently` (the `html-to-image` image renderer is the third workspace member — Bun runtime + installer since #314, the same single-lockfile story as the server and client).
 
 ## Commands
 
@@ -91,10 +92,14 @@ The `#/` path alias maps to `src/` (configured in `tsconfig.json` `paths`).
 
 ### Image Generation
 
-Responding to a message with `includeQuestionAsImage: true` calls the in-house `html-to-image` service (`EXPORT_HTML_URL` env var, defaults to `http://localhost:3033/`). The service lives in `html-to-image/` at the repo root. Run it locally with:
+Responding to a message with `includeQuestionAsImage: true` calls the in-house `html-to-image` service (`EXPORT_HTML_URL` env var, defaults to `http://localhost:3033/`). The service lives in `html-to-image/` at the repo root (a Bun workspace member since #314, formerly a standalone Node package). Run it locally with:
 ```bash
-docker build -t html-to-image ./html-to-image
-docker run --rm -p 3033:3033 html-to-image
+bun run --cwd html-to-image start
+```
+Or via Docker (the production Dockerfile builds from the repo root so `bun install` can resolve the workspace lockfile):
+```bash
+docker build -t html-to-image -f docker/Dockerfile.html-to-image .
+docker run --rm -p 3033:3033 --shm-size=256m html-to-image
 ```
 Image themes are defined in `src/lib/themes.ts` and stored per-user in `user_settings.imageTheme`. Available themes: `default` (dark gradient card), `compressed` (light minimal), `twitter` (square Twitter/X card).
 
@@ -108,9 +113,9 @@ The image-gen service runs on Railway with Serverless (app-sleeping) enabled, wh
 
 - Do not prewarm the browser at startup or on a timer — that reintroduces the exact problem.
 - A request arriving after an idle stretch pays a container wake plus a browser launch, which is why `IMAGE_SERVICE_DEADLINE_MS` in `image-generator.ts` is 30s rather than a warm-render budget.
-- The Dockerfile runs `tini` as PID 1. Chromium's children are reparented to PID 1 on browser exit and Node does not reap orphans, so without an init the launch/close cycle leaks zombie PIDs until the table is exhausted. Do not drop the `ENTRYPOINT`.
+- The Dockerfile runs `tini` as PID 1. Chromium's children are reparented to PID 1 on browser exit and Bun (like Node) does not reap orphans, so without an init the launch/close cycle leaks zombie PIDs until the table is exhausted. Do not drop the `ENTRYPOINT`.
 
-Railway builds this service from `html-to-image/Dockerfile`. That is now pinned in `html-to-image/railway.json` — previously it relied on Railway's "a Dockerfile always wins" auto-detection while the dashboard/API still reported the `RAILPACK` default, which reads as though the Dockerfile were dead config. See "Railway deploys from Dockerfiles, not native detection" below — this precedent turned out not to be enough on its own.
+Railway builds this service from `docker/Dockerfile.html-to-image` (root context, same pattern as `Dockerfile.server`/`Dockerfile.client` since #314 folded the service into the root bun workspace — the standalone `html-to-image/Dockerfile` and `package-lock.json` are gone). That is pinned in `railway.html-to-image.json` at the repo root (a root-level config file because the service's Root Directory is `/`, matching `server`/`client`; the service's old `html-to-image/railway.json` is deleted). Previously it relied on Railway's "a Dockerfile always wins" auto-detection while the dashboard/API still reported the `RAILPACK` default, which reads as though the Dockerfile were dead config. See "Railway deploys from Dockerfiles, not native detection" below — this precedent turned out not to be enough on its own.
 
 #### Calling the image service
 
@@ -178,11 +183,11 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 CI runs all tests in a single unified workflow `.github/workflows/Tests.yml`, with separate jobs for client, server, `opengraph-service` (Go), and `html-to-image`. The server job runs under Bun (the runtime the server ships on) and folds the former Bun-runtime canary probes (SQLite data layer, OAuth handle resolution) in ahead of the test suite.
 
-The `html-to-image` job installs with `npm ci` rather than the root `bun install` — the service is deliberately outside the workspaces — and sets `PUPPETEER_SKIP_DOWNLOAD=true`, since its tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser.
+The `html-to-image` job runs under Bun too (#314 — the service migrated from Node). It installs from the single root `bun.lock` (the service is a workspace member) with `PUPPETEER_SKIP_DOWNLOAD=true`, since its unit tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser. A separate Bun-runtime probe step (`html-to-image/probe-bun-puppeteer.mjs`) downloads Chromium explicitly and exercises the real spawn + CDP transport + screenshot round-trip — the load-bearing risk under Bun — gating the job the same way the server's SQLite/OAuth canaries do.
 
-The `html-to-image/` service at the repo root is a standalone Express + Puppeteer image renderer. It has its own `app.test.js` using Node.js built-in `node:test`. Run its tests with:
+The `html-to-image/` service at the repo root is an Express + Puppeteer image renderer running on Bun. It has its own `app.test.js` (Bun's test runner executes Node's `node:test` API natively, so the suite runs under `bun test` unchanged). Run its tests with:
 ```bash
-cd html-to-image && node --test app.test.js
+cd html-to-image && bun test app.test.js
 ```
 
 ## Testing & Coverage
@@ -291,9 +296,9 @@ Notes:
 
 ### Railway deploys from Dockerfiles, not native detection
 
-Every buildable service (`server`, `client`, `caddy`, `anubis`, `opengraph-service`, `html-to-image`, `anubis/prometheus`) has a committed `railway.json` (or, for the two repo-root-context services, `railway.server.json` / `railway.client.json`) pinning `"builder": "DOCKERFILE"` and the Dockerfile path, following the `html-to-image/railway.json` precedent. This exists because a native RAILPACK build on the `server` service **already crashed production once**: `patchedDependencies` (which applies the Bun `undici_v8` fix in `patches/@atproto-labs%2Ffetch-node@0.3.5.patch`) is a Bun-only `package.json` field, so an `npm install`-based native build silently ignores it and the server throws `webidl.util.markAsUncloneable is not a function` on boot. CI is not a safety net for this class of failure — `DockerSmoke.yml` builds `docker/Dockerfile.server` directly and was green throughout the incident; it proves the Dockerfile works, not which builder Railway actually used.
+Every buildable service (`server`, `client`, `caddy`, `anubis`, `opengraph-service`, `html-to-image`, `anubis/prometheus`) has a committed `railway.json` (or, for the three repo-root-context services, `railway.server.json` / `railway.client.json` / `railway.html-to-image.json`) pinning `"builder": "DOCKERFILE"` and the Dockerfile path, following the `html-to-image/railway.json` precedent. This exists because a native RAILPACK build on the `server` service **already crashed production once**: `patchedDependencies` (which applies the Bun `undici_v8` fix in `patches/@atproto-labs%2Ffetch-node@0.3.5.patch`) is a Bun-only `package.json` field, so an `npm install`-based native build silently ignores it and the server throws `webidl.util.markAsUncloneable is not a function` on boot. CI is not a safety net for this class of failure — `DockerSmoke.yml` builds `docker/Dockerfile.server` directly and was green throughout the incident; it proves the Dockerfile works, not which builder Railway actually used.
 
-`server` and `client` build with `context: ..` (repo root) per `docker/docker-compose.yml` — `Dockerfile.server` copies the root `package.json`/`bun.lock`/`patches/` before `server/`. Their Railway services must therefore have **Root Directory `/`** with a `railwayConfigFile` pointing at `railway.server.json` / `railway.client.json` respectively (a service-level dashboard setting — the two files can't share the ambient `railway.json` name at repo root). `caddy`, `anubis`, and `opengraph-service` are self-contained (`COPY Caddyfile ./`, etc.) and keep Root Directory at their own subdirectory.
+`server`, `client`, and `html-to-image` build with `context: ..` (repo root) per `docker/docker-compose.yml` — `Dockerfile.server`/`Dockerfile.client`/`Dockerfile.html-to-image` copy the root `package.json`/`bun.lock`/`patches/` before the per-workspace source. Their Railway services must therefore have **Root Directory `/`** with a `railwayConfigFile` pointing at `railway.server.json` / `railway.client.json` / `railway.html-to-image.json` respectively (a service-level dashboard setting — the files can't share the ambient `railway.json` name at repo root). `caddy`, `anubis`, and `opengraph-service` are self-contained (`COPY Caddyfile ./`, etc.) and keep Root Directory at their own subdirectory.
 
 Committing the config file alone does not switch the builder — Railway only reads it once a service's "Config-as-code path" is set in the dashboard (or via the Railway MCP `update-service` tool's `railwayConfigFile`/`rootDirectory`/`dockerfilePath` params). Do not assume a checked-in `railway.json` is active; confirm with `get-service-config` (via the Railway MCP or dashboard) that `build.builder` reads `DOCKERFILE`, not `RAILPACK`/`NIXPACKS`, before relying on it.
 

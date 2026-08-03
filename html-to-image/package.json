@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node app.js",
-    "test": "node --test app.test.js"
+    "start": "bun app.js",
+    "test": "bun test app.test.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

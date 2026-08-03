@@ -1,0 +1,72 @@
+# Bun runtime image (#314). The image renderer runs JavaScript directly under
+# Bun — the server's Hono migration (#316) established the runtime, and the
+# gating CI probe (probe-bun-puppeteer.mjs) confirmed Puppeteer's Chromium
+# spawn + CDP transport work under Bun on both the local Windows dev host and
+# the Ubuntu CI runner.
+FROM oven/bun:1.3-alpine AS builder
+WORKDIR /app
+
+# System Chromium — Puppeteer in production points at this via
+# PUPPETEER_EXECUTABLE_PATH (the bundled download is skipped). tini is PID 1
+# below: Chromium's children reparent to PID 1 on browser exit, and Bun (like
+# Node) does not reap orphans, so the pool's launch/close churn would leak
+# zombie PIDs without an init. tini is runtime-agnostic — it stays regardless
+# of Node→Bun.
+RUN apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont \
+      font-noto-emoji \
+      tini
+
+# Copy workspace manifests so bun install resolves against the root lockfile.
+# html-to-image is a workspace member (#314), so there is a single root
+# bun.lock and no standalone package-lock.json.
+COPY package.json bun.lock ./
+COPY patches/ ./patches/
+COPY client/package.json ./client/
+COPY server/package.json ./server/
+COPY html-to-image/package.json ./html-to-image/
+
+# Install runtime deps only. --omit dev (not --production) traverses workspaces
+# so the html-to-image workspace's prod deps are kept — same nuance as
+# Dockerfile.server. PUPPETEER_SKIP_CHROMIUM_DOWNLOAD keeps the ~150MB bundled
+# browser out of the image: the system Chromium above is the one that runs.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+RUN bun install --frozen-lockfile --omit dev
+
+# ── Runtime ──────────────────────────────────────────────────────────────────
+FROM oven/bun:1.3-alpine
+WORKDIR /app
+
+# Chromium and tini belong in the runtime image too (the builder stage only
+# has them for install-time toolchain availability that isn't needed here, but
+# keeping the runtime minimal means reinstalling only what the process needs).
+RUN apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont \
+      font-noto-emoji \
+      tini \
+      # Chromium on musl needs these font-rendering libs at runtime.
+      && rm -rf /var/cache/apk/*
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/html-to-image/node_modules ./html-to-image/node_modules
+COPY html-to-image/app.js ./html-to-image/app.js
+COPY html-to-image/package.json ./html-to-image/package.json
+
+WORKDIR /app/html-to-image
+EXPOSE 3033
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["bun", "app.js"]

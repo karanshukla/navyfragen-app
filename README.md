@@ -120,7 +120,7 @@ Responding to a message with an image card requires the in-house `html-to-image`
 `bun run dev` at the repo root starts it automatically alongside the client and server. To run it in isolation:
 
 ```bash
-npm --prefix html-to-image start
+bun run --cwd html-to-image start
 ```
 
 For Docker (e.g. in CI or the full stack), use:

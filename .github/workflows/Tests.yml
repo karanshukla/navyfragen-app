@@ -272,46 +272,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      # html-to-image is deliberately outside the bun workspaces (it ships as a
-      # standalone container), so it carries its own package-lock.json and
-      # installs with npm rather than the root bun install.
-      - name: Install dependencies
-        # The tests never launch a browser — they drive createApp/createBrowserPool
-        # through fakes — so the ~150MB Chrome download is pure CI cost. The
-        # production image supplies Alpine's system Chromium instead.
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: "true"
-        run: npm ci --no-audit --no-fund
-
-      # Bun-runtime probe — gates the job. This service still runs on Node in
-      # production, but issue #314 proposes moving it to Bun. Two surfaces in
-      # the render path are genuinely under-verified under Bun: the
-      # child_process.spawn of Chromium (Puppeteer launches the browser via
-      # child_process) and the CDP WebSocket transport between puppeteer and
-      # Chromium. This probe exercises both end-to-end (launch → newPage →
-      # goto → evaluate → screenshot → close) and is the evidence that gates
-      # the migration, mirroring the server's SQLite/OAuth canaries above.
-      # puppeteer needs its bundled Chromium for the probe (the system Chromium
-      # is only present in the production Docker image), so install the browser
-      # into the runner rather than skipping the download.
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
+      # html-to-image is a bun workspace member (#314), so deps come from the
+      # single root bun.lock — no standalone package-lock.json anymore.
+      - name: Install dependencies
+        # The unit tests never launch a browser — they drive
+        # createApp/createBrowserPool through fakes — so the ~150MB Chrome
+        # download is pure CI cost. The probe step below downloads it
+        # explicitly only when it needs to launch one. The production image
+        # supplies Alpine's system Chromium instead.
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: bun install --frozen-lockfile
+
+      # Bun-runtime regression canary (#314). The service runs on Bun in
+      # production; two surfaces in the render path are the load-bearing risk
+      # under that runtime — the child_process.spawn of Chromium (Puppeteer
+      # launches the browser via child_process) and the CDP WebSocket transport
+      # between puppeteer and Chromium. This probe exercises both end-to-end
+      # (launch → newPage → goto → evaluate → screenshot → close), mirroring
+      # the server's SQLite/OAuth canaries. The probe needs a real Chromium,
+      # so install the browser the resolved puppeteer expects here.
       - name: Probe Puppeteer under Bun
         id: probe
         env:
           PUPPETEER_SKIP_DOWNLOAD: "false"
         run: |
-          # Install the browser puppeteer was resolved against, then run the
-          # probe. `npx puppeteer browsers install chrome` downloads the same
-          # build that puppeteer.launch() with no executablePath picks up.
+          # `npx puppeteer browsers install chrome` downloads the build that
+          # puppeteer.launch() with no executablePath picks up.
           npx puppeteer browsers install chrome
 
           {
@@ -329,7 +321,7 @@ jobs:
           set -e
           echo "$probe_out" | tee /dev/stderr >/dev/null
           {
-            echo "<details><summary><code>bun-puppeteer-probe</code> (issue #314)</summary>"
+            echo "<details><summary><code>bun-puppeteer-probe</code> (#314 regression canary)</summary>"
             echo ""
             echo '```'
             echo "$probe_out"
@@ -338,12 +330,12 @@ jobs:
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$probe_exit" -ne 0 ] || ! echo "$probe_out" | grep -q '^OK '; then
-            echo "::error::Puppeteer did not pass under Bun — migration (issue #314) must not proceed"
+            echo "::error::Puppeteer did not pass under Bun (regression of #314)"
             exit 1
           fi
 
       - name: Run tests
-        run: node --test app.test.js
+        run: bun test app.test.js
 
   coveralls-finish:
     name: Coveralls Finish
