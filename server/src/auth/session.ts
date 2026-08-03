@@ -1,5 +1,3 @@
-import "cookie-session";
-
 /**
  * A remembered account entry cached in the browser session so the account
  * switcher can render without fetching every profile on each page load.
@@ -22,15 +20,6 @@ export interface AppSessionData {
 
 /** Maximum number of accounts kept in a single browser session. */
 export const MAX_ACCOUNTS = 5;
-
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      session: AppSessionData | null;
-    }
-  }
-}
 
 /** Returns the remembered accounts (never undefined). */
 export function getAccounts(session: AppSessionData | null): AccountEntry[] {

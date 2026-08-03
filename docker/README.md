@@ -8,7 +8,7 @@ This stack is used for **local integration testing and smoke tests** (and option
 |---------|-------------|------|
 | `caddy` | Reverse proxy: `/*` → client, `/api/*` → server. **Default local entry point.** | 8082 |
 | `anubis` | Bot-protection WAF, production topology (Anubis → Caddy) | 8080 |
-| `server` | Express API | 3000 |
+| `server` | Bun.serve + Hono API | 3000 |
 | `client` | React SPA served by `serve` | internal |
 | `html-to-image` | Puppeteer image renderer | internal |
 | `redirector` | Short-URL redirector (fragen.navy equivalent) | 8081 |
@@ -42,7 +42,7 @@ All Docker-related files live here to keep Railway from auto-detecting them in t
 |------|---------|
 | `docker-compose.yml` | Full local stack |
 | `Dockerfile.client` | React SPA image (build context: repo root) |
-| `Dockerfile.server` | Express API image (build context: repo root) |
+| `Dockerfile.server` | Bun.serve + Hono API image (build context: repo root) |
 | `.env.example` | Secret template — copy to `.env` before running |
 
 `client/Dockerfile` and `server/Dockerfile` are intentionally absent — all Docker-related files live under `docker/` to keep the service directories clean. Railway is explicitly pinned to `docker/Dockerfile.client` / `docker/Dockerfile.server` via config-as-code (`railway.client.json` / `railway.server.json` at the repo root — see `CLAUDE.md` → "Deployment (Railway)"), so it doesn't rely on auto-detection either way.

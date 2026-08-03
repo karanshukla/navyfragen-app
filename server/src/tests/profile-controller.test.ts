@@ -1,32 +1,33 @@
 import assert from "node:assert";
 import { test, describe, afterEach, mock } from "bun:test";
 
-import { ProfileController } from "../controllers/profile-controller";
+import { createProfileHono, type ProfileDeps } from "#/hono/message-routes";
+import { withTestSession, sessionHeader } from "./helpers/hono-test";
 
-describe("ProfileController", () => {
+import type { AppContext } from "#/index";
+import type { AppSessionData } from "#/auth/session";
+
+describe("Profile (Hono)", () => {
   afterEach(() => {
     mock.clearAllMocks();
   });
 
-  function makeCtx(): any {
+  function makeCtx(overrides: any = {}): AppContext {
     return {
+      db: {} as any,
       oauthClient: {
         restore: mock(async () => ({ sub: "did:foo" })),
-      },
+      } as any,
       resolver: {
         resolveHandleToDid: mock(async () => "did:foo"),
-      },
+      } as any,
       idResolver: {
         did: {
           resolveAtprotoData: mock(async () => ({ pds: "https://pds.example.com" })),
         },
-      },
-      logger: {
-        info: mock(),
-        error: mock(),
-        warn: mock(),
-        debug: mock(),
-      },
+      } as any,
+      logger: { info: mock(), error: mock(), warn: mock(), debug: mock() } as any,
+      ...overrides,
     };
   }
 
@@ -42,98 +43,88 @@ describe("ProfileController", () => {
     };
   }
 
-  function makeReq(overrides: any = {}): any {
-    return { body: {}, session: { did: "did:foo" }, params: {}, ...overrides };
+  function makeApp(
+    opts: { ctxOverrides?: any; serviceOverride?: any; session?: AppSessionData | null } = {}
+  ) {
+    const ctx = makeCtx(opts.ctxOverrides);
+    const service = makeService(opts.serviceOverride);
+    const app = withTestSession(createProfileHono(ctx, { profileService: service } as ProfileDeps));
+    return { app, service, ctx, headers: sessionHeader(opts.session ?? { did: "did:foo" }) };
   }
 
-  function makeRes(): any {
-    const res: any = {};
-    res.status = mock(() => res);
-    res.json = mock(() => res);
-    return res;
-  }
-
-  describe("getPublicProfile", () => {
+  describe("GET /public-profile/:did", () => {
     test("returns profile on success", async () => {
-      const ctx = makeCtx();
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getPublicProfile(makeReq({ params: { did: "did:foo" } }), res);
-      assert.ok(res.json.mock.calls.length === 1);
+      const { app, headers } = makeApp();
+      const res = await app.request("/public-profile/did:foo", { headers });
+      assert.strictEqual(res.status, 200);
     });
 
     test("returns 404 when service throws 'Profile not found'", async () => {
-      const ctx = makeCtx();
-      const svc = makeService({
-        getPublicProfile: mock(async () => {
-          throw new Error("Profile not found");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          getPublicProfile: mock(async () => {
+            throw new Error("Profile not found");
+          }),
+        },
       });
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getPublicProfile(makeReq({ params: { did: "did:foo" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 404);
+      const res = await app.request("/public-profile/did:foo", { headers });
+      assert.strictEqual(res.status, 404);
     });
 
     test("returns 500 on other error", async () => {
-      const ctx = makeCtx();
-      const svc = makeService({
-        getPublicProfile: mock(async () => {
-          throw new Error("db error");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          getPublicProfile: mock(async () => {
+            throw new Error("db error");
+          }),
+        },
       });
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getPublicProfile(makeReq({ params: { did: "did:foo" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/public-profile/did:foo", { headers });
+      assert.strictEqual(res.status, 500);
     });
   });
 
-  describe("checkUserExists", () => {
+  describe("GET /user-exists/:did", () => {
     test("returns exists result on success", async () => {
-      const ctx = makeCtx();
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.checkUserExists(makeReq({ params: { did: "did:foo" } }), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { exists: true, did: "did:foo" });
+      const { app, headers } = makeApp();
+      const res = await app.request("/user-exists/did:foo", { headers });
+      const body = await res.json();
+      assert.deepStrictEqual(body, { exists: true, did: "did:foo" });
     });
 
     test("returns 500 on error", async () => {
-      const ctx = makeCtx();
-      const svc = makeService({
-        checkUserExists: mock(async () => {
-          throw new Error("db error");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          checkUserExists: mock(async () => {
+            throw new Error("db error");
+          }),
+        },
       });
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.checkUserExists(makeReq({ params: { did: "did:foo" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/user-exists/did:foo", { headers });
+      assert.strictEqual(res.status, 500);
     });
   });
 
-  describe("getFriends", () => {
+  describe("GET /friends", () => {
     test("returns 403 when no session", async () => {
-      const ctx = makeCtx();
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getFriends(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 403);
+      const { app } = makeApp({ session: null });
+      const res = await app.request("/friends", { headers: sessionHeader(null) });
+      assert.strictEqual(res.status, 403);
     });
 
     test("returns moots, following, and oomfs on success", async () => {
-      const svc = makeService({
-        getFriendsOnApp: mock(async () => ({
-          moots: [{ did: "did:bar" }],
-          following: [],
-          oomfs: [],
-        })),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          getFriendsOnApp: mock(async () => ({
+            moots: [{ did: "did:bar" }],
+            following: [],
+            oomfs: [],
+          })),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getFriends(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], {
+      const res = await app.request("/friends", { headers });
+      const body = await res.json();
+      assert.deepStrictEqual(body, {
         moots: [{ did: "did:bar" }],
         following: [],
         oomfs: [],
@@ -141,154 +132,147 @@ describe("ProfileController", () => {
     });
 
     test("returns 500 on error", async () => {
-      const svc = makeService({
-        getFriendsOnApp: mock(async () => {
-          throw new Error("err");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          getFriendsOnApp: mock(async () => {
+            throw new Error("err");
+          }),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getFriends(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/friends", { headers });
+      assert.strictEqual(res.status, 500);
     });
   });
 
-  describe("checkBotFollow", () => {
+  describe("GET /check-bot-follow", () => {
     test("returns 403 when no session", async () => {
-      const ctx = makeCtx();
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.checkBotFollow(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 403);
+      const { app } = makeApp({ session: null });
+      const res = await app.request("/check-bot-follow", { headers: sessionHeader(null) });
+      assert.strictEqual(res.status, 403);
     });
 
     test("returns 401 when agent is null", async () => {
-      const ctx = makeCtx();
-      ctx.oauthClient.restore = mock(async () => null);
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.checkBotFollow(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 401);
+      const { app, headers } = makeApp({
+        ctxOverrides: { oauthClient: { restore: mock(async () => null) } },
+      });
+      const res = await app.request("/check-bot-follow", { headers });
+      assert.strictEqual(res.status, 401);
     });
 
     test("returns following status on success", async () => {
-      const svc = makeService({ checkFollowsBot: mock(async () => true) });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.checkBotFollow(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { following: true });
+      const { app, headers } = makeApp({
+        serviceOverride: { checkFollowsBot: mock(async () => true) },
+      });
+      const res = await app.request("/check-bot-follow", { headers });
+      const body = await res.json();
+      assert.deepStrictEqual(body, { following: true });
     });
 
     test("returns 500 on error", async () => {
-      const svc = makeService({
-        checkFollowsBot: mock(async () => {
-          throw new Error("err");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          checkFollowsBot: mock(async () => {
+            throw new Error("err");
+          }),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.checkBotFollow(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/check-bot-follow", { headers });
+      assert.strictEqual(res.status, 500);
     });
   });
 
-  describe("getHandlePDS", () => {
+  describe("GET /handle-pds/:handle", () => {
     test("returns the PDS hostname on success", async () => {
-      const ctx = makeCtx();
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getHandlePDS(makeReq({ params: { handle: "foo.bsky.social" } }), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { pds: "pds.example.com" });
+      const { app, headers } = makeApp();
+      const res = await app.request("/handle-pds/foo.bsky.social", { headers });
+      const body = await res.json();
+      assert.deepStrictEqual(body, { pds: "pds.example.com" });
     });
 
     test("returns 404 when the handle does not resolve to a DID", async () => {
-      const ctx = makeCtx();
-      ctx.resolver.resolveHandleToDid = mock(async () => undefined);
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getHandlePDS(makeReq({ params: { handle: "nobody.bsky.social" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 404);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { error: "Handle not found" });
+      const { app, headers } = makeApp({
+        ctxOverrides: { resolver: { resolveHandleToDid: mock(async () => undefined) } },
+      });
+      const res = await app.request("/handle-pds/nobody.bsky.social", { headers });
+      assert.strictEqual(res.status, 404);
     });
 
     test("returns 500 when PDS resolution throws", async () => {
-      const ctx = makeCtx();
-      ctx.idResolver.did.resolveAtprotoData = mock(async () => {
-        throw new Error("network error");
+      const { app, ctx, headers } = makeApp({
+        ctxOverrides: {
+          idResolver: {
+            did: {
+              resolveAtprotoData: mock(async () => {
+                throw new Error("network error");
+              }),
+            },
+          },
+        },
       });
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.getHandlePDS(makeReq({ params: { handle: "foo.bsky.social" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
-      assert.strictEqual(ctx.logger.error.mock.calls.length, 1);
+      const res = await app.request("/handle-pds/foo.bsky.social", { headers });
+      assert.strictEqual(res.status, 500);
+      assert.strictEqual((ctx.logger.error as any).mock.calls.length, 1);
     });
   });
 
-  describe("searchHandles", () => {
+  describe("GET /handle-search", () => {
     test("returns matching actors on success", async () => {
-      const svc = makeService({
-        searchActorsTypeahead: mock(async () => [{ did: "did:foo", handle: "foo.bsky.social" }]),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          searchActorsTypeahead: mock(async () => [{ did: "did:foo", handle: "foo.bsky.social" }]),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.searchHandles(makeReq({ query: { q: "foo" } }), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], {
+      const res = await app.request("/handle-search?q=foo", { headers });
+      const body = await res.json();
+      assert.deepStrictEqual(body, {
         actors: [{ did: "did:foo", handle: "foo.bsky.social" }],
       });
     });
 
     test("returns 500 when the search fails", async () => {
-      const svc = makeService({
-        searchActorsTypeahead: mock(async () => {
-          throw new Error("search failed");
-        }),
+      const { app, ctx, headers } = makeApp({
+        serviceOverride: {
+          searchActorsTypeahead: mock(async () => {
+            throw new Error("search failed");
+          }),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.searchHandles(makeReq({ query: { q: "foo" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
-      assert.strictEqual(ctx.logger.error.mock.calls.length, 1);
+      const res = await app.request("/handle-search?q=foo", { headers });
+      assert.strictEqual(res.status, 500);
+      assert.strictEqual((ctx.logger.error as any).mock.calls.length, 1);
     });
   });
 
-  describe("resolveHandle", () => {
+  describe("GET /resolve-handle/:handle", () => {
     test("returns DID on success", async () => {
-      const ctx = makeCtx();
-      const controller = new ProfileController(makeService(), ctx.logger, ctx);
-      const res = makeRes();
-      await controller.resolveHandle(makeReq({ params: { handle: "foo.bsky.social" } }), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { did: "did:foo" });
+      const { app, headers } = makeApp();
+      const res = await app.request("/resolve-handle/foo.bsky.social", { headers });
+      const body = await res.json();
+      assert.deepStrictEqual(body, { did: "did:foo" });
     });
 
     test("returns 404 when service throws 'Handle not found'", async () => {
-      const svc = makeService({
-        resolveHandleToDid: mock(async () => {
-          throw new Error("Handle not found");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          resolveHandleToDid: mock(async () => {
+            throw new Error("Handle not found");
+          }),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.resolveHandle(makeReq({ params: { handle: "nobody.bsky.social" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 404);
+      const res = await app.request("/resolve-handle/nobody.bsky.social", { headers });
+      assert.strictEqual(res.status, 404);
     });
 
     test("returns 500 on other error", async () => {
-      const svc = makeService({
-        resolveHandleToDid: mock(async () => {
-          throw new Error("network");
-        }),
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          resolveHandleToDid: mock(async () => {
+            throw new Error("network");
+          }),
+        },
       });
-      const ctx = makeCtx();
-      const controller = new ProfileController(svc, ctx.logger, ctx);
-      const res = makeRes();
-      await controller.resolveHandle(makeReq({ params: { handle: "foo.bsky.social" } }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/resolve-handle/foo.bsky.social", { headers });
+      assert.strictEqual(res.status, 500);
     });
   });
 });

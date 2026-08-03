@@ -36,19 +36,3 @@ export async function initializeAgentForDid(
     return null;
   }
 }
-
-/**
- * Restores the AT Protocol Agent for the session's currently active account.
- * Thin wrapper over {@link initializeAgentForDid} using `req.session.did`.
- */
-/* v8 ignore next 1 */
-export async function initializeAgentFromSession(
-  req: Express.Request,
-  ctx: AppContext
-): Promise<E2EAgent | null> {
-  if (!req.session?.did) {
-    return null;
-  }
-
-  return initializeAgentForDid(ctx, req.session.did);
-}

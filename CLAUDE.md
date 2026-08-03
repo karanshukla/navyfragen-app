@@ -14,9 +14,9 @@ NF messages (stored in the centralised DB) are deliberately kept separate from B
 
 npm workspaces with two packages:
 - `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
-- `server/` — Express + TypeScript API (Kysely ORM, AT Protocol SDK)
+- `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), CI, and **the test suite** all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server test suite runs wholesale under `bun test` (#288 retired the former dual-runtime setup and the runtime-agnostic mock shim); coverage comes from Bun's built-in reporter (#287). The server's Node APIs (Express, sharp, web-push, pino, node:dns/crypto) are kept as-is — they run under Bun natively; no Bun-native API rewrite.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the server runtime** — dev (`bun --watch`), production (`Dockerfile.server` on `oven/bun`, source-first), CI, and **the test suite** all run the server under Bun (#268). The client stays on Node (Vite dev/build, Vitest). The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
 
 Root-level `bun run dev` runs both workspaces concurrently via `concurrently` (the html-to-image image renderer is also started this way but remains a standalone npm package outside the workspace).
 
@@ -55,20 +55,23 @@ cd server && bun test --isolate --no-env-file --preload ./src/tests/test-bootstr
 
 ## Server Architecture
 
-Three-layer pattern: **routes → controllers → services**
+Two-layer pattern: **route handlers → services**
 
-- `src/routes/*.ts` — Express Router setup, validation middleware wiring
-- `src/controllers/*.ts` — Request/response handling, session checks, agent initialization
+- `src/hono/*.ts` — Hono route handlers (request/response I/O, session checks, agent initialization) + signed-cookie session middleware + Zod validators. Each domain (auth, message, profile, settings, notification) is a `create<Domain>Hono(ctx)` sub-app mounted in `src/index.ts`.
 - `src/services/*.ts` — Business logic, database access, AT Protocol calls
 
-`AppContext` (defined in `src/index.ts`) carries `db`, `logger`, `oauthClient`, and `resolver` and is passed through the entire stack.
+`AppContext` (defined in `src/index.ts`) carries `db`, `logger`, `oauthClient`, `resolver`, and `idResolver` and is passed through the entire stack.
 
 ### Authentication Flow
 
 1. Client POSTs handle to `/login` → server initiates AT Protocol OAuth redirect
 2. User authenticates on Bluesky → redirected to `/oauth/callback`
-3. Server stores OAuth session in DB; sets `req.session.did` (cookie-session)
-4. Subsequent authenticated requests restore the AT Protocol `Agent` via `initializeAgentFromSession()` in `src/auth/session-agent.ts`
+3. Server stores OAuth session in DB; sets `c.var.session.did` via the signed-cookie session middleware (`src/hono/session-middleware.ts`)
+4. Subsequent authenticated requests restore the AT Protocol `Agent` via `initializeAgentFromHonoSession()` in `src/hono/session-agent-hono.ts` (thin wrapper over `initializeAgentForDid`)
+
+Session is intentionally thin — Bluesky OAuth acts as the authorization proxy. If the Bluesky session expires, the Navyfragen session is also invalidated.
+
+> **Cookie format note (#316):** the session cookie uses Hono's signed-cookie (single `nf-session` cookie, HMAC-SHA256, `name=value.signature`). This is NOT wire-compatible with the former cookie-session/keygrip scheme (dual `navyfragen` + `navyfragen.sig` cookies, SHA1) — the migration invalidated existing sessions, so a one-time re-login was required.
 
 Session is intentionally thin — Bluesky OAuth acts as the authorization proxy. If the Bluesky session expires, the Navyfragen session is also invalidated.
 
@@ -169,6 +172,8 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 **Server**: Uses `bun:test` (test/describe/hooks/mock/spyOn from `bun:test`) + `node:assert` (which Bun runs natively). The suite runs wholesale under `bun test` (#288 retired the former dual-runtime Node+Bun setup); there is no `node --test` path, no `tsx` loader, and no `c8`. Test setup via `src/tests/test-bootstrap.js` (passed via `--preload`) which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with `mock`/`spyOn` from `bun:test` (see "Module Mocking in Server Tests" below).
 
+> **Note on Hono handler tests (#316):** the `src/tests/*-controller.test.ts` files exercise the Hono route handlers via Hono's own `app.request()` (real dispatch through route matching, Zod validation, and response shaping), using an injected-session test helper (`src/tests/helpers/hono-test.ts`) and mock services passed through the `create<Domain>Hono(ctx, deps)` injection seam. The signed-cookie session I/O itself (`src/hono/session-middleware.ts`) is covered by the E2E suite rather than unit tests, so it's excluded from the coverage gate.
+
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
 CI runs all tests in a single unified workflow `.github/workflows/Tests.yml`, with separate jobs for client, server, `opengraph-service` (Go), and `html-to-image`. The server job runs under Bun (the runtime the server ships on) and folds the former Bun-runtime canary probes (SQLite data layer, OAuth handle resolution) in ahead of the test suite.
@@ -200,14 +205,14 @@ The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.9
 
 **Server** — excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml` (coverage is collected by Bun's built-in reporter):
 - `src/lexicon/**` — auto-generated from AT Protocol lexicons
-- `src/index.ts` — Express boot + process signal handlers
+- `src/index.ts` — Hono app + Bun.serve boot + process signal handlers
 - `src/lib/assert-fetch-node-patch.ts` — applied via `patchedDependencies`; covers the @atproto-labs fetch-node patch surface
 - `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — AT Protocol OAuth wiring
 - `src/auth/e2e-agent-store.ts` — in-memory Map for E2E agents; trivial
 - `src/database/db.ts` — Kysely migration runner
 - `src/lib/id-resolver.ts` — AT Protocol DID/handle resolver (requires live network)
 - `src/lib/env.ts` — bootstrapped before tests run via `test-bootstrap.js`
-- `src/routes.ts`, `src/routes/*.ts` — pure Express route wiring with no logic
+- `src/hono/session-middleware.ts` — signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
 - `src/scripts/**` — one-off admin scripts
 
 **Client** — excluded via `coverage.exclude` in `vite.config.ts`:
