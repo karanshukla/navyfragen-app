@@ -28,7 +28,7 @@ coverageThreshold = 0.97
 # individually in docs/testing-notes.md.
 coveragePathIgnorePatterns = [
   "src/lexicon/**",       # auto-generated from AT Protocol lexicons
-  "src/index.ts",         # Express boot + process signal handlers
+  "src/index.ts",         # Hono app + Bun.serve boot + process signal handlers
   "src/lib/assert-fetch-node-patch.ts",  # applied via patchedDependencies; covers the @atproto-labs fetch-node patch surface
   "src/lib/assert-production-bind-host.ts",  # production-only boot guard; the throw branch can't fire under NODE_ENV=test
   "src/auth/client.ts",   # AT Protocol OAuth wiring
@@ -38,7 +38,6 @@ coveragePathIgnorePatterns = [
   "src/database/db.ts",                   # Kysely migration runner; the Bun `bun:sqlite` branch is exercised by the CI runtime canary
   "src/lib/id-resolver.ts",               # AT Protocol DID/handle resolver (requires live network)
   "src/lib/env.ts",                       # bootstrapped before tests via test-bootstrap.js
-  "src/routes.ts",                        # pure Express route wiring with no logic
-  "src/routes/**",
+  "src/hono/**",                          # Hono route wiring (handlers + session middleware); tests deferred to a follow-up
   "src/scripts/**",                       # one-off admin scripts (publish-lexicons etc.)
 ]

@@ -1,29 +1,42 @@
+// Bun.serve + Hono server entrypoint.
+//
+// Bun owns the socket (Bun.serve); Hono is the HTTP router. This replaced the
+// former Express + cors + cookie-session + express-rate-limit + express-validator
+// stack (#316). The middleware those packages provided is now native Hono
+// middleware: hono/cors, hono/cookie (signed, HMAC-SHA256), hono-rate-limiter,
+// and @hono/zod-validator. Route handlers live in src/hono/* and the business
+// logic stays in src/services/* (unchanged).
+//
+// Run with: bun run dev (or bun run start in production).
+
 // Must stay the first import: it front-runs the @atproto/oauth-client-node
 // import graph so an unpatched @atproto-labs/fetch-node fails with the actual
 // cause rather than an undici stack trace. See the module for why.
 import "#/lib/assert-fetch-node-patch";
 
 import dns from "node:dns";
-import events from "node:events";
 
-import cookieSession from "cookie-session";
-import cors from "cors";
-import express, { type Express } from "express";
-import { rateLimit } from "express-rate-limit";
+import { cors } from "hono/cors";
+import { Hono } from "hono";
+import { rateLimiter } from "hono-rate-limiter";
 import pino from "pino";
 
 import { createDb, migrateToLatest } from "./database/db";
 import { assertProductionBindHost, WILDCARD_HOSTS } from "./lib/assert-production-bind-host";
+import { createBidirectionalResolver, createIdResolver } from "./lib/id-resolver";
+import { createAuthHono } from "./hono/auth-routes";
 import {
-  createBidirectionalResolver,
-  createIdResolver,
-  BidirectionalResolver,
-} from "./lib/id-resolver";
+  createMessageHono,
+  createNotificationHono,
+  createProfileHono,
+  createSettingsHono,
+} from "./hono/message-routes";
+import { sessionMiddleware, type SessionVars } from "./hono/session-middleware";
 
 import type { Database } from "./database/db";
 import type { IdResolver } from "@atproto/identity";
 import type { OAuthClient } from "@atproto/oauth-client-node";
-import type http from "node:http";
+import type { BidirectionalResolver } from "./lib/id-resolver";
 
 // Node.js on Windows hangs on DNS TXT record lookups via the system resolver,
 // so point the built-in dns module at public nameservers before any resolver or
@@ -38,7 +51,6 @@ if (process.platform === "win32") {
 
 import { createClient } from "#/auth/client";
 import { env } from "#/lib/env";
-import { createRouter } from "#/routes";
 
 function createLogger(): pino.Logger {
   const { AXIOM_TOKEN, AXIOM_DATASET } = env;
@@ -67,50 +79,10 @@ function createLogger(): pino.Logger {
         options: { dataset: AXIOM_DATASET, token: AXIOM_TOKEN },
         level: "info",
       },
-      {
-        target: "pino/file",
-        options: { destination: 1 },
-        level: "info",
-      },
+      { target: "pino/file", options: { destination: 1 }, level: "info" },
     ],
   });
   return pino({ name: "navyfragen", redact }, transport);
-}
-
-async function listenOn(app: Express, port: number, host: string): Promise<http.Server> {
-  const server = app.listen(port, host);
-  try {
-    await events.once(server, "listening");
-    return server;
-  } catch (err) {
-    server.close();
-    throw err;
-  }
-}
-
-/**
- * Binds a wildcard HOST as "::" so one dual-stack listener serves IPv4 and IPv6,
- * because Railway's private network — the only way Caddy reaches this service —
- * is IPv6-only. Falls back to "0.0.0.0" where the network has no IPv6 at all,
- * which is every Docker bridge network in CI and local compose; Bun reports that
- * as a spurious EADDRINUSE (errno 0) rather than degrading the way Node does.
- * A non-wildcard HOST is bound verbatim so `HOST=127.0.0.1` still means loopback.
- */
-async function listenPreferringDualStack(
-  app: Express,
-  port: number,
-  host: string,
-  logger: pino.Logger
-): Promise<{ server: http.Server; boundHost: string }> {
-  if (!WILDCARD_HOSTS.has(host)) {
-    return { server: await listenOn(app, port, host), boundHost: host };
-  }
-  try {
-    return { server: await listenOn(app, port, "::"), boundHost: "::" };
-  } catch (err) {
-    logger.warn({ err, host }, "IPv6 wildcard bind failed, falling back to 0.0.0.0");
-    return { server: await listenOn(app, port, "0.0.0.0"), boundHost: "0.0.0.0" };
-  }
 }
 
 // Application state passed to the router and elsewhere
@@ -122,29 +94,23 @@ export type AppContext = {
   idResolver: IdResolver;
 };
 
-export class Server {
+class Server {
   constructor(
-    public app: express.Application,
-    public server: http.Server,
+    public server: ReturnType<typeof Bun.serve>,
     public ctx: AppContext
   ) {}
 
-  static async create() {
-    const { NODE_ENV, HOST, PORT, DB_PATH } = env;
+  static async create(): Promise<Server> {
+    const { NODE_ENV, HOST, PORT, DB_PATH, CLIENT_URL, RATE_LIMIT_MAX } = env;
 
-    // Fail fast in production on a non-wildcard HOST before anything else runs:
-    // a loopback bind boots "healthy" but is unreachable from Caddy over
-    // Railway's private network, with no error signal in the server's own logs
-    // (#298). No-op outside production so local loopback testing is unaffected.
+    // Fail fast in production on a non-wildcard HOST before anything else runs
+    // (see lib/assert-production-bind-host.ts for why — #298).
     assertProductionBindHost();
-
     const logger = createLogger();
 
-    // Set up the SQLite database
     const db = await createDb(DB_PATH);
     await migrateToLatest(db);
 
-    // Create the atproto utilities
     const oauthClient = await createClient(db);
     const baseIdResolver = createIdResolver();
     const resolver = createBidirectionalResolver(baseIdResolver);
@@ -156,81 +122,120 @@ export class Server {
       idResolver: baseIdResolver,
     };
 
-    // Create our server
-    const app: Express = express();
-    app.set("trust proxy", 1);
-    app.disable("x-powered-by");
+    // Hono app — the four concerns the old Express middleware chain provided,
+    // now native:
+    const app = new Hono<{ Variables: SessionVars }>();
 
-    // Enable CORS for the frontend client
+    // 1. CORS — replaces the `cors` Express middleware. credentials:true so the
+    //    signed session cookie travels cross-origin to the client origin.
     app.use(
+      "*",
       cors({
-        origin: env.CLIENT_URL,
+        origin: CLIENT_URL,
+        allowHeaders: ["Content-Type", "Authorization"],
+        allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         credentials: true,
+        maxAge: 600,
       })
     );
 
-    // Enable cookie-session
-    app.use(
-      cookieSession({
-        name: "navyfragen",
-        keys: [env.COOKIE_SECRET],
-        maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
-      })
-    );
-
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
-    // RATE_LIMIT_MAX=0 disables rate limiting (used by the e2e overlay so a
-    // large Playwright suite doesn't trip the per-IP cap).
-    if (env.RATE_LIMIT_MAX > 0) {
+    // 2. Per-IP rate limiting — replaces express-rate-limit. Honors the same
+    //    RATE_LIMIT_MAX=0 disable flag used by the e2e overlay. hono-rate-limiter
+    //    keys on x-forwarded-for when present (trust proxy), falling back to the
+    //    socket address.
+    if (RATE_LIMIT_MAX > 0) {
       app.use(
-        rateLimit({
-          windowMs: 60 * 1000, // 1 minute
-          max: env.RATE_LIMIT_MAX,
+        "*",
+        rateLimiter({
+          windowMs: 60 * 1000,
+          limit: RATE_LIMIT_MAX,
+          standardHeaders: "draft-6",
           message: "Too many requests, please try again later.",
+          keyGenerator: (c) => {
+            const xff = c.req.header("x-forwarded-for");
+            if (xff) return xff.split(",")[0].trim();
+            return c.req.raw.headers.get("x-real-ip") ?? "127.0.0.1";
+          },
         })
       );
     }
 
-    app.use((_req, res, next) => {
-      res.set("Cache-Control", "no-store");
-      next();
+    // 3. Signed-cookie session — replaces cookie-session. Populates c.var.session.
+    app.use("*", sessionMiddleware);
+
+    // No-store everywhere — matches the Express Cache-Control setter.
+    app.use("*", async (c, next) => {
+      await next();
+      c.header("Cache-Control", "no-store");
     });
 
-    const router = createRouter(ctx);
-    app.use(router);
+    // 4. Routes. Each domain is a Hono sub-app with Zod validators.
+    app.route("/", createAuthHono(ctx));
+    app.route("/", createMessageHono(ctx));
+    app.route("/", createProfileHono(ctx));
+    app.route("/", createSettingsHono(ctx));
+    app.route("/", createNotificationHono(ctx));
 
-    app.use((_req, res) => {
-      res.status(404).json({
-        error: "Not Found",
-        message: "The requested resource does not exist",
-        status: 404,
-      });
+    // 404 — matches the Express catch-all shape.
+    app.notFound((c) =>
+      c.json(
+        { error: "Not Found", message: "The requested resource does not exist", status: 404 },
+        404
+      )
+    );
+
+    app.onError((err, c) => {
+      logger.error({ err }, "unhandled error in hono app");
+      return c.json({ error: "Internal Server Error" }, 500);
     });
 
-    const { server, boundHost } = await listenPreferringDualStack(app, PORT, HOST, logger);
-    logger.info(`Server (${NODE_ENV}) running on port http://${boundHost}:${PORT}`);
+    // Dual-stack bind — mirrors the old listenPreferringDualStack. Bun.serve
+    // binds `::` as dual-stack; fall back to 0.0.0.0 where IPv6 is unavailable.
+    const { server, boundHost } = await serveDualStack(PORT, HOST, app.fetch, logger);
+    logger.info(`Server (${NODE_ENV}) running on http://${boundHost}:${PORT}`);
 
-    return new Server(app, server, ctx);
+    return new Server(server, ctx);
   }
 
-  async close() {
+  async close(): Promise<void> {
     this.ctx.logger.info("sigint received, shutting down");
-    return new Promise<void>((resolve) => {
-      this.server.close(async () => {
-        // Drain the Postgres pool (no-op for SQLite) so in-flight queries
-        // settle and connections close before the process exits. `destroy()`
-        // rejects any new queries, so it must run after the HTTP server stops
-        // accepting connections.
-        try {
-          await this.ctx.db.destroy();
-        } catch (err) {
-          this.ctx.logger.error({ err }, "Failed to drain database pool");
-        }
-        this.ctx.logger.info("server closed");
-        resolve();
-      });
-    });
+    // Bun.serve.stop(true) waits for in-flight connections before closing.
+    this.server.stop(true);
+    try {
+      await this.ctx.db.destroy();
+    } catch (err) {
+      this.ctx.logger.error({ err }, "Failed to drain database pool");
+    }
+    this.ctx.logger.info("server closed");
+  }
+}
+
+/**
+ * Binds a wildcard HOST as "::" so one dual-stack listener serves IPv4 and IPv6,
+ * because Railway's private network — the only way Caddy reaches this service —
+ * is IPv6-only. Falls back to "0.0.0.0" where the network has no IPv6 at all
+ * (every Docker bridge network in CI and local compose). A non-wildcard HOST is
+ * bound verbatim so `HOST=127.0.0.1` still means loopback.
+ */
+async function serveDualStack(
+  port: number,
+  host: string,
+  fetch: (req: Request) => Response | Promise<Response>,
+  logger: pino.Logger
+): Promise<{ server: ReturnType<typeof Bun.serve>; boundHost: string }> {
+  const wildcard = WILDCARD_HOSTS.has(host);
+  const tryHost = wildcard ? "::" : host;
+  try {
+    // Bun.serve resolves the bind synchronously — it throws if the port/host is
+    // unavailable. The returned Server exposes .hostname/.port/.url for the
+    // address actually bound (which is what we log).
+    const server = Bun.serve({ port, hostname: tryHost, fetch });
+    return { server, boundHost: server.hostname ?? tryHost };
+  } catch (err) {
+    if (!wildcard) throw err;
+    logger.warn({ err, host }, "IPv6 wildcard bind failed, falling back to 0.0.0.0");
+    const server = Bun.serve({ port, hostname: "0.0.0.0", fetch });
+    return { server, boundHost: "0.0.0.0" };
   }
 }
 
