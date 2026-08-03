@@ -198,7 +198,7 @@ These branches are V8 JIT internals; no user-written test can reach them. The sa
 
 ### Server class-based modules — module-scope and class-closing-brace artifacts
 
-**Files:** `server/src/services/auth-service.ts`, `server/src/controllers/message-controller.ts`, `server/src/controllers/profile-controller.ts`, `server/src/controllers/settings-controller.ts`, `server/src/services/profile-service.ts`, `server/src/services/settings-service.ts`
+**Files:** `server/src/services/auth-service.ts`, `server/src/services/profile-service.ts`, `server/src/services/settings-service.ts`
 
 **Lines:** line 1 (module-scope artifact) and the last `}` of the class (class-declaration artifact).
 
@@ -274,6 +274,8 @@ The mock now spreads the real module (`exports: { ...realSessionAgent, initializ
 
 ## TypeScript Transpilation Artifacts (tsx source-map gaps)
 
+> **Historical note:** this section was written under the former c8/tsx/Node coverage path, which was retired in #288 (the server suite now runs under Bun's built-in coverage reporter, which uses neither tsx nor V8 source maps). These source-map-gap observations may no longer reproduce under Bun's reporter and are kept as a historical reference; the current server coverage limitations are documented in CLAUDE.md under "Testing & Coverage".
+
 The following "uncovered" lines are not executable TypeScript — they are blank lines, type annotations, or closing punctuation of multi-line expressions that tsx maps back to the wrong source position. The underlying code **is** executed and tested; only V8's source-map alignment is imprecise.
 
 | File | Lines | Kind |
@@ -323,15 +325,15 @@ CI (`html-to-image-tests` in `.github/workflows/Tests.yml`) runs `node --test ap
 
 The following files are excluded from coverage metrics entirely. See the root-level notes in `CLAUDE.md` under "Coverage Exclusions".
 
-**Server** (excluded via `--test-coverage-exclude` in `package.json`):
+**Server** (excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml`):
 - `src/lexicon/**` — auto-generated AT Protocol types
-- `src/index.ts` — Express boot + signal handlers
+- `src/index.ts` — Hono app + Bun.serve boot + signal handlers
 - `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — OAuth wiring
 - `src/auth/e2e-agent-store.ts` — in-memory Map for E2E agents; trivial code that requires a live AT Protocol PDS to exercise meaningfully
 - `src/database/db.ts` — Kysely migration runner
 - `src/lib/id-resolver.ts` — requires live network
 - `src/lib/env.ts` — bootstrapped before tests
-- `src/routes.ts`, `src/routes/*.ts` — pure Express wiring (includes `e2e-auth-routes.ts`)
+- `src/hono/**` — Hono route handlers + session middleware; tests deferred to a follow-up step (#316)
 
 **Client** (excluded via `coverage.exclude` in `vite.config.ts`):
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and entry point

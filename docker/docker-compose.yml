@@ -100,7 +100,7 @@ services:
         VITE_SHORTLINK_URL: "localhost:8081"
     restart: unless-stopped
 
-  # Express API
+  # Bun.serve + Hono API
   #
   # Published directly on 3000: the loopback OAuth client format below
   # redirects the browser to http://127.0.0.1:3000/oauth/callback, which only

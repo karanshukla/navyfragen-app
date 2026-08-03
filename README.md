@@ -34,7 +34,7 @@ The companion [navyfragen-feed](https://github.com/karanshukla/navyfragen-feed) 
 | Layer | Technologies |
 |---|---|
 | **Client** | React 19, Vite, TypeScript, Mantine UI v8, React Query v5, React Router v7 |
-| **Server** | Express, TypeScript, Kysely ORM, AT Protocol SDK, Pino |
+| **Server** | Bun.serve + Hono, TypeScript, Kysely ORM, AT Protocol SDK, Pino |
 | **Database** | SQLite (development) · PostgreSQL (production) |
 | **Auth** | AT Protocol OAuth (Bluesky as identity provider) |
 | **Testing** | Vitest + Testing Library (client) · Node.js built-in test runner (server) |
@@ -49,7 +49,7 @@ npm workspaces with two packages:
 ```
 navyfragen-app/
 ├── client/        # React + Vite SPA
-├── server/        # Express API
+├── server/        # Bun.serve + Hono API
 ├── anubis/        # Anubis WAF config
 ├── caddy/         # Caddy reverse proxy config
 └── docs/          # Developer notes

@@ -6,13 +6,12 @@ Essentially, Bluesky is acting as an identity provider (authentication) and seco
 
 ## Architecture
 
-Three-layer pattern: **routes → controllers → services**
+Two-layer pattern: **route handlers → services**
 
-- `src/routes/` — Express Router setup and validation middleware
-- `src/controllers/` — Request/response handling and session checks
+- `src/hono/` — Hono route handlers (request/response I/O, session checks, agent initialization) + signed-cookie session middleware + Zod validators. Each domain (auth, message, profile, settings, notification) is a `create<Domain>Hono(ctx)` sub-app mounted in `src/index.ts`.
 - `src/services/` — Business logic, database access, and AT Protocol calls
 
-`AppContext` carries `db`, `logger`, `oauthClient`, and `resolver` and is passed through the entire stack.
+`AppContext` carries `db`, `logger`, `oauthClient`, `resolver`, and `idResolver` and is passed through the entire stack.
 
 ## Database
 
@@ -32,14 +31,14 @@ The `#/` path alias maps to `src/` (configured in `tsconfig.json`).
 
 ## Testing
 
-Tests use Node.js built-in `node:test` + `node:assert`. Test setup is via `src/tests/test-bootstrap.js` which sets dummy env vars. Mock the DB with chainable builder objects (see existing test files for the pattern).
+Tests use `bun:test` + `node:assert` (Bun runs `node:assert` natively). Test setup is via `src/tests/test-bootstrap.js` (passed via `--preload`) which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with `mock`/`spyOn` from `bun:test`.
 
 ```bash
-npm run test        # single run
-npm run test:watch  # watch mode
+bun run test         # single run
+bun run test:watch   # watch mode
 ```
 
 To run a single test file:
 ```bash
-node --import ./src/tests/test-bootstrap.js --import tsx --test src/tests/message-service.test.ts
+bun test --isolate --no-env-file --preload ./src/tests/test-bootstrap.js src/tests/message-service.test.ts
 ```
