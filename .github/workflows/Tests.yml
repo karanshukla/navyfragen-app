@@ -288,6 +288,60 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: "true"
         run: npm ci --no-audit --no-fund
 
+      # Bun-runtime probe — gates the job. This service still runs on Node in
+      # production, but issue #314 proposes moving it to Bun. Two surfaces in
+      # the render path are genuinely under-verified under Bun: the
+      # child_process.spawn of Chromium (Puppeteer launches the browser via
+      # child_process) and the CDP WebSocket transport between puppeteer and
+      # Chromium. This probe exercises both end-to-end (launch → newPage →
+      # goto → evaluate → screenshot → close) and is the evidence that gates
+      # the migration, mirroring the server's SQLite/OAuth canaries above.
+      # puppeteer needs its bundled Chromium for the probe (the system Chromium
+      # is only present in the production Docker image), so install the browser
+      # into the runner rather than skipping the download.
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Probe Puppeteer under Bun
+        id: probe
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "false"
+        run: |
+          # Install the browser puppeteer was resolved against, then run the
+          # probe. `npx puppeteer browsers install chrome` downloads the same
+          # build that puppeteer.launch() with no executablePath picks up.
+          npx puppeteer browsers install chrome
+
+          {
+            echo "## Bun puppeteer probe"
+            echo
+          } > "$GITHUB_STEP_SUMMARY"
+
+          # The probe lives in a checked-in file rather than a `bun -e` heredoc
+          # so the JS isn't fighting bash's double-quote escaping (template
+          # literals and ${} in particular). It imports CHROMIUM_LAUNCH_ARGS
+          # from the real app so it exercises the actual launch flags.
+          set +e
+          probe_out=$(bun probe-bun-puppeteer.mjs 2>&1)
+          probe_exit=$?
+          set -e
+          echo "$probe_out" | tee /dev/stderr >/dev/null
+          {
+            echo "<details><summary><code>bun-puppeteer-probe</code> (issue #314)</summary>"
+            echo ""
+            echo '```'
+            echo "$probe_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$probe_exit" -ne 0 ] || ! echo "$probe_out" | grep -q '^OK '; then
+            echo "::error::Puppeteer did not pass under Bun — migration (issue #314) must not proceed"
+            exit 1
+          fi
+
       - name: Run tests
         run: node --test app.test.js
 
