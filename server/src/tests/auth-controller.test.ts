@@ -91,6 +91,21 @@ describe("Auth (Hono)", () => {
       assert.strictEqual(res.status, 400);
     });
 
+    test("returns 400 for a handle that passes Zod but fails isValidHandle", async () => {
+      // "invalid_handle" has an underscore (not a valid AT Protocol char) but
+      // satisfies the Zod min(1).max(64) schema — exercises the defense-in-depth
+      // isValidHandle guard.
+      const { app, headers } = makeApp();
+      const res = await app.request("/login", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ handle: "invalid_handle" }),
+      });
+      assert.strictEqual(res.status, 400);
+      const body = await res.json();
+      assert.strictEqual(body.error, "invalid handle");
+    });
+
     test("returns redirectUrl on success", async () => {
       const { app, headers } = makeApp();
       const res = await app.request("/login", {
@@ -287,6 +302,22 @@ describe("Auth (Hono)", () => {
       });
       assert.strictEqual(res.status, 403);
       assert.strictEqual((ctx.logger.warn as any).mock.calls.length, 1);
+    });
+
+    test("returns 400 for a malformed DID that passes Zod but fails isValidDid", async () => {
+      // "not-a-did" satisfies Zod min(1).max(512) but isn't a valid DID —
+      // exercises the defense-in-depth isValidDid guard.
+      const { app, ctx, headers } = makeApp({
+        session: { did: "did:plc:foo", accounts: [{ did: "did:plc:foo" }] },
+      });
+      const res = await app.request("/accounts/switch", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ did: "not-a-did" }),
+      });
+      assert.strictEqual(res.status, 400);
+      // The DID-format check runs before the session lookup, so no warn log.
+      assert.strictEqual((ctx.logger.warn as any).mock.calls.length, 0);
     });
 
     test("switches active DID when account is remembered and token is valid", async () => {

@@ -47,6 +47,15 @@ describe("Notifications (Hono)", () => {
     keys: { p256dh: "p256-key", auth: "auth-key" },
   };
 
+  test("withTestSession treats a malformed session header as no session", async () => {
+    const { app } = makeApp();
+    const res = await app.request("/notifications/vapid-public-key", {
+      headers: { "x-test-session": "{not json" },
+    });
+    // No session → still a public endpoint, returns 200 with the key.
+    assert.strictEqual(res.status, 200);
+  });
+
   describe("GET /notifications/vapid-public-key", () => {
     test("returns the key from the service when configured", async () => {
       const { app, headers } = makeApp();

@@ -71,13 +71,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     async (c) => {
       const body = c.req.valid("json");
       const { tid, recipient, original, response, includeQuestionAsImage, replyTo } = body;
-      if (!tid || !recipient || !response) {
-        ctx.logger.warn(
-          { tid, recipient, response },
-          "Missing required fields in respond endpoint"
-        );
-        return c.json({ error: "Missing required fields" }, 400);
-      }
       const did = getSession(c)?.did;
       if (!did) {
         ctx.logger.warn("No authenticated user session found");

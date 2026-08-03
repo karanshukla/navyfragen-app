@@ -23,6 +23,7 @@ import { pdsRegion } from "#/lib/pds-region";
 import { AuthService } from "#/services/auth-service";
 import { NotificationService } from "#/services/notification-service";
 import { clearSession, getSession, setSession } from "./session-middleware";
+import { createE2EAuthHono } from "./e2e-auth-routes";
 
 import type { AppContext } from "#/index";
 import type { AppSessionData } from "#/auth/session";
@@ -311,47 +312,10 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   });
 
   // --- POST /auth/e2e-login (E2E only, never in production) ----------------
+  // Extracted to src/hono/e2e-auth-routes.ts (its own module so it can be
+  // excluded from the unit-coverage gate — it makes live network calls).
   if (env.E2E_TESTING && env.NODE_ENV !== "production") {
-    app.post(
-      "/auth/e2e-login",
-      zValidator(
-        "json",
-        z.object({
-          identifier: z.string().min(1).max(100),
-          password: z.string().min(1).max(200),
-        }),
-        (r, c) => {
-          if (!r.success) return c.json({ errors: r.error.issues }, 400);
-        }
-      ),
-      async (c) => {
-        if (env.NODE_ENV === "production") {
-          ctx.logger.error("E2E login attempted in production — request blocked");
-          return c.json({ error: "E2E login is not available in production" }, 403);
-        }
-        const { identifier, password } = c.req.valid("json");
-        const { AtpAgent } = await import("@atproto/api");
-        const { setE2EAgent } = await import("#/auth/e2e-agent-store");
-        const agent = new AtpAgent({ service: env.E2E_PDS_URL });
-        await agent.login({ identifier, password });
-        const did = agent.session?.did;
-        if (!did) {
-          return c.json({ error: "Login failed: no session DID returned" }, 401);
-        }
-        await ctx.db
-          .insertInto("auth_session")
-          .values({ key: did, session: "e2e" })
-          .onConflict((oc) => oc.column("key").doUpdateSet({ session: "e2e" }))
-          .execute();
-        await service.createOrConfirmUserProfile(did);
-        const handle = agent.session?.handle || identifier;
-        setE2EAgent(did, agent, handle);
-        const existing = getSession(c) ?? ({} as AppSessionData);
-        await setSession(c, { ...existing, did });
-        ctx.logger.info({ did }, "E2E login successful");
-        return c.json({ success: true });
-      }
-    );
+    app.route("/", createE2EAuthHono(ctx, service));
   }
 
   // --- helpers -------------------------------------------------------------
