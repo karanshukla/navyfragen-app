@@ -272,24 +272,70 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 24
+          bun-version: latest
 
-      # html-to-image is deliberately outside the bun workspaces (it ships as a
-      # standalone container), so it carries its own package-lock.json and
-      # installs with npm rather than the root bun install.
+      # html-to-image is a bun workspace member (#314), so deps come from the
+      # single root bun.lock — no standalone package-lock.json anymore.
       - name: Install dependencies
-        # The tests never launch a browser — they drive createApp/createBrowserPool
-        # through fakes — so the ~150MB Chrome download is pure CI cost. The
-        # production image supplies Alpine's system Chromium instead.
+        # The unit tests never launch a browser — they drive
+        # createApp/createBrowserPool through fakes — so the ~150MB Chrome
+        # download is pure CI cost. The probe step below downloads it
+        # explicitly only when it needs to launch one. The production image
+        # supplies Alpine's system Chromium instead.
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
-        run: npm ci --no-audit --no-fund
+        run: bun install --frozen-lockfile
+
+      # Bun-runtime regression canary (#314). The service runs on Bun in
+      # production; two surfaces in the render path are the load-bearing risk
+      # under that runtime — the child_process.spawn of Chromium (Puppeteer
+      # launches the browser via child_process) and the CDP WebSocket transport
+      # between puppeteer and Chromium. This probe exercises both end-to-end
+      # (launch → newPage → goto → evaluate → screenshot → close), mirroring
+      # the server's SQLite/OAuth canaries. The probe needs a real Chromium,
+      # so install the browser the resolved puppeteer expects here.
+      - name: Probe Puppeteer under Bun
+        id: probe
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "false"
+        run: |
+          # `npx puppeteer browsers install chrome` downloads the build that
+          # puppeteer.launch() with no executablePath picks up.
+          npx puppeteer browsers install chrome
+
+          {
+            echo "## Bun puppeteer probe"
+            echo
+          } > "$GITHUB_STEP_SUMMARY"
+
+          # The probe lives in a checked-in file rather than a `bun -e` heredoc
+          # so the JS isn't fighting bash's double-quote escaping (template
+          # literals and ${} in particular). It imports CHROMIUM_LAUNCH_ARGS
+          # from the real app so it exercises the actual launch flags.
+          set +e
+          probe_out=$(bun probe-bun-puppeteer.mjs 2>&1)
+          probe_exit=$?
+          set -e
+          echo "$probe_out" | tee /dev/stderr >/dev/null
+          {
+            echo "<details><summary><code>bun-puppeteer-probe</code> (#314 regression canary)</summary>"
+            echo ""
+            echo '```'
+            echo "$probe_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$probe_exit" -ne 0 ] || ! echo "$probe_out" | grep -q '^OK '; then
+            echo "::error::Puppeteer did not pass under Bun (regression of #314)"
+            exit 1
+          fi
 
       - name: Run tests
-        run: node --test app.test.js
+        run: bun test app.test.js
 
   coveralls-finish:
     name: Coveralls Finish

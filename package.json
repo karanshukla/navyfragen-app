@@ -3,10 +3,11 @@
     "private": true,
     "workspaces": [
         "client",
-        "server"
+        "server",
+        "html-to-image"
     ],
     "scripts": {
-        "dev": "concurrently \"bun run --cwd client dev\" \"bun run --cwd server dev\" \"npm --prefix html-to-image start\"",
+        "dev": "concurrently \"bun run --cwd client dev\" \"bun run --cwd server dev\" \"bun run --cwd html-to-image start\"",
         "html-to-image": "docker compose -f docker/docker-compose.yml up html-to-image --build",
         "prepare": "husky || true",
         "test:e2e": "playwright test",

@@ -134,9 +134,11 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # Puppeteer image renderer
+  # Puppeteer image renderer (Bun runtime, #314)
   html-to-image:
-    build: ../html-to-image
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.html-to-image
     # Chromium needs a larger /dev/shm than Docker's default 64 MB
     shm_size: "256m"
     restart: unless-stopped

@@ -2,6 +2,6 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile"
+    "dockerfilePath": "docker/Dockerfile.html-to-image"
   }
 }
