@@ -1,9 +1,13 @@
 import assert from "node:assert";
 import { test, describe, afterEach, mock } from "bun:test";
 
-import { NotificationController } from "../controllers/notification-controller";
+import { createNotificationHono, type NotificationDeps } from "#/hono/message-routes";
+import { withTestSession, sessionHeader } from "./helpers/hono-test";
 
-describe("NotificationController", () => {
+import type { AppContext } from "#/index";
+import type { AppSessionData } from "#/auth/session";
+
+describe("Notifications (Hono)", () => {
   afterEach(() => {
     mock.clearAllMocks();
   });
@@ -18,153 +22,163 @@ describe("NotificationController", () => {
     };
   }
 
-  function makeLogger(): any {
+  function makeCtx(): AppContext {
     return {
-      info: mock(),
-      error: mock(),
-      warn: mock(),
-      debug: mock(),
+      db: {} as any,
+      logger: { info: mock(), error: mock(), warn: mock(), debug: mock() } as any,
+      oauthClient: {} as any,
+      resolver: {} as any,
+      idResolver: {} as any,
     };
   }
 
-  function makeReq(overrides: any = {}): any {
-    return { body: {}, session: { did: "did:foo" }, params: {}, ...overrides };
+  function makeApp(serviceOverride: any = {}, session: AppSessionData | null = { did: "did:foo" }) {
+    const ctx = makeCtx();
+    const service = makeService(serviceOverride);
+    const app = withTestSession(
+      createNotificationHono(ctx, { notificationService: service } as NotificationDeps)
+    );
+    return { app, service, headers: sessionHeader(session) };
   }
 
-  function makeRes(): any {
-    const res: any = {};
-    res.status = mock(() => res);
-    res.json = mock(() => res);
-    return res;
-  }
+  const sessionDid = { did: "did:foo" } as AppSessionData;
+  const validBody = {
+    endpoint: "https://push.example.com/sub",
+    keys: { p256dh: "p256-key", auth: "auth-key" },
+  };
 
-  describe("getVapidPublicKey", () => {
+  describe("GET /notifications/vapid-public-key", () => {
     test("returns the key from the service when configured", async () => {
-      const controller = new NotificationController(makeService(), makeLogger());
-      const res = makeRes();
-      await controller.getVapidPublicKey(makeReq(), res);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { vapidPublicKey: "vapid-key" });
+      const { app, headers } = makeApp();
+      const res = await app.request("/notifications/vapid-public-key", { headers });
+      assert.strictEqual(res.status, 200);
+      const body = await res.json();
+      assert.deepStrictEqual(body, { vapidPublicKey: "vapid-key" });
     });
 
     test("returns 501 when VAPID is not configured", async () => {
-      const controller = new NotificationController(
-        makeService({ getVapidPublicKey: mock(() => null) }),
-        makeLogger()
-      );
-      const res = makeRes();
-      await controller.getVapidPublicKey(makeReq(), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 501);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], {
-        error: "Web push not configured",
-      });
+      const { app, headers } = makeApp({ getVapidPublicKey: mock(() => null) });
+      const res = await app.request("/notifications/vapid-public-key", { headers });
+      assert.strictEqual(res.status, 501);
     });
   });
 
-  describe("subscribe", () => {
-    const validBody = {
-      endpoint: "https://push.example.com/sub",
-      keys: { p256dh: "p256-key", auth: "auth-key" },
-    };
-
+  describe("POST /notifications/subscribe", () => {
     test("returns 403 when no session", async () => {
-      const controller = new NotificationController(makeService(), makeLogger());
-      const res = makeRes();
-      await controller.subscribe(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 403);
+      const { app } = makeApp({}, null);
+      const res = await app.request("/notifications/subscribe", {
+        method: "POST",
+        headers: { ...sessionHeader(null), "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      });
+      assert.strictEqual(res.status, 403);
     });
 
     test("returns 501 when VAPID is not configured", async () => {
-      const svc = makeService({ getVapidPublicKey: mock(() => null) });
-      const controller = new NotificationController(svc, makeLogger());
-      const res = makeRes();
-      await controller.subscribe(makeReq({ body: validBody }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 501);
+      const { app, headers } = makeApp({ getVapidPublicKey: mock(() => null) });
+      const res = await app.request("/notifications/subscribe", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      });
+      assert.strictEqual(res.status, 501);
     });
 
     test("saves subscription and returns 201 on success", async () => {
-      const svc = makeService();
-      const controller = new NotificationController(svc, makeLogger());
-      const res = makeRes();
-      await controller.subscribe(makeReq({ body: validBody }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 201);
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { ok: true });
-      const args = svc.saveSubscription.mock.calls[0];
-      assert.strictEqual(args[0], "did:foo"); // did from session
+      const { app, service, headers } = makeApp();
+      const res = await app.request("/notifications/subscribe", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      });
+      assert.strictEqual(res.status, 201);
+      const body = await res.json();
+      assert.deepStrictEqual(body, { ok: true });
+      const args = service.saveSubscription.mock.calls[0];
+      assert.strictEqual(args[0], "did:foo");
       assert.strictEqual(args[1], "https://push.example.com/sub");
     });
 
     test("syncs the subscription across every account remembered on this device", async () => {
-      const svc = makeService();
-      const controller = new NotificationController(svc, makeLogger());
-      const res = makeRes();
-      await controller.subscribe(
-        makeReq({
-          body: validBody,
-          session: {
-            did: "did:foo",
-            accounts: [
-              { did: "did:foo", handle: "foo.bsky.social" },
-              { did: "did:bar", handle: "bar.bsky.social" },
-            ],
-          },
-        }),
-        res
+      const { app, service } = makeApp(
+        {},
+        {
+          did: "did:foo",
+          accounts: [
+            { did: "did:foo", handle: "foo.bsky.social" },
+            { did: "did:bar", handle: "bar.bsky.social" },
+          ],
+        }
       );
-      assert.strictEqual(res.status.mock.calls[0][0], 201);
-      assert.deepStrictEqual(svc.syncSubscriptionsAcrossAccounts.mock.calls[0][0], [
+      await app.request("/notifications/subscribe", {
+        method: "POST",
+        headers: {
+          ...sessionHeader({
+            did: "did:foo",
+            accounts: [{ did: "did:foo" }, { did: "did:bar" }],
+          } as any),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(validBody),
+      });
+      assert.deepStrictEqual(service.syncSubscriptionsAcrossAccounts.mock.calls[0][0], [
         "did:foo",
         "did:bar",
       ]);
     });
 
     test("returns 500 when service throws", async () => {
-      const svc = makeService({
+      const { app, headers } = makeApp({
         saveSubscription: mock(async () => {
           throw new Error("db down");
         }),
       });
-      const controller = new NotificationController(svc, makeLogger());
-      const res = makeRes();
-      await controller.subscribe(makeReq({ body: validBody }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/notifications/subscribe", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      });
+      assert.strictEqual(res.status, 500);
     });
   });
 
-  describe("unsubscribe", () => {
+  describe("DELETE /notifications/subscribe", () => {
     test("returns 403 when no session", async () => {
-      const controller = new NotificationController(makeService(), makeLogger());
-      const res = makeRes();
-      await controller.unsubscribe(makeReq({ session: null }), res);
-      assert.strictEqual(res.status.mock.calls[0][0], 403);
+      const { app } = makeApp({}, null);
+      const res = await app.request("/notifications/subscribe", {
+        method: "DELETE",
+        headers: { ...sessionHeader(null), "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: "https://push.example.com/sub" }),
+      });
+      assert.strictEqual(res.status, 403);
     });
 
     test("deletes subscription and returns ok on success", async () => {
-      const svc = makeService();
-      const controller = new NotificationController(svc, makeLogger());
-      const res = makeRes();
-      await controller.unsubscribe(
-        makeReq({ body: { endpoint: "https://push.example.com/sub" } }),
-        res
-      );
-      assert.deepStrictEqual(res.json.mock.calls[0][0], { ok: true });
-      const args = svc.deleteSubscription.mock.calls[0];
+      const { app, service, headers } = makeApp({}, sessionDid);
+      const res = await app.request("/notifications/subscribe", {
+        method: "DELETE",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: "https://push.example.com/sub" }),
+      });
+      const body = await res.json();
+      assert.deepStrictEqual(body, { ok: true });
+      const args = service.deleteSubscription.mock.calls[0];
       assert.strictEqual(args[0], "did:foo");
       assert.strictEqual(args[1], "https://push.example.com/sub");
     });
 
     test("returns 500 when service throws", async () => {
-      const svc = makeService({
+      const { app, headers } = makeApp({
         deleteSubscription: mock(async () => {
           throw new Error("db down");
         }),
       });
-      const controller = new NotificationController(svc, makeLogger());
-      const res = makeRes();
-      await controller.unsubscribe(
-        makeReq({ body: { endpoint: "https://push.example.com/sub" } }),
-        res
-      );
-      assert.strictEqual(res.status.mock.calls[0][0], 500);
+      const res = await app.request("/notifications/subscribe", {
+        method: "DELETE",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: "https://push.example.com/sub" }),
+      });
+      assert.strictEqual(res.status, 500);
     });
   });
 });

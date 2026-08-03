@@ -31,9 +31,14 @@ import { clearSession, getSession, setSession } from "./session-middleware";
 import type { AppContext } from "#/index";
 import type { AppSessionData } from "#/auth/session";
 
-export function createAuthHono(ctx: AppContext): Hono {
+/** Optional injected services — production omits this (uses real services); tests pass mocks. */
+export interface AuthDeps {
+  service?: AuthService;
+}
+
+export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   const app = new Hono();
-  const service = new AuthService(ctx);
+  const service = deps.service ?? new AuthService(ctx);
 
   // --- POST /login ---------------------------------------------------------
   // Zod v4: custom messages on .min() use { error: "..." }.

@@ -333,7 +333,7 @@ The following files are excluded from coverage metrics entirely. See the root-le
 - `src/database/db.ts` — Kysely migration runner
 - `src/lib/id-resolver.ts` — requires live network
 - `src/lib/env.ts` — bootstrapped before tests
-- `src/hono/**` — Hono route handlers + session middleware; tests deferred to a follow-up step (#316)
+- `src/hono/session-middleware.ts` — signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
 
 **Client** (excluded via `coverage.exclude` in `vite.config.ts`):
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and entry point

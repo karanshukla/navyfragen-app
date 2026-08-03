@@ -172,7 +172,7 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 **Server**: Uses `bun:test` (test/describe/hooks/mock/spyOn from `bun:test`) + `node:assert` (which Bun runs natively). The suite runs wholesale under `bun test` (#288 retired the former dual-runtime Node+Bun setup); there is no `node --test` path, no `tsx` loader, and no `c8`. Test setup via `src/tests/test-bootstrap.js` (passed via `--preload`) which sets dummy env vars. Mock the DB with chainable builder objects; mock dependencies with `mock`/`spyOn` from `bun:test` (see "Module Mocking in Server Tests" below).
 
-> **Note on controller tests (#316, in progress):** the Express→Hono migration deleted the old `src/controllers/*` the `src/tests/*-controller.test.ts` files imported. Those 5 test files are intentionally left on disk but **currently fail to import** — they error when `bun test` collects them. The service/lib/auth tests (12 files) are unaffected and pass. Rewriting the controller tests against the Hono handlers is a tracked follow-up step; until then `bun run test` is expected to error on those 5 files.
+> **Note on Hono handler tests (#316):** the `src/tests/*-controller.test.ts` files exercise the Hono route handlers via Hono's own `app.request()` (real dispatch through route matching, Zod validation, and response shaping), using an injected-session test helper (`src/tests/helpers/hono-test.ts`) and mock services passed through the `create<Domain>Hono(ctx, deps)` injection seam. The signed-cookie session I/O itself (`src/hono/session-middleware.ts`) is covered by the E2E suite rather than unit tests, so it's excluded from the coverage gate.
 
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
@@ -212,7 +212,7 @@ The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.9
 - `src/database/db.ts` — Kysely migration runner
 - `src/lib/id-resolver.ts` — AT Protocol DID/handle resolver (requires live network)
 - `src/lib/env.ts` — bootstrapped before tests run via `test-bootstrap.js`
-- `src/hono/**` — Hono route handlers + session middleware; tests deferred to a follow-up step (#316)
+- `src/hono/session-middleware.ts` — signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
 - `src/scripts/**` — one-off admin scripts
 
 **Client** — excluded via `coverage.exclude` in `vite.config.ts`:

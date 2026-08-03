@@ -21,10 +21,18 @@ import type { AppContext } from "#/index";
 
 const BOT_DID = "did:plc:3d4awubjiftylwrhhyp5vl7i";
 
-export function createMessageHono(ctx: AppContext): Hono {
+/** Optional injected services — production omits this (uses real services); tests pass mocks. */
+export interface MessageDeps {
+  messageService?: MessageService;
+  notificationService?: NotificationService;
+}
+
+export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono {
   const app = new Hono();
-  const messageService = new MessageService(ctx.db, ctx.resolver, ctx.logger);
-  const notificationService = new NotificationService(ctx.db, ctx.resolver, ctx.logger);
+  const messageService =
+    deps.messageService ?? new MessageService(ctx.db, ctx.resolver, ctx.logger);
+  const notificationService =
+    deps.notificationService ?? new NotificationService(ctx.db, ctx.resolver, ctx.logger);
 
   // --- POST /messages/example ---------------------------------------------
   app.post(
@@ -236,9 +244,15 @@ export function createMessageHono(ctx: AppContext): Hono {
   return app;
 }
 
-export function createProfileHono(ctx: AppContext): Hono {
+/** Optional injected services — production omits this (uses real services); tests pass mocks. */
+export interface ProfileDeps {
+  profileService?: ProfileService;
+}
+
+export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono {
   const app = new Hono();
-  const profileService = new ProfileService(ctx.db, ctx.resolver, ctx.logger);
+  const profileService =
+    deps.profileService ?? new ProfileService(ctx.db, ctx.resolver, ctx.logger);
 
   // --- GET /public-profile/:did -------------------------------------------
   app.get(
@@ -370,9 +384,14 @@ export function createProfileHono(ctx: AppContext): Hono {
   return app;
 }
 
-export function createSettingsHono(ctx: AppContext): Hono {
+/** Optional injected services — production omits this (uses real services); tests pass mocks. */
+export interface SettingsDeps {
+  settingsService?: SettingsService;
+}
+
+export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Hono {
   const app = new Hono();
-  const settingsService = new SettingsService(ctx.db, ctx.logger);
+  const settingsService = deps.settingsService ?? new SettingsService(ctx.db, ctx.logger);
 
   app.get("/settings", async (c) => {
     const userSessionDid = getSession(c)?.did;
@@ -468,9 +487,15 @@ export function createSettingsHono(ctx: AppContext): Hono {
   return app;
 }
 
-export function createNotificationHono(ctx: AppContext): Hono {
+/** Optional injected services — production omits this (uses real services); tests pass mocks. */
+export interface NotificationDeps {
+  notificationService?: NotificationService;
+}
+
+export function createNotificationHono(ctx: AppContext, deps: NotificationDeps = {}): Hono {
   const app = new Hono();
-  const notificationService = new NotificationService(ctx.db, ctx.resolver, ctx.logger);
+  const notificationService =
+    deps.notificationService ?? new NotificationService(ctx.db, ctx.resolver, ctx.logger);
 
   app.get("/notifications/vapid-public-key", async (c) => {
     const vapidPublicKey = notificationService.getVapidPublicKey();
