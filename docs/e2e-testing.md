@@ -31,8 +31,8 @@ E2E_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 First time only:
 
 ```bash
-npm install
-npx playwright install --with-deps chromium
+bun install
+bunx playwright install --with-deps chromium
 ```
 
 ### 4. Start the e2e stack
@@ -49,13 +49,13 @@ Wait ~30 s for services to stabilise.
 ### 5. Run the tests
 
 ```bash
-npm run test:e2e
+bun run test:e2e
 ```
 
 Interactive UI (useful for debugging):
 
 ```bash
-npm run test:e2e:ui
+bun run test:e2e:ui
 ```
 
 ### 6. Tear down
@@ -113,8 +113,8 @@ mobile project runs the same auth setup, so specs there reuse the saved session 
 Run a single project locally:
 
 ```bash
-npx playwright test --project=chromium
-npx playwright test --project=mobile-chromium
+bunx playwright test --project=chromium
+bunx playwright test --project=mobile-chromium
 ```
 
 ### Side-effect hygiene
