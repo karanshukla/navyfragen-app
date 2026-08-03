@@ -13,17 +13,17 @@
         "test:e2e:ui": "playwright test --ui"
     },
     "devDependencies": {
-        "@playwright/test": "^1.61.1",
+        "@playwright/test": "^1.62.1",
         "concurrently": "^10.0.4",
         "dotenv": "^17.4.2",
-        "happy-dom": "^20.10.6",
+        "happy-dom": "^20.11.1",
         "husky": "^9.1.7",
-        "lint-staged": "^17.0.8",
-        "prettier": "^3.9.3"
+        "lint-staged": "^17.3.0",
+        "prettier": "^3.9.6"
     },
     "dependencies": {
         "@types/ws": "^8.18.1",
-        "ws": "^8.21.0"
+        "ws": "^8.21.1"
     },
     "overrides": {
         "esbuild": ">=0.28.1",
