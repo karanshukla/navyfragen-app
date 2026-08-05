@@ -25,6 +25,7 @@ import { useHasBounceGap } from "../lib/useHasBounceGap";
 import { surfaceBg } from "../styles/tokens";
 
 import { useBounceLogos } from "./BounceLogosContext";
+import { UpdateAvailableButton } from "./UpdateAvailableButton";
 import { WinkMark } from "./WinkMark";
 import { Wordmark } from "./Wordmark";
 
@@ -75,6 +76,8 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
       >
         <Wordmark size={18} />
       </Box>
+
+      <UpdateAvailableButton />
 
       <Flex gap="sm" justify="flex-end" align="center" style={{ flexGrow: 1 }}>
         {hasBounceGap && (
