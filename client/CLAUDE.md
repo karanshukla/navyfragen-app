@@ -6,6 +6,8 @@
 
 The explicit `--bun` flag is load-bearing: `bun run <script>` hands a node-shebang binary — and `vite`, `vitest`, `tsc`, and `oxlint` all have one — to Node whenever Node is on PATH, so a bare `bun run build` silently runs on Node locally while running on Bun inside `docker/Dockerfile.client` (which is `FROM oven/bun` and ships no Node). Before this, that production build path was the only place Vite ran under Bun, and nothing tested it.
 
+`bunfig.toml` sets `[run] bun = true` so the guarantee survives a script that forgets the flag: a new `"foo": "vite something"` would otherwise run on Node locally and Bun in Docker, failing nothing. The explicit `bunx --bun` in the scripts stays anyway, since it reads at the call site and still applies when a script is invoked from outside `client/`. `server/bunfig.toml` carries the same setting. The repo root deliberately does not, because `test:e2e` must stay on Node.
+
 `probe-bun-vite.mjs` (`bun run probe:bun`) is the canary, gating the `Client Tests` CI job the way the server's SQLite/OAuth probes gate theirs. It asserts the runtime really is Bun and boots the Vite dev server to fetch a transformed TSX route — the dev server being the one Vite surface neither `vite build` nor Vitest touches.
 
 ## Data Layer

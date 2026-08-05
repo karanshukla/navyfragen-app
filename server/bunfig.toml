@@ -1,3 +1,10 @@
+[run]
+# Same Node-drift guard as client/bunfig.toml: `bun run <script>` defers a
+# node-shebang binary to Node whenever Node is on PATH, and oxlint, tsc,
+# pino-pretty, rimraf, and lex all have one. The scripts spell out
+# `bunx --bun`; this makes it hold even when a new one forgets.
+bun = true
+
 # Bun test + coverage configuration.
 #
 # The server suite runs exclusively under `bun test` (the Node `node --test`
