@@ -6,3 +6,6 @@ server/dist
 client/coverage
 server/coverage
 .env
+
+# Railway reads these from the repo, not from the Docker build context
+railway/

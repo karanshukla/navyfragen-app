@@ -1,6 +1,6 @@
 # Docker Compose Stack
 
-This stack is used for **local integration testing and smoke tests** (and optionally self-hosting). It mirrors production closely: Railway builds every service from these same Dockerfiles (pinned via `railway.server.json` / `railway.client.json` at the repo root and `railway.json` in each self-contained service directory — see `CLAUDE.md` → "Deployment (Railway)").
+This stack is used for **local integration testing and smoke tests** (and optionally self-hosting). It mirrors production closely: Railway builds every service from these same Dockerfiles (pinned via `railway/server.json` / `railway/client.json` for the repo-root-context services and `railway.json` in each self-contained service directory — see `CLAUDE.md` → "Deployment (Railway)").
 
 ## Services
 
@@ -45,7 +45,7 @@ All Docker-related files live here to keep Railway from auto-detecting them in t
 | `Dockerfile.server` | Bun.serve + Hono API image (build context: repo root) |
 | `.env.example` | Secret template — copy to `.env` before running |
 
-`client/Dockerfile` and `server/Dockerfile` are intentionally absent — all Docker-related files live under `docker/` to keep the service directories clean. Railway is explicitly pinned to `docker/Dockerfile.client` / `docker/Dockerfile.server` via config-as-code (`railway.client.json` / `railway.server.json` at the repo root — see `CLAUDE.md` → "Deployment (Railway)"), so it doesn't rely on auto-detection either way.
+`client/Dockerfile` and `server/Dockerfile` are intentionally absent — all Docker-related files live under `docker/` to keep the service directories clean. Railway is explicitly pinned to `docker/Dockerfile.client` / `docker/Dockerfile.server` via config-as-code (`railway/client.json` / `railway/server.json` — see `CLAUDE.md` → "Deployment (Railway)"), so it doesn't rely on auto-detection either way.
 
 ## Caveats
 
