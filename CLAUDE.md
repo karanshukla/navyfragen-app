@@ -13,7 +13,7 @@ NF messages (stored in the centralised DB) are deliberately kept separate from B
 ## Monorepo Structure
 
 npm workspaces with three packages:
-- `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
+- `client/` — React + Vite 8 + TypeScript SPA (Mantine UI 9, React Query, React Router)
 - `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
 - `html-to-image/` — Bun + Puppeteer image renderer (headless Chromium OG-image generation)
 
@@ -166,6 +166,12 @@ Key events that are instrumented:
 ## Code comments
 
 Don't add comments above functions or inline unless the WHY is genuinely non-obvious (a hidden constraint, a subtle invariant, a workaround for a specific bug). Well-named identifiers should make the WHAT self-evident. Before reaching for a comment, check whether the explanation can instead be expressed through abstraction or encapsulation — e.g. business logic embedded in a controller should move to a self-commenting, domain-named method in the service layer rather than being explained in a comment. Favor human-readable, domain-driven names and logical flow over prose explanations, while keeping code legible to agents working in this repo.
+
+## Agent skills live in `.claude/skills/`, not `.agents/skills/`
+
+Claude Code discovers project skills under `.claude/skills/` only. The `skills` CLI (`skills-lock.json`) installs into `.agents/skills/` instead — the cross-agent convention — so anything it writes is inert here and fails silently: no error, no missing-skill warning, just a skill that never appears in the session's skill list. A vendored set of `mantinedev/skills` sat there unused (duplicated at both the repo root and `client/`) until it was removed.
+
+If a skill is genuinely wanted, put it in `.claude/skills/` and add a `!.claude/skills/` exception to `.gitignore` — the `.claude/*` ignore rule otherwise keeps it out of the repo, which reads as "installed" locally while being absent for everyone else. Before vendoring third-party skills, check they target this codebase: the Mantine set documented `@mantine/form` and `Combobox` (neither is used here) and `factory()`/`createVarsResolver` for *authoring* a component library, not consuming one.
 
 ## Environment Setup
 
