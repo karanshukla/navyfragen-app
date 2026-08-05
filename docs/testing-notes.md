@@ -432,6 +432,42 @@ Isolating the layer, since the fix belongs at the narrowest one:
 
 Only the last combination breaks, so this is Vitest's module runner over the prebundled dependency on Bun, not Bun's ESM loader and not Vite's transform. The namespace import is the form zod's own docs use, costs nothing, and sidesteps it. The regression guard is CI running the suite on Bun: reverting to `import { z }` fails it immediately. The probe script deliberately does not assert this, since a bare `import("zod")` inside the probe passes on both runtimes and would give false assurance.
 
+### Playwright is the one Node holdout
+
+Everything in the repo runs on Bun except Playwright, which keeps `actions/setup-node` in `E2E.yml` and plain `playwright test` in the root scripts.
+
+The runner itself is not the problem. `bunx --bun playwright test --list` works on a trivial spec:
+
+```
+$ bunx --bun playwright test --list e2e/_min.spec.ts
+  [setup] > auth.setup.ts:7:0 > authenticate via e2e bypass
+  [chromium] > _min.spec.ts:2:0 > min
+Total: 2 tests in 2 files
+```
+
+Our real specs do not build. Four of the nine fail, and they are exactly the four that use an inline `type` import (`import { test, expect, type Page } from "@playwright/test"`); the five using a plain value import all pass:
+
+```
+AggregateError: 2 errors building "e2e/web/customise.spec.ts"
+AggregateError: 2 errors building "e2e/web/inbox.spec.ts"
+AggregateError: 2 errors building "e2e/web/profile-send-message.spec.ts"
+AggregateError: 2 errors building "e2e/mobile/navigation.spec.ts"
+Total: 0 tests in 0 files
+```
+
+Splitting the inline `type` into its own `import type` statement removes one of the two errors per file, leaving an opaque `BuildMessage {}` with no message. Playwright swallows the underlying error, and `DEBUG=pw:test:*` surfaces only `error in "load tests": Error: No tests found`. `bun build --target=bun e2e/web/customise.spec.ts` transpiles the same file with no complaint, so this is the Playwright loader interacting with Bun's transpiler, not Bun's TypeScript support.
+
+Not worth pursuing. Microsoft does not support Bun as a Playwright runtime, the errors are opaque by design, and there is nothing to gain: E2E drives a real browser against the built Docker images, so the runner's own runtime has no bearing on what is under test. Leave it on Node.
+
+### Remaining Node in the repo
+
+| Location | What | Why it stays |
+| --- | --- | --- |
+| `.github/workflows/E2E.yml` | `actions/setup-node@v4` | Playwright, see above |
+| root `package.json` | `test:e2e`, `test:e2e:ui` | Playwright, same |
+
+That is the whole list. Every other script in every workspace routes through `bunx --bun` or is Bun-native, all five Dockerfiles are `FROM oven/bun`, and `Tests.yml` sets up no Node in any job. The `tsx` loader was dropped from `server/` (Bun runs the lexicon-publishing script's TypeScript directly) and the html-to-image CI job now uses `bunx puppeteer browsers install chrome` instead of `npx`.
+
 ### Remaining questions
 
 - The zod interop bug is unreported upstream. Worth a minimal repro against Vitest or Bun, since the namespace import is a workaround rather than a fix.

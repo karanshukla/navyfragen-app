@@ -17,7 +17,11 @@ npm workspaces with three packages:
 - `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
 - `html-to-image/` — Bun + Puppeteer image renderer (headless Chromium OG-image generation)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client runs its Vite dev server, build, and Vitest suite under Bun too — see "Client on the Bun runtime" below; only `test:coverage` still needs a Node. The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client runs its Vite dev server, build, lint, Vitest suite, and coverage under Bun too, with no Node required anywhere (see `client/CLAUDE.md`).
+
+**Node is required in exactly one place: Playwright.** `E2E.yml` keeps `actions/setup-node`, and the root `test:e2e` scripts stay on plain `playwright test`. Playwright's runner cannot load our spec files under Bun — see "Playwright is the one Node holdout" in `docs/testing-notes.md` for the evidence. Every other script in every workspace routes through `bunx --bun` or is Bun-native, and all five Dockerfiles are `FROM oven/bun`. If you add a script that shells out to a node-shebang binary (`vite`, `vitest`, `tsc`, `oxlint`, `pino-pretty`, `rimraf`, `lex`, `husky`, `concurrently` all have one), route it through `bunx --bun` or it will silently run on Node wherever Node happens to be installed.
+
+The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
 
 Root-level `bun run dev` runs all three workspaces concurrently via `concurrently` (the `html-to-image` image renderer is the third workspace member — Bun runtime + installer since #314, the same single-lockfile story as the server and client).
 
@@ -128,58 +132,9 @@ Retry budgets are per-attempt, not per-loop: a single hung connection must not c
 
 ## Client Architecture
 
-### Client on the Bun runtime
+Client-specific conventions (React Query data layer, form validation, toast notifications, design tokens) live in `client/CLAUDE.md`.
 
-**The client needs no Node.** Every script (`dev`, `build`, `preview`, `typecheck`, `lint`, `test`, `test:watch`, `test:coverage`) routes through `bunx --bun`, and `start` was already `bun serve.ts`. Verified by shimming `node` on `PATH` to `exit 127` and running all of them.
-
-The explicit `--bun` flag is load-bearing: `bun run <script>` hands a node-shebang binary — and `vite`, `vitest`, `tsc`, and `oxlint` all have one — to Node whenever Node is on PATH, so a bare `bun run build` silently runs on Node locally while running on Bun inside `docker/Dockerfile.client` (which is `FROM oven/bun` and ships no Node). Before this, that production build path was the only place Vite ran under Bun, and nothing tested it.
-
-**Coverage uses the istanbul provider, not v8.** `@vitest/coverage-v8` drives `node:inspector`'s Profiler domain, which Bun does not implement — every worker throws `Error: Coverage APIs are not supported` and the run reports 0% while still exiting green on the test count. `@vitest/coverage-istanbul` instruments the source at transform time and needs no V8 inspector, so it works on either runtime; `@vitest/coverage-v8` is no longer a dependency. The gate is unchanged in strength: 100% on all four metrics, enforced by `coverage.thresholds` in `vite.config.ts` (verified to exit non-zero at 99.91%) plus the Coveralls threshold. istanbul's lcov carries real `BRDA` branch records, so unlike the server's Bun coverage the Coveralls branch metric is meaningful.
-
-**Suppress unreachable code with `/* istanbul ignore ... */`, never `/* v8 ignore ... */`** — istanbul does not honor the v8 form, and there are no v8 markers left in `client/src`. See "`/* istanbul ignore */` Convention" below.
-
-`client/probe-bun-vite.mjs` (`bun run probe:bun`) is the canary, gating the `Client Tests` CI job the way the server's SQLite/OAuth probes gate theirs. It asserts the runtime really is Bun and boots the Vite dev server to fetch a transformed TSX route — the dev server being the one Vite surface neither `vite build` nor Vitest touches.
-
-**Import `zod` as a namespace (`import * as z from "zod"`), never `import { z }`.** Zod v4's entrypoint re-exports its own namespace (`import * as z from "./v4/classic/external.js"; export { z }`), and Vite's dependency prebundle preserves that as `export { external_exports as z }`. Reading that one binding under Bun yields `undefined` while every other named export resolves, so `z.string()` throws at module scope and takes the whole suite file down with it. A plain `import("zod")` under Bun is fine, and so is Vite's `ssrLoadModule("zod")` — it only surfaces through Vitest's module runner, which is why running the suite on Bun in CI is what guards it.
-
-React Query is the data layer. Each domain (auth, messages, profile, settings) has a service file in `src/api/` that exports plain functions and React Query hooks:
-- `src/api/apiClient.ts` — thin fetch wrapper; reads `VITE_API_URL` env var (defaults to `""`, so same-origin)
-- `src/api/authService.ts` — exports `useSession`, `useLogin`, `useLogout`
-- `src/api/messageService.ts`, `profileService.ts`, `settingsService.ts` — similar pattern
-
-All API calls use `credentials: "include"` for cookie forwarding.
-
-### Form Validation
-
-The client uses **Zod v4** (`^4.4.3`). Zod v4 has breaking syntax changes from v3:
-- Import it as `import * as z from "zod"`, never `import { z }` — the named form breaks under Bun (see "Client on the Bun runtime" above)
-- Custom messages on `.min()` / `.max()` use `{ error: "..." }` instead of a plain string
-- Validation errors are accessed via `.issues` not `.errors`
-
-### UI Feedback (Toast Notifications)
-
-Transient feedback (success, error) uses Mantine's `showNotification()` from `@mantine/notifications` rather than inline alert state. The `<Notifications>` component is mounted in `src/main.tsx` with `position="bottom-right"` and `autoClose={5000}`. Use `showNotification()` for any new transient messages — don't add stateful alert components to pages.
-
-### Design Tokens
-
-Brand CSS custom properties live in `client/src/index.css` under the `--nf-*` namespace and are the single source of truth for colors and gradients. Key gradient tokens:
-
-- `--nf-grad-mark` — the primary brand gradient (`#3349E0 → #6B3FD4 → #4F1FA6`); use this for all interactive card backgrounds (login, ask, inbox hero, question cards with gradient enabled)
-- `--nf-grad-dark` — reserved exclusively for the "default" image-export theme preview in the `ThemeCard` selector; do not use it for new UI elements
-- `--nf-grad-hero` — defined but no longer applied to any UI element; do not reintroduce it for text or nav items
-
-Nav active state uses a solid tint (`--nf-nav-active-bg`) — no gradients on nav items. Gradient text (`background-clip: text`) is not used in the app; brand color (`--nf-royal`) is used for highlighted text instead.
-
-### Logging
-
-The server uses Pino (`src/index.ts` → `createLogger()`). In development, stdout is piped through `pino-pretty` via the dev script. In production, when `AXIOM_TOKEN` and `AXIOM_DATASET` are both set, logs are shipped to Axiom via `@axiomhq/pino` as a transport target alongside stdout. Without those vars the logger falls back to stdout only.
-
-Key events that are instrumented:
-- OAuth flow: login initiation, callback success/failure, session creation, token consumption, logout
-- Anonymous message sent, response posted to Bluesky (with AT URI)
-- Account deletion, PDS sync (with counts)
-- Settings changes (pdsSyncEnabled, imageTheme)
-- All 500-class errors across controllers and services carry structured `{ err, did }` fields
+Server-specific logging conventions live in `server/CLAUDE.md`.
 
 ## Code comments
 
@@ -218,114 +173,15 @@ cd html-to-image && bun test app.test.js
 
 ## Testing & Coverage
 
-### Running Coverage
+Per-package coverage commands, targets, and exclusion lists live in `client/CLAUDE.md` and `server/CLAUDE.md`.
 
-```bash
-# Server (from server/)
-bun run test:coverage
+### Coverage Suppression Markers
 
-# Client (from client/)
-bun run test:coverage
-```
+Client-only: `/* istanbul ignore if | else | next */`, documented in `client/CLAUDE.md`. The `/* v8 ignore */` form is inert under the istanbul provider and there are none left in `client/src`.
 
-The **client** targets 100% across all four metrics (statements, lines, branches, functions) via Vitest's **istanbul** provider, enforced by `coverage.thresholds` in `client/vite.config.ts`. The v8 provider was dropped because it cannot run under Bun (`node:inspector` has no Profiler domain there).
+Server: Bun's coverage reporter honors **neither** form, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `server/bunfig.toml`. The `/* v8 ignore */` markers still in server source are inert and kept only as documentation of the reachability argument.
 
-The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.97` in `server/bunfig.toml`), applied to **lines** — Bun's lcov carries line + function coverage only, with **no branch data** (verified on 1.3.14; documented in `docs/testing-notes.md`). Bun also does **not** honor `/* v8 ignore */` source annotations, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml`. These two limitations are the accepted trade-off of moving coverage onto the production runtime (#287); the prior c8/Node path that did honor `v8 ignore` and report branches was retired with the Node test path in #288.
-
-### Coverage Exclusions
-
-**Server** — excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml` (coverage is collected by Bun's built-in reporter):
-- `src/lexicon/**` — auto-generated from AT Protocol lexicons
-- `src/index.ts` — Hono app + Bun.serve boot + process signal handlers
-- `src/lib/assert-fetch-node-patch.ts` — applied via `patchedDependencies`; covers the @atproto-labs fetch-node patch surface
-- `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — AT Protocol OAuth wiring
-- `src/auth/e2e-agent-store.ts` — in-memory Map for E2E agents; trivial
-- `src/database/db.ts` — Kysely migration runner
-- `src/lib/id-resolver.ts` — AT Protocol DID/handle resolver (requires live network)
-- `src/lib/env.ts` — bootstrapped before tests run via `test-bootstrap.js`
-- `src/hono/session-middleware.ts` — signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
-- `src/scripts/**` — one-off admin scripts
-
-**Client** — excluded via `coverage.exclude` in `vite.config.ts`:
-- `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and app entry point
-- `src/vite-env.d.ts` — ambient declarations
-- `src/styles/tokens.ts` — pure style constant exports
-- `src/pushPayload.ts` — a type-only `interface` with no runtime code to execute
-- `src/index.css` — a stylesheet; Vite's CSS import handling registers it as a coverage-tracked module with zero instrumentable statements
-
-Adding a new exclusion requires a comment in `docs/testing-notes.md` explaining why and what it would take to test.
-
-### `/* istanbul ignore */` Convention
-
-The client uses istanbul's markers. `/* v8 ignore */` is inert under the istanbul provider and there are none left in `client/src`; do not reintroduce them.
-
-Pick the narrowest form:
-- `/* istanbul ignore if */` — the `if` body is unreachable (a defensive early-return guard whose condition can't hold)
-- `/* istanbul ignore else */` — the implicit else is unreachable (a guard that always passes)
-- `/* istanbul ignore next */` — the whole next statement or function, for `catch` blocks wrapping non-throwing DOM operations and for callbacks tests never invoke
-
-Use them **only** for:
-1. `catch {}` blocks that wrap non-throwing DOM operations (e.g. the AppHeader `handleSwitch` catch that resets `body.style` — the try never throws in practice)
-2. TypeScript-narrowed union branches, and UI guards, that are structurally unreachable at runtime
-
-Do **not** use them to skip real business logic. Document any usage in `docs/testing-notes.md`.
-
-**Placement matters.** istanbul attaches hints to statement-, function-, and `if`-level nodes only. A marker in front of a bare sub-expression is silently ignored, so `foo: /* istanbul ignore next */ value || null` does nothing — hoist the expression into a statement and mark that instead. Two sites in this repo (`Customise.tsx`'s locale `onChange`, `profileService.ts`'s `initialDataUpdatedAt`) were rewritten into block bodies for exactly this reason.
-
-**Note on the server:** Bun's coverage reporter honors **neither** form (verified on 1.3.14), so per-file exclusion there is done via `coveragePathIgnorePatterns` globs in `server/bunfig.toml` instead. The convention above is client-only.
-
-### Module Mocking in Server Tests
-
-The server test suite runs under `bun:test` (#288). Import `test`/`describe`/hooks/`mock`/`spyOn` from `bun:test` and `assert` from `node:assert` (Bun runs `node:assert` natively):
-
-```typescript
-import assert from "node:assert";
-import { test, describe, beforeAll, afterEach, mock, spyOn } from "bun:test";
-```
-
-`mock` is `bun:test`'s mock factory. The API surface (and the differences from the former `node:test`/shim shape worth knowing):
-- Create a mock fn: `mock(impl?)` (was `mock.fn(...)`). Its `.mock.calls` is an array of **bare argument arrays** (`calls[0][0]`), not `[{ arguments }]` objects — read args as `m.mock.calls[0][0]`, not `.calls[0].arguments[0]`.
-- `mockImplementation`/`mockImplementationOnce`/`mockReturnValue`/`mockReturnValueOnce` live on the function directly (`m.mockImplementation(...)`), **not** under `.mock`.
-- Clear call history with `m.mockClear()` (was `m.mock.resetCalls()`); drop implementations with `m.mockReset()`; restore a spy with `m.mockRestore()`. Global cleanup: `mock.clearAllMocks()` (call history) and `mock.restore()` (restore all spies).
-- Spy on a method (e.g. `globalThis.fetch`): `spyOn(globalThis, "fetch").mockImplementation(impl)` — `spyOn` takes no implementation arg; chain the impl on. `mock.method(target, name, impl)` from the old shim maps to this.
-- `bun:test` uses `beforeAll`/`afterAll` (not `before`/`after`) for the once-per-file hooks.
-
-The default mocking strategy is **dependency injection** (chainable DB builders passed into constructors). `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
-
-```typescript
-let AuthService: typeof import("../services/auth-service").AuthService;
-let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
-
-beforeAll(async () => {
-  mockAgent = { getProfile: mock(async () => ({ data: undefined })) };
-  // Spread the real module so every export it has keeps working and only
-  // initializeAgentForDid is swapped (see the note on --isolate below).
-  const realSessionAgent = await import("../auth/session-agent");
-  mock.module("../auth/session-agent", () => ({
-    ...realSessionAgent,
-    initializeAgentForDid: async (ctx, did) => { /* ... */ return mockAgent; },
-  }));
-  // Register the mock BEFORE importing the module under test so its
-  // transitive import of session-agent picks up the fakes.
-  const mod = await import("../services/auth-service");
-  AuthService = mod.AuthService;
-});
-```
-
-Notes:
-- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `beforeAll()`, never a top-level static import. Bun's `mock.module` takes a factory `() => exports` (the opposite of node:test's `{ exports }` shape) and is synchronous (returns `void`).
-- Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
-- **`mock.module` is process-global and not restorable.** `mock.restore()`/`clearAllMocks()` clear mock call history and restore spies but do **not** unmock modules, so a partial mock registered in one file leaks into every other file that imports the real module. The `test`/`test:coverage` scripts pass `--isolate` for a fresh per-file module registry. Do not let `--isolate` be the only thing keeping a mock contained: **spread the real module into the mock** (`() => ({ ...realModule, theOneYouAreFaking })`) so a partial mock can't take out files that import the real exports with a missing-export `SyntaxError`.
-- The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
-
-#### Bun-runtime specifics (#269, #270, #288)
-
-- `bun run test` / `test:coverage` add `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation). Bun **1.3.14+** is required (the floor `@types/bun` is pinned to).
-- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces the unicast rules**: it runs the package's own `unicastLookup` before the request, so a handle resolving to a loopback/private/link-local address is rejected exactly as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname` returns `undefined` for a DNS name, so on its own it lets `http://internal.example.com/` straight through, and handle resolution fetches user-supplied hostnames. The branch also rejects non-HTTP(S) schemes, which the Node path got for free from undici: every unicast check keys on `url.hostname`, which is `""` for `file:`, and Bun's `fetch` reads `file:` URLs where Node's refuses them. The one gap versus the old Node path: the check runs before the connection rather than on the socket, so DNS rebinding between check and connect is not caught.
-- **Never call `dns.setServers()` unconditionally.** Under Node it only rebinds the `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; under Bun it steers `dns.lookup` too, so the process forgets every name the system resolver owns — container DNS included. `src/index.ts` keeps its Windows TXT-lookup workaround gated behind `process.platform === "win32"` for that reason.
-- **The listen address is negotiated, not hardcoded** (`listenPreferringDualStack` in `src/index.ts`). A wildcard `HOST` (`"::"` or `"0.0.0.0"`) binds `"::"` so a single dual-stack listener serves both families — required in production, where Caddy reaches this service only over Railway's private network and that network is IPv6-only (`BACKEND_DOMAIN = ${{Backend.RAILWAY_PRIVATE_DOMAIN}}`). Where the network has no IPv6 at all — every Docker bridge network in CI and local compose — the bind falls back to `"0.0.0.0"`; Bun surfaces that case as a spurious `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does. A non-wildcard `HOST` is bound verbatim, so `HOST=127.0.0.1` still means loopback. **In production a non-wildcard `HOST` is refused at boot** (`assertProductionBindHost` in `src/lib/assert-production-bind-host.ts`, called first in `Server.create()`) — a loopback bind boots "healthy" but is unreachable from Caddy, with no error signal in the server's own logs, which caused a full outage on both Railway server services on 2026-07-25 (#298). The guard is a no-op outside `NODE_ENV=production`, so local loopback testing and the test suite are unaffected. See "Production server services must bind a wildcard HOST" below.
-- **The OAuth login path has its own CI probe** (`Probe SQLite data layer + OAuth handle resolution under Bun` in `Tests.yml`). E2E signs in through `/auth/e2e-login` with an app password and never resolves a handle, so without this the one production surface that runs through the patched `fetch-node` would be untested. Its Bun failure mode is silent — bluesky-social/atproto#3511 has resolution returning `undefined`, surfacing only as "does not resolve to a DID" — so the probe asserts a `did:` string comes back rather than trusting the call not to throw. The SQLite probe (`createDb` → `migrateToLatest` → insert/select through the `bun:sqlite` adapter) gates the data layer the test suite mocks around.
-- Coverage comes from Bun's built-in reporter (`bun test --coverage`, configured in `server/bunfig.toml`). It does **not** honor `/* v8 ignore */` and its lcov carries line + function coverage only (no branch data) — see "Coverage under Bun" in `docs/testing-notes.md` for the rationale and accepted trade-offs.
+Every suppressed site is catalogued in `docs/testing-notes.md`.
 
 ## Deployment (Railway)
 

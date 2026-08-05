@@ -64,8 +64,11 @@ navyfragen-app/
 - [Bun](https://bun.sh) (package manager and runtime — see [issue #250](https://github.com/karanshukla/navyfragen-app/issues/250))
 - [Git](https://git-scm.com)
 - A modern web browser
+- [Node.js](https://nodejs.org) — **only** if you want to run the Playwright E2E suite locally
 
-> **Runtime note:** Bun is the installer and the runtime for every workspace, and Node is no longer needed anywhere. The server has been Bun-only since #268/#288; the client's Vite dev server, build, lint, tests, and coverage all run on Bun too. Client coverage uses Vitest's istanbul provider rather than v8, since v8 coverage depends on a `node:inspector` API Bun does not implement. See `client/README.md`.
+> **Runtime note:** Bun is the installer and the runtime for every workspace. The server has been Bun-only since #268/#288; the client's Vite dev server, build, lint, tests, and coverage now run on Bun too. Client coverage uses Vitest's istanbul provider rather than v8, since v8 coverage depends on a `node:inspector` API Bun does not implement. See `client/README.md`.
+>
+> Node is needed for exactly one thing: **Playwright**, which cannot load our E2E specs under Bun. Install it only if you plan to run `bun run test:e2e` locally. Everything else works with Bun alone.
 
 > **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `sharp`). WSL2 is recommended for the best experience. (`better-sqlite3` was removed in #288 when the Node code path was retired — SQLite now runs through `bun:sqlite`, which ships inside the Bun runtime and needs no native build.)
 

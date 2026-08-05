@@ -337,9 +337,10 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: "false"
         run: |
-          # `npx puppeteer browsers install chrome` downloads the build that
-          # puppeteer.launch() with no executablePath picks up.
-          npx puppeteer browsers install chrome
+          # `bunx puppeteer browsers install chrome` downloads the build that
+          # puppeteer.launch() with no executablePath picks up. bunx, not npx,
+          # so this job needs no Node.
+          bunx puppeteer browsers install chrome
 
           {
             echo "## Bun puppeteer probe"
