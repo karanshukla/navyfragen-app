@@ -7,7 +7,7 @@
 [![Tests](https://github.com/karanshukla/navyfragen-app/actions/workflows/Tests.yml/badge.svg)](https://github.com/karanshukla/navyfragen-app/actions/workflows/Tests.yml)
 [![Coverage Status](https://coveralls.io/repos/github/karanshukla/navyfragen-app/badge.svg?branch=main)](https://coveralls.io/github/karanshukla/navyfragen-app?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-24-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
+[![Bun](https://img.shields.io/badge/bun-1.3-f9f1e1?logo=bun&logoColor=white)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![AT Protocol](https://img.shields.io/badge/AT%20Protocol-native-0085ff?logo=bluesky&logoColor=white)](https://atproto.com)
 
@@ -37,7 +37,7 @@ The companion [navyfragen-feed](https://github.com/karanshukla/navyfragen-feed) 
 | **Server** | Bun.serve + Hono, TypeScript, Kysely ORM, AT Protocol SDK, Pino |
 | **Database** | SQLite (development) · PostgreSQL (production) |
 | **Auth** | AT Protocol OAuth (Bluesky as identity provider) |
-| **Testing** | Vitest + Testing Library (client) · Node.js built-in test runner (server) |
+| **Testing** | Vitest + Testing Library (client) · `bun test` (server) — both on the Bun runtime |
 | **Observability** | Pino structured logging, optional Axiom transport |
 
 ---
@@ -61,12 +61,14 @@ navyfragen-app/
 
 ### Prerequisites
 
-- [Node.js 24+](https://nodejs.org)
+- [Bun](https://bun.sh) (package manager and runtime — see [issue #250](https://github.com/karanshukla/navyfragen-app/issues/250))
 - [Git](https://git-scm.com)
-- [Bun](https://bun.sh) (package manager / installer — see [issue #250](https://github.com/karanshukla/navyfragen-app/issues/250))
 - A modern web browser
+- [Node.js](https://nodejs.org) — **only** if you want to run the Playwright E2E suite locally
 
-> **Runtime note:** Bun is the *installer* and the **server runtime** (dev, production, and tests — #268/#288). Node remains the runtime for the client only (Vite dev/build, Vitest).
+> **Runtime note:** Bun is the installer and the runtime for every workspace. The server has been Bun-only since #268/#288; the client's Vite dev server, build, lint, tests, and coverage now run on Bun too. Client coverage uses Vitest's istanbul provider rather than v8, since v8 coverage depends on a `node:inspector` API Bun does not implement. See `client/README.md`.
+>
+> Node is needed for exactly one thing: **Playwright**, which cannot load our E2E specs under Bun. Install it only if you plan to run `bun run test:e2e` locally. Everything else works with Bun alone.
 
 > **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `sharp`). WSL2 is recommended for the best experience. (`better-sqlite3` was removed in #288 when the Node code path was retired — SQLite now runs through `bun:sqlite`, which ships inside the Bun runtime and needs no native build.)
 
@@ -93,7 +95,7 @@ navyfragen-app/
    The only required secret with no default is `OAUTH_TOKEN_SECRET`, a 32-byte hex string used for AES-256 encryption:
    ```bash
    # Generate one with:
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   bun -e "console.log(crypto.getRandomValues(new Uint8Array(32)).toHex())"
    ```
 
 4. **Start the development servers:**
@@ -184,7 +186,7 @@ cd client && bun run test:coverage
 cd server && bun run test:coverage
 ```
 
-Coverage target is **100%** across all v8 metrics (statements, lines, branches, functions).
+Coverage target is **100%** across all four metrics (statements, lines, branches, functions). The client measures them with Vitest's istanbul provider; the server uses Bun's built-in reporter, which carries lines and functions only.
 
 ### AT Protocol Lexicons
 

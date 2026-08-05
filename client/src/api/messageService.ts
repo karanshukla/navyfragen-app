@@ -89,7 +89,7 @@ export function useMessages(
     queryFn: () =>
       did
         ? messageService.getMessages(did)
-        : /* v8 ignore next */ Promise.reject("No DID provided"),
+        : /* istanbul ignore next */ Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
     ...(options || {}),
   });

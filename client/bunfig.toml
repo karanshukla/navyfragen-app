@@ -1,0 +1,23 @@
+# Bun configuration for the client workspace.
+
+[run]
+# Belt-and-braces against silent Node drift.
+#
+# `bun run <script>` hands a node-shebang binary to Node whenever Node is on
+# PATH, and vite, vitest, tsc, and oxlint all have one. Every script in
+# package.json already spells out `bunx --bun` for that reason, but a single
+# new script added without the flag would silently run on Node locally while
+# running on Bun inside docker/Dockerfile.client (FROM oven/bun, no Node in
+# the image) — exactly the split this migration existed to remove, and nothing
+# fails when it happens.
+#
+# This setting makes Bun the runtime for every `bun run` in this directory
+# regardless of the flag, so the guarantee comes from config rather than from
+# remembering. The explicit `bunx --bun` in the scripts stays: it keeps the
+# intent readable at the call site and still holds when a script is invoked
+# from outside this directory, where this file is not consulted.
+#
+# Deliberately NOT set at the repo root: `bun run test:e2e` must stay on Node
+# because Playwright's runner cannot load our spec files under Bun. See
+# docs/testing-notes.md, "Playwright is the one Node holdout".
+bun = true

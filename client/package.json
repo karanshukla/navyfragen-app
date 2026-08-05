@@ -4,16 +4,17 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "dev": "bunx --bun vite --host",
+    "build": "bunx --bun tsc && bunx --bun vite build",
+    "preview": "bunx --bun vite preview",
     "start": "bun serve.ts",
-    "lint": "oxlint .",
-    "lint:fix": "oxlint . --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "lint": "bunx --bun oxlint .",
+    "lint:fix": "bunx --bun oxlint . --fix",
+    "typecheck": "bunx --bun tsc --noEmit",
+    "test": "bunx --bun vitest run",
+    "test:watch": "bunx --bun vitest",
+    "test:coverage": "bunx --bun vitest run --coverage",
+    "probe:bun": "bun --bun probe-bun-vite.mjs"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
@@ -29,7 +30,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-istanbul": "^4.1.10",
     "happy-dom": "^20.11.1",
     "msw": "^2.15.0",
     "oxlint": "^1.77.0",

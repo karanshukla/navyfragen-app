@@ -18,20 +18,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Bun is the installer (issue #250 — package-manager swap only, not a
-      # runtime swap). Node stays the runtime for vitest, so setup-node remains.
+      # Bun is the installer (issue #250) and the runtime for every client
+      # script. Deliberately no setup-node: the runner image ships a Node
+      # anyway, and `bun run <script>` hands node-shebang binaries (vite,
+      # vitest, tsc) to it whenever it is on PATH, which is why every client
+      # script routes through `bunx --bun`. The probe below asserts the runtime
+      # rather than trusting that — a silent Node fallback would leave the whole
+      # job measuring the wrong thing.
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Probe Vite dev server under Bun
+        working-directory: client
+        run: |
+          {
+            echo "## Client Bun runtime probe"
+            echo
+          } > "$GITHUB_STEP_SUMMARY"
+
+          # createServer + fetch of a TSX route through @vitejs/plugin-react.
+          # `vite build` (the Docker path) and vitest (its own module runner)
+          # both skip the dev server, so this is its only coverage.
+          set +e
+          probe_out=$(bun run probe:bun 2>&1)
+          probe_exit=$?
+          set -e
+          echo "$probe_out" | tee /dev/stderr >/dev/null
+          {
+            echo "<details><summary><code>bun-vite-dev-server</code></summary>"
+            echo ""
+            echo '```'
+            echo "$probe_out"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$probe_exit" -ne 0 ] || ! echo "$probe_out" | grep -q 'OK bun='; then
+            echo "::error::Vite dev server did not pass under Bun"
+            exit 1
+          fi
+
+      # tsc + vite build, the same pair docker/Dockerfile.client runs on the
+      # oven/bun image.
+      - name: Build under Bun
+        run: cd client && bun run build
 
       - name: Run client tests with coverage
         run: cd client && bun run test:coverage
@@ -302,9 +337,10 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: "false"
         run: |
-          # `npx puppeteer browsers install chrome` downloads the build that
-          # puppeteer.launch() with no executablePath picks up.
-          npx puppeteer browsers install chrome
+          # `bunx puppeteer browsers install chrome` downloads the build that
+          # puppeteer.launch() with no executablePath picks up. bunx, not npx,
+          # so this job needs no Node.
+          bunx puppeteer browsers install chrome
 
           {
             echo "## Bun puppeteer probe"

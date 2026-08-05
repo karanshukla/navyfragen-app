@@ -283,7 +283,7 @@ function setSectionOpen(label: string, open: boolean, did: string) {
     const parsed = raw ? JSON.parse(raw) : {};
     localStorage.setItem(sectionKey(did), JSON.stringify({ ...parsed, [label]: open }));
   } catch {
-    /* v8 ignore next */
+    // localStorage unavailable (private browsing quota, etc.)
   }
 }
 

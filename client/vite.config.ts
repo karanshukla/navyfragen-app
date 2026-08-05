@@ -58,7 +58,15 @@ export default defineConfig({
     setupFiles: ["./src/tests/setupTests.ts"],
     exclude: [...configDefaults.exclude, "**/*.e2e.test.ts"],
     coverage: {
-      provider: "v8",
+      // istanbul, not v8: @vitest/coverage-v8 drives node:inspector's Profiler
+      // domain, which Bun does not implement, so under the Bun runtime every
+      // worker throws "Coverage APIs are not supported" and the run reports 0%.
+      // istanbul instruments the source at transform time instead and needs no
+      // V8 inspector, which is what lets the client drop Node entirely.
+      // Unreachable code is suppressed with `/* istanbul ignore ... */` markers
+      // (istanbul does not honor the `/* v8 ignore */` form) — see
+      // docs/testing-notes.md.
+      provider: "istanbul",
       reporter: ["text", "lcov", "html", "json-summary"],
       reportsDirectory: "./coverage",
       include: ["src/**"],
@@ -72,6 +80,7 @@ export default defineConfig({
         "src/pushPayload.ts",
         "src/index.css",
       ],
+      thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
     },
   },
 });

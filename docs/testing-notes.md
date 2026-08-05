@@ -2,27 +2,24 @@
 
 This document explains coverage exclusions and hard-to-test code.
 
-## `/* v8 ignore */` Usage
+## Coverage Suppression Markers
 
-### `client/src/utils/parseRichText.tsx` — `toShortUrl` long-URL truncation branch
+Two different conventions, because the two workspaces measure coverage differently:
 
-**Lines:** the `if (href.length > 80) { return href.slice(0, 76) + "…"; }` block inside `toShortUrl`.
+- **Client** — Vitest's **istanbul** provider. Suppress with `/* istanbul ignore if */`, `/* istanbul ignore else */`, or `/* istanbul ignore next */`. The `/* v8 ignore */` form is inert here and there are none left in `client/src`.
+- **Server** — Bun's built-in reporter, which honors **neither** form. Suppression is per-file only, via `coveragePathIgnorePatterns` globs in `server/bunfig.toml`. The `/* v8 ignore */` markers still present in server source are inert; they are kept as documentation of the reachability argument, not as working annotations.
 
-**Why ignored:** This branch only fires when `safeUrlParse` returns `null` **and** the URL is longer than 80 characters. `safeUrlParse` returns `null` only for non-http/https protocols (e.g., `ftp://`, `javascript:`). The AT Protocol (Bluesky) only stores `http://` and `https://` links in rich text facets, so this path is structurally unreachable via the `@atcute/bluesky-richtext-parser` tokenizer used by `parseRichText`.
+istanbul only attaches a hint to statement-, function-, and `if`-level nodes. A marker in front of a bare sub-expression is silently dropped, which is why two client sites (`Customise.tsx`'s locale `onChange` and `profileService.ts`'s `initialDataUpdatedAt`) were rewritten into block bodies so there was a statement to mark.
 
-**What it would take to test:** Mock or swap the tokenizer to inject a fake link segment whose `url` field is a non-http protocol string of more than 80 characters (e.g., `ftp://` + `a`.repeat(75)). Alternatively, export `toShortUrl` and test it directly.
+Entries below explain why each suppressed site is unreachable and what testing it would take.
+
+### Suppressions dropped in the Node-free migration
+
+These client sites carried `/* v8 ignore */` markers that istanbul does not need — it measures them as covered, so the markers were removed rather than translated: `parseRichText.tsx`'s `toShortUrl` long-URL truncation, its `safeUrlParse` `return null` tail, and its unknown-segment-type `default` arm; `Navigation.tsx`'s friends-ternary `null` tail; `AppHeader.tsx`'s `onLogout` catch; `profileService.ts`'s two localStorage catches; and `Home.tsx`'s share-sheet catch. Most were v8 source-map or JIT artifacts rather than genuinely unreachable code, which is why they disappear under source instrumentation. The four empty `catch {}` blocks kept a plain explanatory comment so the block still reads as deliberate.
 
 ### `server/src/services/auth-service.ts` — `agent.getProfile()` block in `checkSession`
 
 **Status: now tested.** This block was previously ignored because `node:test`'s `mock.module()` was unavailable under the CJS `tsx` transform. After the ESM migration (#216) it became reachable: `auth-service.test.ts` mocks `../auth/session-agent` via `mock.module()` (registered in a `before()` hook before dynamically importing `auth-service`) so `initializeAgentForDid` returns a fake agent whose `getProfile` is controlled per-test. The block now has full coverage (success path, `!data` branch, optional-field fallbacks, getProfile rejection). See the `checkSession` tests for the pattern.
-
-### `client/src/Navigation.tsx` — unreachable `null` tail of friends ternary
-
-**Line:** the trailing `: null` in `{friendsLoading ? ... : friends.length > 0 ? ... : !friendsLoading ? ... : null}`.
-
-**Why ignored:** This `null` branch is structurally unreachable. The outer ternary only reaches the `else` arm when `friendsLoading` is falsy; at that point the inner guard `!friendsLoading` is always `true`, so the final `null` can never be evaluated at runtime.
-
-**What it would take to test:** Not possible through React rendering — the branch requires `friendsLoading` to be simultaneously falsy (to skip the loading skeleton) and truthy (to skip the empty-state text).
 
 ### `client/src/components/AppHeader.tsx` — unreachable `did === activeDid` guard in `handleSwitch`
 
@@ -36,7 +33,7 @@ This document explains coverage exclusions and hard-to-test code.
 
 **Lines:** the `catch { document.body.style.pointerEvents = ""; document.body.style.opacity = ""; }` block inside `handleSwitch` (the account-switcher's `UserMenu`).
 
-**Why ignored:** Same pattern as the `onLogout` catch block already documented in `CLAUDE.md`'s `/* v8 ignore next */` convention — the `try` only assigns string literals to `document.body.style`, which never throws in practice. Note: a `/* v8 ignore next 4 */` placed on the line before `} catch {` did **not** suppress this block (the two assignment lines still showed as uncovered) even though the identical pattern worked for the `onLogout` handler a few lines above. Switching to `/* v8 ignore start */` immediately before `} catch {` and `/* v8 ignore stop */` immediately after the closing `}` reliably suppresses the whole block.
+**Why ignored:** The `try` only assigns string literals to `document.body.style`, which never throws in practice. Marked with a single `/* istanbul ignore next */` on the `try` statement — istanbul has no catch-only hint, so the whole `try`/`catch` comes out of the denominator. (The `onLogout` handler a few lines above has the same shape but needs no marker at all: its `try` calls `logout()`, which a test does make throw.)
 
 **What it would take to test:** Not worth pursuing — would require mocking `document.body.style` property assignment to throw, which doesn't reflect any real browser behavior.
 
@@ -45,6 +42,8 @@ This document explains coverage exclusions and hard-to-test code.
 **Line:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange` handler.
 
 **Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. This `Select` is rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty locale codes from `touchpointLocales` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
+
+**Marker placement:** the `onChange` arrow was rewritten from a concise body to a block body so `/* istanbul ignore next */` has a statement to attach to. Inline on the `value || null` expression it does nothing.
 
 **What it would take to test:** Call the `Select`'s `onChange` prop directly (bypassing rendering) with `null`, e.g. by extracting the handler to a named, exported function, or by asserting on the prop passed to a mocked `Select`.
 
@@ -69,6 +68,8 @@ This document explains coverage exclusions and hard-to-test code.
 **Line:** `initialDataUpdatedAt: () => (did ? getCachedFriends(did)?.timestamp : undefined) ?? undefined`
 
 **Why ignored:** React Query only calls `initialDataUpdatedAt` when `initialData` returns a non-undefined value, which only happens when `did` is non-null and the localStorage cache is valid. In that scenario: (1) the ternary's false arm (`did` is null → `undefined`) is structurally unreachable; (2) `getCachedFriends(did)?.timestamp` always returns a number (the stored `Date.now()` timestamp), so the `?.` null path and the `?? undefined` right-hand side are also unreachable.
+
+**Marker placement:** the arrow function was rewritten from a concise body to a block body with an explicit `return`, so there is a statement for `/* istanbul ignore next */` to attach to. A marker in front of the object property, or in front of the arrow itself, is silently dropped.
 
 **What it would take to test:** Mock `getCachedFriends` to return a partial object missing the `timestamp` field while still having `data`, so that `?.timestamp` returns `undefined` and the `?? undefined` fallback is exercised.
 
@@ -108,22 +109,6 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Mock the `fs.readFileSync` call at module load time to return an empty buffer (so `LOGO_DATA_URL` becomes `""`), then re-import the module. This requires `mock.module` wrapping the Node.js `fs` module before the dynamic import of `image-generator.ts`.
 
-### `client/src/utils/parseRichText.tsx` — `safeUrlParse` null return after catch
-
-**Line:** the `return null;` statement that follows the try-catch in `safeUrlParse`.
-
-**Why ignored:** `return null` is reachable only if `new URL(fullHref)` throws an exception inside the try block. In practice, `toShortUrl` is always called with hrefs that have already been prefixed with `https://` by the calling code in `parseRichText`, so the URL constructor never throws. A URL with a non-http/https protocol also cannot reach this return — the code prepends `https://` for any non-http/https input, ensuring the parsed protocol is always `https:`.
-
-**What it would take to test:** Export `toShortUrl` and call it directly with a string that causes `new URL` to throw (e.g., a string containing whitespace after the https:// prefix).
-
-### `client/src/utils/parseRichText.tsx` — unknown segment type fallback in `parseRichText`
-
-**Line:** the `result.push(segment.text || segment.raw)` fallback at the end of the `forEach` loop.
-
-**Why ignored:** The `@atcute/bluesky-richtext-parser` tokenizer only produces `text`, `mention`, and `link` segment types per the AT Protocol spec. The three explicit `if` branches above it cover all reachable segment types, making this fallback structurally dead code.
-
-**What it would take to test:** Mock the `tokenize` function to inject a fake segment with an unknown type.
-
 ### `client/src/utils/parseRichText.tsx` — protocol-prefix guard for auto-detected domain links
 
 **Line:** `if (!/^https?:\/\//.test(href)) { href = "https://" + href; }` inside the `text`-segment auto-linking loop in `parseRichText`.
@@ -131,6 +116,14 @@ This document explains coverage exclusions and hard-to-test code.
 **Why ignored:** `matchText` comes from `domainRegex`, whose domain-segment pattern (`(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}`) requires a literal `.` immediately before the TLD. `http:` and `https:` contain no `.` before their `:`, so the regex engine can never start a match there — verified empirically (`domainRegex.exec("https://example.com/path")` returns `"example.com/path"`, never including the scheme). `matchText` is therefore always a bare domain, so the guard's "already has a protocol" false arm is structurally unreachable.
 
 **What it would take to test:** Not possible through `parseRichText`'s public behavior — would require calling the auto-linking logic directly with a hand-crafted `matchText` that already includes a scheme, bypassing the regex that makes this guard necessary in the first place.
+
+### `client/src/utils/parseRichText.tsx` — non-http protocol fall-through in `safeUrlParse`
+
+**Line:** the implicit else of `if (protocol === "https:" || protocol === "http:") { return url; }`.
+
+**Why ignored:** New under istanbul; v8 folded this branch away. `safeUrlParse` prepends `https://` to any href that does not already start with `http://` or `https://`, so by the time `new URL()` succeeds the parsed protocol is always one of the two the guard accepts. The else path, which falls through to `return null`, is unreachable for that reason rather than by caller discipline. Marked `/* istanbul ignore else */`.
+
+**What it would take to test:** Not reachable through the module's exports. It would need `safeUrlParse` called with a string that survives the protocol prepend and still parses to some third scheme, which the prepend makes impossible.
 
 ### `client/src/api/messageService.ts` — disabled-query reject branch in `useMessages`
 
@@ -148,14 +141,6 @@ This document explains coverage exclusions and hard-to-test code.
 
 **What it would take to test:** Export `handleSend` for direct unit testing, or access the component's internal state setter to bypass the `onChange` guard. Neither is practical without refactoring the component.
 
-### `client/src/utils/parseRichText.tsx` — false branch of `if (!/^https?:\/\//.test(href))`
-
-**Line:** 117 (`if (!/^https?:\/\//.test(href)) { href = "https://" + href; }`) inside the `text` segment branch of the `forEach` loop.
-
-**Why uncovered:** This branch is entered when the regex matches a domain-like string in a plain-text segment (e.g., `example.com`). The domain regex `((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}...)` cannot match strings that start with `https?://` because the `://` breaks the allowed character set. So the `false` branch — "href already has https:// protocol, skip prepend" — is structurally unreachable: every domain match that enters this code path will always lack the protocol.
-
-**What it would take to test:** There is no DOM path to exercise the false branch because the tokenizer's domain regex logically excludes protocol-prefixed strings. Testing it would require either mocking the regex or exporting the inner text-processing logic.
-
 ### `client/src/pages/Messages.tsx` — collapsed reply Box/Button handlers (correction to a prior note)
 
 A previous version of this note claimed the collapsed `↩ Reply` Box's `stopPropagation` handler and the collapsed Button's `onClick` body were uncovered due to a Vitest/v8 source-map alignment bug with arrow functions nested in the non-first branch of a JSX ternary. That diagnosis was wrong. The real cause: `screen.getAllByRole("button", { name: /reply/i })` matches **both** the outer message-card `<Paper role="button">` (whose aggregated accessible name includes the nested "↩ Reply" text) **and** the actual nested `<button>` element. `.find((b) => b.textContent?.includes("↩"))` picked the first DOM-order match, which is the outer Paper card — so those "collapsed button" tests were actually clicking the card itself (which has its own unguarded `onClick` that produces the same visible outcome), never the real nested Box/Button. Querying with an **exact** name match (e.g. `screen.getAllByRole("button", { name: "↩ Reply" })`, exact matching excludes the Paper since its full accessible name is longer) or `document.querySelectorAll("button")` reliably isolates the real element and exercises these handlers normally — no ignore annotation or tooling workaround is needed. See `Messages.test.tsx` for the corrected tests ("collapsed reply Box wrapper stops click propagation…", "collapsed reply Button (exact match) opens the response box…", "collapsed reply Button does nothing when blocked…").
@@ -172,7 +157,7 @@ A previous version of this note claimed the collapsed `↩ Reply` Box's `stopPro
 - The auto-scroll effect's `newestCard` lookup: whenever the guarding `messages?.[0]` check passes, that message's card is rendered in the same commit, so `newestCard` is always truthy, making both the `??` fallback and the `if (target)` guard's false arm dead.
 - The Escape-key handler's `idx` lookup: same reasoning as `handlePrepareResponse` — `respondingTid` always corresponds to a `sortedMessages` entry.
 
-Each is annotated in place with `/* v8 ignore start */` / `/* v8 ignore stop */` around just the guard statement, following this file's established convention, plus an inline comment explaining the reachability argument.
+Each is annotated in place with the narrowest istanbul hint for its shape — `/* istanbul ignore if */` where the guard body is unreachable, `/* istanbul ignore else */` where the guard always passes — plus an inline comment explaining the reachability argument. The scroll-into-view effect additionally needs `/* istanbul ignore next */` on the `setTimeout` callback, which the suite's fake timers never run.
 
 **What it would take to test:** Each would require calling the relevant internal function directly with an argument that violates the invariant enforced by its sole caller (e.g. a `tid` not present in `sortedMessages`, or firing the modal's `onConfirm` with `messageIdToDelete` forced to `null`) — not reachable by driving the rendered UI, since every caller already enforces the invariant before invoking these functions.
 
@@ -384,3 +369,106 @@ Coverage comes from Bun's built-in reporter (`bun test --coverage`, configured i
 2. **Bun's lcov carries line + function coverage only — no branch data.** The lcov has `DA` (per-line) and `FNF`/`FNH` (function totals) records but zero `BRDA`/`BRF`/`BRH` branch records. Coveralls therefore reports the server flag's branch coverage as 0/N/A. The real gate is Bun's own `coverageThreshold = 0.97` (scalar form — the object form `{ lines, functions }` silently no-ops on 1.3.14; the scalar form reliably fails the run below threshold); the Coveralls `coverage-threshold-percent: 97` is a secondary line-of-coverage defense that tolerates the missing branch metric.
 
 The `coverageThreshold` is set as a scalar (`0.97`) rather than the per-metric object form because the object form (`{ lines = ..., functions = ... }`) silently no-ops on Bun 1.3.14 — the run does not fail even when below threshold — whereas the scalar form reliably exits non-zero. CLI flags like `--coverage-threshold=` are also not honored; the threshold must live in `bunfig.toml`.
+
+## Client suite under the Bun runtime
+
+The client has no Node dependency left. Every script (`dev`, `build`, `preview`, `typecheck`, `lint`, `test`, `test:watch`, `test:coverage`) routes through `bunx --bun`, and `start` was already `bun serve.ts`. Verified by shimming `node` on `PATH` to `exit 127` and running all of them; each passes. The `Client Tests` CI job sets up Bun and no Node, and runs probe -> build -> `test:coverage`. All 545 tests pass.
+
+The explicit `--bun` flag is the load-bearing part. `bun run <script>` hands a node-shebang binary to Node whenever Node is on `PATH`, and `vite`, `vitest`, `tsc`, and `oxlint` all have one:
+
+```
+$ bun run rtprobe          -> runtime: node v22.22.2
+$ bun run --bun rtprobe    -> runtime: bun 1.3.11
+```
+
+Before this, `docker/Dockerfile.client` (`FROM oven/bun`, no Node in the image) was the only place Vite ran under Bun, and nothing tested it.
+
+### Coverage: istanbul, because v8 needs an API Bun lacks
+
+`@vitest/coverage-v8` calls `Profiler.startPreciseCoverage` through `node:inspector`. Bun does not implement it:
+
+```
+Error: Coverage APIs are not supported
+ > #handleMethod node:inspector:93:15
+ > startCoverage @vitest/coverage-v8/dist/index.js:17:16
+```
+
+Every worker throws, the run finishes in ~6s instead of ~20s, and the summary reports `0% (0/1228)` with 36 unhandled errors. The dangerous part is that the test count still passes, so a job that only gates on tests goes green while measuring nothing.
+
+`@vitest/coverage-istanbul` instruments the source at transform time and needs no V8 inspector, so it runs on either runtime. It is now the only provider; `@vitest/coverage-v8` was removed from `client/package.json`.
+
+The gate did not get weaker:
+
+| | v8 (before, on Node) | istanbul (now, on Bun) |
+| --- | --- | --- |
+| statements | 100% (1228/1228) | 100% (1246/1246) |
+| branches | 100% (937/937) | 100% (952/952) |
+| functions | 100% (380/380) | 100% (382/382) |
+| lines | 100% (1146/1146) | 100% (1160/1160) |
+| enforced by | Coveralls threshold only | `coverage.thresholds` in `vite.config.ts` + Coveralls |
+| lcov branch records | yes | yes (`BRDA`) |
+
+istanbul's denominators are larger because it instruments defensive branches v8 folds away. Reaching 100% on them was annotation work, not new tests: 29 sites were uncovered on the first istanbul run, and all 29 already carried a `/* v8 ignore */` marker that istanbul does not honor. See "Coverage Suppression Markers" above for the conversion and for the placement rule that bit two of them.
+
+Two side benefits worth noting. The thresholds are now enforced in-repo rather than only by Coveralls, and they were verified to bite: deleting one `/* istanbul ignore if */` drops statements to 99.91% and `test:coverage` exits 1. And unlike the server's Bun-native coverage, istanbul's lcov carries real `BRDA` records, so the Coveralls branch metric for the `client` flag is meaningful.
+
+### Why not Bun's built-in coverage
+
+`bun test --coverage` (what the server uses) only measures code run by Bun's own test runner. The client suite is Vitest with happy-dom, `@testing-library/react`, and MSW, so using it would mean porting 545 tests across 36 files off Vitest. Not worth it to avoid an npm dependency, and it would be a step down on metrics: Bun's lcov has no branch data at all, and its `coverageThreshold` has a bug where it exits 1 for any coverage below 100% regardless of the configured value (see "Coverage under Bun" above).
+
+### `zod` named exports through Vitest's module runner
+
+`client/src/pages/Login.tsx` imports zod as `import * as z from "zod"`. The named form (`import { z } from "zod"`) fails under Bun with `TypeError: undefined is not an object (evaluating 'z.string')`, taking down `Login.test.tsx` and `AppLayout.test.tsx`.
+
+Zod v4's entrypoint does `import * as z from "./v4/classic/external.js"; export { z }`, and Vite's dependency prebundle preserves that shape as `export { external_exports as z }` alongside ~400 ordinary named exports. Under Bun, reading `z` off that module gives `undefined` while every sibling export resolves. `Object.keys()` on the namespace shows `$brand`, `$input`, and no `z`.
+
+Isolating the layer, since the fix belongs at the narrowest one:
+
+| path | Node | Bun |
+| --- | --- | --- |
+| `import("zod")` directly | `z` present | `z` present |
+| `viteServer.ssrLoadModule("zod")` | `z` present | `z` present |
+| Vitest module runner (happy-dom env) | `z` present | **`z` undefined** |
+
+Only the last combination breaks, so this is Vitest's module runner over the prebundled dependency on Bun, not Bun's ESM loader and not Vite's transform. The namespace import is the form zod's own docs use, costs nothing, and sidesteps it. The regression guard is CI running the suite on Bun: reverting to `import { z }` fails it immediately. The probe script deliberately does not assert this, since a bare `import("zod")` inside the probe passes on both runtimes and would give false assurance.
+
+### Playwright is the one Node holdout
+
+Everything in the repo runs on Bun except Playwright, which keeps `actions/setup-node` in `E2E.yml` and plain `playwright test` in the root scripts.
+
+The runner itself is not the problem. `bunx --bun playwright test --list` works on a trivial spec:
+
+```
+$ bunx --bun playwright test --list e2e/_min.spec.ts
+  [setup] > auth.setup.ts:7:0 > authenticate via e2e bypass
+  [chromium] > _min.spec.ts:2:0 > min
+Total: 2 tests in 2 files
+```
+
+Our real specs do not build. Four of the nine fail, and they are exactly the four that use an inline `type` import (`import { test, expect, type Page } from "@playwright/test"`); the five using a plain value import all pass:
+
+```
+AggregateError: 2 errors building "e2e/web/customise.spec.ts"
+AggregateError: 2 errors building "e2e/web/inbox.spec.ts"
+AggregateError: 2 errors building "e2e/web/profile-send-message.spec.ts"
+AggregateError: 2 errors building "e2e/mobile/navigation.spec.ts"
+Total: 0 tests in 0 files
+```
+
+Splitting the inline `type` into its own `import type` statement removes one of the two errors per file, leaving an opaque `BuildMessage {}` with no message. Playwright swallows the underlying error, and `DEBUG=pw:test:*` surfaces only `error in "load tests": Error: No tests found`. `bun build --target=bun e2e/web/customise.spec.ts` transpiles the same file with no complaint, so this is the Playwright loader interacting with Bun's transpiler, not Bun's TypeScript support.
+
+Not worth pursuing. Microsoft does not support Bun as a Playwright runtime, the errors are opaque by design, and there is nothing to gain: E2E drives a real browser against the built Docker images, so the runner's own runtime has no bearing on what is under test. Leave it on Node.
+
+### Remaining Node in the repo
+
+| Location | What | Why it stays |
+| --- | --- | --- |
+| `.github/workflows/E2E.yml` | `actions/setup-node@v4` | Playwright, see above |
+| root `package.json` | `test:e2e`, `test:e2e:ui` | Playwright, same |
+
+That is the whole list. Every other script in every workspace routes through `bunx --bun` or is Bun-native, all five Dockerfiles are `FROM oven/bun`, and `Tests.yml` sets up no Node in any job. The `tsx` loader was dropped from `server/` (Bun runs the lexicon-publishing script's TypeScript directly) and the html-to-image CI job now uses `bunx puppeteer browsers install chrome` instead of `npx`.
+
+### Remaining questions
+
+- The zod interop bug is unreported upstream. Worth a minimal repro against Vitest or Bun, since the namespace import is a workaround rather than a fix.
+- `probe-bun-vite.mjs` asserts the runtime for the dev server only. If someone drops `--bun` from a single script, that script silently reverts to Node without failing anything. A `[run] bun = true` in a `client/bunfig.toml` would close that gap at the config level; not done here to keep the mechanism visible in the scripts.

@@ -18,6 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The one place in the repo that still needs Node. Playwright's test
+      # runner cannot load our spec files under Bun: `bunx --bun playwright
+      # test` fails with an opaque `BuildMessage {}` from Bun's transpiler
+      # inside Playwright's loader on every spec that uses an inline `type`
+      # import, and Bun transpiles the same files standalone without complaint.
+      # Microsoft does not support Bun as a Playwright runtime. Not worth
+      # fighting: E2E drives a real browser against the built Docker images, so
+      # the runner's own runtime has no bearing on what is under test.
+      # See docs/testing-notes.md, "Playwright is the one Node holdout".
       - uses: actions/setup-node@v4
         with:
           node-version: 24

@@ -17,7 +17,11 @@ npm workspaces with three packages:
 - `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
 - `html-to-image/` — Bun + Puppeteer image renderer (headless Chromium OG-image generation)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client stays on Node for Vite dev/build + Vitest. The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client runs its Vite dev server, build, lint, Vitest suite, and coverage under Bun too, with no Node required anywhere (see `client/CLAUDE.md`).
+
+**Node is required in exactly one place: Playwright.** `E2E.yml` keeps `actions/setup-node`, and the root `test:e2e` scripts stay on plain `playwright test`. Playwright's runner cannot load our spec files under Bun — see "Playwright is the one Node holdout" in `docs/testing-notes.md` for the evidence. Every other script in every workspace routes through `bunx --bun` or is Bun-native, and all five Dockerfiles are `FROM oven/bun`. If you add a script that shells out to a node-shebang binary (`vite`, `vitest`, `tsc`, `oxlint`, `pino-pretty`, `rimraf`, `lex`, `husky`, `concurrently` all have one), route it through `bunx --bun` or it will silently run on Node wherever Node happens to be installed. `client/bunfig.toml` and `server/bunfig.toml` both set `[run] bun = true` as a second line of defence, so a forgotten flag in those two workspaces is caught by config; the repo root has no such setting, deliberately, so `test:e2e` keeps reaching Node.
+
+The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
 
 Root-level `bun run dev` runs all three workspaces concurrently via `concurrently` (the `html-to-image` image renderer is the third workspace member — Bun runtime + installer since #314, the same single-lockfile story as the server and client).
 
@@ -36,7 +40,10 @@ bun run build      # tsc + vite build
 bun run lint       # oxlint
 bun run test       # Vitest (single run)
 bun run test:watch # Vitest watch mode
+bun run test:coverage # Vitest + istanbul coverage — the gate, 100% on all four metrics
+bun run probe:bun  # Bun-runtime canary (asserts Bun + boots the Vite dev server)
 ```
+Every one of these runs on Bun; the client needs no Node installed.
 
 ### Server (`cd server`)
 ```bash
@@ -155,6 +162,8 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 CI runs all tests in a single unified workflow `.github/workflows/Tests.yml`, with separate jobs for client, server, `opengraph-service` (Go), and `html-to-image`. The server job runs under Bun (the runtime the server ships on) and folds the former Bun-runtime canary probes (SQLite data layer, OAuth handle resolution) in ahead of the test suite.
 
+The `Client Tests` job runs entirely on Bun and sets up **no Node at all**: `probe:bun` canary → `build` → `test:coverage`. There is no second client job; the Node one was retired when the coverage provider moved to istanbul.
+
 The `html-to-image` job runs under Bun too (#314 — the service migrated from Node). It installs from the single root `bun.lock` (the service is a workspace member) with `PUPPETEER_SKIP_DOWNLOAD=true`, since its unit tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser. A separate Bun-runtime probe step (`html-to-image/probe-bun-puppeteer.mjs`) downloads Chromium explicitly and exercises the real spawn + CDP transport + screenshot round-trip — the load-bearing risk under Bun — gating the job the same way the server's SQLite/OAuth canaries do.
 
 The `html-to-image/` service at the repo root is an Express + Puppeteer image renderer running on Bun. It has its own `app.test.js` (Bun's test runner executes Node's `node:test` API natively, so the suite runs under `bun test` unchanged). Run its tests with:
@@ -166,17 +175,13 @@ cd html-to-image && bun test app.test.js
 
 Per-package coverage commands, targets, and exclusion lists live in `client/CLAUDE.md` and `server/CLAUDE.md`.
 
-### `/* v8 ignore */` Convention
+### Coverage Suppression Markers
 
-Use `/* v8 ignore next */` (or `/* v8 ignore next N */` for N lines) **only** for:
-1. `catch {}` blocks that wrap non-throwing DOM operations (e.g. the AppHeader logout catch block that resets `body.style` — the try never throws in practice)
-2. TypeScript-narrowed union branches that are structurally unreachable at runtime
+Client-only: `/* istanbul ignore if | else | next */`, documented in `client/CLAUDE.md`. The `/* v8 ignore */` form is inert under the istanbul provider and there are none left in `client/src`.
 
-Do **not** use it to skip real business logic. Document any usage in `docs/testing-notes.md`.
+Server: Bun's coverage reporter honors **neither** form, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `server/bunfig.toml`. The `/* v8 ignore */` markers still in server source are inert and kept only as documentation of the reachability argument.
 
-**Note on the server:** Bun's coverage reporter does **not** honor `/* v8 ignore */` annotations (verified on 1.3.14), so these markers are inert in server source. Server-side per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml` instead. The `v8 ignore` convention above applies to the **client** (Vitest's v8 provider honors them).
-
-Server-specific mocking conventions (bun:test API, `mock.module` gotchas, Bun-runtime fetch/DNS/listen-address specifics) live in `server/CLAUDE.md`.
+Every suppressed site is catalogued in `docs/testing-notes.md`.
 
 ## Deployment (Railway)
 
