@@ -155,7 +155,7 @@ export default function Home() {
                         url,
                       });
                     } catch {
-                      /* v8 ignore next */
+                      // share sheet dismissed or unavailable
                     }
                   } else if (navigator.clipboard) {
                     await navigator.clipboard.writeText(url);

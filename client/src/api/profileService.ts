@@ -93,7 +93,7 @@ export function usePublicProfile(did: string | null) {
     queryFn: () =>
       did
         ? profileService.getPublicProfile(did)
-        : /* v8 ignore next */ Promise.reject("No DID provided"),
+        : /* istanbul ignore next */ Promise.reject("No DID provided"),
     enabled: !!did,
     staleTime: 30 * 60 * 1000,
   });
@@ -103,7 +103,9 @@ export function useUserExists(did: string | null) {
   return useQuery({
     queryKey: did ? profileKeys.exists(did) : profileKeys.all,
     queryFn: () =>
-      did ? profileService.userExists(did) : /* v8 ignore next */ Promise.reject("No DID provided"),
+      did
+        ? profileService.userExists(did)
+        : /* istanbul ignore next */ Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
   });
 }
@@ -118,7 +120,7 @@ export function clearFriendsCache(did: string) {
   try {
     localStorage.removeItem(getFriendsCacheKey(did));
   } catch {
-    /* v8 ignore next */
+    // localStorage unavailable (private browsing quota, etc.)
   }
 }
 
@@ -143,7 +145,6 @@ export function useFriends(did: string | null) {
           JSON.stringify({ data, timestamp: Date.now() })
         );
       } catch {
-        /* v8 ignore next */
         // localStorage unavailable (private browsing quota, etc.)
       }
       return data;
@@ -153,9 +154,13 @@ export function useFriends(did: string | null) {
     // Read localStorage lazily — only when the query cache entry is first created,
     // not on every render.
     initialData: () => (did ? getCachedFriends(did)?.data : undefined) ?? undefined,
-    /* v8 ignore start */
-    initialDataUpdatedAt: () => (did ? getCachedFriends(did)?.timestamp : undefined) ?? undefined,
-    /* v8 ignore stop */
+    // React Query only calls this when initialData returned a value, which
+    // already implies `did` is set and the cache hit — so both the ternary's
+    // alternate and the `?? undefined` fallback are unreachable from here.
+    initialDataUpdatedAt: () => {
+      /* istanbul ignore next */
+      return (did ? getCachedFriends(did)?.timestamp : undefined) ?? undefined;
+    },
     refetchOnWindowFocus: false,
     retry: false,
   });
@@ -180,7 +185,7 @@ export function useResolveHandle(handle: string | null) {
     queryFn: () =>
       handle
         ? profileService.resolveHandle(handle)
-        : /* v8 ignore next */ Promise.reject("No handle provided"),
+        : /* istanbul ignore next */ Promise.reject("No handle provided"),
     enabled: !!handle,
     staleTime: Infinity,
   });

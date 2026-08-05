@@ -129,7 +129,6 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
                 document.body.style.pointerEvents = "none";
                 document.body.style.opacity = "0.5";
                 logout();
-                /* v8 ignore next 4 */
               } catch {
                 document.body.style.pointerEvents = "";
                 document.body.style.opacity = "";
@@ -184,20 +183,18 @@ function UserMenu({
   const hasMultiple = accounts.length > 1; // gates the "Accounts" label only
 
   const handleSwitch = (did: string, handle: string) => {
-    /* v8 ignore start */
+    /* istanbul ignore if */
     if (did === activeDid || isSwitching) return;
-    /* v8 ignore stop */
     triggerHaptic();
 
+    /* istanbul ignore next */
     try {
       document.body.style.pointerEvents = "none";
       document.body.style.opacity = "0.5";
-      /* v8 ignore start */
     } catch {
       document.body.style.pointerEvents = "";
       document.body.style.opacity = "";
     }
-    /* v8 ignore stop */
 
     switchAccount(
       { did },

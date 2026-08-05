@@ -31,15 +31,15 @@ bun run dev        # start client (port 5173) and server (port 3000) together
 
 ### Client (`cd client`)
 ```bash
-bun run dev        # Vite dev server (Bun runtime)
-bun run build      # tsc + vite build (Bun runtime)
+bun run dev        # Vite dev server
+bun run build      # tsc + vite build
 bun run lint       # oxlint
-bun run test       # Vitest (single run, Bun runtime)
-bun run test:watch # Vitest watch mode (Bun runtime)
-bun run test:coverage     # Vitest + v8 coverage — the gate; requires Node
-bun run test:coverage:bun # Vitest + istanbul coverage on Bun, into coverage-bun/
+bun run test       # Vitest (single run)
+bun run test:watch # Vitest watch mode
+bun run test:coverage # Vitest + istanbul coverage — the gate, 100% on all four metrics
 bun run probe:bun  # Bun-runtime canary (asserts Bun + boots the Vite dev server)
 ```
+Every one of these runs on Bun; the client needs no Node installed.
 
 ### Server (`cd server`)
 ```bash
@@ -130,16 +130,17 @@ Retry budgets are per-attempt, not per-loop: a single hung connection must not c
 
 ### Client on the Bun runtime
 
-Every client script routes through `bunx --bun` (`dev`, `build`, `preview`, `typecheck`, `test`, `test:watch`), so Vite and Vitest execute on Bun. The explicit flag is load-bearing: `bun run <script>` hands a node-shebang binary — and `vite`, `vitest`, and `tsc` all have one — to Node whenever Node is on PATH, so a bare `bun run build` silently runs on Node locally while running on Bun inside `docker/Dockerfile.client` (which is `FROM oven/bun` and ships no Node). Before this, that production build path was the only place Vite ran under Bun, and nothing tested it.
+**The client needs no Node.** Every script (`dev`, `build`, `preview`, `typecheck`, `lint`, `test`, `test:watch`, `test:coverage`) routes through `bunx --bun`, and `start` was already `bun serve.ts`. Verified by shimming `node` on `PATH` to `exit 127` and running all of them.
 
-Two things do **not** run under Bun:
+The explicit `--bun` flag is load-bearing: `bun run <script>` hands a node-shebang binary — and `vite`, `vitest`, `tsc`, and `oxlint` all have one — to Node whenever Node is on PATH, so a bare `bun run build` silently runs on Node locally while running on Bun inside `docker/Dockerfile.client` (which is `FROM oven/bun` and ships no Node). Before this, that production build path was the only place Vite ran under Bun, and nothing tested it.
 
-- **`test:coverage`** stays on Node. `@vitest/coverage-v8` drives `node:inspector`'s Profiler domain, which Bun does not implement — every worker throws `Error: Coverage APIs are not supported` and the run reports 0%. This is the client's real gate (100% on all four v8 metrics, plus the Coveralls threshold), so it keeps a Node. `test:coverage:bun` is the Bun-native alternative, using `@vitest/coverage-istanbul` (source instrumentation, no V8 APIs) into `coverage-bun/`; it reports ~99.4% statements / ~98.0% branches on the same suite, because istanbul counts defensive branches v8 folds away and does not honor the `/* v8 ignore */` markers documented in `docs/testing-notes.md`. Treat it as the escape hatch for a Node-free machine, not as the number to chase.
-- **`start`** (`bun serve.ts`) was already Bun-native and is unchanged.
+**Coverage uses the istanbul provider, not v8.** `@vitest/coverage-v8` drives `node:inspector`'s Profiler domain, which Bun does not implement — every worker throws `Error: Coverage APIs are not supported` and the run reports 0% while still exiting green on the test count. `@vitest/coverage-istanbul` instruments the source at transform time and needs no V8 inspector, so it works on either runtime; `@vitest/coverage-v8` is no longer a dependency. The gate is unchanged in strength: 100% on all four metrics, enforced by `coverage.thresholds` in `vite.config.ts` (verified to exit non-zero at 99.91%) plus the Coveralls threshold. istanbul's lcov carries real `BRDA` branch records, so unlike the server's Bun coverage the Coveralls branch metric is meaningful.
 
-`client/probe-bun-vite.mjs` (`bun run probe:bun`) is the canary, gating the `Client (Bun runtime)` CI job the way the server's SQLite/OAuth probes gate theirs. It asserts the runtime really is Bun and boots the Vite dev server to fetch a transformed TSX route — the dev server being the one Vite surface neither `vite build` nor Vitest touches.
+**Suppress unreachable code with `/* istanbul ignore ... */`, never `/* v8 ignore ... */`** — istanbul does not honor the v8 form, and there are no v8 markers left in `client/src`. See "`/* istanbul ignore */` Convention" below.
 
-**Import `zod` as a namespace (`import * as z from "zod"`), never `import { z }`.** Zod v4's entrypoint re-exports its own namespace (`import * as z from "./v4/classic/external.js"; export { z }`), and Vite's dependency prebundle preserves that as `export { external_exports as z }`. Reading that one binding under Bun yields `undefined` while every other named export resolves, so `z.string()` throws at module scope and takes the whole suite file down with it. A plain `import("zod")` under Bun is fine, and so is Vite's `ssrLoadModule("zod")` — it only surfaces through Vitest's module runner, which is why `client-bun-runtime` running the suite is what guards it.
+`client/probe-bun-vite.mjs` (`bun run probe:bun`) is the canary, gating the `Client Tests` CI job the way the server's SQLite/OAuth probes gate theirs. It asserts the runtime really is Bun and boots the Vite dev server to fetch a transformed TSX route — the dev server being the one Vite surface neither `vite build` nor Vitest touches.
+
+**Import `zod` as a namespace (`import * as z from "zod"`), never `import { z }`.** Zod v4's entrypoint re-exports its own namespace (`import * as z from "./v4/classic/external.js"; export { z }`), and Vite's dependency prebundle preserves that as `export { external_exports as z }`. Reading that one binding under Bun yields `undefined` while every other named export resolves, so `z.string()` throws at module scope and takes the whole suite file down with it. A plain `import("zod")` under Bun is fine, and so is Vite's `ssrLoadModule("zod")` — it only surfaces through Vitest's module runner, which is why running the suite on Bun in CI is what guards it.
 
 React Query is the data layer. Each domain (auth, messages, profile, settings) has a service file in `src/api/` that exports plain functions and React Query hooks:
 - `src/api/apiClient.ts` — thin fetch wrapper; reads `VITE_API_URL` env var (defaults to `""`, so same-origin)
@@ -206,7 +207,7 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 
 CI runs all tests in a single unified workflow `.github/workflows/Tests.yml`, with separate jobs for client, server, `opengraph-service` (Go), and `html-to-image`. The server job runs under Bun (the runtime the server ships on) and folds the former Bun-runtime canary probes (SQLite data layer, OAuth handle resolution) in ahead of the test suite.
 
-A fifth job, `Client (Bun runtime)`, runs the client on Bun: the `probe:bun` canary, then `build`, `test`, and `test:coverage:bun`. It installs no Node, since every client script routes through `bunx --bun`. The `Client Tests` job stays on Node because the v8 coverage gate needs it — the two jobs run the same suite on the two runtimes.
+The `Client Tests` job runs entirely on Bun and sets up **no Node at all**: `probe:bun` canary → `build` → `test:coverage`. There is no second client job; the Node one was retired when the coverage provider moved to istanbul.
 
 The `html-to-image` job runs under Bun too (#314 — the service migrated from Node). It installs from the single root `bun.lock` (the service is a workspace member) with `PUPPETEER_SKIP_DOWNLOAD=true`, since its unit tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser. A separate Bun-runtime probe step (`html-to-image/probe-bun-puppeteer.mjs`) downloads Chromium explicitly and exercises the real spawn + CDP transport + screenshot round-trip — the load-bearing risk under Bun — gating the job the same way the server's SQLite/OAuth canaries do.
 
@@ -224,10 +225,10 @@ cd html-to-image && bun test app.test.js
 bun run test:coverage
 
 # Client (from client/)
-bun run test -- --coverage
+bun run test:coverage
 ```
 
-The **client** targets 100% across all four v8 metrics (statements, lines, branches, functions) via Vitest's v8 provider.
+The **client** targets 100% across all four metrics (statements, lines, branches, functions) via Vitest's **istanbul** provider, enforced by `coverage.thresholds` in `client/vite.config.ts`. The v8 provider was dropped because it cannot run under Bun (`node:inspector` has no Profiler domain there).
 
 The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.97` in `server/bunfig.toml`), applied to **lines** — Bun's lcov carries line + function coverage only, with **no branch data** (verified on 1.3.14; documented in `docs/testing-notes.md`). Bun also does **not** honor `/* v8 ignore */` source annotations, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml`. These two limitations are the accepted trade-off of moving coverage onto the production runtime (#287); the prior c8/Node path that did honor `v8 ignore` and report branches was retired with the Node test path in #288.
 
@@ -254,15 +255,24 @@ The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.9
 
 Adding a new exclusion requires a comment in `docs/testing-notes.md` explaining why and what it would take to test.
 
-### `/* v8 ignore */` Convention
+### `/* istanbul ignore */` Convention
 
-Use `/* v8 ignore next */` (or `/* v8 ignore next N */` for N lines) **only** for:
-1. `catch {}` blocks that wrap non-throwing DOM operations (e.g. the AppHeader logout catch block that resets `body.style` — the try never throws in practice)
-2. TypeScript-narrowed union branches that are structurally unreachable at runtime
+The client uses istanbul's markers. `/* v8 ignore */` is inert under the istanbul provider and there are none left in `client/src`; do not reintroduce them.
 
-Do **not** use it to skip real business logic. Document any usage in `docs/testing-notes.md`.
+Pick the narrowest form:
+- `/* istanbul ignore if */` — the `if` body is unreachable (a defensive early-return guard whose condition can't hold)
+- `/* istanbul ignore else */` — the implicit else is unreachable (a guard that always passes)
+- `/* istanbul ignore next */` — the whole next statement or function, for `catch` blocks wrapping non-throwing DOM operations and for callbacks tests never invoke
 
-**Note on the server:** Bun's coverage reporter does **not** honor `/* v8 ignore */` annotations (verified on 1.3.14), so these markers are inert in server source. Server-side per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml` instead. The `v8 ignore` convention above applies to the **client** (Vitest's v8 provider honors them).
+Use them **only** for:
+1. `catch {}` blocks that wrap non-throwing DOM operations (e.g. the AppHeader `handleSwitch` catch that resets `body.style` — the try never throws in practice)
+2. TypeScript-narrowed union branches, and UI guards, that are structurally unreachable at runtime
+
+Do **not** use them to skip real business logic. Document any usage in `docs/testing-notes.md`.
+
+**Placement matters.** istanbul attaches hints to statement-, function-, and `if`-level nodes only. A marker in front of a bare sub-expression is silently ignored, so `foo: /* istanbul ignore next */ value || null` does nothing — hoist the expression into a statement and mark that instead. Two sites in this repo (`Customise.tsx`'s locale `onChange`, `profileService.ts`'s `initialDataUpdatedAt`) were rewritten into block bodies for exactly this reason.
+
+**Note on the server:** Bun's coverage reporter honors **neither** form (verified on 1.3.14), so per-file exclusion there is done via `coveragePathIgnorePatterns` globs in `server/bunfig.toml` instead. The convention above is client-only.
 
 ### Module Mocking in Server Tests
 

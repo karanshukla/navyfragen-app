@@ -529,9 +529,8 @@ export default function Messages() {
     // The trash ActionIcon's onClick already guards on `isPinned` (threadRootTid === msg.tid)
     // before ever calling this handler, so this condition can never be true through the UI —
     // see docs/testing-notes.md for details.
-    /* v8 ignore start */
+    /* istanbul ignore if */
     if (threadRootTid === tid) return;
-    /* v8 ignore stop */
     if (confirmBeforeDelete) {
       setMessageIdToDelete(tid);
       setDeleteModalOpened(true);
@@ -572,9 +571,8 @@ export default function Messages() {
     // Confirm button that invokes this handler only exists in the DOM while the modal is
     // opened — so the false arm (messageIdToDelete === null) has no reachable UI path. See
     // docs/testing-notes.md for details.
-    /* v8 ignore start */
+    /* istanbul ignore else */
     if (messageIdToDelete) performDelete(messageIdToDelete, true);
-    /* v8 ignore stop */
   };
 
   const handlePrepareResponse = (tid: string) => {
@@ -583,9 +581,8 @@ export default function Messages() {
     const idx = sortedMessages.findIndex((m) => m.tid === tid);
     // Every call site passes a tid taken directly from a `sortedMessages` entry, so idx is
     // always found — the -1 branch has no reachable UI path. See docs/testing-notes.md.
-    /* v8 ignore start */
+    /* istanbul ignore else */
     if (idx !== -1) setFocusedCardIndex(idx);
-    /* v8 ignore stop */
   };
 
   const handleSendResponse = (msg: Message) => {
@@ -672,17 +669,21 @@ export default function Messages() {
       // respondingTid is always set (via handlePrepareResponse) to the tid of a card that is
       // already rendered in the same commit, so el is always found — the false arm has no
       // reachable UI path. See docs/testing-notes.md.
-      /* v8 ignore start */
       // Defer the scroll so it lands after the textarea-expansion layout shift
       // settles; without the cleanup, the timer survives a respondingTid change
       // (or unmount) and scrolls a card from a prior interaction.
       let handle: ReturnType<typeof setTimeout> | undefined;
+      /* istanbul ignore else */
       if (el)
-        handle = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
+        handle = setTimeout(
+          /* istanbul ignore next */
+          () => el.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+          150
+        );
       return () => {
+        /* istanbul ignore else */
         if (handle) clearTimeout(handle);
       };
-      /* v8 ignore stop */
     }
   }, [respondingTid]);
 
@@ -701,10 +702,10 @@ export default function Messages() {
       // card is rendered in the same commit), so the `?? messagesTopRef.current` fallback and
       // the `if (target)` guard's false arm are both structurally unreachable. See
       // docs/testing-notes.md.
-      /* v8 ignore start */
+      /* istanbul ignore next */
       const target = newestCard ?? messagesTopRef.current;
+      /* istanbul ignore else */
       if (target) {
-        /* v8 ignore stop */
         const { top, bottom } = target.getBoundingClientRect();
         if (top >= window.innerHeight || bottom <= 0) {
           target.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -723,9 +724,8 @@ export default function Messages() {
         setRespondingTid(null);
         // respondingTid always corresponds to an entry in sortedMessages, so idx is always
         // found — the -1 branch has no reachable UI path. See docs/testing-notes.md.
-        /* v8 ignore start */
+        /* istanbul ignore else */
         if (idx !== -1) messageCardRefs.current[idx]?.focus();
-        /* v8 ignore stop */
         return;
       }
 

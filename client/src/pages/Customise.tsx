@@ -130,12 +130,12 @@ export default function Customise() {
                         ? userSettings!.touchpointLocale!
                         : "en"
                     }
-                    onChange={(value) =>
-                      updateSettings.mutate({
-                        /* v8 ignore next */
-                        touchpointLocale: value || null,
-                      })
-                    }
+                    onChange={(value) => {
+                      // allowDeselect={false} means Mantine never emits null or
+                      // "" here, so the `|| null` fallback is unreachable.
+                      /* istanbul ignore next */
+                      updateSettings.mutate({ touchpointLocale: value || null });
+                    }}
                     disabled={busy}
                     allowDeselect={false}
                     aria-label="Message language"

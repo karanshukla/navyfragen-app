@@ -18,13 +18,13 @@ const safeUrlParse = (href: string): URL | null => {
     }
     const url = new URL(fullHref);
     const protocol = url.protocol;
+    /* istanbul ignore else */
     if (protocol === "https:" || protocol === "http:") {
       return url;
     }
   } catch (e) {
     // Ignore errors from URL parsing, it'll just return null
   }
-  /* v8 ignore next */
   return null;
 };
 
@@ -43,7 +43,6 @@ const toShortUrl = (href: string): string => {
   }
   // If safeUrlParse returns null (e.g. for an invalid or non-http/s URL),
   // return the original href, or a shortened version if it's very long.
-  /* v8 ignore next 4 */
   if (href.length > 80) {
     return href.slice(0, 76) + "…";
   }
@@ -71,11 +70,10 @@ const renderTextWithAutolinks = (content: string, keyPrefix: string): React.Reac
     // domainRegex's segments require a literal "." before the TLD, so it can never
     // match starting at "http:" or "https:" (no dot before the colon) — matchText is
     // always the bare domain, so this guard's false arm is structurally unreachable.
-    /* v8 ignore start */
+    /* istanbul ignore else */
     if (!/^https?:\/\//.test(href)) {
       href = "https://" + href;
     }
-    /* v8 ignore stop */
     result.push(
       <a
         href={href}
@@ -161,7 +159,6 @@ const renderToken = (token: Token, key: string): React.ReactNode => {
     case "text":
       return renderTextWithAutolinks(token.content, key);
 
-    /* v8 ignore next 2 */
     default:
       return token.raw;
   }

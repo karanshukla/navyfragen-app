@@ -18,74 +18,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Bun is the installer (issue #250) and, since the Bun-runtime POC, the
-      # runtime for every client script except this one. `test:coverage` is
-      # deliberately the lone holdout: @vitest/coverage-v8 drives
-      # `node:inspector`'s Profiler domain, which Bun does not implement
-      # ("Coverage APIs are not supported"), so the 100%-on-v8 gate has to keep
-      # a Node. setup-node therefore remains — see the client-bun-runtime job
-      # below for everything that does run on Bun.
+      # Bun is the installer (issue #250) and the runtime for every client
+      # script. Deliberately no setup-node: the runner image ships a Node
+      # anyway, and `bun run <script>` hands node-shebang binaries (vite,
+      # vitest, tsc) to it whenever it is on PATH, which is why every client
+      # script routes through `bunx --bun`. The probe below asserts the runtime
+      # rather than trusting that — a silent Node fallback would leave the whole
+      # job measuring the wrong thing.
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run client tests with coverage
-        run: cd client && bun run test:coverage
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: client-coverage-report
-          path: client/coverage/
-          retention-days: 14
-
-      - name: Report coverage on PR
-        uses: davelosert/vitest-coverage-report-action@v2
-        if: always() && github.event_name == 'pull_request'
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: client
-
-      - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@v2.3.6
-        if: always()
-        continue-on-error: true
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: client/coverage/lcov.info
-          flag-name: client
-          base-path: client
-          parallel: true
-          coverage-threshold-percent: 97
-
-  client-bun-runtime:
-    name: Client (Bun runtime)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      # Deliberately no setup-node. The runner image ships a Node anyway, and
-      # `bun run <script>` hands node-shebang binaries (vite, vitest, tsc) to
-      # it whenever it is on PATH — which is why every client script routes
-      # through `bunx --bun`. The probe below asserts the runtime rather than
-      # trusting that, since a silent Node fallback would make this whole job
-      # a duplicate of client-tests.
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -124,23 +68,35 @@ jobs:
       - name: Build under Bun
         run: cd client && bun run build
 
-      - name: Run tests under Bun
-        run: cd client && bun run test
+      - name: Run client tests with coverage
+        run: cd client && bun run test:coverage
 
-      # The istanbul provider is the only coverage that works under Bun. It is
-      # not the gate (client-tests keeps that on v8, which reports 100%) — this
-      # step exists so the delta between the two providers stays visible rather
-      # than being rediscovered later.
-      - name: Run coverage under Bun (istanbul provider)
-        run: cd client && bun run test:coverage:bun
-
-      - name: Upload Bun coverage report
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: client-bun-coverage-report
-          path: client/coverage-bun/
+          name: client-coverage-report
+          path: client/coverage/
           retention-days: 14
+
+      - name: Report coverage on PR
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: client
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2.3.6
+        if: always()
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: client/coverage/lcov.info
+          flag-name: client
+          base-path: client
+          parallel: true
+          coverage-threshold-percent: 97
 
   server-tests:
     name: Server Tests
