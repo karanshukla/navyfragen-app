@@ -33,7 +33,7 @@ The companion [navyfragen-feed](https://github.com/karanshukla/navyfragen-feed) 
 
 | Layer | Technologies |
 |---|---|
-| **Client** | React 19, Vite, TypeScript, Mantine UI v8, React Query v5, React Router v7 |
+| **Client** | React 19, Vite, TypeScript, Mantine UI v9, React Query v5, React Router v8 |
 | **Server** | Bun.serve + Hono, TypeScript, Kysely ORM, AT Protocol SDK, Pino |
 | **Database** | SQLite (development) · PostgreSQL (production) |
 | **Auth** | AT Protocol OAuth (Bluesky as identity provider) |

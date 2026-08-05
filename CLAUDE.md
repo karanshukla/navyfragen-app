@@ -13,7 +13,7 @@ NF messages (stored in the centralised DB) are deliberately kept separate from B
 ## Monorepo Structure
 
 npm workspaces with three packages:
-- `client/` — React + Vite 7 + TypeScript SPA (Mantine UI 8, React Query, React Router)
+- `client/` — React + Vite 8 + TypeScript SPA (Mantine UI 9, React Query, React Router)
 - `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
 - `html-to-image/` — Bun + Puppeteer image renderer (headless Chromium OG-image generation)
 
