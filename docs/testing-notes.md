@@ -384,3 +384,38 @@ Coverage comes from Bun's built-in reporter (`bun test --coverage`, configured i
 2. **Bun's lcov carries line + function coverage only — no branch data.** The lcov has `DA` (per-line) and `FNF`/`FNH` (function totals) records but zero `BRDA`/`BRF`/`BRH` branch records. Coveralls therefore reports the server flag's branch coverage as 0/N/A. The real gate is Bun's own `coverageThreshold = 0.97` (scalar form — the object form `{ lines, functions }` silently no-ops on 1.3.14; the scalar form reliably fails the run below threshold); the Coveralls `coverage-threshold-percent: 97` is a secondary line-of-coverage defense that tolerates the missing branch metric.
 
 The `coverageThreshold` is set as a scalar (`0.97`) rather than the per-metric object form because the object form (`{ lines = ..., functions = ... }`) silently no-ops on Bun 1.3.14 — the run does not fail even when below threshold — whereas the scalar form reliably exits non-zero. CLI flags like `--coverage-threshold=` are also not honored; the threshold must live in `bunfig.toml`.
+
+## Client suite under the Bun runtime
+
+The client's Vite and Vitest scripts run on Bun (`bunx --bun` in `client/package.json`; see CLAUDE.md "Client on the Bun runtime"). The `Client (Bun runtime)` job in `.github/workflows/Tests.yml` gates it: probe → `build` → `test` → `test:coverage:bun`. All 545 tests pass on both runtimes.
+
+### Coverage: v8 needs Node, istanbul does not
+
+`@vitest/coverage-v8` calls `Profiler.startPreciseCoverage` through `node:inspector`. Bun's `node:inspector` shim rejects it — every test worker throws `Error: Coverage APIs are not supported` from `startCoverage`, the run finishes suspiciously fast (~6s vs ~20s), and the summary reports `0% (0/1228)` across the board with 36 unhandled errors. The failure is loud, but only if you read past the table.
+
+So `test:coverage` keeps a Node and stays the gate: v8 provider, 100% on statements/branches/functions/lines, feeding the Coveralls `client` flag at threshold 97.
+
+`test:coverage:bun` is the Bun-native alternative — `@vitest/coverage-istanbul`, which instruments the source at transform time and needs no V8 inspector. It reports into `coverage-bun/` (gitignored, uploaded as its own CI artifact) so it can't be mistaken for the gate's output. On the same suite it returns:
+
+| provider | statements | branches | functions | lines |
+| --- | --- | --- | --- | --- |
+| v8 (Node, gate) | 100% (1228/1228) | 100% (937/937) | 100% (380/380) | 100% (1146/1146) |
+| istanbul (Bun) | 99.44% (1253/1260) | 97.95% (960/980) | 100% (383/383) | 99.65% (1166/1170) |
+
+The gap is not missing tests. istanbul counts a larger denominator (1260 statements vs 1228) because it instruments defensive branches — optional chaining, `??` fallbacks, unreachable guards — that v8 folds away, and it does not honor the `/* v8 ignore */` annotations catalogued above (it reads `/* istanbul ignore */` instead). The residue lands almost entirely on files already carrying documented `v8 ignore` markers: `profileService.ts`, `messageService.ts`, `AppHeader.tsx`, `PublicProfile.tsx`, `parseRichText.tsx`. Both istanbul numbers clear the repo's 97% Coveralls threshold, so a Node-free machine can still run a meaningful coverage check — it just isn't the same measurement, and converting the annotations to satisfy both providers is a larger change than this POC.
+
+### `zod` named exports through Vitest's module runner
+
+`client/src/pages/Login.tsx` imports zod as `import * as z from "zod"`. The named form (`import { z } from "zod"`) fails under Bun with `TypeError: undefined is not an object (evaluating 'z.string')`, taking down `Login.test.tsx` and `AppLayout.test.tsx` (2 suites, the only Bun failures in the suite).
+
+Zod v4's entrypoint does `import * as z from "./v4/classic/external.js"; export { z }`, and Vite's dependency prebundle preserves that shape as `export { external_exports as z }` alongside ~400 ordinary named exports. Under Bun, reading `z` off that module gives `undefined` while every sibling export resolves — `Object.keys()` on the namespace shows `$brand`, `$input`, … and no `z`.
+
+Isolating the layer, since the fix belongs at the narrowest one:
+
+| path | Node | Bun |
+| --- | --- | --- |
+| `import("zod")` directly | `z` present | `z` present |
+| `viteServer.ssrLoadModule("zod")` | `z` present | `z` present |
+| Vitest module runner (happy-dom env) | `z` present | **`z` undefined** |
+
+Only the last combination breaks, so this is Vitest's module runner over the prebundled dependency on Bun, not Bun's ESM loader and not Vite's transform. The namespace import is the form zod's own docs use, costs nothing on Node, and sidesteps it. The regression guard is the `Client (Bun runtime)` job running the suite — reverting to `import { z }` fails it immediately. The probe script deliberately does not assert this: a bare `import("zod")` inside the probe passes on both runtimes and would give false assurance.

@@ -37,7 +37,7 @@ The companion [navyfragen-feed](https://github.com/karanshukla/navyfragen-feed) 
 | **Server** | Bun.serve + Hono, TypeScript, Kysely ORM, AT Protocol SDK, Pino |
 | **Database** | SQLite (development) · PostgreSQL (production) |
 | **Auth** | AT Protocol OAuth (Bluesky as identity provider) |
-| **Testing** | Vitest + Testing Library (client) · Node.js built-in test runner (server) |
+| **Testing** | Vitest + Testing Library (client) · `bun test` (server) — both on the Bun runtime |
 | **Observability** | Pino structured logging, optional Axiom transport |
 
 ---
@@ -66,7 +66,7 @@ navyfragen-app/
 - [Bun](https://bun.sh) (package manager / installer — see [issue #250](https://github.com/karanshukla/navyfragen-app/issues/250))
 - A modern web browser
 
-> **Runtime note:** Bun is the *installer* and the **server runtime** (dev, production, and tests — #268/#288). Node remains the runtime for the client only (Vite dev/build, Vitest).
+> **Runtime note:** Bun is the *installer* and the runtime for every workspace — the server (dev, production, and tests — #268/#288) and now the client, whose Vite dev server, build, and Vitest suite all run on Bun. Node is still needed for one script, `client`'s `test:coverage`: the v8 coverage provider drives an inspector API Bun does not implement. See `client/README.md` for the Bun-native coverage alternative.
 
 > **Windows users:** You may need the [C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (required by `sharp`). WSL2 is recommended for the best experience. (`better-sqlite3` was removed in #288 when the Node code path was retired — SQLite now runs through `bun:sqlite`, which ships inside the Bun runtime and needs no native build.)
 

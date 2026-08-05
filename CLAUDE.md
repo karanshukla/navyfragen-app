@@ -17,7 +17,7 @@ npm workspaces with three packages:
 - `server/` — Bun.serve + Hono + TypeScript API (Kysely ORM, AT Protocol SDK)
 - `html-to-image/` — Bun + Puppeteer image renderer (headless Chromium OG-image generation)
 
-**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client stays on Node for Vite dev/build + Vitest. The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
+**Bun is the package manager** (single root `bun.lock`; installer swapped from npm per issue #250) and **the runtime for every TypeScript/JavaScript service** — the server (dev `bun --watch`, production `Dockerfile.server` on `oven/bun`, CI, and the test suite all run under Bun, #268) and the `html-to-image` renderer (#314, formerly Node + Puppeteer). The client runs its Vite dev server, build, and Vitest suite under Bun too — see "Client on the Bun runtime" below; only `test:coverage` still needs a Node. The server HTTP layer is `Bun.serve` + [Hono](https://hono.dev) (#316): the former Express + cors + cookie-session + express-rate-limit + express-validator stack was migrated to native Hono middleware (hono/cors, hono/cookie signed sessions, hono-rate-limiter, @hono/zod-validator). Business logic (sharp, web-push, pino, node:dns/crypto) runs under Bun natively as before.
 
 Root-level `bun run dev` runs all three workspaces concurrently via `concurrently` (the `html-to-image` image renderer is the third workspace member — Bun runtime + installer since #314, the same single-lockfile story as the server and client).
 
@@ -31,11 +31,14 @@ bun run dev        # start client (port 5173) and server (port 3000) together
 
 ### Client (`cd client`)
 ```bash
-bun run dev        # Vite dev server
-bun run build      # tsc + vite build
+bun run dev        # Vite dev server (Bun runtime)
+bun run build      # tsc + vite build (Bun runtime)
 bun run lint       # oxlint
-bun run test       # Vitest (single run)
-bun run test:watch # Vitest watch mode
+bun run test       # Vitest (single run, Bun runtime)
+bun run test:watch # Vitest watch mode (Bun runtime)
+bun run test:coverage     # Vitest + v8 coverage — the gate; requires Node
+bun run test:coverage:bun # Vitest + istanbul coverage on Bun, into coverage-bun/
+bun run probe:bun  # Bun-runtime canary (asserts Bun + boots the Vite dev server)
 ```
 
 ### Server (`cd server`)
@@ -125,6 +128,19 @@ Retry budgets are per-attempt, not per-loop: a single hung connection must not c
 
 ## Client Architecture
 
+### Client on the Bun runtime
+
+Every client script routes through `bunx --bun` (`dev`, `build`, `preview`, `typecheck`, `test`, `test:watch`), so Vite and Vitest execute on Bun. The explicit flag is load-bearing: `bun run <script>` hands a node-shebang binary — and `vite`, `vitest`, and `tsc` all have one — to Node whenever Node is on PATH, so a bare `bun run build` silently runs on Node locally while running on Bun inside `docker/Dockerfile.client` (which is `FROM oven/bun` and ships no Node). Before this, that production build path was the only place Vite ran under Bun, and nothing tested it.
+
+Two things do **not** run under Bun:
+
+- **`test:coverage`** stays on Node. `@vitest/coverage-v8` drives `node:inspector`'s Profiler domain, which Bun does not implement — every worker throws `Error: Coverage APIs are not supported` and the run reports 0%. This is the client's real gate (100% on all four v8 metrics, plus the Coveralls threshold), so it keeps a Node. `test:coverage:bun` is the Bun-native alternative, using `@vitest/coverage-istanbul` (source instrumentation, no V8 APIs) into `coverage-bun/`; it reports ~99.4% statements / ~98.0% branches on the same suite, because istanbul counts defensive branches v8 folds away and does not honor the `/* v8 ignore */` markers documented in `docs/testing-notes.md`. Treat it as the escape hatch for a Node-free machine, not as the number to chase.
+- **`start`** (`bun serve.ts`) was already Bun-native and is unchanged.
+
+`client/probe-bun-vite.mjs` (`bun run probe:bun`) is the canary, gating the `Client (Bun runtime)` CI job the way the server's SQLite/OAuth probes gate theirs. It asserts the runtime really is Bun and boots the Vite dev server to fetch a transformed TSX route — the dev server being the one Vite surface neither `vite build` nor Vitest touches.
+
+**Import `zod` as a namespace (`import * as z from "zod"`), never `import { z }`.** Zod v4's entrypoint re-exports its own namespace (`import * as z from "./v4/classic/external.js"; export { z }`), and Vite's dependency prebundle preserves that as `export { external_exports as z }`. Reading that one binding under Bun yields `undefined` while every other named export resolves, so `z.string()` throws at module scope and takes the whole suite file down with it. A plain `import("zod")` under Bun is fine, and so is Vite's `ssrLoadModule("zod")` — it only surfaces through Vitest's module runner, which is why `client-bun-runtime` running the suite is what guards it.
+
 React Query is the data layer. Each domain (auth, messages, profile, settings) has a service file in `src/api/` that exports plain functions and React Query hooks:
 - `src/api/apiClient.ts` — thin fetch wrapper; reads `VITE_API_URL` env var (defaults to `""`, so same-origin)
 - `src/api/authService.ts` — exports `useSession`, `useLogin`, `useLogout`
@@ -135,6 +151,7 @@ All API calls use `credentials: "include"` for cookie forwarding.
 ### Form Validation
 
 The client uses **Zod v4** (`^4.4.3`). Zod v4 has breaking syntax changes from v3:
+- Import it as `import * as z from "zod"`, never `import { z }` — the named form breaks under Bun (see "Client on the Bun runtime" above)
 - Custom messages on `.min()` / `.max()` use `{ error: "..." }` instead of a plain string
 - Validation errors are accessed via `.issues` not `.errors`
 
@@ -188,6 +205,8 @@ Windows users: use `http://127.0.0.1` instead of `localhost` for cookies to work
 **Client**: Uses Vitest + `@testing-library/react` + `happy-dom`. MSW is available for API mocking. Test setup file at `src/tests/setupTests.ts`.
 
 CI runs all tests in a single unified workflow `.github/workflows/Tests.yml`, with separate jobs for client, server, `opengraph-service` (Go), and `html-to-image`. The server job runs under Bun (the runtime the server ships on) and folds the former Bun-runtime canary probes (SQLite data layer, OAuth handle resolution) in ahead of the test suite.
+
+A fifth job, `Client (Bun runtime)`, runs the client on Bun: the `probe:bun` canary, then `build`, `test`, and `test:coverage:bun`. It installs no Node, since every client script routes through `bunx --bun`. The `Client Tests` job stays on Node because the v8 coverage gate needs it — the two jobs run the same suite on the two runtimes.
 
 The `html-to-image` job runs under Bun too (#314 — the service migrated from Node). It installs from the single root `bun.lock` (the service is a workspace member) with `PUPPETEER_SKIP_DOWNLOAD=true`, since its unit tests drive `createApp`/`createBrowserPool` through fakes and never launch a browser. A separate Bun-runtime probe step (`html-to-image/probe-bun-puppeteer.mjs`) downloads Chromium explicitly and exercises the real spawn + CDP transport + screenshot round-trip — the load-bearing risk under Bun — gating the job the same way the server's SQLite/OAuth canaries do.
 

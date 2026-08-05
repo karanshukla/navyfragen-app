@@ -20,7 +20,11 @@ import { useQuery } from "@tanstack/react-query";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useHaptic } from "use-haptic";
-import { z } from "zod";
+// Namespace import, not `import { z }`: zod's entrypoint re-exports its own
+// namespace under the name `z`, and that one binding comes back undefined
+// through Vitest's module runner on Bun while every sibling export resolves.
+// See docs/testing-notes.md, "zod named exports through Vitest's module runner".
+import * as z from "zod";
 
 import { apiClient } from "../api/apiClient";
 import { authKeys, useE2ELogin, useLogin } from "../api/authService";
