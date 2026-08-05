@@ -11,6 +11,7 @@ import { queryClient } from "./api/queryClient";
 import { AppLayout } from "./AppLayout";
 import { BounceLogosProvider } from "./components/BounceLogosContext";
 import { InstallPromptProvider } from "./components/InstallPromptContext";
+import { markUpdateReady, setUpdateApplier } from "./lib/swUpdate";
 import navyfragenTheme from "./Theme";
 
 import "@mantine/core/styles.css";
@@ -42,4 +43,17 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 // closing the race where a leftover production SW could intercept TanStack
 // Query's first fetches on a fresh reload. In production it registers the
 // generated /sw.js (push notifications, offline app shell).
-registerSW({ immediate: true });
+//
+// Registration runs in "prompt" mode, so a new deploy never reloads the page on
+// its own: it reports the waiting worker here, and the header's "Update" button
+// is what applies it.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    markUpdateReady();
+  },
+});
+
+setUpdateApplier(() => {
+  void updateSW();
+});

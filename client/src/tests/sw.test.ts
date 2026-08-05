@@ -72,9 +72,31 @@ describe("sw.ts", () => {
     vi.unstubAllGlobals();
   });
 
-  it("precaches the injected build manifest and skips waiting", () => {
+  it("precaches the injected build manifest", () => {
     expect(precacheAndRouteMock).toHaveBeenCalledWith(selfMock.__WB_MANIFEST);
-    expect(selfMock.skipWaiting).toHaveBeenCalledOnce();
+  });
+
+  describe("update activation", () => {
+    it("stays waiting instead of skipping on its own", () => {
+      // The regression this guards: an unconditional skipWaiting() at parse time
+      // activates every deploy immediately, and the registration answers that
+      // activation by reloading the page mid-session.
+      expect(selfMock.skipWaiting).not.toHaveBeenCalled();
+    });
+
+    it("skips waiting once the page asks it to", () => {
+      listeners.message({ data: { type: "SKIP_WAITING" } });
+
+      expect(selfMock.skipWaiting).toHaveBeenCalledOnce();
+    });
+
+    it("ignores unrelated messages", () => {
+      listeners.message({ data: { type: "SOMETHING_ELSE" } });
+      listeners.message({ data: undefined });
+      listeners.message({});
+
+      expect(selfMock.skipWaiting).not.toHaveBeenCalled();
+    });
   });
 
   it("registers the network-only, navigation, and static-asset routes", () => {

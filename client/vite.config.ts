@@ -10,7 +10,11 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.ts",
-      registerType: "autoUpdate",
+      // "prompt", not "autoUpdate": autoUpdate reloads the page as soon as a new
+      // worker activates, which interrupts whatever the user is doing. In prompt
+      // mode the registration reports the waiting worker to main.tsx, which
+      // surfaces it as the header's "Update" button (see src/sw.ts).
+      registerType: "prompt",
       // We register the SW ourselves via virtual:pwa-register in main.tsx so we
       // can keep the push-notification registration flow (and its error
       // handling) in one place.

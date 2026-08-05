@@ -12,15 +12,24 @@ declare const self: ServiceWorkerGlobalScope;
 // by vite-plugin-pwa's `injectManifest` strategy).
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Activate a newly installed worker without waiting for every tab to close,
-// but deliberately skip clientsClaim(): claiming already-open tabs fires a
-// `controllerchange` event that vite-plugin-pwa's autoUpdate registration
-// (main.tsx) responds to with an immediate, unprompted `location.reload()` —
-// so any tab open when a new deploy ships gets silently reloaded seconds into
-// the session. Without clientsClaim(), the new worker only takes control of
-// tabs opened/reloaded after activation, so the update applies on the next
-// natural navigation instead of interrupting an in-progress session.
-self.skipWaiting();
+// Stay in the `waiting` state until the user explicitly asks for the update.
+//
+// Calling skipWaiting() at parse time activated every new deploy the instant it
+// finished installing, and vite-plugin-pwa's registration answers an update
+// activation with `window.location.reload()` — so a tab that happened to be
+// open when a deploy shipped was reloaded mid-session, discarding whatever the
+// user was typing. Dropping clientsClaim() alone did not stop that, because
+// skipWaiting() on its own already transfers control of existing clients.
+//
+// `registerType: "prompt"` surfaces the waiting worker as the header's "Update"
+// button instead. workbox-window's messageSkipWaiting() posts this message when
+// that button is pressed, and it only posts to a worker that is genuinely
+// waiting — so skipping the wait here would break the button as well.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 // --- Production-only runtime caching ---------------------------------------
 // In dev, vite-plugin-pwa serves the SW with devOptions that intentionally keep
