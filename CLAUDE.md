@@ -125,43 +125,9 @@ Retry budgets are per-attempt, not per-loop: a single hung connection must not c
 
 ## Client Architecture
 
-React Query is the data layer. Each domain (auth, messages, profile, settings) has a service file in `src/api/` that exports plain functions and React Query hooks:
-- `src/api/apiClient.ts` — thin fetch wrapper; reads `VITE_API_URL` env var (defaults to `""`, so same-origin)
-- `src/api/authService.ts` — exports `useSession`, `useLogin`, `useLogout`
-- `src/api/messageService.ts`, `profileService.ts`, `settingsService.ts` — similar pattern
+Client-specific conventions (React Query data layer, form validation, toast notifications, design tokens) live in `client/CLAUDE.md`.
 
-All API calls use `credentials: "include"` for cookie forwarding.
-
-### Form Validation
-
-The client uses **Zod v4** (`^4.4.3`). Zod v4 has breaking syntax changes from v3:
-- Custom messages on `.min()` / `.max()` use `{ error: "..." }` instead of a plain string
-- Validation errors are accessed via `.issues` not `.errors`
-
-### UI Feedback (Toast Notifications)
-
-Transient feedback (success, error) uses Mantine's `showNotification()` from `@mantine/notifications` rather than inline alert state. The `<Notifications>` component is mounted in `src/main.tsx` with `position="bottom-right"` and `autoClose={5000}`. Use `showNotification()` for any new transient messages — don't add stateful alert components to pages.
-
-### Design Tokens
-
-Brand CSS custom properties live in `client/src/index.css` under the `--nf-*` namespace and are the single source of truth for colors and gradients. Key gradient tokens:
-
-- `--nf-grad-mark` — the primary brand gradient (`#3349E0 → #6B3FD4 → #4F1FA6`); use this for all interactive card backgrounds (login, ask, inbox hero, question cards with gradient enabled)
-- `--nf-grad-dark` — reserved exclusively for the "default" image-export theme preview in the `ThemeCard` selector; do not use it for new UI elements
-- `--nf-grad-hero` — defined but no longer applied to any UI element; do not reintroduce it for text or nav items
-
-Nav active state uses a solid tint (`--nf-nav-active-bg`) — no gradients on nav items. Gradient text (`background-clip: text`) is not used in the app; brand color (`--nf-royal`) is used for highlighted text instead.
-
-### Logging
-
-The server uses Pino (`src/index.ts` → `createLogger()`). In development, stdout is piped through `pino-pretty` via the dev script. In production, when `AXIOM_TOKEN` and `AXIOM_DATASET` are both set, logs are shipped to Axiom via `@axiomhq/pino` as a transport target alongside stdout. Without those vars the logger falls back to stdout only.
-
-Key events that are instrumented:
-- OAuth flow: login initiation, callback success/failure, session creation, token consumption, logout
-- Anonymous message sent, response posted to Bluesky (with AT URI)
-- Account deletion, PDS sync (with counts)
-- Settings changes (pdsSyncEnabled, imageTheme)
-- All 500-class errors across controllers and services carry structured `{ err, did }` fields
+Server-specific logging conventions live in `server/CLAUDE.md`.
 
 ## Code comments
 
@@ -198,42 +164,7 @@ cd html-to-image && bun test app.test.js
 
 ## Testing & Coverage
 
-### Running Coverage
-
-```bash
-# Server (from server/)
-bun run test:coverage
-
-# Client (from client/)
-bun run test -- --coverage
-```
-
-The **client** targets 100% across all four v8 metrics (statements, lines, branches, functions) via Vitest's v8 provider.
-
-The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.97` in `server/bunfig.toml`), applied to **lines** — Bun's lcov carries line + function coverage only, with **no branch data** (verified on 1.3.14; documented in `docs/testing-notes.md`). Bun also does **not** honor `/* v8 ignore */` source annotations, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml`. These two limitations are the accepted trade-off of moving coverage onto the production runtime (#287); the prior c8/Node path that did honor `v8 ignore` and report branches was retired with the Node test path in #288.
-
-### Coverage Exclusions
-
-**Server** — excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml` (coverage is collected by Bun's built-in reporter):
-- `src/lexicon/**` — auto-generated from AT Protocol lexicons
-- `src/index.ts` — Hono app + Bun.serve boot + process signal handlers
-- `src/lib/assert-fetch-node-patch.ts` — applied via `patchedDependencies`; covers the @atproto-labs fetch-node patch surface
-- `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — AT Protocol OAuth wiring
-- `src/auth/e2e-agent-store.ts` — in-memory Map for E2E agents; trivial
-- `src/database/db.ts` — Kysely migration runner
-- `src/lib/id-resolver.ts` — AT Protocol DID/handle resolver (requires live network)
-- `src/lib/env.ts` — bootstrapped before tests run via `test-bootstrap.js`
-- `src/hono/session-middleware.ts` — signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
-- `src/scripts/**` — one-off admin scripts
-
-**Client** — excluded via `coverage.exclude` in `vite.config.ts`:
-- `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and app entry point
-- `src/vite-env.d.ts` — ambient declarations
-- `src/styles/tokens.ts` — pure style constant exports
-- `src/pushPayload.ts` — a type-only `interface` with no runtime code to execute
-- `src/index.css` — a stylesheet; Vite's CSS import handling registers it as a coverage-tracked module with zero instrumentable statements
-
-Adding a new exclusion requires a comment in `docs/testing-notes.md` explaining why and what it would take to test.
+Per-package coverage commands, targets, and exclusion lists live in `client/CLAUDE.md` and `server/CLAUDE.md`.
 
 ### `/* v8 ignore */` Convention
 
@@ -245,58 +176,7 @@ Do **not** use it to skip real business logic. Document any usage in `docs/testi
 
 **Note on the server:** Bun's coverage reporter does **not** honor `/* v8 ignore */` annotations (verified on 1.3.14), so these markers are inert in server source. Server-side per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml` instead. The `v8 ignore` convention above applies to the **client** (Vitest's v8 provider honors them).
 
-### Module Mocking in Server Tests
-
-The server test suite runs under `bun:test` (#288). Import `test`/`describe`/hooks/`mock`/`spyOn` from `bun:test` and `assert` from `node:assert` (Bun runs `node:assert` natively):
-
-```typescript
-import assert from "node:assert";
-import { test, describe, beforeAll, afterEach, mock, spyOn } from "bun:test";
-```
-
-`mock` is `bun:test`'s mock factory. The API surface (and the differences from the former `node:test`/shim shape worth knowing):
-- Create a mock fn: `mock(impl?)` (was `mock.fn(...)`). Its `.mock.calls` is an array of **bare argument arrays** (`calls[0][0]`), not `[{ arguments }]` objects — read args as `m.mock.calls[0][0]`, not `.calls[0].arguments[0]`.
-- `mockImplementation`/`mockImplementationOnce`/`mockReturnValue`/`mockReturnValueOnce` live on the function directly (`m.mockImplementation(...)`), **not** under `.mock`.
-- Clear call history with `m.mockClear()` (was `m.mock.resetCalls()`); drop implementations with `m.mockReset()`; restore a spy with `m.mockRestore()`. Global cleanup: `mock.clearAllMocks()` (call history) and `mock.restore()` (restore all spies).
-- Spy on a method (e.g. `globalThis.fetch`): `spyOn(globalThis, "fetch").mockImplementation(impl)` — `spyOn` takes no implementation arg; chain the impl on. `mock.method(target, name, impl)` from the old shim maps to this.
-- `bun:test` uses `beforeAll`/`afterAll` (not `before`/`after`) for the once-per-file hooks.
-
-The default mocking strategy is **dependency injection** (chainable DB builders passed into constructors). `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
-
-```typescript
-let AuthService: typeof import("../services/auth-service").AuthService;
-let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
-
-beforeAll(async () => {
-  mockAgent = { getProfile: mock(async () => ({ data: undefined })) };
-  // Spread the real module so every export it has keeps working and only
-  // initializeAgentForDid is swapped (see the note on --isolate below).
-  const realSessionAgent = await import("../auth/session-agent");
-  mock.module("../auth/session-agent", () => ({
-    ...realSessionAgent,
-    initializeAgentForDid: async (ctx, did) => { /* ... */ return mockAgent; },
-  }));
-  // Register the mock BEFORE importing the module under test so its
-  // transitive import of session-agent picks up the fakes.
-  const mod = await import("../services/auth-service");
-  AuthService = mod.AuthService;
-});
-```
-
-Notes:
-- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `beforeAll()`, never a top-level static import. Bun's `mock.module` takes a factory `() => exports` (the opposite of node:test's `{ exports }` shape) and is synchronous (returns `void`).
-- Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
-- **`mock.module` is process-global and not restorable.** `mock.restore()`/`clearAllMocks()` clear mock call history and restore spies but do **not** unmock modules, so a partial mock registered in one file leaks into every other file that imports the real module. The `test`/`test:coverage` scripts pass `--isolate` for a fresh per-file module registry. Do not let `--isolate` be the only thing keeping a mock contained: **spread the real module into the mock** (`() => ({ ...realModule, theOneYouAreFaking })`) so a partial mock can't take out files that import the real exports with a missing-export `SyntaxError`.
-- The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
-
-#### Bun-runtime specifics (#269, #270, #288)
-
-- `bun run test` / `test:coverage` add `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation). Bun **1.3.14+** is required (the floor `@types/bun` is pinned to).
-- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.5.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces the unicast rules**: it runs the package's own `unicastLookup` before the request, so a handle resolving to a loopback/private/link-local address is rejected exactly as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname` returns `undefined` for a DNS name, so on its own it lets `http://internal.example.com/` straight through, and handle resolution fetches user-supplied hostnames. The branch also rejects non-HTTP(S) schemes, which the Node path got for free from undici: every unicast check keys on `url.hostname`, which is `""` for `file:`, and Bun's `fetch` reads `file:` URLs where Node's refuses them. The one gap versus the old Node path: the check runs before the connection rather than on the socket, so DNS rebinding between check and connect is not caught.
-- **Never call `dns.setServers()` unconditionally.** Under Node it only rebinds the `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; under Bun it steers `dns.lookup` too, so the process forgets every name the system resolver owns — container DNS included. `src/index.ts` keeps its Windows TXT-lookup workaround gated behind `process.platform === "win32"` for that reason.
-- **The listen address is negotiated, not hardcoded** (`listenPreferringDualStack` in `src/index.ts`). A wildcard `HOST` (`"::"` or `"0.0.0.0"`) binds `"::"` so a single dual-stack listener serves both families — required in production, where Caddy reaches this service only over Railway's private network and that network is IPv6-only (`BACKEND_DOMAIN = ${{Backend.RAILWAY_PRIVATE_DOMAIN}}`). Where the network has no IPv6 at all — every Docker bridge network in CI and local compose — the bind falls back to `"0.0.0.0"`; Bun surfaces that case as a spurious `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does. A non-wildcard `HOST` is bound verbatim, so `HOST=127.0.0.1` still means loopback. **In production a non-wildcard `HOST` is refused at boot** (`assertProductionBindHost` in `src/lib/assert-production-bind-host.ts`, called first in `Server.create()`) — a loopback bind boots "healthy" but is unreachable from Caddy, with no error signal in the server's own logs, which caused a full outage on both Railway server services on 2026-07-25 (#298). The guard is a no-op outside `NODE_ENV=production`, so local loopback testing and the test suite are unaffected. See "Production server services must bind a wildcard HOST" below.
-- **The OAuth login path has its own CI probe** (`Probe SQLite data layer + OAuth handle resolution under Bun` in `Tests.yml`). E2E signs in through `/auth/e2e-login` with an app password and never resolves a handle, so without this the one production surface that runs through the patched `fetch-node` would be untested. Its Bun failure mode is silent — bluesky-social/atproto#3511 has resolution returning `undefined`, surfacing only as "does not resolve to a DID" — so the probe asserts a `did:` string comes back rather than trusting the call not to throw. The SQLite probe (`createDb` → `migrateToLatest` → insert/select through the `bun:sqlite` adapter) gates the data layer the test suite mocks around.
-- Coverage comes from Bun's built-in reporter (`bun test --coverage`, configured in `server/bunfig.toml`). It does **not** honor `/* v8 ignore */` and its lcov carries line + function coverage only (no branch data) — see "Coverage under Bun" in `docs/testing-notes.md` for the rationale and accepted trade-offs.
+Server-specific mocking conventions (bun:test API, `mock.module` gotchas, Bun-runtime fetch/DNS/listen-address specifics) live in `server/CLAUDE.md`.
 
 ## Deployment (Railway)
 
