@@ -1,11 +1,5 @@
-diff --git a/node_modules/@atproto-labs/fetch-node/.bun-tag-d3164fca44050840 b/.bun-tag-d3164fca44050840
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-diff --git a/node_modules/@atproto-labs/fetch-node/.bun-tag-e3dae270cf7f8001 b/.bun-tag-e3dae270cf7f8001
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/dist/unicast.js b/dist/unicast.js
-index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..f9b69246767072270aa05c242840cc65b53a1ede 100644
+index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..4712e033e95d5695fde11e5fe05f1dd9102a4724 100644
 --- a/dist/unicast.js
 +++ b/dist/unicast.js
 @@ -1,8 +1,9 @@

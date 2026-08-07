@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy workspace manifests so bun install can use the root lock file.
 # patches/ must be present too: patchedDependencies in package.json applies
-# patches/@atproto-labs%2Ffetch-node@0.3.5.patch during bun install (#270).
+# patches/@atproto-labs%2Ffetch-node@0.3.7.patch during bun install (#270).
 # Every workspace member's manifest must be copied — bun install reads the
 # root workspaces array (client, server, html-to-image) and fails if any
 # listed workspace dir is missing its package.json (#314 added html-to-image).
