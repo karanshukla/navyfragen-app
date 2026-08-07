@@ -118,9 +118,10 @@
     },
   },
   "patchedDependencies": {
-    "@atproto-labs/fetch-node@0.3.5": "patches/@atproto-labs%2Ffetch-node@0.3.5.patch",
+    "@atproto-labs/fetch-node@0.3.7": "patches/@atproto-labs%2Ffetch-node@0.3.7.patch",
   },
   "overrides": {
+    "@atproto-labs/fetch-node": "0.3.7",
     "brace-expansion": ">=5.0.8",
     "esbuild": ">=0.28.1",
   },
@@ -135,7 +136,7 @@
 
     "@atproto-labs/fetch": ["@atproto-labs/fetch@0.3.4", "", { "dependencies": { "@atproto-labs/pipe": "^0.2.4" } }, "sha512-YxXwi8HMk2HHDd5rljPGqxZ8bSeU78sFNz511Y222D0FraEq98p2r1ifkIgI23KQOfy0k0VzafeJAiGDh1CvfQ=="],
 
-    "@atproto-labs/fetch-node": ["@atproto-labs/fetch-node@0.3.5", "", { "dependencies": { "@atproto-labs/fetch": "^0.3.4", "@atproto-labs/pipe": "^0.2.4", "ipaddr.js": "^2.1.0", "undici_v6": "npm:undici@^6.x", "undici_v7": "npm:undici@^7.x", "undici_v8": "npm:undici@^8.x" } }, "sha512-fVoniRexly08D5Htzmdd6bvS2Y1tFMWVAiZCUbFBRojm5QFfhzYVvZRwBUR9zL3+8Uh+bEikZ66MFvzbwhsx0g=="],
+    "@atproto-labs/fetch-node": ["@atproto-labs/fetch-node@0.3.7", "", { "dependencies": { "@atproto-labs/fetch": "^0.3.5", "@atproto-labs/pipe": "^0.2.4", "ipaddr.js": "^2.1.0", "undici_v6": "npm:undici@^6.x", "undici_v7": "npm:undici@^7.x", "undici_v8": "npm:undici@^8.x" } }, "sha512-WZvjXIeEHGeOPmeckyGiSGeoHhkvzwnKtSrRSxgnHakkNqlKNLmPbUIYOIiJgiYgBSOCbse5NpPLRu3Zdw2+gA=="],
 
     "@atproto-labs/handle-resolver": ["@atproto-labs/handle-resolver@0.4.6", "", { "dependencies": { "@atproto-labs/simple-store": "^0.4.4", "@atproto-labs/simple-store-memory": "^0.2.4", "@atproto/did": "^0.5.4", "zod": "^3.23.8" } }, "sha512-a3ZoQ0xpIowFuIhvjXwaloJwT3He6NJ02FfrKaRW0tdT2GvEH6nLaVHr46ps8A4ddCz+Q4oUha9atfr4O+0P2g=="],
 
@@ -1862,6 +1863,8 @@
     "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@atproto-labs/did-resolver/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@atproto-labs/fetch-node/@atproto-labs/fetch": ["@atproto-labs/fetch@0.3.5", "", { "dependencies": { "@atproto-labs/pipe": "^0.2.4" } }, "sha512-iDFZEoNqfL17EVKE+uNzdUD7YF8LWhEhxeBtP6x+PNuAxoXv3ip9vLmB8nNzNxFwVn++FipfDtSiPqmziv1bdA=="],
 
     "@atproto-labs/fetch-node/ipaddr.js": ["ipaddr.js@2.4.0", "", {}, "sha512-9VGk3HGanVE6JoZXHiCpnGy5X0jYDnN4EA4lntFPj+1vIWlFhIylq2CrrCOJH9EAhc5CYhq18F2Av2tgoAPsYQ=="],
 

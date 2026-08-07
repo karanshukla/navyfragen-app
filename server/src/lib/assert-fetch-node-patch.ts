@@ -2,7 +2,7 @@
 // reaches @atproto/oauth-client-node.
 //
 // Under Bun, @atproto-labs/fetch-node crashes at module load unless
-// patches/@atproto-labs%2Ffetch-node@0.3.5.patch is applied: undici 8's
+// patches/@atproto-labs%2Ffetch-node@0.3.7.patch is applied: undici 8's
 // CacheStorage constructor calls webidl.util.markAsUncloneable, which Bun does
 // not implement (nodejs/undici#5024). The failure therefore happens while the
 // import graph is still evaluating, which is why this front-runs that import
