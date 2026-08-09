@@ -34,7 +34,7 @@
     "happy-dom": "^20.11.1",
     "msw": "^2.15.0",
     "oxlint": "^1.77.0",
-    "postcss": "^8.5.25",
+    "postcss": "^8.5.26",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^7.0.2",
