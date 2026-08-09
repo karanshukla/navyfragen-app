@@ -9,7 +9,7 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.0",
+    "express-rate-limit": "^8.6.2",
     "puppeteer": "^25.3.0",
     "tmp": "^0.2.7"
   }
