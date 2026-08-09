@@ -35,3 +35,17 @@ updates:
     directory: "/anubis"
     schedule:
       interval: "weekly"
+
+  # Without this block opengraph-service raises Go security *alerts* but never
+  # opens update PRs, so every advisory needs a hand-written bump (see #348,
+  # cel-go GHSA). Indigo is excluded because it is SHA-pinned on purpose —
+  # hard constraint #8 in go.mod requires bumping it deliberately, and
+  # dependabot would otherwise churn it to a new pseudo-version every week.
+  - package-ecosystem: "gomod"
+    directory: "/opengraph-service"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "github.com/bluesky-social/indigo"
