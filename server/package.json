@@ -34,7 +34,7 @@
     "@atproto/sync": "^0.4.1",
     "@atproto/syntax": "^0.7.0",
     "@atproto/xrpc-server": "^0.12.1",
-    "@axiomhq/pino": "^1.8.0",
+    "@axiomhq/pino": "^2.0.0",
     "@hono/zod-validator": "^0.9.0",
     "@types/cryptr": "^4.0.3",
     "@types/web-push": "^3.6.4",
