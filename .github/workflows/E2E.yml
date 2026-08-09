@@ -9,6 +9,16 @@ on:
 permissions:
   contents: read
 
+# The suite drives one shared live Bluesky test account and mutates global state
+# on it (customise.spec flips touchpointLocale; inbox/profile-send-message write
+# and delete real messages), so two runs overlapping stomp each other. The group
+# is deliberately workflow-wide rather than per-ref: a PR run and a main run
+# collide just as badly as two main runs. cancel-in-progress stays false because
+# specs restore the state they mutate in teardown, and a cancelled run skips that.
+concurrency:
+  group: e2e-shared-test-account
+  cancel-in-progress: false
+
 jobs:
   e2e:
     name: Playwright E2E Tests
