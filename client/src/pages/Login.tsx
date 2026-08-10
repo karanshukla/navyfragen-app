@@ -20,10 +20,8 @@ import { useQuery } from "@tanstack/react-query";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useHaptic } from "use-haptic";
-// Namespace import, not `import { z }`: zod's entrypoint re-exports its own
-// namespace under the name `z`, and that one binding comes back undefined
-// through Vitest's module runner on Bun while every sibling export resolves.
-// See docs/testing-notes.md, "zod named exports through Vitest's module runner".
+// Namespace import, not `import { z }` — that one binding comes back undefined
+// through Vitest's module runner on Bun. See docs/testing-notes.md.
 import * as z from "zod";
 
 import { apiClient } from "../api/apiClient";
@@ -44,9 +42,8 @@ interface BlueskyActor {
   avatar?: string;
 }
 
-// Rendered only when VITE_E2E_TESTING=true is baked into the build.
-// Uses an AT Protocol app password to bypass the OAuth redirect, enabling
-// automated Playwright tests against a real account on a private PDS.
+// Bypasses the OAuth redirect with an app password so Playwright can drive a
+// real account on a private PDS. Only built when VITE_E2E_TESTING=true.
 function E2ELoginPanel() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -126,8 +123,6 @@ function E2ELoginPanel() {
     </Box>
   );
 }
-
-// ─── Suggestion box sub-components ───────────────────────────────────────────
 
 const ROW_H = 64;
 
@@ -271,8 +266,8 @@ function HandleSuggestionBox({
           onEscape={onEscape}
         />
       ) : noResults && isHandleReady ? (
-        // No Bluesky index results but handle looks complete — offer typed handle directly
-        // so users on unindexed third-party PDS instances can still proceed
+        // Nothing in the Bluesky index, but the handle looks complete — offer it
+        // directly so users on unindexed third-party PDSes can still proceed.
         <SuggestionRow
           actor={{ did: "", handle: cleanHandle }}
           onClick={() => onSelect({ did: "", handle: cleanHandle })}
@@ -296,14 +291,11 @@ function HandleSuggestionBox({
   );
 }
 
-// ─── Main login form ──────────────────────────────────────────────────────────
-
 function LoginForm() {
   const location = useLocation();
   const [handle, setHandle] = useState("");
   const [debouncedHandle] = useDebouncedValue(handle, 300);
-  // Tracks an actor the user explicitly picked (click or keyboard).
-  // Auto-selection is derived separately so no setState-in-effect is needed.
+  // Explicit picks only; auto-selection is derived, so no setState-in-effect.
   const [manualSelectedActor, setManualSelectedActor] = useState<BlueskyActor | null>(null);
   const [error, setError] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("error") === "oauth_failed"
@@ -322,8 +314,7 @@ function LoginForm() {
   const cleanHandle = handle.replace(/^@/, "").trim();
   const isHandleReady = cleanHandle.length >= 3 && cleanHandle.includes(".");
 
-  // Strip domain suffix before searching: "karan.bsky.social" → "karan"
-  // so typeahead prefix-matching works for both full handles and partial names.
+  // "karan.bsky.social" → "karan", so prefix matching works for full handles too.
   const dotIdx = debouncedQuery.indexOf(".");
   const searchQ = dotIdx > 1 ? debouncedQuery.slice(0, dotIdx) : debouncedQuery;
 
@@ -340,8 +331,8 @@ function LoginForm() {
     throwOnError: false,
   });
 
-  // True from the moment the user starts typing until debounce+fetch settle.
-  // Uses manualSelectedActor (not derived selectedActor) to avoid circular deps.
+  // Reads manualSelectedActor rather than the derived selectedActor: the latter
+  // depends on this value.
   const isSearchPending =
     !manualSelectedActor &&
     cleanHandle.length >= 2 &&
@@ -354,8 +345,7 @@ function LoginForm() {
     return [...actorSuggestions].sort((a, b) => rankActor(a, q, full) - rankActor(b, q, full));
   }, [actorSuggestions, cleanHandle, searchQ]);
 
-  // Derive selected actor: manual pick takes priority; if exactly one result is
-  // an exact handle match, auto-select it so Enter goes straight to Continue.
+  // A lone exact handle match auto-selects so Enter goes straight to Continue.
   const selectedActor = useMemo(() => {
     if (manualSelectedActor) return manualSelectedActor;
     if (
@@ -519,9 +509,8 @@ function LoginForm() {
   );
 }
 
-// Dispatches to E2ELoginPanel (VITE_E2E_TESTING=true builds) or the normal
-// OAuth form. The build-time constant means exactly one branch is ever reachable
-// at runtime, so there is no conditional-hook issue.
+// The build-time constant leaves exactly one branch reachable, so the hooks in
+// each panel are never conditional.
 export default function Login() {
   if (import.meta.env.VITE_E2E_TESTING === "true") {
     return <E2ELoginPanel />;

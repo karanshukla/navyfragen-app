@@ -3,15 +3,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiClient, ApiError } from "./apiClient";
 import { queryClient } from "./queryClient";
 
-// Types
 export interface UserSettings {
   did: string;
-  pdsSyncEnabled: number | boolean; // Server returns number (1/0), but we use as boolean
+  pdsSyncEnabled: number | boolean;
   imageTheme: string;
-  // Whether the inbox accepts new anonymous messages (1/0 from server, treated
-  // as boolean). When false, PublicProfile shows a closed-inbox state.
   inboxEnabled: number | boolean;
-  // Whether incoming messages are screened against a profanity wordlist (#58).
   profanityFilterEnabled: number | boolean;
   customPrompt: string | null; // Optional ask-card headline override; null = default
   profileCardTheme: string | null; // Optional ask-card colour preset; null = default
@@ -29,7 +25,6 @@ export interface PdsInfo {
   recordCount: number;
 }
 
-// Query keys
 export const settingsKeys = {
   all: ["settings"] as const,
   user: () => [...settingsKeys.all, "user"] as const,
@@ -37,45 +32,37 @@ export const settingsKeys = {
   pdsInfo: () => [...settingsKeys.all, "pds-info"] as const,
 };
 
-// API Services
 export const settingsService = {
-  // Get user settings
   getUserSettings: async (): Promise<UserSettings> => {
     return apiClient.get<UserSettings>("/settings");
   },
 
-  // Update user settings
   updateUserSettings: async (settings: Partial<UserSettings>): Promise<UserSettings> => {
     return apiClient.post<UserSettings, Partial<UserSettings>>("/settings", settings);
   },
 
-  // Get account stats (message count, member since)
   getStats: async (): Promise<UserStats> => {
     return apiClient.get<UserStats>("/stats");
   },
 
-  // Get PDS URL and navyfragen record count
   getPdsInfo: async (): Promise<PdsInfo> => {
     return apiClient.get<PdsInfo>("/pds-info");
   },
 };
 
-// React Query hooks
 export function useUserSettings() {
   return useQuery<UserSettings, ApiError>({
     queryKey: settingsKeys.user(),
     queryFn: () => settingsService.getUserSettings(),
     retry: (failureCount, error) => {
-      // Don't retry on 404 (not found) or 401/403 (authentication) errors
       if (error.status === 404 || error.status === 401 || error.status === 403) {
         return false;
       }
-      // Otherwise retry up to 3 times
       return failureCount < 3;
     },
     refetchOnWindowFocus: false,
-    // Mutations call invalidateQueries(settingsKeys.all) on every change,
-    // so background refetches between user actions add no value.
+    // Every mutation invalidates settingsKeys.all, so a background refetch
+    // between user actions would only duplicate work.
     staleTime: Infinity,
   });
 }
@@ -86,8 +73,7 @@ export function useUserStats() {
     queryFn: () => settingsService.getStats(),
     retry: false,
     refetchOnWindowFocus: false,
-    // Invalidated by message mutations (delete, respond, sync) and settings
-    // mutations via settingsKeys.all, so independent refetches are redundant.
+    // Invalidated by both message and settings mutations already.
     staleTime: Infinity,
   });
 }
@@ -98,7 +84,7 @@ export function usePdsInfo() {
     queryFn: () => settingsService.getPdsInfo(),
     retry: false,
     refetchOnWindowFocus: false,
-    // PDS URL is static per-user; invalidated by settings mutations.
+    // Static per user; settings mutations invalidate it.
     staleTime: Infinity,
   });
 }
@@ -110,7 +96,6 @@ export function useUpdateUserSettings(options?: {
   return useMutation({
     mutationFn: (settings: Partial<UserSettings>) => settingsService.updateUserSettings(settings),
     onSuccess: () => {
-      // Invalidate the settings query to refetch updated settings
       queryClient.invalidateQueries({ queryKey: settingsKeys.all });
       options?.onSuccess?.();
     },

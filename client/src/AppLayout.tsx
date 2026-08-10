@@ -46,7 +46,6 @@ export function AppLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Close the mobile navbar when the user clicks outside it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (

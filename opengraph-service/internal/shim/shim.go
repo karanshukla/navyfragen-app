@@ -89,8 +89,7 @@ func (e *CacheEntry) IsFresh(now time.Time, ttl time.Duration) bool {
 }
 
 // ParseTTL turns a string like "720h" into a Duration, falling back to the
-// default on any parse error. The default (~1 month) is the staleness
-// tradeoff the issue accepts.
+// default (~1 month) on any parse error.
 func ParseTTL(s string, fallback time.Duration) time.Duration {
 	if s == "" {
 		return fallback
@@ -101,8 +100,6 @@ func ParseTTL(s string, fallback time.Duration) time.Duration {
 	}
 	return d
 }
-
-// --- OG composite template ---
 
 // Brand gradient per CLAUDE.md design tokens (--nf-grad-dark — reserved for
 // image-export/OG preview surfaces, not live UI). Matches the "default" theme
@@ -140,8 +137,7 @@ type OGInput struct {
 	Prompt      string // empty → default prompt
 }
 
-// DefaultPrompt is used when no per-user prompt is wired in yet (issue #199
-// is the followup that supplies a custom prompt).
+// DefaultPrompt applies until per-user prompts are wired in (#199).
 const DefaultPrompt = "Ask me anything anonymously on Navyfragen"
 
 // BuildOGTemplate renders an OG-sized (1200x630) HTML page: banner (or brand

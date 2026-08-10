@@ -20,6 +20,22 @@ export interface Message {
   recipient: string;
 }
 
+interface SyncOutcome {
+  count: number;
+  errors: { tid: string; error: string }[];
+}
+
+const EXAMPLE_QUESTIONS = [
+  "Do you like cats?",
+  "Do you like dogs?",
+  "What's your favorite movie?",
+  "If you could travel anywhere, where would you go?",
+  "What's something most people don't know about you?",
+  "What's the best piece of advice you've ever received?",
+  "What are you currently obsessed with?",
+  "What's your hot take on something totally mundane?",
+];
+
 export class MessageService {
   constructor(
     private db: Database,
@@ -28,72 +44,63 @@ export class MessageService {
   ) {}
   /* v8 ignore stop */
 
-  /**
-   * Get all messages for a user
-   * @param recipient The recipient's DID
-   * @returns Array of messages
-   */
+  private async userProfileExists(did: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("user_profile")
+      .select("did")
+      .where("did", "=", did)
+      .executeTakeFirst();
+    return Boolean(row);
+  }
+
+  private async readInboxMessages(recipient: string): Promise<Message[]> {
+    return await this.db
+      .selectFrom("message")
+      .selectAll()
+      .where("recipient", "=", recipient)
+      .orderBy("createdAt desc")
+      .execute();
+  }
+
+  private async insertMessagesIgnoringDuplicates(messages: Message[]): Promise<void> {
+    await this.db
+      .insertInto("message")
+      .values(messages)
+      .onConflict((oc) => oc.column("tid").doNothing())
+      .execute();
+  }
+
+  private async readIntakeSettings(recipient: string) {
+    return await this.db
+      .selectFrom("user_settings")
+      .select(["inboxEnabled", "profanityFilterEnabled"])
+      .where("did", "=", recipient)
+      .executeTakeFirst();
+  }
+
   async getMessages(recipient: string): Promise<Message[]> {
     try {
-      // Check if recipient exists in user_profile table
-      const userProfileExists = await this.db
-        .selectFrom("user_profile")
-        .select("did")
-        .where("did", "=", recipient)
-        .executeTakeFirst();
-
-      if (!userProfileExists) {
+      if (!(await this.userProfileExists(recipient))) {
         throw new Error("User profile does not exist");
       }
-
-      const messages = await this.db
-        .selectFrom("message")
-        .selectAll()
-        .where("recipient", "=", recipient)
-        .orderBy("createdAt desc")
-        .execute();
-
-      return messages;
+      return await this.readInboxMessages(recipient);
     } catch (err) {
       this.logger.error({ err, recipient }, "Failed to fetch messages");
       throw new Error("Failed to fetch messages", { cause: err });
     }
   }
 
-  /**
-   * Add example messages for a user
-   * @param recipient The recipient's DID
-   * @returns Array of all messages for the user including the examples
-   */
   async addExampleMessages(recipient: string): Promise<Message[]> {
     try {
       const now = new Date();
-      const exampleTexts = [
-        "Do you like cats?",
-        "Do you like dogs?",
-        "What's your favorite movie?",
-        "If you could travel anywhere, where would you go?",
-        "What's something most people don't know about you?",
-        "What's the best piece of advice you've ever received?",
-        "What are you currently obsessed with?",
-        "What's your hot take on something totally mundane?",
-      ];
-      const messages = exampleTexts.map((message, i) => ({
+      const examples = EXAMPLE_QUESTIONS.map((message, i) => ({
         tid: `example-${i + 1}-${Date.now()}`,
         message,
         createdAt: new Date(now.getTime() + i * 1000).toISOString(),
         recipient,
       }));
 
-      // Single batched insert (one round-trip) rather than one per example row.
-      // The earlier loop issued N inserts; the rows are independent and the
-      // `tid` PK conflict target is per-row, so a single multi-row statement
-      // with the same onConflict is equivalent.
-      await this.db
-        .insertInto("message")
-        .values(messages)
-        .onConflict((oc) => oc.column("tid").doNothing())
-        .execute();
+      await this.insertMessagesIgnoringDuplicates(examples);
 
       return await this.getMessages(recipient);
     } catch (err) {
@@ -102,65 +109,27 @@ export class MessageService {
     }
   }
 
-  /**
-   * Send an anonymous message to a user
-   * @param recipient The recipient's DID
-   * @param message The message content
-   * @returns Success status
-   */
   async sendMessage(recipient: string, message: string): Promise<{ success: boolean }> {
     try {
-      // Check if recipient exists in user_profile table
-      const userProfileExists = await this.db
-        .selectFrom("user_profile")
-        .select("did")
-        .where("did", "=", recipient)
-        .executeTakeFirst();
-
-      if (!userProfileExists) {
+      if (!(await this.userProfileExists(recipient))) {
         throw new Error("Recipient not found (user profile does not exist)");
       }
 
-      // Read the recipient's intake settings in one indexed point-read:
-      // - inboxEnabled (NOT NULL default true) — a closed inbox rejects sends.
-      // - profanityFilterEnabled (NOT NULL default false) — opt-in wordlist
-      //   screening. Defaults apply when a user_settings row is absent.
-      const recipientSettings = await this.db
-        .selectFrom("user_settings")
-        .select(["inboxEnabled", "profanityFilterEnabled"])
-        .where("did", "=", recipient)
-        .executeTakeFirst();
+      const intakeSettings = await this.readIntakeSettings(recipient);
 
-      if (recipientSettings && !recipientSettings.inboxEnabled) {
+      if (intakeSettings && !intakeSettings.inboxEnabled) {
         throw new Error("This inbox is closed and not accepting new messages");
       }
 
-      // Profanity screening (#58): when the recipient has opted in, a flagged
-      // message is silently dropped — the sender still gets a success response
-      // (so there's no "your message was rejected" UX to game), but the message
-      // is never inserted into the recipient's inbox.
-      if (recipientSettings?.profanityFilterEnabled && containsProfanity(message)) {
-        this.logger.info({ recipient }, "Message silently dropped (profanity filter)");
-        return { success: true };
+      if (intakeSettings?.profanityFilterEnabled && containsProfanity(message)) {
+        return this.dropWithoutTellingSender(recipient);
       }
 
       const tid = `anon-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-      const msg = {
-        tid,
-        message,
-        createdAt: new Date().toISOString(),
-        recipient,
-      };
+      await this.insertMessagesIgnoringDuplicates([
+        { tid, message, createdAt: new Date().toISOString(), recipient },
+      ]);
 
-      await this.db
-        .insertInto("message")
-        .values(msg)
-        .onConflict((oc) => oc.column("tid").doNothing())
-        .execute();
-
-      // Per-send success is on the hot path of every message send. Demoted to
-      // debug so the info-level transport (Axiom/file) drops it; the
-      // debug log is still there for local tracing when needed (#319).
       this.logger.debug({ recipient, tid }, "Message saved to DB");
       return { success: true };
     } catch (err) {
@@ -172,18 +141,17 @@ export class MessageService {
   }
 
   /**
-   * Delete a message
-   * @param tid The message TID
-   * @param userDid The user's DID
-   * @param agent The ATP agent
-   * @returns Success status
-   */ async deleteMessage(
-    tid: string,
-    userDid: string,
-    agent: Agent
-  ): Promise<{ success: boolean }> {
+   * @see [message-service.test.ts](../tests/message-service.test.ts) — pins that
+   * a flagged message still answers success and is never inserted, so a sender
+   * cannot probe the filter.
+   */
+  private dropWithoutTellingSender(recipient: string): { success: boolean } {
+    this.logger.info({ recipient }, "Message silently dropped (profanity filter)");
+    return { success: true };
+  }
+
+  async deleteMessage(tid: string, userDid: string, agent: Agent): Promise<{ success: boolean }> {
     try {
-      // Find the message and check ownership
       const message = await this.db
         .selectFrom("message")
         .selectAll()
@@ -199,18 +167,7 @@ export class MessageService {
       }
 
       await this.db.deleteFrom("message").where("tid", "=", tid).execute();
-
-      // Fire-and-forget PDS deletion — DB is authoritative, so the message is
-      // already gone from the user's inbox. PDS cleanup is best-effort.
-      agent.com.atproto.repo
-        .deleteRecord({
-          repo: userDid,
-          collection: ids.AppNavyfragenMessage,
-          rkey: tid,
-        })
-        .catch((err) => {
-          this.logger.error({ err, tid }, "Background PDS delete failed");
-        });
+      this.deletePdsRecordInBackground(tid, userDid, agent);
 
       return { success: true };
     } catch (err) {
@@ -219,6 +176,92 @@ export class MessageService {
         cause: err,
       });
     }
+  }
+
+  private deletePdsRecordInBackground(tid: string, userDid: string, agent: Agent): void {
+    agent.com.atproto.repo
+      .deleteRecord({
+        repo: userDid,
+        collection: ids.AppNavyfragenMessage,
+        rkey: tid,
+      })
+      .catch((err) => {
+        this.logger.error({ err, tid }, "Background PDS delete failed");
+      });
+  }
+
+  private async toRichTextFields(text: string, agent: Agent) {
+    const rt = new RichText({ text });
+    await rt.detectFacets(agent);
+    return { text: rt.text, facets: rt.facets || [] };
+  }
+
+  private async resolveReplyReference(
+    replyTo: { uri: string },
+    agent: Agent
+  ): Promise<AppBskyFeedPost.Record["reply"]> {
+    const uriParts = replyTo.uri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
+    if (!uriParts) throw new Error("Invalid parent post URI");
+    const [, repo, collection, rkey] = uriParts;
+    const parentRecord = await agent.com.atproto.repo.getRecord({ repo, collection, rkey });
+    if (!parentRecord.data.cid) throw new Error("Could not resolve CID for parent post");
+    return {
+      root: { uri: replyTo.uri, cid: parentRecord.data.cid },
+      parent: { uri: replyTo.uri, cid: parentRecord.data.cid },
+    };
+  }
+
+  private async readImageTheme(did: string): Promise<string> {
+    const userSettings = await this.db
+      .selectFrom("user_settings")
+      .selectAll()
+      .where("did", "=", did)
+      .executeTakeFirst();
+    return userSettings?.imageTheme ?? "default";
+  }
+
+  private async buildQuestionImageEmbed(
+    question: string,
+    did: string,
+    handle: string | undefined,
+    agent: Agent
+  ): Promise<AppBskyFeedPost.Record["embed"]> {
+    const theme = await this.readImageTheme(did);
+    const { imageBlob, imageAltText, width, height } = await imageGenerator.generateQuestionImage(
+      question,
+      this.logger,
+      handle,
+      theme
+    );
+
+    if (!imageBlob) {
+      throw new Error(
+        "Image generation failed — the image service may still be starting up. Please try again in a moment."
+      );
+    }
+
+    const uploadedImage = await agent.uploadBlob(imageBlob, { encoding: "image/png" });
+    const imageEmbed: AppBskyEmbedImages.Image = {
+      image: uploadedImage.data.blob,
+      alt: imageAltText || "Image of the anonymous question",
+    };
+    if (width && height) {
+      imageEmbed.aspectRatio = { width, height };
+    }
+    return { $type: "app.bsky.embed.images", images: [imageEmbed] };
+  }
+
+  private async resolveBskyWebUrl(postUri: string, agent: Agent): Promise<string | undefined> {
+    const match = postUri.match(/^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/);
+    if (!match) return undefined;
+
+    const [, authorDid, rkey] = match;
+    const profileHandle = await agent.app.bsky.actor
+      .getProfile({ actor: authorDid })
+      .then((res) => res?.data?.handle)
+      .catch(() => undefined);
+
+    return `https://bsky.app/profile/${profileHandle || authorDid}/post/${encodeURIComponent(rkey)}`;
   }
 
   async respondToMessage(
@@ -233,98 +276,33 @@ export class MessageService {
   ): Promise<{ success: boolean; uri: string; cid: string; link?: string }> {
     try {
       const handle = await this.resolver.resolveDidToHandle(did);
-      const rt = new RichText({ text: response });
-      await rt.detectFacets(agent);
 
       const postRecord: Partial<AppBskyFeedPost.Record> = {
-        text: rt.text,
-        facets: rt.facets || [],
+        ...(await this.toRichTextFields(response, agent)),
         createdAt: new Date().toISOString(),
       };
 
       if (replyTo) {
-        const uriParts = replyTo.uri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
-        if (!uriParts) throw new Error("Invalid parent post URI");
-        const [, repo, collection, rkey] = uriParts;
-        const parentRecord = await agent.com.atproto.repo.getRecord({ repo, collection, rkey });
-        if (!parentRecord.data.cid) throw new Error("Could not resolve CID for parent post");
-        postRecord.reply = {
-          root: { uri: replyTo.uri, cid: parentRecord.data.cid },
-          parent: { uri: replyTo.uri, cid: parentRecord.data.cid },
-        };
+        postRecord.reply = await this.resolveReplyReference(replyTo, agent);
       }
 
       if (includeQuestionAsImage) {
-        const userSettings = await this.db
-          .selectFrom("user_settings")
-          .selectAll()
-          .where("did", "=", did)
-          .executeTakeFirst();
-
-        const imageTheme = userSettings?.imageTheme ?? "default";
-
-        const { imageBlob, imageAltText, width, height } =
-          await imageGenerator.generateQuestionImage(original, this.logger, handle, imageTheme);
-
-        if (!imageBlob) {
-          throw new Error(
-            "Image generation failed — the image service may still be starting up. Please try again in a moment."
-          );
-        }
-
-        const uploadedImage = await agent.uploadBlob(imageBlob, {
-          encoding: "image/png",
-        });
-        const imageEmbed: AppBskyEmbedImages.Image = {
-          image: uploadedImage.data.blob,
-          alt: imageAltText || "Image of the anonymous question",
-        };
-        if (width && height) {
-          imageEmbed.aspectRatio = { width, height };
-        }
-        postRecord.embed = {
-          $type: "app.bsky.embed.images",
-          images: [imageEmbed],
-        };
+        postRecord.embed = await this.buildQuestionImageEmbed(original, did, handle, agent);
       } else {
-        const combinedText = `${response}\n\nAnon asked via 🔷💬📩: "${original}"`;
-        const richTextWithQuestion = new RichText({ text: combinedText });
-        await richTextWithQuestion.detectFacets(agent);
-        postRecord.text = richTextWithQuestion.text;
-        postRecord.facets = richTextWithQuestion.facets || [];
+        Object.assign(
+          postRecord,
+          await this.toRichTextFields(`${response}\n\nAnon asked via 🔷💬📩: "${original}"`, agent)
+        );
       }
 
       const postRes = await agent.post(postRecord);
-      // One info log per reply is on the per-reply hot path; demoted to debug so
-      // the info-level transport drops it. Errors still surface via the catch
-      // block below at error level (#319).
       this.logger.debug({ tid, did, uri: postRes.uri }, "Response posted to Bluesky");
-      let webUrl = null;
-      let profileName = null;
-      const match = postRes.uri.match(/^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/);
 
-      if (match) {
-        const did = match[1];
-        const rkey = match[2];
-        try {
-          const profileRes = await agent.app.bsky.actor.getProfile({
-            actor: did,
-          });
-          if (profileRes?.data?.handle) {
-            profileName = profileRes.data.handle;
-            webUrl = `https://bsky.app/profile/${profileName}/post/${encodeURIComponent(rkey)}`;
-          } else {
-            webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
-          }
-        } catch {
-          webUrl = `https://bsky.app/profile/${did}/post/${encodeURIComponent(rkey)}`;
-        }
-      }
       return {
         success: true,
         uri: postRes.uri,
         cid: postRes.cid,
-        link: webUrl || undefined,
+        link: await this.resolveBskyWebUrl(postRes.uri, agent),
       };
     } catch (err) {
       this.logger.error({ err, tid, did }, "Error while trying to post response to Bluesky");
@@ -334,54 +312,142 @@ export class MessageService {
     }
   }
 
-  async deleteUserData(userDid: string, agent: Agent): Promise<{ success: boolean }> {
+  private async deleteAllPdsMessages(userDid: string, agent: Agent): Promise<void> {
     try {
-      // Delete from PDS
-      try {
-        // Message IDs
-        const rkeys = await this.db
-          .selectFrom("message")
-          .select(["tid"])
-          .where("recipient", "=", userDid)
-          .execute();
+      const rkeys = await this.db
+        .selectFrom("message")
+        .select(["tid"])
+        .where("recipient", "=", userDid)
+        .execute();
 
-        if (rkeys.length === 0) {
-          this.logger.info({ did: userDid }, "No messages found for deletion in PDS");
-        }
+      if (rkeys.length === 0) {
+        this.logger.info({ did: userDid }, "No messages found for deletion in PDS");
+      }
 
-        for (const rkey of rkeys) {
-          await agent.com.atproto.repo.deleteRecord({
-            repo: userDid,
-            collection: ids.AppNavyfragenMessage,
-            rkey: rkey.tid, // Use the TID as the rkey
-          });
-        }
-
-        this.logger.info({ did: userDid }, "Successfully deleted all messages from PDS");
-      } catch (err) {
-        this.logger.error({ error: err, did: userDid }, "Failed to delete messages from PDS");
-        throw new Error("Failed to delete messages from PDS, but data deleted in the DB", {
-          cause: err,
+      for (const rkey of rkeys) {
+        await agent.com.atproto.repo.deleteRecord({
+          repo: userDid,
+          collection: ids.AppNavyfragenMessage,
+          rkey: rkey.tid,
         });
       }
 
-      // Delete all messages, user profile, and user settings for this DID in a
-      // single transaction. Without it, a failure mid-sequence (e.g. the
-      // user_settings delete throwing) left a half-deleted user: no messages
-      // but a still-present profile/settings row. The PDS deleteRecord loop
-      // above stays outside the transaction — network calls must not hold a DB
-      // connection, and the rkeys SELECT that feeds it has already run.
-      await this.db.transaction().execute(async (trx) => {
-        await trx.deleteFrom("message").where("recipient", "=", userDid).execute();
-        await trx.deleteFrom("user_profile").where("did", "=", userDid).execute();
-        await trx.deleteFrom("user_settings").where("did", "=", userDid).execute();
+      this.logger.info({ did: userDid }, "Successfully deleted all messages from PDS");
+    } catch (err) {
+      this.logger.error({ error: err, did: userDid }, "Failed to delete messages from PDS");
+      throw new Error("Failed to delete messages from PDS, but data deleted in the DB", {
+        cause: err,
       });
+    }
+  }
+
+  private async deleteAllUserRowsAtomically(userDid: string): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await trx.deleteFrom("message").where("recipient", "=", userDid).execute();
+      await trx.deleteFrom("user_profile").where("did", "=", userDid).execute();
+      await trx.deleteFrom("user_settings").where("did", "=", userDid).execute();
+    });
+  }
+
+  async deleteUserData(userDid: string, agent: Agent): Promise<{ success: boolean }> {
+    try {
+      // PDS deletion runs before (and outside) the transaction so network calls
+      // never hold a DB connection open.
+      await this.deleteAllPdsMessages(userDid, agent);
+      await this.deleteAllUserRowsAtomically(userDid);
 
       return { success: true };
     } catch (err) {
       this.logger.error({ err, did: userDid }, "Failed to delete user data");
       throw new Error("Failed to delete user data", { cause: err });
     }
+  }
+
+  private async listAllPdsMessages(
+    userDid: string,
+    agent: Agent
+  ): Promise<{ rkey: string; value: MessageSchemaRecord }[]> {
+    const pdsRecords: { rkey: string; value: MessageSchemaRecord }[] = [];
+    let cursor: string | undefined;
+    do {
+      const res = await agent.com.atproto.repo.listRecords({
+        repo: userDid,
+        collection: ids.AppNavyfragenMessage,
+        limit: 100,
+        cursor,
+      });
+      if (!res.success) break;
+      for (const r of res.data.records) {
+        const rkey = r.uri.split("/").pop()!;
+        pdsRecords.push({ rkey, value: r.value as MessageSchemaRecord });
+      }
+      cursor = res.data.cursor;
+    } while (cursor);
+    return pdsRecords;
+  }
+
+  private async pushMissingToPds(
+    localMessages: Message[],
+    pdsRecords: { rkey: string }[],
+    agent: Agent
+  ): Promise<SyncOutcome> {
+    const pdsRkeys = new Set(pdsRecords.map((r) => r.rkey));
+    const outcome: SyncOutcome = { count: 0, errors: [] };
+
+    for (const dbMessage of localMessages) {
+      if (pdsRkeys.has(dbMessage.tid)) continue;
+
+      try {
+        await agent.com.atproto.repo.createRecord({
+          repo: agent.assertDid,
+          collection: ids.AppNavyfragenMessage,
+          rkey: dbMessage.tid,
+          record: {
+            $type: ids.AppNavyfragenMessage,
+            createdAt: dbMessage.createdAt,
+            message: dbMessage.message,
+            recipient: dbMessage.recipient,
+          } satisfies MessageSchemaRecord,
+        });
+        outcome.count++;
+      } catch (err: unknown) {
+        outcome.errors.push({
+          tid: dbMessage.tid,
+          error: errorMessage(err) || "Unknown error during PDS record creation",
+        });
+      }
+    }
+    return outcome;
+  }
+
+  private async importMissingFromPds(
+    pdsRecords: { rkey: string; value: MessageSchemaRecord }[],
+    localMessages: Message[]
+  ): Promise<SyncOutcome> {
+    const localTids = new Set(localMessages.map((m) => m.tid));
+    const outcome: SyncOutcome = { count: 0, errors: [] };
+
+    for (const pdsRecord of pdsRecords) {
+      if (localTids.has(pdsRecord.rkey)) continue;
+
+      try {
+        await this.insertMessagesIgnoringDuplicates([
+          {
+            tid: pdsRecord.rkey,
+            message: pdsRecord.value.message,
+            createdAt: pdsRecord.value.createdAt,
+            recipient: pdsRecord.value.recipient,
+          },
+        ]);
+        outcome.count++;
+      } catch (err: unknown) {
+        outcome.errors.push({
+          tid: pdsRecord.rkey,
+          error: errorMessage(err) || "Unknown error during DB import",
+        });
+      }
+    }
+    return outcome;
   }
 
   async syncMessages(
@@ -396,92 +462,16 @@ export class MessageService {
     errors?: { tid: string; error: string }[];
   }> {
     try {
-      // Fetch all existing PDS records first to avoid redundant pushes and enable pull
-      const pdsRecords: { rkey: string; value: MessageSchemaRecord }[] = [];
-      let cursor: string | undefined;
-      do {
-        const res = await agent.com.atproto.repo.listRecords({
-          repo: userDid,
-          collection: ids.AppNavyfragenMessage,
-          limit: 100,
-          cursor,
-        });
-        if (!res.success) break;
-        for (const r of res.data.records) {
-          const rkey = r.uri.split("/").pop()!;
-          pdsRecords.push({ rkey, value: r.value as MessageSchemaRecord });
-        }
-        cursor = res.data.cursor;
-      } while (cursor);
+      const pdsRecords = await this.listAllPdsMessages(userDid, agent);
+      const localMessages = await this.readInboxMessages(userDid);
 
-      const pdsRkeys = new Set(pdsRecords.map((r) => r.rkey));
+      const pushOutcome = await this.pushMissingToPds(localMessages, pdsRecords, agent);
+      const importOutcome = await this.importMissingFromPds(pdsRecords, localMessages);
 
-      // Fetch local DB messages for the user
-      const localMessages = await this.db
-        .selectFrom("message")
-        .selectAll()
-        .where("recipient", "=", userDid)
-        .execute();
-
-      const localTids = new Set(localMessages.map((m) => m.tid));
-
-      let syncedCount = 0;
-      let importedCount = 0;
-      let errorCount = 0;
-      const syncErrors: { tid: string; error: string }[] = [];
-
-      // Phase 1: Push DB messages that are missing from PDS (DB → PDS)
-      for (const dbMessage of localMessages) {
-        if (pdsRkeys.has(dbMessage.tid)) continue;
-
-        const recordToCreate: MessageSchemaRecord = {
-          $type: ids.AppNavyfragenMessage,
-          createdAt: dbMessage.createdAt,
-          message: dbMessage.message,
-          recipient: dbMessage.recipient,
-        };
-
-        try {
-          await agent.com.atproto.repo.createRecord({
-            repo: agent.assertDid,
-            collection: ids.AppNavyfragenMessage,
-            rkey: dbMessage.tid,
-            record: recordToCreate,
-          });
-          syncedCount++;
-        } catch (err: unknown) {
-          errorCount++;
-          syncErrors.push({
-            tid: dbMessage.tid,
-            error: errorMessage(err) || "Unknown error during PDS record creation",
-          });
-        }
-      }
-
-      // Phase 2: Import PDS records missing from DB (PDS → DB)
-      for (const pdsRecord of pdsRecords) {
-        if (localTids.has(pdsRecord.rkey)) continue;
-
-        try {
-          await this.db
-            .insertInto("message")
-            .values({
-              tid: pdsRecord.rkey,
-              message: pdsRecord.value.message,
-              createdAt: pdsRecord.value.createdAt,
-              recipient: pdsRecord.value.recipient,
-            })
-            .onConflict((oc) => oc.column("tid").doNothing())
-            .execute();
-          importedCount++;
-        } catch (err: unknown) {
-          errorCount++;
-          syncErrors.push({
-            tid: pdsRecord.rkey,
-            error: errorMessage(err) || "Unknown error during DB import",
-          });
-        }
-      }
+      const syncedCount = pushOutcome.count;
+      const importedCount = importOutcome.count;
+      const syncErrors = [...pushOutcome.errors, ...importOutcome.errors];
+      const errorCount = syncErrors.length;
 
       this.logger.info(
         { did: userDid, syncedCount, importedCount, errorCount },

@@ -13,24 +13,11 @@ import (
 	"time"
 )
 
-// Handler integration tests: exercise the real HTTP wiring (classify → proxy /
-// generate → cache serve) end-to-end against a Handler constructed exactly as
-// main.go constructs it, with the external dependencies (indigo, html-to-image)
-// replaced by the FakeFetcher/FakeRenderer stubs. This is the committed
-// automation that replaces the poc's 12 manual curl runs (reexamine gap 1) — it
-// runs hermetically in CI with no real network and no Docker compose.
-//
-// What is real here:
-//   - The full ServeHTTP router (healthz / og-cache / classify-or-proxy).
-//   - The real httputil.ReverseProxy in front of a real httptest upstream that
-//     stands in for the client SPA.
-//   - The real Generator (singleflight, cache-keyed-by-DID, render→store).
-//   - The real FileCache on a real tempdir (the volume).
-//   - The real BuildOGResponse (og:image, absolute URL, escaping).
-//
-// What is stubbed: ProfileFetcher (indigo) and ImageRenderer (html-to-image) —
-// the two network egress points. The seams (interfaces in fetcher.go /
-// renderer.go) are exactly what the poc/implement established.
+// End-to-end tests over the real HTTP wiring: the ServeHTTP router, the proxy
+// in front of a real httptest upstream standing in for the client SPA, the real
+// Generator, a real FileCache on a tempdir, and the real BuildOGResponse. Only
+// the two network egress points are stubbed — ProfileFetcher (indigo) and
+// ImageRenderer (html-to-image).
 
 // newIntegrationHandler builds a Handler exactly like main.go but with the
 // fetcher/renderer stubbed. The upstream is a real httptest server standing in
@@ -89,8 +76,6 @@ func do(t *testing.T, h *Handler, ua, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// --- UA detection on the full HTTP path (AC3 / AC8 trigger) ---
-
 // Cardyb on /profile/:handle MUST trigger generation: the response is the
 // synthesized OG HTML, not the upstream SPA, and its og:image points at the
 // shim's cache path for the resolved DID.
@@ -140,7 +125,7 @@ func TestHandler_CardybOnProfile_GeneratesOGResponse(t *testing.T) {
 
 // Ordinary browser UA on /profile/:handle MUST pass through to the upstream
 // unchanged — the acceptance criterion that ordinary /* traffic is unaffected
-// (AC3 / hard constraint #3).
+// unaffected.
 func TestHandler_BrowserOnProfile_ProxiesToUpstream(t *testing.T) {
 	fetcher, renderer := defaultStubs()
 	h, _, _ := newIntegrationHandler(t, fetcher, renderer)
@@ -169,7 +154,7 @@ func TestHandler_BrowserOnProfile_ProxiesToUpstream(t *testing.T) {
 }
 
 // Cardyb on a non-profile route MUST pass through — generation is gated on BOTH
-// the UA and the path (AC3).
+// the UA and the path.
 func TestHandler_CardybOnRoot_ProxiesToUpstream(t *testing.T) {
 	fetcher, renderer := defaultStubs()
 	h, _, _ := newIntegrationHandler(t, fetcher, renderer)
@@ -209,10 +194,8 @@ func TestHandler_ApiPath_ProxiesNotGenerates(t *testing.T) {
 	}
 }
 
-// --- Cache hit/miss/expiry on the full request path (AC5) ---
-
 // A second Cardyb request within TTL MUST be a cache hit: no indigo profile
-// read, no render. This is the committed proof of the reexamine's "repeat
+// read, no render. This is the proof of the "repeat
 // within TTL → cache hit" scenario.
 func TestHandler_RepeatWithinTTL_CacheHitSkipsFetchAndRender(t *testing.T) {
 	fetcher, renderer := defaultStubs()
@@ -248,7 +231,7 @@ func TestHandler_RepeatWithinTTL_CacheHitSkipsFetchAndRender(t *testing.T) {
 
 // After the cache entry expires, the next Cardyb request MUST regenerate:
 // FetchProfile + Render fire again. This is the committed proof of the
-// reexamine's "expire the entry → regeneration" scenario.
+// "expire the entry → regeneration" scenario.
 func TestHandler_ExpiredEntry_Regenerates(t *testing.T) {
 	// Short TTL so we can expire the entry by backdating mtime.
 	cache, err := NewFileCache(t.TempDir(), 100, time.Hour)
@@ -295,8 +278,6 @@ func TestHandler_ExpiredEntry_Regenerates(t *testing.T) {
 	}
 }
 
-// --- The full generation pipeline on the request path (AC8) ---
-
 // The synthesized og:image URL must be fetchable from the shim's own cache
 // route and return the bytes the renderer produced. This ties the generate
 // path to the cache-serve path — the crawler's two-step (fetch HTML, then fetch
@@ -335,7 +316,7 @@ func TestHandler_GeneratedImageURL_ServesCachedPNG(t *testing.T) {
 }
 
 // An unresolvable handle surfaces as a 404, and critically does NOT panic or
-// hang the handler (AC8 fallback + the hot-path-safety risk from the
+// hang the handler (the hot-path-safety risk from the
 // investigation).
 func TestHandler_UnresolvableHandle_Returns404AndDoesNotPanic(t *testing.T) {
 	fetcher, renderer := defaultStubs()
@@ -380,8 +361,6 @@ type sentinelErr struct{ msg string }
 
 func (e *sentinelErr) Error() string { return e.msg }
 
-// --- /og-cache path traversal defense on the real route ---
-
 func TestHandler_OgCacheTraversal_Returns404(t *testing.T) {
 	fetcher, renderer := defaultStubs()
 	h, _, _ := newIntegrationHandler(t, fetcher, renderer)
@@ -398,8 +377,6 @@ func TestHandler_OgCacheTraversal_Returns404(t *testing.T) {
 	}
 }
 
-// --- /healthz ---
-
 func TestHandler_Healthz(t *testing.T) {
 	fetcher, renderer := defaultStubs()
 	h, _, _ := newIntegrationHandler(t, fetcher, renderer)
@@ -415,8 +392,6 @@ func TestHandler_Healthz(t *testing.T) {
 		t.Fatalf("healthz body = %q, want {}", rec.Body.String())
 	}
 }
-
-// --- Concurrent-render cap (concern 3 fix) ---
 
 // TestHandler_GenerateCap_FailsFastWhenBusy pins the spoofed-Cardyb DoS guard:
 // when MaxConcurrentGenerate cold-path renders are already in flight, further
@@ -555,7 +530,6 @@ func (b *blockingFetcher) ResolveDID(ctx context.Context, handle string) (string
 // that don't care about the renderer's output.
 func NewFakeRenderer() *FakeRenderer { return &FakeRenderer{PNG: []byte("DEFAULT-PNG")} }
 
-// --- FRONTEND_URL scheme tolerance ---
 //
 // Railway private-network URLs are easy to paste without the http:// scheme
 // (e.g. "client.railway.internal:3000"). Without defaulting, the reverse
@@ -594,13 +568,9 @@ func TestNewHandler_BareHostnameDefaultsToHTTP(t *testing.T) {
 	}
 }
 
-// --- helper: set file times so a test can simulate TTL expiry. ---
-
 func chtimes(path string, atime, mtime time.Time) error {
 	return os.Chtimes(path, atime, mtime)
 }
-
-// --- NewHandler: url.Parse failure surfaces rather than being swallowed. ---
 
 func TestNewHandler_InvalidUpstreamURL_ReturnsError(t *testing.T) {
 	fetcher, renderer := defaultStubs()
@@ -617,8 +587,6 @@ func TestNewHandler_InvalidUpstreamURL_ReturnsError(t *testing.T) {
 		t.Fatal("expected an error for a malformed upstream URL")
 	}
 }
-
-// --- initSem: MaxConcurrentGenerate normalization. ---
 
 func TestHandler_InitSem_NegativeDisablesCap(t *testing.T) {
 	h := &Handler{MaxConcurrentGenerate: -1}
@@ -638,11 +606,6 @@ func TestHandler_InitSem_ZeroFallsBackToDefault(t *testing.T) {
 		t.Fatalf("genSem capacity = %d, want %d", cap(h.genSem), DefaultMaxConcurrentGenerate)
 	}
 }
-
-// --- handleGenerate: defensive guards unreachable through ServeHTTP's own
-// routing (Classify already guarantees these preconditions before dispatch),
-// but exercised directly the same way other unreachable-guard tests in this
-// repo call the internal method directly. ---
 
 func TestHandler_HandleGenerate_EmptyHandleIsNotFound(t *testing.T) {
 	fetcher, renderer := defaultStubs()

@@ -2,11 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "./apiClient";
 
-/**
- * Represents a user profile on the client-side.
- * This interface is based on the app.bsky.actor.getProfile lexicon.
- * @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile}
- */
+/** @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile} */
 export interface ProfileResponse {
   profile: {
     did?: string;
@@ -17,8 +13,6 @@ export interface ProfileResponse {
     banner?: string;
   } | null;
   exists: boolean;
-  // Public-facing settings subset — the profile owner's customisations shown
-  // to anonymous visitors. All default to "unset" when no user_settings row.
   inboxEnabled?: boolean; // true unless the owner explicitly closed their inbox
   customPrompt?: string | null; // ask-card headline override; null = default
   profileCardTheme?: string | null; // ask-card colour preset; null = default gradient
@@ -51,7 +45,6 @@ export interface BotFollowResponse {
   following: boolean;
 }
 
-// Query keys
 export const profileKeys = {
   all: ["profiles"] as const,
   exists: (did: string) => [...profileKeys.all, "exists", did] as const,
@@ -61,32 +54,25 @@ export const profileKeys = {
   botFollow: () => [...profileKeys.all, "bot-follow"] as const,
 };
 
-// API Services
 export const profileService = {
-  // Get follows who are on Navyfragen
   getFriends: (): Promise<FriendsResponse> => apiClient.get<FriendsResponse>("/friends"),
 
-  // Get public profile by DID
   getPublicProfile: (did: string): Promise<ProfileResponse> => {
     return apiClient.get<ProfileResponse>(`/public-profile/${encodeURIComponent(did)}`);
   },
 
-  // Check if user exists
   userExists: (did: string): Promise<UserExistsResponse> => {
     return apiClient.get<UserExistsResponse>(`/user-exists/${encodeURIComponent(did)}`);
   },
 
-  // Check if the logged-in user follows the notification bot
   checkBotFollow: (): Promise<BotFollowResponse> =>
     apiClient.get<BotFollowResponse>("/check-bot-follow"),
 
-  // Resolve handle to DID
   resolveHandle: (handle: string): Promise<ResolveHandleResponse> => {
     return apiClient.get<ResolveHandleResponse>(`/resolve-handle/${encodeURIComponent(handle)}`);
   },
 };
 
-// React Query hooks
 export function usePublicProfile(did: string | null) {
   return useQuery({
     queryKey: did ? profileKeys.detail(did) : profileKeys.all,
@@ -151,8 +137,7 @@ export function useFriends(did: string | null) {
     },
     enabled: !!did,
     staleTime: ONE_DAY,
-    // Read localStorage lazily — only when the query cache entry is first created,
-    // not on every render.
+    // Lazy: only when the cache entry is first created, not on every render.
     initialData: () => (did ? getCachedFriends(did)?.data : undefined) ?? undefined,
     // React Query only calls this when initialData returned a value, which
     // already implies `did` is set and the cache hit — so both the ternary's
@@ -171,9 +156,8 @@ export function useBotFollow(enabled: boolean) {
     queryKey: profileKeys.botFollow(),
     queryFn: () => profileService.checkBotFollow(),
     enabled,
-    // staleTime: 0 so the query is always stale — combined with the global
-    // refetchOnWindowFocus:true, this means returning from the Bluesky tab
-    // immediately triggers a background refetch to pick up the new follow.
+    // Always stale, so returning from the Bluesky tab refetches immediately
+    // (via the global refetchOnWindowFocus) and picks up a brand-new follow.
     staleTime: 0,
     retry: false,
   });

@@ -1,23 +1,13 @@
-// Bun.serve + Hono server entrypoint.
-//
-// Bun owns the socket (Bun.serve); Hono is the HTTP router. This replaced the
-// former Express + cors + cookie-session + express-rate-limit + express-validator
-// stack (#316). The middleware those packages provided is now native Hono
-// middleware: hono/cors, hono/cookie (signed, HMAC-SHA256), hono-rate-limiter,
-// and @hono/zod-validator. Route handlers live in src/hono/* and the business
-// logic stays in src/services/* (unchanged).
-//
-// Run with: bun run dev (or bun run start in production).
-
 // Must stay the first import: it front-runs the @atproto/oauth-client-node
 // import graph so an unpatched @atproto-labs/fetch-node fails with the actual
-// cause rather than an undici stack trace. See the module for why.
+// cause rather than an undici stack trace.
 import "#/lib/assert-fetch-node-patch";
 
 import dns from "node:dns";
 
 import { cors } from "hono/cors";
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import pino from "pino";
 
@@ -38,33 +28,33 @@ import type { IdResolver } from "@atproto/identity";
 import type { OAuthClient } from "@atproto/oauth-client-node";
 import type { BidirectionalResolver } from "./lib/id-resolver";
 
-// Node.js on Windows hangs on DNS TXT record lookups via the system resolver,
-// so point the built-in dns module at public nameservers before any resolver or
-// OAuth client is created. Windows-only: under Node this rebinds the dns.resolve*
-// family and leaves dns.lookup on getaddrinfo, but Bun routes dns.lookup through
-// the same server list, so applying it everywhere makes the runtime forget every
-// name the system resolver owns — container DNS included, which is how the
-// Postgres hostname stopped resolving under the Bun runtime image.
-if (process.platform === "win32") {
-  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
-}
-
 import { createClient } from "#/auth/client";
 import { env } from "#/lib/env";
 
+// Windows hangs on DNS TXT lookups via the system resolver. Strictly
+// Windows-only: Bun routes dns.lookup through this server list too, so applying
+// it everywhere makes the runtime forget every name the system resolver owns,
+// container DNS included (that is how the Postgres hostname stopped resolving).
+function redirectWindowsDnsToPublicResolvers(): void {
+  if (process.platform !== "win32") return;
+  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+}
+
+redirectWindowsDnsToPublicResolvers();
+
+// Defense-in-depth against a future logger call that logs a whole object:
+// these paths carry user-authored content and must never reach Axiom.
+const USER_CONTENT_REDACT_PATHS = [
+  "message",
+  "updates.message",
+  "updates.customPrompt",
+  "*.message",
+  "*.customPrompt",
+];
+
 function createLogger(): pino.Logger {
   const { AXIOM_TOKEN, AXIOM_DATASET } = env;
-  // Defense-in-depth: redact paths known to carry user-authored content so a
-  // future logger.info that logs a whole object can't leak PII to Axiom. The
-  // per-request hot-path logs have already been trimmed/demoted (#319); this
-  // catches anything that slips through. Paths use dot/bracket syntax (fast-redact).
-  const redact = [
-    "message", // message-service: logged objects sometimes carry the message text
-    "updates.message",
-    "updates.customPrompt",
-    "*.message",
-    "*.customPrompt",
-  ];
+  const redact = USER_CONTENT_REDACT_PATHS;
   if (!AXIOM_TOKEN || !AXIOM_DATASET) {
     return pino({ name: "navyfragen", redact });
   }
@@ -81,7 +71,6 @@ function createLogger(): pino.Logger {
   return pino({ name: "navyfragen", redact }, transport);
 }
 
-// Application state passed to the router and elsewhere
 export type AppContext = {
   db: Database;
   logger: pino.Logger;
@@ -89,6 +78,74 @@ export type AppContext = {
   resolver: BidirectionalResolver;
   idResolver: IdResolver;
 };
+
+function corsForClient(clientUrl: string) {
+  return cors({
+    origin: clientUrl,
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
+    maxAge: 600,
+  });
+}
+
+function perIpRateLimiter(limit: number) {
+  return rateLimiter({
+    windowMs: 60 * 1000,
+    limit,
+    standardHeaders: "draft-6",
+    message: "Too many requests, please try again later.",
+    // Caddy/Railway set x-forwarded-for. Local dev has no proxy hop, so every
+    // request shares the one "local" bucket — fine for a single-user machine.
+    keyGenerator: (c) => {
+      const xff = c.req.header("x-forwarded-for");
+      return xff ? xff.split(",")[0].trim() : "local";
+    },
+  });
+}
+
+const noStore: MiddlewareHandler = async (c, next) => {
+  await next();
+  c.header("Cache-Control", "no-store");
+};
+
+function mountDomainRoutes(app: Hono<{ Variables: SessionVars }>, ctx: AppContext): void {
+  app.route("/", createAuthHono(ctx));
+  app.route("/", createMessageHono(ctx));
+  app.route("/", createProfileHono(ctx));
+  app.route("/", createSettingsHono(ctx));
+  app.route("/", createNotificationHono(ctx));
+}
+
+function buildApp(
+  ctx: AppContext,
+  { clientUrl, rateLimitMax }: { clientUrl: string; rateLimitMax: number }
+): Hono<{ Variables: SessionVars }> {
+  const app = new Hono<{ Variables: SessionVars }>();
+
+  app.use("*", corsForClient(clientUrl));
+  if (rateLimitMax > 0) {
+    app.use("*", perIpRateLimiter(rateLimitMax));
+  }
+  app.use("*", sessionMiddleware);
+  app.use("*", noStore);
+
+  mountDomainRoutes(app, ctx);
+
+  app.notFound((c) =>
+    c.json(
+      { error: "Not Found", message: "The requested resource does not exist", status: 404 },
+      404
+    )
+  );
+
+  app.onError((err, c) => {
+    ctx.logger.error({ err }, "unhandled error in hono app");
+    return c.json({ error: "Internal Server Error" }, 500);
+  });
+
+  return app;
+}
 
 class Server {
   constructor(
@@ -99,8 +156,6 @@ class Server {
   static async create(): Promise<Server> {
     const { NODE_ENV, HOST, PORT, DB_PATH, CLIENT_URL, RATE_LIMIT_MAX } = env;
 
-    // Fail fast in production on a non-wildcard HOST before anything else runs
-    // (see lib/assert-production-bind-host.ts for why — #298).
     assertProductionBindHost();
     const logger = createLogger();
 
@@ -118,77 +173,8 @@ class Server {
       idResolver: baseIdResolver,
     };
 
-    // Hono app — the four concerns the old Express middleware chain provided,
-    // now native:
-    const app = new Hono<{ Variables: SessionVars }>();
+    const app = buildApp(ctx, { clientUrl: CLIENT_URL, rateLimitMax: RATE_LIMIT_MAX });
 
-    // 1. CORS — replaces the `cors` Express middleware. credentials:true so the
-    //    signed session cookie travels cross-origin to the client origin.
-    app.use(
-      "*",
-      cors({
-        origin: CLIENT_URL,
-        allowHeaders: ["Content-Type", "Authorization"],
-        allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        credentials: true,
-        maxAge: 600,
-      })
-    );
-
-    // 2. Per-IP rate limiting — replaces express-rate-limit. Honors the same
-    //    RATE_LIMIT_MAX=0 disable flag used by the e2e overlay. hono-rate-limiter
-    //    keys on x-forwarded-for when present (trust proxy), falling back to the
-    //    socket address.
-    if (RATE_LIMIT_MAX > 0) {
-      app.use(
-        "*",
-        rateLimiter({
-          windowMs: 60 * 1000,
-          limit: RATE_LIMIT_MAX,
-          standardHeaders: "draft-6",
-          message: "Too many requests, please try again later.",
-          // Trust the proxy hop (Caddy/Railway set x-forwarded-for). In local
-          // dev there's no proxy header, so all requests share one bucket —
-          // fine since local dev is single-user.
-          keyGenerator: (c) => {
-            const xff = c.req.header("x-forwarded-for");
-            return xff ? xff.split(",")[0].trim() : "local";
-          },
-        })
-      );
-    }
-
-    // 3. Signed-cookie session — replaces cookie-session. Populates c.var.session.
-    app.use("*", sessionMiddleware);
-
-    // No-store everywhere — matches the Express Cache-Control setter.
-    app.use("*", async (c, next) => {
-      await next();
-      c.header("Cache-Control", "no-store");
-    });
-
-    // 4. Routes. Each domain is a Hono sub-app with Zod validators.
-    app.route("/", createAuthHono(ctx));
-    app.route("/", createMessageHono(ctx));
-    app.route("/", createProfileHono(ctx));
-    app.route("/", createSettingsHono(ctx));
-    app.route("/", createNotificationHono(ctx));
-
-    // 404 — matches the Express catch-all shape.
-    app.notFound((c) =>
-      c.json(
-        { error: "Not Found", message: "The requested resource does not exist", status: 404 },
-        404
-      )
-    );
-
-    app.onError((err, c) => {
-      logger.error({ err }, "unhandled error in hono app");
-      return c.json({ error: "Internal Server Error" }, 500);
-    });
-
-    // Dual-stack bind — mirrors the old listenPreferringDualStack. Bun.serve
-    // binds `::` as dual-stack; fall back to 0.0.0.0 where IPv6 is unavailable.
     const { server, boundHost } = await serveDualStack(PORT, HOST, app.fetch, logger);
     logger.info(`Server (${NODE_ENV}) running on http://${boundHost}:${PORT}`);
 
@@ -197,8 +183,8 @@ class Server {
 
   async close(): Promise<void> {
     this.ctx.logger.info("sigint received, shutting down");
-    // Bun.serve.stop(true) waits for in-flight connections before closing.
-    this.server.stop(true);
+    const waitForInFlightRequests = true;
+    this.server.stop(waitForInFlightRequests);
     try {
       await this.ctx.db.destroy();
     } catch (err) {
@@ -209,11 +195,10 @@ class Server {
 }
 
 /**
- * Binds a wildcard HOST as "::" so one dual-stack listener serves IPv4 and IPv6,
- * because Railway's private network — the only way Caddy reaches this service —
- * is IPv6-only. Falls back to "0.0.0.0" where the network has no IPv6 at all
- * (every Docker bridge network in CI and local compose). A non-wildcard HOST is
- * bound verbatim so `HOST=127.0.0.1` still means loopback.
+ * Binds a wildcard HOST as "::" so one dual-stack listener serves both families,
+ * because Railway's private network — the only route Caddy has to this service —
+ * is IPv6-only. Falls back to "0.0.0.0" on networks with no IPv6 at all (every
+ * Docker bridge network in CI and local compose).
  */
 async function serveDualStack(
   port: number,
@@ -224,9 +209,6 @@ async function serveDualStack(
   const wildcard = WILDCARD_HOSTS.has(host);
   const tryHost = wildcard ? "::" : host;
   try {
-    // Bun.serve resolves the bind synchronously — it throws if the port/host is
-    // unavailable. The returned Server exposes .hostname/.port/.url for the
-    // address actually bound (which is what we log).
     const server = Bun.serve({ port, hostname: tryHost, fetch });
     return { server, boundHost: server.hostname ?? tryHost };
   } catch (err) {
@@ -237,11 +219,13 @@ async function serveDualStack(
   }
 }
 
+const FORCED_SHUTDOWN_TIMEOUT_MS = 10_000;
+
 const run = async () => {
   const server = await Server.create();
 
   const onCloseSignal = async () => {
-    setTimeout(() => process.exit(1), 10000).unref(); // Force shutdown after 10s
+    setTimeout(() => process.exit(1), FORCED_SHUTDOWN_TIMEOUT_MS).unref();
     await server.close();
     process.exit();
   };

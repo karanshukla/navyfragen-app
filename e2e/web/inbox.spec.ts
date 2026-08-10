@@ -2,20 +2,13 @@ import { test, expect, type Page } from "@playwright/test";
 
 test.use({ storageState: "e2e/.auth/user.json" });
 
-// Inbox happy paths. These exercise real server endpoints:
-//  - "Add example messages" creates LOCAL-DB-only rows (no PDS record).
-//  - Delete hard-removes the local row (DB is authoritative for the inbox).
-//  - Pin/unpin is pure client localStorage state — no server calls.
-//  - Reply would post a permanent Bluesky post (no cleanup path exists), so the
-//    reply test exercises the compose UI and then backs out with Escape.
+// Inbox happy paths against real server endpoints. Replying would post a
+// permanent Bluesky post with no cleanup path, so that test drives the compose
+// UI and backs out with Escape.
 //
-// Isolation across the shared account: most tests here don't care *which* card
-// they touch, so they use `ensureExampleMessages` (seed only when empty) and
-// `cleanupAllMessages`. The delete test is different — under Playwright's worker
-// model another spec file can land a row in this inbox between our checks, so a
-// "populated inbox ⇒ skip" guard (#289) made the delete path silently opt out
-// of CI. Instead the delete test seeds and identifies its OWN marker'd message
-// and deletes only that card, so a populated inbox is never a reason to skip.
+// These share one account with the other spec files, which run in parallel, so
+// no test may assume it owns the inbox. Most don't care which card they touch;
+// the delete test seeds and deletes its own marker'd message.
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/messages");
@@ -35,7 +28,6 @@ test("expand a message card to reveal the reply composer and back out", async ({
   const card = page.locator('[id^="message-card-"]').first();
   await expect(card).toBeVisible({ timeout: 10_000 });
 
-  // Expanding happens on card click.
   await card.click();
 
   const replyBox = page.getByLabel("Your response");
@@ -45,7 +37,7 @@ test("expand a message card to reveal the reply composer and back out", async ({
   const replyBtn = page.getByRole("button", { name: /^Reply/ }).last();
   await expect(replyBtn).toBeEnabled({ timeout: 5_000 });
 
-  // Back out WITHOUT sending — Escape collapses the composer (no Bluesky post made).
+  // Escape collapses the composer without posting to Bluesky.
   await replyBox.press("Escape");
   await expect(replyBox).toHaveCount(0);
 
@@ -74,7 +66,6 @@ test("pin and unpin a thread root is local state only", async ({ page }) => {
 test("posting-preferences switch toggles state", async ({ page }) => {
   const seeded = await ensureExampleMessages(page);
 
-  // The Posting preferences section is open by default; if it isn't, open it.
   const header = page.getByText("Posting preferences");
   const autoScroll = page.getByRole("switch", { name: "Auto-scroll to messages" });
   if (!(await autoScroll.isVisible().catch(() => false))) {
@@ -94,39 +85,27 @@ test("posting-preferences switch toggles state", async ({ page }) => {
 });
 
 test("delete a message removes it from the inbox (no-confirm default)", async ({ page }) => {
-  // This test must NEVER skip. The previous implementation bailed out (and the
-  // suite went green without exercising the delete path) whenever the shared
-  // inbox already held a row — which happens whenever the parallel
-  // `profile-send-message.spec.ts` lands a message first (#289). Instead of
-  // relying on the inbox being empty, we seed and identify OUR OWN message by a
-  // unique marker, delete only that card, and assert only that card disappears.
-  // A populated inbox is no longer a reason to skip.
+  // Must never skip: a "populated inbox ⇒ skip" guard used to let this go green
+  // without exercising delete at all, because the parallel
+  // profile-send-message.spec.ts lands a row first (#289). Hence the marker.
   const marker = `[e2e inbox-delete ${Date.now()}]`;
   await seedOwnedMessage(page, marker);
   try {
-    // We seeded via the API after `beforeEach` already navigated, so the
-    // client's React Query cache doesn't know about the new row yet. Reload to
-    // surface it deterministically.
+    // Seeded via the API after beforeEach navigated, so React Query's cache has
+    // not seen the row yet.
     await page.reload();
     const card = page.locator('[id^="message-card-"]').filter({ hasText: marker });
     await expect(card).toBeVisible({ timeout: 15_000 });
 
-    // confirmBeforeDelete defaults to false, so delete is immediate.
     await card.getByRole("button", { name: "Delete message" }).click();
 
-    // Assert OUR card is gone — not a count delta, which is also racy under
-    // concurrent writers from the other spec.
+    // Asserting on our own card, not a count delta, which races the other spec.
     await expect(card).toHaveCount(0, { timeout: 15_000 });
   } finally {
-    // Best-effort: if the UI delete didn't land (e.g. test failed mid-flight),
-    // clean up the marker row we created so we don't leave litter.
+    // Best-effort litter cleanup if the UI delete never landed.
     await deleteMessagesByText(page, [marker]);
   }
 });
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Ensure the inbox has at least one message. If it's empty, click "Add example
@@ -136,8 +115,7 @@ test("delete a message removes it from the inbox (no-confirm default)", async ({
 async function ensureExampleMessages(page: Page): Promise<boolean> {
   await expect(page.locator("main, [role=main]")).toBeVisible({ timeout: 10_000 });
 
-  // Wait for the messages query to settle: either cards render, or the empty
-  // state appears. (While loading, neither is present.)
+  // Neither is present while loading, so this waits for the query to settle.
   const cards = page.locator('[id^="message-card-"]');
   const emptyAlert = page.getByRole("alert").filter({ hasText: "No messages" });
   await expect(async () => {

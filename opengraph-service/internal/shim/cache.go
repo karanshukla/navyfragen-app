@@ -12,42 +12,33 @@ import (
 	"time"
 )
 
-// ErrCacheMiss is returned by FileCache.Load when an entry is absent or expired.
-// Callers treat it as "needs generation."
+// ErrCacheMiss is returned when an entry is absent or expired.
 var ErrCacheMiss = errors.New("cache miss")
 
-// DefaultCacheMaxEntries caps the on-disk cache size when no override is
-// supplied. ~10k profiles at ~350KB each is ~3.5GB worst case — a generous
-// ceiling that the Railway volume can be sized for. Eviction is LRU, so the
-// working set of popular profiles stays resident.
+// DefaultCacheMaxEntries caps the on-disk cache when no override is supplied.
+// ~10k profiles at ~350KB each is ~3.5GB worst case, which the Railway volume
+// is sized for.
 const DefaultCacheMaxEntries = 10000
 
 // FileCache is a DID-keyed, file-backed, LRU-bounded TTL cache for generated OG
-// images. It persists to a volume (so the cache survives redeploys), evicts the
-// least-recently-used entry when the count exceeds MaxEntries, and treats
-// expired entries as misses (Load returns ErrCacheMiss).
+// images, persisted to a volume so it survives redeploys.
 //
 // The on-disk layout per entry is:
 //
-//	<dir>/<SafeDID>.png     # the image bytes (ModTime = TTL freshness clock)
-//	<dir>/<SafeDID>.meta    # {"mimeType": "..."} sidecar (ModTime = LRU recency)
+//	<dir>/<SafeDID>.png     # the image bytes
+//	<dir>/<SafeDID>.meta    # {"mimeType": "..."} sidecar
 //
-// Two clocks are intentionally separated onto two files:
+// The two files carry two separate clocks, and keeping them separate is
+// load-bearing — collapsing them either stops popular entries from ever
+// expiring or evicts heavily-served ones as "least recently used":
 //
-//   - .png ModTime is the TTL freshness clock. It is set ONLY when the image is
-//     generated (Store). The TTL check compares now - .pngModTime against TTL,
-//     so "image refreshes ~monthly" is honored regardless of how often the
-//     entry is read.
-//   - .meta ModTime is the LRU recency clock. Load/LoadByPath touch the .meta
-//     file (not the .png) on every hit, so eviction orders by access recency
-//     without masking TTL expiry.
+//   - .png ModTime is TTL freshness, written only by Store, so a read never
+//     extends an image's lifetime.
+//   - .meta ModTime is LRU recency, touched by every Load/LoadByPath hit, so
+//     eviction orders by access without masking TTL expiry.
 //
-// Keeping these on separate files is load-bearing: an earlier version touched
-// the .png on every read, which (because TTL used .png ModTime) made popular
-// entries effectively never expire and prevented banner/avatar edits from
-// refreshing. LoadByPath previously touched neither file, so actual image
-// traffic never updated LRU recency and heavily-served entries could be
-// evicted as "least recently used." Both are fixed by splitting the clocks.
+// [TestFileCache_LoadDoesNotRefreshTTL], [TestFileCache_LoadByPathUpdatesLRURecency],
+// and [TestFileCache_LoadByPathDoesNotRefreshTTL] pin all three directions.
 type FileCache struct {
 	dir        string
 	MaxEntries int
@@ -57,8 +48,8 @@ type FileCache struct {
 }
 
 // NewFileCache opens (or creates) a file cache rooted at dir. Existing entries
-// are visible immediately — Load scans the directory at read time, so there is
-// no in-memory index to rebuild. MaxEntries <= 0 falls back to the default.
+// are visible immediately: Load scans the directory, so there is no in-memory
+// index to rebuild. MaxEntries <= 0 falls back to the default.
 func NewFileCache(dir string, maxEntries int, ttl time.Duration) (*FileCache, error) {
 	if maxEntries <= 0 {
 		maxEntries = DefaultCacheMaxEntries
@@ -69,7 +60,6 @@ func NewFileCache(dir string, maxEntries int, ttl time.Duration) (*FileCache, er
 	return &FileCache{dir: dir, MaxEntries: maxEntries, TTL: ttl}, nil
 }
 
-// pngPath returns the image file path for a DID.
 func (c *FileCache) pngPath(did string) string {
 	return filepath.Join(c.dir, SafeDID(did)+".png")
 }
@@ -101,29 +91,22 @@ func (c *FileCache) Load(did string) (*CacheEntry, error) {
 	return &CacheEntry{Bytes: bytes, ModTime: info.ModTime(), MimeType: mime}, nil
 }
 
-// touchLRU bumps the .meta sidecar's ModTime (the LRU recency clock) for the
-// given DID's entry. It is safe to call even when no .meta file exists yet —
-// in that case it no-ops (the entry will be considered fresh-insert-recent on
-// the next eviction scan, which is correct).
+// touchLRU bumps the .meta sidecar's ModTime. It no-ops when no sidecar
+// exists yet, which the eviction scan then treats as fresh-insert-recent.
 func (c *FileCache) touchLRU(did string) {
 	now := time.Now()
 	if err := os.Chtimes(c.metaPath(did), now, now); err != nil {
-		// Sidecar may be absent on a cache populated by an older binary, or the
-		// filesystem may reject the touch. Either way LRU recency is a soft
-		// signal — falling back to the .png mtime for eviction ordering is
-		// acceptable and never affects correctness of serve.
+		// LRU recency is a soft signal: falling back to the .png mtime for
+		// eviction ordering never affects the correctness of a serve.
 		return
 	}
 }
 
-// Store writes the image and its mime type to the cache, then evicts if the
-// entry count exceeds MaxEntries. The image is written atomically (temp file +
-// rename on the same directory) so a concurrent Store for the same DID, or a
-// crash mid-write, can never leave a truncated/half-written .png visible to a
-// reader — readers either see the previous complete entry or the new complete
-// entry. The .meta sidecar is written non-atomically; readers tolerate a
-// missing/corrupt sidecar (defaulting to image/png), so a torn .meta is at
-// worst a one-time mime fallback, never a corrupt serve.
+// Store writes the image and its mime type, then evicts down to MaxEntries.
+// The image write is atomic, so a concurrent Store or a crash mid-write leaves
+// readers on either the previous or the new complete entry, never a truncated
+// one. The .meta sidecar is not atomic: readers default a torn or missing one
+// to image/png, making it at worst a one-time mime fallback.
 func (c *FileCache) Store(did string, bytes []byte, mimeType string) error {
 	if did == "" {
 		return errors.New("store: empty did")
@@ -139,11 +122,9 @@ func (c *FileCache) Store(did string, bytes []byte, mimeType string) error {
 	return nil
 }
 
-// writeFileAtomic writes data to a temp file in the same directory as dst, then
-// renames it into place. Rename on the same filesystem is atomic, so a
-// concurrent reader never observes a partially-written dst. On Windows the
-// rename may fail if dst already exists and is open; the temp file is cleaned
-// up on any error path.
+// writeFileAtomic writes to a temp file alongside dst and renames it into
+// place, which is atomic on the same filesystem. On Windows the rename can fail
+// while dst is open; the temp file is cleaned up on every error path.
 func writeFileAtomic(dst string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(dst)
 	tmp, err := os.CreateTemp(dir, ".tmp-og-*")
@@ -231,12 +212,10 @@ func (c *FileCache) SafePathFromBase(base string) string {
 	return safe + ".png"
 }
 
-// LoadByPath loads an entry from an absolute image path (used by the
-// /og-cache/:did.png serving route). Unlike Load, it does NOT key on the DID
-// (the DID is already baked into the path via SafeDID). Returns ErrCacheMiss on
-// any absence/expiry error. On a hit it updates the LRU recency clock (the
-// .meta sidecar's ModTime) so actual image-serving traffic influences eviction
-// ordering, matching the generate path's behavior.
+// LoadByPath loads an entry from an absolute image path, for the
+// /og-cache/:did.png serving route. It does not key on the DID — SafeDID has
+// already baked that into the path. A hit updates LRU recency, so image-serving
+// traffic influences eviction ordering the same way the generate path does.
 func (c *FileCache) LoadByPath(p string) (*CacheEntry, error) {
 	info, err := os.Stat(p)
 	if err != nil {
@@ -249,8 +228,6 @@ func (c *FileCache) LoadByPath(p string) (*CacheEntry, error) {
 	if err != nil {
 		return nil, ErrCacheMiss
 	}
-	// Derive the sidecar filename from the PNG basename. The .meta uses the
-	// same SafeDID-derived stem as the .png, so just swap the extension.
 	base := strings.TrimSuffix(filepath.Base(p), ".png")
 	metaPath := filepath.Join(c.dir, base+".meta")
 	mime := "image/png"
@@ -262,20 +239,15 @@ func (c *FileCache) LoadByPath(p string) (*CacheEntry, error) {
 			mime = m.MimeType
 		}
 	}
-	// Update LRU recency so the serve path participates in eviction ordering.
-	// The .png ModTime (TTL clock) is deliberately left untouched.
 	now := time.Now()
 	_ = os.Chtimes(metaPath, now, now)
 	return &CacheEntry{Bytes: bytes, ModTime: info.ModTime(), MimeType: mime}, nil
 }
 
-// evictIfNeeded removes least-recently-used entries (both .png and .meta) while
-// the entry count exceeds MaxEntries. An "entry" is a .png file; .meta sidecars
-// are tracked alongside their image. LRU recency is the .meta sidecar's ModTime
-// (the access clock); when a .meta is missing or unreadable, the .png's ModTime
-// (the freshness clock) is used as a fallback — this over-approximates recency
-// (the entry looks older than it really is on access) but never evicts a hot
-// entry that was never accessed.
+// evictIfNeeded removes least-recently-used entries while the count exceeds
+// MaxEntries. An "entry" is a .png plus its sidecar. A missing .meta falls back
+// to the .png ModTime, which makes the entry look older than it is but never
+// evicts one that is genuinely hot.
 func (c *FileCache) evictIfNeeded() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -288,10 +260,8 @@ func (c *FileCache) evictIfNeeded() {
 	if err != nil {
 		return
 	}
-	// Pre-index .meta modtimes for LRU recency lookups, and opportunistically
-	// collect orphaned sidecars (a .meta whose .png was deleted, e.g. a Store
-	// interrupted between writing the .meta and the .png, or a manual .png
-	// removal). Orphans would otherwise accumulate indefinitely.
+	// Orphaned sidecars (a .meta whose .png was deleted, e.g. a Store
+	// interrupted mid-write) would otherwise accumulate indefinitely.
 	metaMod := make(map[string]time.Time)
 	pngStems := make(map[string]bool)
 	for _, e := range entries {
@@ -327,8 +297,6 @@ func (c *FileCache) evictIfNeeded() {
 			continue
 		}
 		stem := strings.TrimSuffix(name, ".png")
-		// Prefer the .meta recency clock; fall back to the .png freshness clock
-		// if the sidecar is absent (older entry, or never read since a restart).
 		recency, ok := metaMod[stem]
 		if !ok || recency.IsZero() {
 			recency = info.ModTime()

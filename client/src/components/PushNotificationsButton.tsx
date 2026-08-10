@@ -23,7 +23,7 @@ export function PushNotificationsButton() {
   const [locallySubscribed, setLocallySubscribed] = useState(
     typeof localStorage !== "undefined" && localStorage.getItem(SUBSCRIBED_FLAG) === "1"
   );
-  // Effective state: the flag must be set AND the browser must still hold permission.
+  // The stored flag is not enough — the browser must still hold permission.
   const isSubscribed = permission === "granted" && locallySubscribed;
 
   const isBusy = enablePush.isPending || disablePush.isPending;

@@ -4,11 +4,7 @@ import { apiClient, ApiError } from "./apiClient";
 import { clearFriendsCache } from "./profileService";
 import { queryClient } from "./queryClient";
 
-/**
- * Represents a user profile on the client-side.
- * This interface is based on the app.bsky.actor.getProfile lexicon.
- * @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile}
- */
+/** @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile} */
 export interface UserProfile {
   did?: string;
   handle?: string;
@@ -18,11 +14,7 @@ export interface UserProfile {
   banner?: string;
 }
 
-/**
- * A remembered account in the multi-account switcher. Mirrors the server-side
- * `AccountEntry`. The list is populated server-side after each successful
- * OAuth login; the client only ever reads it (and POSTs a switch request).
- */
+/** Read-only mirror of the server's `AccountEntry`; switching goes via POST. */
 export interface AccountEntry {
   did: string;
   handle?: string;
@@ -90,7 +82,6 @@ export const authService = {
   },
 };
 
-// React Query hooks
 export function useSession(): UseQueryResult<SessionResponse, ApiError> {
   return useQuery({
     queryKey: authKeys.session,
@@ -108,7 +99,6 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authService.logout(),
     onSuccess: () => {
-      // Invalidate the session query to force a refetch
       queryClient.invalidateQueries({ queryKey: authKeys.session });
       window.location.href = "/";
     },

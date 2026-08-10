@@ -4,7 +4,6 @@ import { apiClient, ApiError } from "./apiClient";
 import { queryClient } from "./queryClient";
 import { settingsKeys } from "./settingsService";
 
-// Defined in the DB schema in /server
 export interface Message {
   tid: string;
   message: string;
@@ -37,30 +36,24 @@ export interface ResponseMessageResponse {
   link?: string;
 }
 
-// Query keys
 export const messageKeys = {
   all: ["messages"] as const,
   detail: (did: string) => [...messageKeys.all, did] as const,
 };
 
-// API Services
 export const messageService = {
-  // Get messages for user
   getMessages: (did: string): Promise<MessagesResponse> => {
     return apiClient.get<MessagesResponse>(`/messages/${encodeURIComponent(did)}`);
   },
 
-  // Send anonymous message
   sendMessage: async (data: SendMessageRequest): Promise<{ success: boolean }> => {
     return apiClient.post<{ success: boolean }, SendMessageRequest>("/messages/send", data);
   },
 
-  // Delete a message
   deleteMessage: async (tid: string): Promise<{ success: boolean }> => {
     return apiClient.delete<{ success: boolean }>(`/messages/${tid}`);
   },
 
-  // Respond to a message
   respondToMessage: async (data: ResponseMessageRequest): Promise<ResponseMessageResponse> => {
     return apiClient.post<ResponseMessageResponse, ResponseMessageRequest>(
       "/messages/respond",
@@ -68,18 +61,15 @@ export const messageService = {
     );
   },
 
-  // Add example messages (for testing)
   addExampleMessages: async (recipient: string): Promise<MessagesResponse> => {
     return apiClient.post<MessagesResponse>("/messages/example", { recipient });
   },
 
-  // Sync with user's repo
   syncMessages: async (): Promise<MessagesResponse> => {
     return apiClient.post<MessagesResponse>(`/messages/sync`);
   },
 };
 
-// React Query hooks
 export function useMessages(
   did: string | null,
   options?: Omit<UseQueryOptions<MessagesResponse, ApiError>, "queryKey" | "queryFn">

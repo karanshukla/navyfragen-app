@@ -1,20 +1,9 @@
-// Side-effect module. Import it FIRST in src/index.ts, before anything that
-// reaches @atproto/oauth-client-node.
-//
-// Under Bun, @atproto-labs/fetch-node crashes at module load unless
-// patches/@atproto-labs%2Ffetch-node@0.3.7.patch is applied: undici 8's
-// CacheStorage constructor calls webidl.util.markAsUncloneable, which Bun does
-// not implement (nodejs/undici#5024). The failure therefore happens while the
-// import graph is still evaluating, which is why this front-runs that import
-// rather than checking anything from the module body — by the time a statement
-// in index.ts could run, the process is already dead.
-//
-// Left alone, it surfaces as an undici stack trace with no hint that the real
-// cause is an installer that ignored `patchedDependencies`. That cost a
-// production deploy once; see #293.
+// Side-effect module — import it FIRST in src/index.ts. Unpatched, undici 8's
+// CacheStorage constructor throws under Bun (nodejs/undici#5024) while the
+// import graph is still evaluating, so this has to front-run that import rather
+// than check anything from its own body. The thrown message explains the fix.
 
-// Marks the file as a module so the top-level await below is legal (TS1375);
-// there is nothing to export.
+// Present so the top-level await below is legal (TS1375); nothing to export.
 export {};
 
 try {

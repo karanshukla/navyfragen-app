@@ -16,11 +16,10 @@ type ResponseInput struct {
 	Origin        string // the public site origin, e.g. https://navyfragen.app
 }
 
-// BuildOGResponse produces the minimal HTML that carries the per-profile OG
-// tags. It is NOT the image itself — it is the index.html whose og:image points
-// at the generated PNG served from /og-cache/:did.png. All user-supplied
-// strings are HTML-escaped. The crawler is not a browser executing the page; it
-// only reads the meta tags, so the body is a placeholder.
+// BuildOGResponse produces the index.html whose og:image points at the PNG
+// served from /og-cache/:did.png — not the image itself. All user-supplied
+// strings are HTML-escaped. The crawler only reads meta tags, so the body is a
+// placeholder.
 func BuildOGResponse(in ResponseInput) string {
 	imageURL := AbsoluteImageURL(in.Origin, in.ImageURL)
 	origin := strings.TrimRight(strings.TrimSpace(in.Origin), "/")
@@ -64,7 +63,6 @@ func AbsoluteImageURL(origin, imageURL string) string {
 	if imageURL == "" {
 		return ""
 	}
-	// Already absolute (http/https or protocol-relative)?
 	lower := strings.ToLower(imageURL)
 	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
 		return imageURL

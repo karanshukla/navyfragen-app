@@ -1,16 +1,8 @@
-// Bun-runtime regression canary for issue #314 — gates the html-to-image-tests
-// CI job. The service runs on Bun in production; this probe protects against
-// regressions of the two surfaces in the render path that were the load-bearing
-// risk of the Node→Bun migration:
-//   1. the child_process.spawn of Chromium (Puppeteer launches the browser via
-//      child_process), and
-//   2. the CDP WebSocket transport between puppeteer and Chromium.
-// Both are hit by a single launch → newPage → goto(data URL) → evaluate →
-// screenshot → close round-trip, lifted almost verbatim from app.js's
-// production launch block. Not shipped in the Docker image (not referenced by
-// the Dockerfile) and not run by the unit suite (app.test.js imports
-// createApp/createBrowserPool through fakes and never launches a browser) —
-// this file exists solely for the CI probe.
+// Bun-runtime canary gating the html-to-image CI job (#314). The unit suite
+// drives createApp/createBrowserPool through fakes and never launches a browser,
+// so this is the only thing covering the two surfaces the Node→Bun migration put
+// at risk: Chromium's child_process.spawn, and the CDP WebSocket transport. One
+// launch → newPage → goto → evaluate → screenshot → close hits both.
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import os from 'os';

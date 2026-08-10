@@ -8,15 +8,12 @@ const handle = () => {
   return h;
 };
 
-// Desktop navigation: sidebar is always visible, keyboard shortcuts work,
-// the header logo returns home, and the user menu exposes profile + logout.
 
 test("header wordmark returns home", async ({ page }) => {
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/messages/);
 
-  // The wordmark renders "navy" + "fragen" as separate spans, so its accessible
-  // name is "navy fragen" (with a space). Match by shape, not the concatenated form.
+  // "navy" and "fragen" are separate spans, so the accessible name has a space.
   await page.getByRole("link", { name: /navy.*fragen/i }).first().click();
   await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
   await expect(page.locator("main, [role=main]")).toBeVisible();
@@ -25,9 +22,8 @@ test("header wordmark returns home", async ({ page }) => {
 test("sidebar navigates between home, messages, and settings", async ({ page }) => {
   await page.goto("/");
 
-  // The sidebar NavLink's accessible name includes any unread-count badge
-  // ("Messages 3"), so anchor to the label and allow a trailing number. Scope
-  // to the navbar to avoid the home hero's "View Your Messages" link.
+  // The name may carry an unread badge ("Messages 3"), hence the trailing
+  // number; the navbar scope avoids the home hero's "View Your Messages".
   const navbar = page.locator("nav").first();
   await navbar.getByRole("link", { name: /^Messages\b/ }).click();
   await expect(page).toHaveURL(/\/messages/);
@@ -46,19 +42,15 @@ test("sidebar navigates between home, messages, and settings", async ({ page }) 
 });
 
 test("keyboard shortcuts navigate the app", async ({ page }) => {
-  // Start on the messages page so the session has settled.
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/messages/);
 
-  // Alt+S -> Settings
   await page.keyboard.press("Alt+s");
   await expect(page).toHaveURL(/\/settings/);
 
-  // Alt+M -> Messages
   await page.keyboard.press("Alt+m");
   await expect(page).toHaveURL(/\/messages/);
 
-  // Alt+H -> Home
   await page.keyboard.press("Alt+h");
   await expect(page).toHaveURL(/\/$/);
 });
@@ -67,8 +59,7 @@ test("user menu links to own profile", async ({ page }) => {
   const h = handle();
   await page.goto("/");
 
-  // The user-menu trigger is the last header button (after the color-scheme
-  // toggle). It has no stable aria-label — its name is the user's display name.
+  // No stable aria-label on the trigger: its name is the user's display name.
   await page.locator("header").getByRole("button").last().click();
   await page.getByRole("menuitem", { name: "View Profile" }).click();
 
@@ -82,7 +73,6 @@ test("color scheme toggle flips the theme", async ({ page }) => {
   await page.goto("/");
 
   const html = page.locator("html");
-  // The attribute toggles between "light" and "dark" once Mantine hydrates it.
   await expect(html).toHaveAttribute("data-mantine-color-scheme", /(light|dark)/, {
     timeout: 10_000,
   });

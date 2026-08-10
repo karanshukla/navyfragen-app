@@ -26,8 +26,7 @@ func (p Profile) NormalizedHandle() string {
 	return strings.TrimPrefix(p.Handle, "@")
 }
 
-// ToOGInput converts the profile to the template's input struct, defaulting the
-// prompt to DefaultPrompt (issue #199 will later supply a custom prompt).
+// ToOGInput converts the profile to the template's input struct.
 func (p Profile) ToOGInput() OGInput {
 	return OGInput{
 		DisplayName: p.DisplayName,
@@ -39,14 +38,9 @@ func (p Profile) ToOGInput() OGInput {
 }
 
 // ProfileFetcher resolves a Bluesky handle to a full profile over the AT
-// Protocol. The indigo-backed implementation is the production path; the
-// interface exists so the generator can be unit-tested with a fake.
-//
-// It is split into two phases so the cache lookup can happen between them:
-// ResolveDID is the cheap handle→DID lookup (always called); FetchProfile is
-// the full profile read (skipped on a cache hit). This matches the task spec:
-// "DID is resolved first, then cache check → on miss: indigo resolve +
-// getProfile."
+// Protocol. The interface exists so the generator can be unit-tested with a
+// fake. It is split in two so the cache lookup can happen between the cheap
+// handle→DID resolve and the full profile read.
 type ProfileFetcher interface {
 	// ResolveDID maps a handle to its stable DID. This is the cache key.
 	ResolveDID(ctx context.Context, handle string) (string, error)
@@ -120,23 +114,19 @@ func derefStr(p *string) string {
 	return *p
 }
 
-// isNotFound reports whether err is an indigo/xrpc "not found" response. The
-// indigo client returns *xrpc.Error whose StatusCode is the HTTP status from
-// the AppView. Handle resolution of a nonexistent handle yields a 400
-// ("Unable to resolve handle"); a missing profile yields a 400/404. Both map to
-// ErrProfileNotFound so the shim can return a 404 to the crawler.
+// isNotFound reports whether err is an indigo/xrpc "not found" response.
+// Resolving a nonexistent handle yields a 400 ("Unable to resolve handle") and
+// a missing profile yields 400/404; both become ErrProfileNotFound.
 func isNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
-	// The concrete indigo type carries StatusCode as a field, not a method.
 	var xe *xrpc.Error
 	if errors.As(err, &xe) {
 		return xe.StatusCode == 400 || xe.StatusCode == 404
 	}
-	// Fall back to a substring check for non-xrpc errors (e.g. a wrapped error
-	// from a transport layer): indigo messages carry "not found" / "Unable to
-	// resolve handle".
+	// Non-xrpc errors (e.g. wrapped by a transport layer) still carry indigo's
+	// "not found" / "Unable to resolve handle" text.
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "not found") || strings.Contains(msg, "unable to resolve handle")
 }

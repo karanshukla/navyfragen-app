@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-// FileCache is a DID-keyed, file-backed, LRU-bounded TTL cache. It persists
-// generated PNGs across restarts (the Railway volume) and evicts the
-// least-recently-used entries when the entry count exceeds MaxEntries. This is
-// the production answer to the poc's "unbounded cache" open question.
-
 func newTestCache(t *testing.T, maxEntries int, ttl time.Duration) *FileCache {
 	t.Helper()
 	dir := t.TempDir()
@@ -138,14 +133,8 @@ func mustStore(t *testing.T, c *FileCache, did, payload string) {
 	}
 }
 
-// --- TTL/LRU separation (red→green for the concerns that Load's Chtimes was
-// refreshing the TTL clock and LoadByPath was not updating LRU recency). ---
-
-// TestFileCache_LoadDoesNotRefreshTTL pins the invariant that reading an entry
-// does NOT extend its TTL. Before the fix, Load called os.Chtimes on the .png
-// (the TTL clock), so a popular entry read at least once per TTL window never
-// expired — defeating the "~monthly refresh" tradeoff. Now Load touches only
-// the .meta sidecar; the .png ModTime (TTL clock) is frozen at Store time.
+// Reading an entry must not extend its TTL, or a profile popular enough to be
+// read once per window would never pick up a banner/avatar edit.
 func TestFileCache_LoadDoesNotRefreshTTL(t *testing.T) {
 	c := newTestCache(t, 100, time.Hour)
 	if err := c.Store("did:plc:ttl", []byte("X"), "image/png"); err != nil {
@@ -189,11 +178,8 @@ func TestFileCache_LoadDoesNotRefreshTTL(t *testing.T) {
 	}
 }
 
-// TestFileCache_LoadByPathUpdatesLRURecency pins the invariant that the
-// image-serving path (GET /og-cache/:did.png) participates in LRU eviction
-// ordering. Before the fix, LoadByPath touched neither file, so heavily-served
-// images could be evicted as "least recently used" because the serve path
-// never marked them recent. Now LoadByPath bumps the .meta mtime.
+// The serve path must participate in LRU ordering, or a heavily-served image
+// gets evicted as "least recently used".
 func TestFileCache_LoadByPathUpdatesLRURecency(t *testing.T) {
 	c := newTestCache(t, 2, time.Hour)
 	mustStore(t, c, "did:plc:a", "A")
@@ -217,9 +203,7 @@ func TestFileCache_LoadByPathUpdatesLRURecency(t *testing.T) {
 	}
 }
 
-// TestFileCache_LoadByPathDoesNotRefreshTTL pins the matching invariant for the
-// serve path: serving an image does not extend its TTL. The .png mtime (TTL
-// clock) must be frozen at Store time even when the image is served constantly.
+// The serve-path counterpart: serving an image must not extend its TTL.
 func TestFileCache_LoadByPathDoesNotRefreshTTL(t *testing.T) {
 	c := newTestCache(t, 100, time.Hour)
 	mustStore(t, c, "did:plc:x", "X")

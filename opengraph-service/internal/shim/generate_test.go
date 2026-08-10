@@ -84,8 +84,6 @@ func newDeps(t *testing.T) (*FileCache, *FakeFetcher, *FakeRenderer) {
 	}}, &FakeRenderer{PNG: []byte("PNG-BYTES")}
 }
 
-// --- Cache hit short-circuits the slow path ---
-
 func TestGenerate_CacheHit_SkipsFetchAndRender(t *testing.T) {
 	cache, fetcher, renderer := newDeps(t)
 	// Prime the cache.
@@ -116,8 +114,6 @@ func TestGenerate_CacheHit_SkipsFetchAndRender(t *testing.T) {
 		t.Fatal("renderer must not be called on cache hit")
 	}
 }
-
-// --- Cold path: resolve → render → store ---
 
 func TestGenerate_ColdPath_ResolvesRendersStores(t *testing.T) {
 	cache, fetcher, renderer := newDeps(t)
@@ -154,8 +150,6 @@ func TestGenerate_ColdPath_ResolvesRendersStores(t *testing.T) {
 		t.Fatal("second call should be a cache hit")
 	}
 }
-
-// --- Singleflight: concurrent cold-path calls coalesce to one fetch+render ---
 
 func TestGenerate_Singleflight_CoalescesConcurrentCalls(t *testing.T) {
 	cache, fetcher, renderer := newDeps(t)
@@ -199,9 +193,6 @@ func TestGenerate_Singleflight_CoalescesConcurrentCalls(t *testing.T) {
 		t.Fatalf("renderer called %d times, want 1 (singleflight)", got)
 	}
 }
-
-// --- Fallbacks: never break. Indigo failure surfaces a typed error so the
-// proxy fast path can degrade gracefully. ---
 
 func TestGenerate_UnresolvableHandle_ReturnsErrProfileNotFound(t *testing.T) {
 	cache, fetcher, renderer := newDeps(t)
@@ -248,8 +239,6 @@ func TestGenerate_ProfileFetchFailure_AfterCacheMiss(t *testing.T) {
 	}
 }
 
-// --- isNotFound: the indigo xrpc.Error shape drives the 404 mapping ---
-
 func TestIsNotFound_XRPC400_IsNotFound(t *testing.T) {
 	// Handle resolution of a nonexistent handle returns XRPC ERROR 400.
 	xe := &xrpc.Error{StatusCode: 400, Wrapped: errors.New("InvalidRequest: Unable to resolve handle")}
@@ -280,8 +269,6 @@ func TestIsNotFound_NilSafe(t *testing.T) {
 	}
 }
 
-// --- Profile shape: empty banner/avatar fall through to the template ---
-
 func TestGenerate_EmptyBannerAvatar_StillRenders(t *testing.T) {
 	cache, fetcher, renderer := newDeps(t)
 	fetcher.Profile.Banner = ""
@@ -301,8 +288,6 @@ func TestGenerate_EmptyBannerAvatar_StillRenders(t *testing.T) {
 		t.Fatal("renderer should have been called once")
 	}
 }
-
-// --- Profile struct helpers ---
 
 func TestProfile_NormalizeHandle_StripsLeadingAt(t *testing.T) {
 	p := Profile{Handle: "@foo.bsky.social"}
@@ -331,9 +316,6 @@ func TestProfile_ToOGInput_PopulatesDefaults(t *testing.T) {
 		t.Fatal("Prompt should default to non-empty (DefaultPrompt)")
 	}
 }
-
-// --- Detached singleflight context (red→green for the concern that a leader
-// disconnect aborted the shared render for all followers). ---
 
 // TestGenerate_LeaderCancelDoesNotAbortFollowers pins the fix: when the leader's
 // request context is canceled (Cardyb closes the connection early), the shared
@@ -386,8 +368,6 @@ func TestGenerate_LeaderCancelDoesNotAbortFollowers(t *testing.T) {
 	}
 }
 
-// --- Type-assertion guard on the singleflight return value (concern 5). ---
-
 // TestGenerate_NilSafeReturnValue is a defensive guard: the comma-ok type
 // assertion means a future refactor that returns a typed-nil or unexpected type
 // surfaces as ErrRenderFailed rather than panicking on the request path.
@@ -406,8 +386,6 @@ func TestGenerate_TypeAssertionGuard(t *testing.T) {
 	}
 }
 
-// --- detachContext: the "no ctx" test-only path (concern noted in its doc). ---
-
 func TestDetachContext_NilContext(t *testing.T) {
 	detached, cancel := detachContext(nil)
 	defer cancel()
@@ -423,8 +401,6 @@ func TestDetachContext_NilContext(t *testing.T) {
 	default:
 	}
 }
-
-// --- AsHTTPStatus: orchestrator error -> HTTP status mapping. ---
 
 func TestAsHTTPStatus(t *testing.T) {
 	cases := []struct {

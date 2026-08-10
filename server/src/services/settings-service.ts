@@ -4,6 +4,7 @@ import { Logger } from "pino";
 
 import type { Database } from "../database/db";
 import type { IdResolver } from "@atproto/identity";
+import { toDbBoolean } from "../lib/db-boolean";
 
 export interface UserSettings {
   did: string;
@@ -17,11 +18,28 @@ export interface UserSettings {
   createdAt: string;
 }
 
+const USE_APP_DEFAULT = null;
+
+const SETTINGS_DEFAULTS = {
+  pdsSyncEnabled: toDbBoolean(true),
+  imageTheme: "default",
+  inboxEnabled: toDbBoolean(true),
+  profanityFilterEnabled: toDbBoolean(false),
+  customPrompt: USE_APP_DEFAULT,
+  profileCardTheme: USE_APP_DEFAULT,
+  touchpointLocale: USE_APP_DEFAULT,
+} satisfies Omit<UserSettings, "did" | "createdAt">;
+
 /**
- * The subset of `UserSettings` a client is allowed to update. Every field is
- * optional so a /customise card can mutate just its own setting; the service
- * persists only the keys present.
+ * @see [settings-service.test.ts](../tests/settings-service.test.ts) — pins that
+ * a row created by a partial update leaves PDS sync off, unlike first-run.
  */
+const SETTINGS_DEFAULTS_WITH_SYNC_OPT_IN = {
+  ...SETTINGS_DEFAULTS,
+  pdsSyncEnabled: toDbBoolean(false),
+};
+
+/** Every field is optional: the service persists only the keys present. */
 export interface UpdatableSettings {
   pdsSyncEnabled?: boolean;
   imageTheme?: string;
@@ -30,6 +48,28 @@ export interface UpdatableSettings {
   customPrompt?: string | null;
   profileCardTheme?: string | null;
   touchpointLocale?: string | null;
+}
+
+const BOOLEAN_SETTINGS = [
+  "pdsSyncEnabled",
+  "inboxEnabled",
+  "profanityFilterEnabled",
+] as const satisfies readonly (keyof UpdatableSettings)[];
+
+/**
+ * Projects only the keys the caller actually supplied, so a /customise card
+ * mutating one setting never clobbers the rest back to their defaults.
+ */
+function toSettingsColumns(updates: UpdatableSettings): Record<string, unknown> {
+  const columns: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) continue;
+    const isBooleanColumn = (BOOLEAN_SETTINGS as readonly string[]).includes(key);
+    columns[key] = isBooleanColumn ? toDbBoolean(Boolean(value)) : value;
+  }
+
+  return columns;
 }
 
 export class SettingsService {
@@ -55,13 +95,7 @@ export class SettingsService {
   async createDefaultSettings(userDid: string): Promise<UserSettings> {
     const defaultSettings: UserSettings = {
       did: userDid,
-      pdsSyncEnabled: 1, // Default to enabled (SQLite uses 1/0 for booleans)
-      imageTheme: "default",
-      inboxEnabled: 1, // Inbox open by default
-      profanityFilterEnabled: 0, // Opt-in wordlist screening (#58)
-      customPrompt: null, // null = use the default ask-card headline
-      profileCardTheme: null, // null = the default --nf-grad-mark gradient
-      touchpointLocale: null, // null = English
+      ...SETTINGS_DEFAULTS,
       createdAt: new Date().toISOString(),
     };
 
@@ -149,39 +183,17 @@ export class SettingsService {
           .insertInto("user_settings")
           .values({
             did: userDid,
-            pdsSyncEnabled: updates.pdsSyncEnabled ? 1 : 0,
-            imageTheme: updates.imageTheme ?? "default",
-            inboxEnabled: updates.inboxEnabled === false ? 0 : 1,
-            profanityFilterEnabled: updates.profanityFilterEnabled ? 1 : 0,
-            customPrompt: updates.customPrompt ?? null,
-            profileCardTheme: updates.profileCardTheme ?? null,
-            touchpointLocale: updates.touchpointLocale ?? null,
+            ...SETTINGS_DEFAULTS_WITH_SYNC_OPT_IN,
+            ...toSettingsColumns(updates),
             createdAt: new Date().toISOString(),
           })
           .execute();
       } else {
-        // Build a set of only the fields the caller provided, so a card
-        // mutating one setting doesn't clobber the others to their defaults.
-        const set: Record<string, unknown> = {};
-        if (updates.pdsSyncEnabled !== undefined) {
-          set.pdsSyncEnabled = updates.pdsSyncEnabled ? 1 : 0;
-        }
-        if (updates.imageTheme !== undefined) set.imageTheme = updates.imageTheme;
-        if (updates.inboxEnabled !== undefined) {
-          set.inboxEnabled = updates.inboxEnabled ? 1 : 0;
-        }
-        if (updates.profanityFilterEnabled !== undefined) {
-          set.profanityFilterEnabled = updates.profanityFilterEnabled ? 1 : 0;
-        }
-        if (updates.customPrompt !== undefined) set.customPrompt = updates.customPrompt;
-        if (updates.profileCardTheme !== undefined) {
-          set.profileCardTheme = updates.profileCardTheme;
-        }
-        if (updates.touchpointLocale !== undefined) {
-          set.touchpointLocale = updates.touchpointLocale;
-        }
-
-        await this.db.updateTable("user_settings").set(set).where("did", "=", userDid).execute();
+        await this.db
+          .updateTable("user_settings")
+          .set(toSettingsColumns(updates))
+          .where("did", "=", userDid)
+          .execute();
       }
 
       return await this.getUserSettings(userDid);

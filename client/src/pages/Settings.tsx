@@ -29,7 +29,7 @@ import { useInstallPrompt } from "../components/InstallPromptContext";
 import { PushNotificationsButton } from "../components/PushNotificationsButton";
 import { SettingsCard } from "../components/SettingsCard";
 
-// Stat display sizes — intentionally different to create visual hierarchy
+// Deliberately unequal, to create visual hierarchy.
 const STAT_SIZE_LARGE = 32;
 const STAT_SIZE_MEDIUM = 22;
 const STAT_SIZE_SMALL = 13;

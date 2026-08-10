@@ -9,11 +9,7 @@ interface SettingsCardProps {
   children: React.ReactNode;
 }
 
-/**
- * Uniform card shell used throughout the Settings page.
- * Owns the surface background, border-radius, padding, title, and description.
- * Pass the action (button / switch / select / skeleton) as children.
- */
+/** Owns the card surface; pass the action (button/switch/select) as children. */
 export function SettingsCard({ title, description, isDark, children }: SettingsCardProps) {
   return (
     <Paper

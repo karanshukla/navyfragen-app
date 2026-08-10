@@ -32,7 +32,6 @@ import { parseRichText } from "../utils/parseRichText";
 
 const MAX_MESSAGE_LENGTH = 150;
 
-// Styles for the ask-card textarea (rendered on a dark gradient background)
 const askCardTextareaStyles = {
   input: {
     backgroundColor: "rgba(255,255,255,0.95)",
@@ -45,7 +44,6 @@ const askCardTextareaStyles = {
   },
 } as const;
 
-// Reusable SVG icon for "open in new tab" links
 function ExternalLinkIcon() {
   return (
     <svg
@@ -87,16 +85,10 @@ export default function PublicProfile() {
   const { triggerHaptic } = useHaptic(1);
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
-  // Profile-owner customisations read off the public-profile response — the
-  // owner's language, prompt override, ask-card colour, and inbox-open state.
-  // All default to "unset" (English / default headline / default gradient /
-  // open) when the owner never configured them.
   const touchpointLocale = profileData?.touchpointLocale ?? null;
   const t = getTouchpointTranslations(touchpointLocale);
   const askCardGradient = profileCardGradient(profileData?.profileCardTheme ?? null);
-  // The server's getPublicProfile normalizes inboxEnabled to a boolean in the
-  // response (false only when the owner explicitly closed their inbox). It's
-  // undefined when the field wasn't returned, which we treat as open.
+  // The server sends a real boolean; undefined means the field wasn't returned.
   const inboxOpen = profileData?.inboxEnabled !== false;
   const ownerName = profile?.displayName || profile?.handle || "";
 
@@ -154,7 +146,6 @@ export default function PublicProfile() {
 
   const isLoading = handleLoading || profileLoading;
 
-  // Scroll textarea into view on mobile when focused
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -163,7 +154,6 @@ export default function PublicProfile() {
     return () => el.removeEventListener("focus", handleFocus);
   }, []);
 
-  // Scroll the ask card into view once the profile loads
   useEffect(() => {
     if (!isLoading && profile && askCardRef.current) {
       const rect = askCardRef.current.getBoundingClientRect();

@@ -24,9 +24,9 @@ import { touchpointLocales } from "../lib/touchpointTranslations";
 const MAX_PROMPT_LENGTH = 100;
 
 /**
- * Coerce a `user_settings` boolean column to a real boolean. The Kysely row
- * type says `number | boolean`: SQLite returns 0/1, Postgres returns false/true
- * for a `boolean` column. Treat anything that isn't 1/true as off.
+ * SQLite sends 0/1 and Postgres sends false/true for the same column.
+ *
+ * @see [Customise.test.tsx](../tests/pages/Customise.test.tsx) — pins both.
  */
 function on(value: number | boolean | null | undefined): boolean {
   return value === 1 || value === true;
@@ -43,10 +43,8 @@ export default function Customise() {
   } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
 
-  // Local draft for the prompt text so typing doesn't fire a mutation per
-  // keystroke; persisted on blur when the value actually changed. Resyncs from
-  // the server value once it loads (async) and after a successful mutation so
-  // the trimmed/persisted result is reflected.
+  // Drafted locally so typing doesn't fire a mutation per keystroke; persisted
+  // on blur, then resynced so the trimmed server value is what's shown.
   const [promptDraft, setPromptDraft] = useState<string>(userSettings?.customPrompt ?? "");
   const promptInSync = (userSettings?.customPrompt ?? "") === promptDraft;
   useEffect(() => {
@@ -131,8 +129,7 @@ export default function Customise() {
                         : "en"
                     }
                     onChange={(value) => {
-                      // allowDeselect={false} means Mantine never emits null or
-                      // "" here, so the `|| null` fallback is unreachable.
+                      // allowDeselect={false} — Mantine never emits null/"" here.
                       /* istanbul ignore next */
                       updateSettings.mutate({ touchpointLocale: value || null });
                     }}
@@ -247,12 +244,8 @@ function Section({ eyebrow, help, last, children }: SectionProps) {
   );
 }
 
-/**
- * Swatch selector for the ask-card colour preset, mirroring the ThemeCard
- * pattern already used for image-export themes in Messages.tsx (selected =
- * blue tint + border), but lighter-weight since the preview is just a gradient
- * fill, not a multi-branch card mockup.
- */
+/** Lighter-weight sibling of Messages.tsx's ThemeCard: the preview is a
+ * gradient fill rather than a card mockup. */
 function ProfileThemeSwatches({
   value,
   disabled,

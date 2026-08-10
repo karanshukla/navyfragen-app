@@ -2,9 +2,8 @@ import { test, expect, type Page, type Locator } from "@playwright/test";
 
 test.use({ storageState: "e2e/.auth/user.json" });
 
-// Mobile happy paths. Runs at the "Pixel 7" viewport, below the `sm` breakpoint,
-// so the sidebar collapses behind the burger. Opening it reveals the same nav
-// links, and tapping one navigates and closes the drawer.
+// Runs at the "Pixel 7" viewport, below the `sm` breakpoint, so the sidebar
+// collapses behind the burger.
 
 const handle = () => {
   const h = process.env.E2E_HANDLE;
@@ -48,13 +47,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("burger opens and closes the navigation drawer", async ({ page }) => {
-  // Drawer starts collapsed (navbar translated off the left edge).
+  // Collapsed = navbar translated off the left edge.
   await expectDrawerClosed(page);
 
   await burger(page).click();
   await expectDrawerOpen(page);
 
-  // Close again.
   await burger(page).click();
   await expectDrawerClosed(page);
 });
@@ -62,20 +60,17 @@ test("burger opens and closes the navigation drawer", async ({ page }) => {
 test("tapping a nav link navigates and closes the drawer", async ({ page }) => {
   await openDrawer(page);
 
-  // The NavLink accessible name may include an unread badge ("Messages 3"),
-  // so anchor to the label and allow a trailing number.
+  // The name may carry an unread badge ("Messages 3").
   await page.locator("nav").getByRole("link", { name: /^Messages\b/ }).click();
 
   await expect(page).toHaveURL(/\/messages/);
   await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
     timeout: 10_000,
   });
-  // Drawer auto-closed after navigation.
   await expectDrawerClosed(page);
 });
 
 test("home hero links to messages on mobile", async ({ page }) => {
-  // The logged-in home hero has a prominent "View Your Messages" button.
   await page.getByRole("link", { name: "View Your Messages" }).click();
   await expect(page).toHaveURL(/\/messages/);
   await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
@@ -86,8 +81,7 @@ test("home hero links to messages on mobile", async ({ page }) => {
 test("navigate to own profile via the user menu on mobile", async ({ page }) => {
   const h = handle();
 
-  // The user-menu trigger is the last header button (after the color-scheme
-  // toggle). It has no stable aria-label.
+  // No stable aria-label on the trigger.
   await page.locator("header").getByRole("button").last().click();
   await page.getByRole("menuitem", { name: "View Profile" }).click();
 

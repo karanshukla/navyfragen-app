@@ -83,8 +83,6 @@ async function cancelPushSubscription(): Promise<void> {
   await apiClient.delete("/notifications/subscribe", { endpoint });
 }
 
-// --- React Query hooks ---
-
 export const notificationKeys = {
   vapid: ["notifications", "vapid"] as const,
 };

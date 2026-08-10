@@ -46,9 +46,7 @@ const maxRenderBackoff = 2 * time.Second
 const defaultAttemptTimeout = 15 * time.Second
 
 // HTMLToImageRenderer POSTs the composite HTML to the sibling html-to-image
-// service and returns the rendered PNG bytes. It mirrors the TS
-// image-generator.ts call shape and retry discipline: a bounded overall
-// deadline, retry on network errors and on not-awake-yet statuses.
+// service. It mirrors image-generator.ts's call shape and retry discipline.
 type HTMLToImageRenderer struct {
 	URL     string
 	Client  *http.Client
@@ -74,8 +72,7 @@ func NewHTMLToImageRenderer(url string, timeout time.Duration) *HTMLToImageRende
 	}
 	return &HTMLToImageRenderer{
 		URL: url,
-		// No Client.Timeout: each attempt carries its own context deadline, and a
-		// client-level timeout would apply to the whole loop rather than one try.
+		// No Client.Timeout — it would bound the whole loop, not one attempt.
 		Client:         &http.Client{},
 		Timeout:        timeout,
 		AttemptTimeout: attempt,
