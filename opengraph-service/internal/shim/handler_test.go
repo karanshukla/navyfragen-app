@@ -489,10 +489,19 @@ func TestHandler_GenerateCap_ProxyUnaffected(t *testing.T) {
 	h.MaxConcurrentGenerate = 1
 	h.initSem()
 
-	// Saturate the generate slot.
-	go func() { _ = do(t, h, "Bluesky Cardyb", "/profile/busy.test") }()
+	// Saturate the generate slot. The generate must be drained before the test
+	// returns: releasing it leaves it running into Cache.Store, which writes into
+	// the t.TempDir() that cleanup is about to walk.
+	saturated := make(chan struct{})
+	go func() {
+		defer close(saturated)
+		_ = do(t, h, "Bluesky Cardyb", "/profile/busy.test")
+	}()
 	<-started
-	defer close(release)
+	defer func() {
+		close(release)
+		<-saturated
+	}()
 
 	// Ordinary proxy traffic (browser UA) must succeed — the cap is generate-only.
 	rec := do(t, h, "Mozilla/5.0", "/some/path")
