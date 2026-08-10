@@ -12,7 +12,8 @@
     "prepare": "bunx --bun husky || true",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "check:doc-links": "bun scripts/check-doc-links.mjs"
+    "check:doc-links": "bun scripts/check-doc-links.mjs",
+    "test:doc-links": "bun test scripts/check-doc-links.test.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

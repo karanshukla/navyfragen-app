@@ -167,7 +167,9 @@ When rung 3 or 4 is what replaced a comment, leave a link to the test so the rul
 
 Say which rule the test pins, not just that one exists. A bare `@see` is noise.
 
-`bun run check:doc-links` (run in CI by the `Doc Links` job in `Tests.yml`) fails on a `@see [name](path)` whose file is missing and on a Go `[TestName]` doc link with no matching `func TestName`. Without it a renamed test rots the link silently, which is the same staleness problem the comment had.
+`bun run check:doc-links` (run in CI by the `Doc Links` job in `Tests.yml`) fails on a relative markdown link in any TS/JS comment whose file is missing, and on a Go `[TestName]` doc link with no matching `func TestName`. Without it a renamed test rots the link silently, which is the same staleness problem the comment had.
+
+The markdown side deliberately does not require the `@see` tag to be adjacent: JSDoc wraps, so the tag and the link often sit on different lines, and an earlier tag-anchored version of the checker passed a wrapped link that pointed at nothing. `bun run test:doc-links` pins that case and the rest of the checker's boundaries.
 
 ### What this does not license
 
