@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-// --- Classify: the hot-path decision that ordinary /* traffic must not trip ---
-
 func TestClassify_CardybOnProfilePath_Generates(t *testing.T) {
 	if got := Classify("Bluesky Cardyb", "/profile/did:plc:abc"); got != DecisionGenerate {
 		t.Fatalf("Cardyb on /profile/:handle = %v, want DecisionGenerate", got)
@@ -44,8 +42,6 @@ func TestClassify_EmptyUA_Proxies(t *testing.T) {
 		t.Fatalf("empty UA = %v, want DecisionProxy", got)
 	}
 }
-
-// --- ProfileHandle extraction (accepts the :handle and ignores the rest) ---
 
 func TestProfileHandle_Plain(t *testing.T) {
 	if got := ProfileHandle("/profile/foo.bsky.social"); got != "foo.bsky.social" {
@@ -87,8 +83,6 @@ func TestProfileHandle_TrailingSlashOnlyBecomesEmptyAfterTrim(t *testing.T) {
 		t.Fatalf("got %q, want empty", got)
 	}
 }
-
-// --- Cache TTL logic ---
 
 func TestCacheEntry_NilNeverFresh(t *testing.T) {
 	var e *CacheEntry
@@ -147,7 +141,6 @@ func TestParseTTL_NonPositive_FallsBack(t *testing.T) {
 	}
 }
 
-// --- OG composite template builder fallbacks ---
 // These are the acceptance criteria for "sensible fallbacks when banner/avatar
 // are unset." Each variation must produce valid HTML that names the OG size and
 // does NOT contain an empty src attribute that would break the renderer.

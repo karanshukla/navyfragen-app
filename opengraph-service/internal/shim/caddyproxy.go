@@ -80,12 +80,9 @@ http://%s {
 }
 
 // newCaddyProxy returns an http.Handler that forwards every request to target
-// via the embedded Caddy engine. This replaces the hand-rolled
-// httputil.ReverseProxy (custom Director, buffer pool, flush-interval tuning)
-// that used to live directly in Handler: Caddy's real reverse-proxy engine
-// now owns buffering, streaming, and connection handling for the pass-through
-// path. The only Go code left here is the loopback hop that tags each request
-// with its real destination.
+// via the embedded Caddy engine, which owns buffering, streaming, and
+// connection handling. The only Go code here is the loopback hop that tags each
+// request with its real destination.
 func newCaddyProxy(target *url.URL) (http.Handler, error) {
 	engineAddr, err := ensureCaddyEngine()
 	if err != nil {
@@ -96,11 +93,9 @@ func newCaddyProxy(target *url.URL) (http.Handler, error) {
 	baseDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		baseDirector(req)
-		// NewSingleHostReverseProxy's default director only rewrites
-		// req.URL.Host, not req.Host (the actual outgoing Host header). Since
-		// the embedded engine's site block is host-matched
-		// (http://127.0.0.1:<port>), the request must carry that as its Host
-		// header too, or Caddy never matches the site and silently no-ops.
+		// The default director rewrites req.URL.Host but not req.Host. The
+		// engine's site block is host-matched, so without the outgoing Host
+		// header Caddy never matches the site and silently no-ops.
 		req.Host = engineURL.Host
 		req.Header.Set(caddyUpstreamHeader, target.Host)
 	}
@@ -115,13 +110,10 @@ func IsErrServerClosed(err error) bool {
 	return errors.Is(err, http.ErrServerClosed)
 }
 
-// proxyErrorHandler is the bridge proxy's ErrorHandler: invoked when the
-// loopback hop into the embedded Caddy engine fails (which, since the engine
-// lives in this same process, indicates the engine itself failed to start or
-// crashed — a distinct failure mode from the frontend being down, which Caddy
-// itself now handles and reports with its own 502). We log it as an operator-
-// visible error. Context cancellation (client disconnect) is intentionally
-// left as a no-op so a client hang-up does not log as an error.
+// proxyErrorHandler fires when the loopback hop into the embedded engine
+// fails. Since the engine is in-process, that means the engine itself failed —
+// distinct from the frontend being down, which Caddy reports with its own 502.
+// Client disconnects are deliberately not logged as errors.
 func proxyErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, context.Canceled) {
 		return

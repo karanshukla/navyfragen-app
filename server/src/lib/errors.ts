@@ -1,7 +1,5 @@
-// Extracts `.message` from an unknown catch value, or "" if the value isn't
-// Error-shaped. Callers pair it with a fallback (e.g. `errorMessage(err) ||
-// "Failed..."`) so non-Error throws still produce a useful message — matching
-// the pre-`unknown` `err.message || "..."` behavior the tests rely on.
+// Returns "" rather than a placeholder so callers can spell their own fallback
+// as `errorMessage(err) || "Failed to ..."`.
 export function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === "object" && "message" in err) {

@@ -3,10 +3,68 @@ import { AtpAgent, Agent } from "@atproto/api";
 import { Logger } from "pino";
 
 import type { Database } from "../database/db";
+import { fromDbBoolean } from "../lib/db-boolean";
 
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
   resolveHandleToDid(handle: string): Promise<string | undefined>;
+}
+
+const INBOX_OPEN_BY_DEFAULT = true;
+const MAX_SOCIAL_GRAPH_PAGES = 5;
+
+type FriendEntry = { did: string; handle: string; displayName?: string; avatar?: string };
+
+export interface FriendGroups {
+  moots: FriendEntry[];
+  following: FriendEntry[];
+  oomfs: FriendEntry[];
+}
+
+async function collectPagedActors(
+  fetchPage: (cursor: string | undefined) => Promise<{
+    success: boolean;
+    data: { follows?: FriendEntry[]; followers?: FriendEntry[]; cursor?: string };
+  }>
+): Promise<Map<string, FriendEntry>> {
+  const actors = new Map<string, FriendEntry>();
+  let cursor: string | undefined;
+  for (let page = 0; page < MAX_SOCIAL_GRAPH_PAGES; page++) {
+    const res = await fetchPage(cursor);
+    if (!res.success) break;
+    const items = res.data.follows ?? res.data.followers ?? [];
+    for (const actor of items) {
+      actors.set(actor.did, {
+        did: actor.did,
+        handle: actor.handle,
+        displayName: actor.displayName,
+        avatar: actor.avatar,
+      });
+    }
+    cursor = res.data.cursor;
+    if (!cursor) break;
+  }
+  return actors;
+}
+
+function groupByFollowDirection(
+  dids: Set<string>,
+  followingMap: Map<string, FriendEntry>,
+  followersMap: Map<string, FriendEntry>
+): FriendGroups {
+  const groups: FriendGroups = { moots: [], following: [], oomfs: [] };
+
+  for (const did of dids) {
+    const followedByUser = followingMap.has(did);
+    const followsUser = followersMap.has(did);
+    const entry = followingMap.get(did) ?? followersMap.get(did)!;
+
+    if (followedByUser && followsUser) groups.moots.push(entry);
+    else if (followedByUser) groups.following.push(entry);
+    else groups.oomfs.push(entry);
+  }
+
+  return groups;
 }
 
 export class ProfileService {
@@ -21,14 +79,14 @@ export class ProfileService {
   }
   /* v8 ignore stop */
 
-  /**
-   * Get public profile information for a given DID
-   * @param did The user's DID
-   * @returns The user's public profile, whether they're registered on
-   *   Navyfragen, and the public-facing subset of their settings (the
-   *   ask-card strings/theme + inbox-open state) so an anonymous visitor sees
-   *   the profile owner's customisations without a second round-trip.
-   */
+  private readPubliclyVisibleSettings(did: string) {
+    return this.db
+      .selectFrom("user_settings")
+      .select(["inboxEnabled", "customPrompt", "profileCardTheme", "touchpointLocale"])
+      .where("did", "=", did)
+      .executeTakeFirst();
+  }
+
   async getPublicProfile(did: string): Promise<{
     profile: Awaited<ReturnType<AtpAgent["getProfile"]>>["data"];
     exists: boolean;
@@ -39,29 +97,13 @@ export class ProfileService {
   }> {
     let profileResponse: Awaited<ReturnType<typeof this.agent.getProfile>>;
     let exists: boolean;
-    // The public-facing settings subset (inbox toggle, prompt, card theme,
-    // touchpoint locale). Fetched as a third parallel leg alongside the
-    // remote Bluesky profile + checkUserExists — user_settings.did is the PK,
-    // so this is a cheap indexed point-read that adds no measurable latency
-    // on top of the dominating remote HTTP round-trip.
-    let publicSettings:
-      | {
-          inboxEnabled: number | null;
-          customPrompt: string | null;
-          profileCardTheme: string | null;
-          touchpointLocale: string | null;
-        }
-      | undefined;
+    let publicSettings: Awaited<ReturnType<typeof this.readPubliclyVisibleSettings>>;
 
     try {
       [profileResponse, exists, publicSettings] = await Promise.all([
         this.agent.getProfile({ actor: did }),
         this.checkUserExists(did),
-        this.db
-          .selectFrom("user_settings")
-          .select(["inboxEnabled", "customPrompt", "profileCardTheme", "touchpointLocale"])
-          .where("did", "=", did)
-          .executeTakeFirst(),
+        this.readPubliclyVisibleSettings(did),
       ]);
     } catch (err) {
       this.logger.error({ err, did }, "Failed to fetch profile by DID");
@@ -72,32 +114,16 @@ export class ProfileService {
       throw new Error("Profile not found");
     }
 
-    // inboxEnabled is NOT NULL default true, so a missing row (or a null read
-    // from an older row) means the inbox is open. The other fields default to
-    // null = "use the default string/theme/locale". SQLite stores booleans as
-    // 0/1; Postgres stores them as actual booleans — normalize both so the
-    // value reaching the client is always a real boolean.
-    // NOTE: the Kysely row type declares inboxEnabled as `number` (SQLite's
-    // 0/1), but the Postgres dialect returns an actual `boolean` at runtime
-    // for a `boolean` column. Both `0` and `false` mean closed, so coerce via
-    // `unknown` to compare against both without a TS overlap error.
-    const rawInboxEnabled = publicSettings?.inboxEnabled as unknown;
-    const inboxClosed = rawInboxEnabled === 0 || rawInboxEnabled === false;
     return {
       profile: profileResponse.data,
       exists,
-      inboxEnabled: !inboxClosed,
+      inboxEnabled: fromDbBoolean(publicSettings?.inboxEnabled, INBOX_OPEN_BY_DEFAULT),
       customPrompt: publicSettings?.customPrompt ?? null,
       profileCardTheme: publicSettings?.profileCardTheme ?? null,
       touchpointLocale: publicSettings?.touchpointLocale ?? null,
     };
   }
 
-  /**
-   * Check if a user exists in the database
-   * @param did The user's DID
-   * @returns Whether the user exists
-   */
   async checkUserExists(did: string): Promise<boolean> {
     try {
       const userExists = await this.db
@@ -112,57 +138,29 @@ export class ProfileService {
     }
   }
 
+  private async filterToRegisteredUsers(dids: Set<string>): Promise<Set<string>> {
+    const appUsers = await this.db
+      .selectFrom("user_profile")
+      .select("did")
+      .where("did", "in", [...dids])
+      .execute();
+    return new Set(appUsers.map((u) => u.did));
+  }
+
   /**
-   * Resolve a handle to a DID
-   * @param handle The user's handle
-   * @returns The resolved DID
+   * Follows and followers both go through the public appview agent so the two
+   * datasets come from one consistent indexing state — reading one through the
+   * authenticated caller agent could observe the same relationship differently
+   * and mislabel a moot as an oomf. Follows can't move to the authenticated
+   * agent either: its OAuth scope grants getFollows but not getFollowers.
    */
-  async getFriendsOnApp(userDid: string): Promise<{
-    moots: { did: string; handle: string; displayName?: string; avatar?: string }[];
-    following: { did: string; handle: string; displayName?: string; avatar?: string }[];
-    oomfs: { did: string; handle: string; displayName?: string; avatar?: string }[];
-  }> {
-    type FriendEntry = { did: string; handle: string; displayName?: string; avatar?: string };
-
-    async function fetchPages(
-      fetcher: (cursor: string | undefined) => Promise<{
-        success: boolean;
-        data: { follows?: FriendEntry[]; followers?: FriendEntry[]; cursor?: string };
-      }>
-    ): Promise<Map<string, FriendEntry>> {
-      const map = new Map<string, FriendEntry>();
-      let cursor: string | undefined;
-      for (let page = 0; page < 5; page++) {
-        const res = await fetcher(cursor);
-        if (!res.success) break;
-        const items = res.data.follows ?? res.data.followers ?? [];
-        for (const f of items) {
-          map.set(f.did, {
-            did: f.did,
-            handle: f.handle,
-            displayName: f.displayName,
-            avatar: f.avatar,
-          });
-        }
-        cursor = res.data.cursor;
-        if (!cursor) break;
-      }
-      return map;
-    }
-
-    // Both calls go through the same public appview agent so the follows and
-    // followers datasets are read from one consistent indexing state. Splitting
-    // them across the authenticated caller agent and this public agent could
-    // observe the same relationship differently (one appview session lagging
-    // the other), which mislabels moots as oomfs. Note we can't move follows to
-    // the authenticated agent instead: its OAuth scope grants getFollows but not
-    // getFollowers, so doing so would break getFollowers for existing sessions.
+  async getFriendsOnApp(userDid: string): Promise<FriendGroups> {
     const agent = this.agent;
     const [followingMap, followersMap] = await Promise.all([
-      fetchPages((cursor) =>
+      collectPagedActors((cursor) =>
         agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor })
       ),
-      fetchPages((cursor) =>
+      collectPagedActors((cursor) =>
         agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })
       ),
     ]);
@@ -170,32 +168,9 @@ export class ProfileService {
     const allDids = new Set([...followingMap.keys(), ...followersMap.keys()]);
     if (allDids.size === 0) return { moots: [], following: [], oomfs: [] };
 
-    const appUsers = await this.db
-      .selectFrom("user_profile")
-      .select("did")
-      .where("did", "in", [...allDids])
-      .execute();
+    const registeredDids = await this.filterToRegisteredUsers(allDids);
 
-    const appUserDids = new Set(appUsers.map((u) => u.did));
-
-    const moots: FriendEntry[] = [];
-    const following: FriendEntry[] = [];
-    const oomfs: FriendEntry[] = [];
-
-    for (const did of appUserDids) {
-      const inFollowing = followingMap.has(did);
-      const inFollowers = followersMap.has(did);
-      const entry = followingMap.get(did) ?? followersMap.get(did)!;
-      if (inFollowing && inFollowers) {
-        moots.push(entry);
-      } else if (inFollowing) {
-        following.push(entry);
-      } else {
-        oomfs.push(entry);
-      }
-    }
-
-    return { moots, following, oomfs };
+    return groupByFollowDirection(registeredDids, followingMap, followersMap);
   }
 
   async checkFollowsBot(agent: Agent, botDid: string): Promise<boolean> {

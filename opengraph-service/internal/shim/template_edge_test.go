@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 )
 
-// Edge-case coverage for BuildOGTemplate (reexamine gaps 5 and 6):
+// Edge-case coverage for BuildOGTemplate:
 //   - Very long display names / handles (truncation behavior — must not overflow
 //     the 1200×630 canvas).
 //   - Non-Latin display names (Cyrillic, CJK, emoji, RTL scripts) — confirm the
@@ -20,8 +20,6 @@ import (
 // rune-aware (not byte-aware); and very long strings are carried without
 // breaking the HTML structure.
 
-// --- Very long display names / handles (reexamine gap 5) ---
-
 // longName is a display name far longer than the 1200px canvas can fit at 56px.
 // At 56px font-size, the canvas fits roughly 20-25 Latin characters in the
 // meta row's available width (1088px - avatar 132px - gaps). Anything over ~40
@@ -33,7 +31,7 @@ const longHandle = "a-very-long-handle-with-many-segments-that-exceeds-the-canva
 
 // TestBuildOGTemplate_LongDisplayName_HasTruncationCSS asserts the template
 // emits CSS that bounds the display-name element so it cannot overflow the
-// canvas. The reexamine flagged this as untested; the dev asked for coverage.
+// canvas.
 // This test is RED until the template's .name rule includes a max-width /
 // overflow / text-overflow directive.
 func TestBuildOGTemplate_LongDisplayName_HasTruncationCSS(t *testing.T) {
@@ -96,11 +94,9 @@ func TestBuildOGTemplate_LongNamesDoNotBreakHTMLStructure(t *testing.T) {
 	}
 }
 
-// --- Non-Latin display names (reexamine gap 6) ---
-
 // TestBuildOGTemplate_NotoFontStacksPresent asserts the template loads the Noto
 // font stacks that cover Cyrillic, CJK, Arabic, Hebrew, Devanagari, Thai, and
-// emoji. The reexamine noted font coverage "relies on html-to-image's font
+// emoji. Font coverage "relies on html-to-image's font
 // loading" — but the template itself must REQUEST those stacks; if a future
 // edit drops them, non-Latin names silently tofu. This test pins the
 // requirement at the template level.
@@ -132,7 +128,7 @@ func TestBuildOGTemplate_NotoFontStacksPresent(t *testing.T) {
 }
 
 // TestBuildOGTemplate_NonLatinDisplayName_PreservedAndGlyphWorks is a table
-// test covering the script families the reexamine flagged. For each:
+// test covering each script family. For each:
 //   - The full display name survives in the HTML (HTML-escaped but not
 //     mangled) — crawlers see the correct name.
 //   - When avatar is unset, the first-rune glyph fallback extracts the correct
@@ -228,8 +224,6 @@ func TestFirstGlyph_EmptyReturnsEmpty(t *testing.T) {
 	}
 }
 
-// --- RTL safety: an RTL display name must not break the LTR template structure ---
-
 func TestBuildOGTemplate_RTLDisplayName_StructureIntact(t *testing.T) {
 	html := BuildOGTemplate(OGInput{
 		DisplayName: "محمد والعائلة",
@@ -250,8 +244,6 @@ func TestBuildOGTemplate_RTLDisplayName_StructureIntact(t *testing.T) {
 		t.Fatalf("RTL display name not preserved in HTML")
 	}
 }
-
-// --- helpers ---
 
 // hasTruncationCSS reports whether the CSS rule for selector (e.g. ".name")
 // contains the overflow-control trio: a width bound, overflow:hidden, and

@@ -45,10 +45,8 @@ const IMAGE_SERVICE_DEADLINE_MS = 30_000;
 // adds load to a limiter that is already shedding.
 const WAKE_RETRYABLE_STATUSES = new Set([408, 502, 503, 504]);
 
-// Retries on network errors (ECONNREFUSED, ETIMEDOUT, etc.) and on the
-// not-awake-yet statuses above, for up to timeoutMs. Each individual request is
-// bounded by an AbortController so a hanging connection cannot block the loop
-// past the overall deadline.
+// Each attempt gets its own AbortController so one hung connection cannot eat
+// the whole deadline and starve the retry that would have succeeded.
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
@@ -69,10 +67,8 @@ export async function fetchWithRetry(
         clearTimeout(abortTimer);
         return response;
       }
-      // Drain the body before discarding the response, so the connection is
-      // released back to the pool instead of being held open by the next retry.
-      // The abort timer stays armed across the drain — a body that never
-      // finishes must not outlive the deadline.
+      // Drained (with the abort timer still armed) so the connection returns to
+      // the pool instead of being held open by the next retry.
       lastRetryableResponse = {
         status: response.status,
         statusText: response.statusText,
@@ -193,10 +189,17 @@ export function msgFontSize(length: number, large: number, medium: number, small
   return small;
 }
 
-// Simulates CSS word-wrap by placing words one-by-one and breaking at the line
-// boundary. Handles explicit newlines and long words (matched to break-word CSS).
-// charWidthCoeff: avg rendered char width as a fraction of fontSize.
-// Noto Sans ≈ 0.58; compact system fonts (SF Pro, Segoe UI, Roboto) ≈ 0.55.
+/**
+ * Simulates CSS word-wrap (including break-word on over-long words) closely
+ * enough to predict the rendered height before Chromium is involved.
+ *
+ * `charWidthCoeff` is the average rendered character width as a fraction of
+ * fontSize — measured per font, since it is the one value that cannot be
+ * derived from the CSS box model.
+ *
+ * @see [image-generator.test.ts](../tests/image-generator.test.ts) — pins the
+ * wrapping cases (explicit newlines, over-long words, multi-byte text).
+ */
 export function wrapLines(
   text: string,
   fontSize: number,
@@ -233,40 +236,76 @@ export function wrapLines(
   return Math.max(1, totalLines);
 }
 
+const LINE_HEIGHT_RATIO = 1.45;
+
+/** Mirrors the CSS box model of each theme's template, so a padding change here
+ * and there stay in step. `charWidthCoeff` is measured, not derived. */
+const THEME_LAYOUT = {
+  ngl: {
+    cardWidth: 360,
+    horizontalInsets: { bodyPadding: 32, bubblePadding: 36 },
+    bubbleVerticalPadding: 12 + 12,
+    charWidthCoeff: 0.58,
+    chrome: { topPad: 16, header: 20, headerGap: 10, bubbleGap: 10, footer: 16, bottomPad: 16 },
+    minHeight: 0,
+  },
+  compressed: {
+    cardWidth: 380,
+    horizontalInsets: { bodyPadding: 24, border: 4, cardPadding: 13 + 14 },
+    bubbleVerticalPadding: 0,
+    charWidthCoeff: 0.53,
+    chrome: {
+      bodyPad: 24,
+      cardPad: 24,
+      label: 11,
+      labelMargin: 6,
+      footerMargin: 8,
+      footer: 12,
+    },
+    minHeight: 100,
+  },
+  twitter: {
+    cardWidth: 420,
+    horizontalInsets: { cardPadding: 16 + 16 },
+    bubbleVerticalPadding: 0,
+    charWidthCoeff: 0.55,
+    chrome: { cardTop: 14, avatarRow: 36, headerMargin: 10, footer: 37, cardBottom: 12 },
+    minHeight: 140,
+  },
+} as const;
+
+type ThemeLayout = (typeof THEME_LAYOUT)[keyof typeof THEME_LAYOUT];
+
+function sum(parts: Readonly<Record<string, number>>): number {
+  return Object.values(parts).reduce((total, part) => total + part, 0);
+}
+
+function cardHeight(layout: ThemeLayout, text: string, fontSize: number): number {
+  const textAreaWidth = layout.cardWidth - sum(layout.horizontalInsets);
+  const lines = wrapLines(text, fontSize, textAreaWidth, layout.charWidthCoeff);
+  const textHeight = Math.ceil(lines * fontSize * LINE_HEIGHT_RATIO) + layout.bubbleVerticalPadding;
+
+  return Math.max(textHeight + sum(layout.chrome), layout.minHeight);
+}
+
 function nglHeight(message: string): number {
-  const length = [...message].length;
-  const fontSize = msgFontSize(length, 26, 21, 17);
-  // message area: 360px wide − 32px body padding − 36px bubble padding (18px each side)
-  const lines = wrapLines(message, fontSize, 292, 0.58);
-  const bubbleH = Math.ceil(lines * fontSize * 1.45) + 24; // 24 = 12px top + 12px bottom bubble padding
-  // fixed chrome: 16 top pad + 20 header + 10 gap + 10 gap + 16 footer + 16 bottom pad = 88
-  return bubbleH + 88;
+  const fontSize = msgFontSize([...message].length, 26, 21, 17);
+  return cardHeight(THEME_LAYOUT.ngl, message, fontSize);
 }
 
 function compressedHeight(message: string): number {
-  const length = [...message].length;
-  const fontSize = msgFontSize(length, 19, 16, 14);
-  // message area: 380px − 24px body padding − 4px border − 27px card padding (13px+14px)
-  // coeff 0.53: Noto Sans semibold at these sizes fills ~38–39 chars/line at 16px in a 325px area
-  const lines = wrapLines(message, fontSize, 325, 0.53);
-  const textH = Math.ceil(lines * fontSize * 1.45);
-  // fixed chrome: 24 body pad + 24 card pad + 11 label (9px×1.2lh) + 6 label-margin + 8 footer-margin + 12 footer (10px×1.2lh) = 85
-  return Math.max(textH + 85, 100);
+  const fontSize = msgFontSize([...message].length, 19, 16, 14);
+  return cardHeight(THEME_LAYOUT.compressed, message, fontSize);
 }
 
 function twitterHeight(message: string, handle?: string): number {
-  const length = [...message].length;
-  const fontSize = msgFontSize(length, 21, 17, 14);
-  // message area: 420px − 32px card padding (16px each side)
-  // Prepend handle mention since it's rendered inline before the message text
-  const displayText = handle ? `@${handle} ${message}` : message;
-  const lines = wrapLines(displayText, fontSize, 388, 0.55);
-  const textH = Math.ceil(lines * fontSize * 1.45);
-  // fixed chrome: 14 card-top + 36 avatar-row + 10 header-margin + 37 footer (margin+pad+border+text) + 12 card-bottom = 109
-  return Math.max(textH + 109, 140);
+  const fontSize = msgFontSize([...message].length, 21, 17, 14);
+  // The handle mention renders inline ahead of the message, so it occupies the
+  // same wrapped text block.
+  const renderedText = handle ? `@${handle} ${message}` : message;
+  return cardHeight(THEME_LAYOUT.twitter, renderedText, fontSize);
 }
 
-// Default theme: NGL-style — vivid purple gradient, large prominent white bubble
 function generateDefaultHtml(
   escapedMessage: string,
   footerText: string,
@@ -346,7 +385,6 @@ function generateDefaultHtml(
   return { html, width, height };
 }
 
-// Compressed theme: Dark compact card with left accent border
 function generateCompressedHtml(
   escapedMessage: string,
   footerText: string,
@@ -423,7 +461,6 @@ function generateCompressedHtml(
   return { html, width, height };
 }
 
-// Twitter theme: X/Twitter post card — profile header, tweet body, link footer
 function generateTwitterHtml(
   escapedMessage: string,
   footerText: string,

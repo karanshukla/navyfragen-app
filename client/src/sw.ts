@@ -8,46 +8,31 @@ import type { PushPayload } from "./pushPayload";
 
 declare const self: ServiceWorkerGlobalScope;
 
-// Precache the build's emitted assets (the manifest is injected at build time
-// by vite-plugin-pwa's `injectManifest` strategy).
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Stay in the `waiting` state until the user explicitly asks for the update.
-//
-// Calling skipWaiting() at parse time activated every new deploy the instant it
-// finished installing, and vite-plugin-pwa's registration answers an update
-// activation with `window.location.reload()` — so a tab that happened to be
-// open when a deploy shipped was reloaded mid-session, discarding whatever the
-// user was typing. Dropping clientsClaim() alone did not stop that, because
-// skipWaiting() on its own already transfers control of existing clients.
-//
-// `registerType: "prompt"` surfaces the waiting worker as the header's "Update"
-// button instead. workbox-window's messageSkipWaiting() posts this message when
-// that button is pressed, and it only posts to a worker that is genuinely
-// waiting — so skipping the wait here would break the button as well.
+// Only ever skip waiting on request. Calling skipWaiting() at parse time takes
+// control of open tabs, and vite-plugin-pwa answers that with a
+// window.location.reload() — reloading a tab mid-session and discarding whatever
+// the user was typing. The header's Update button posts this message instead,
+// and workbox only posts it to a worker that is genuinely waiting.
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
 
-// --- Production-only runtime caching ---------------------------------------
-// In dev, vite-plugin-pwa serves the SW with devOptions that intentionally keep
-// runtime behavior minimal; we also gate runtime caching behind a SW-origin
-// check so a dev SW can never serve a stale production asset via fetch handlers.
+// Every runtime-caching route is gated on this so a dev service worker can never
+// serve a stale production asset.
 const SW_ORIGIN = self.location.origin;
 const CACHE_STATIC = "nf-static-v2";
 
-// Bypass cache for API and OAuth requests — always go to the network.
 const networkOnlyUrls = ["/api/", "/oauth"];
 registerRoute(({ url }) => {
   if (url.origin !== SW_ORIGIN) return false;
   return networkOnlyUrls.some((p) => url.pathname.startsWith(p));
 }, new NetworkFirst());
 
-// Navigation requests: network-first so fresh HTML is served, fall back to the
-// precached app shell for offline support. This mirrors the prior hand-rolled
-// `event.respondWith(fetch(event.request).catch(() => caches.match("/index.html")))`.
+// Network-first, falling back to the precached app shell when offline.
 const navigationRoute = new NavigationRoute(
   new NetworkFirst({
     cacheName: CACHE_STATIC,
@@ -56,14 +41,12 @@ const navigationRoute = new NavigationRoute(
 );
 registerRoute(navigationRoute);
 
-// Static assets (JS, CSS, fonts, images): cache-first.
 registerRoute(
   ({ request, url }) =>
     url.origin === SW_ORIGIN && ["script", "style", "image", "font"].includes(request.destination),
   new CacheFirst({ cacheName: CACHE_STATIC })
 );
 
-// --- Push notifications ----------------------------------------------------
 const APP_ICON = "/android-chrome-192x192.png";
 const APP_BADGE = "/favicon-32x32.png";
 
@@ -78,7 +61,7 @@ self.addEventListener("push", (event) => {
       data = { ...data, ...event.data.json() };
     }
   } catch {
-    // Payload wasn't valid JSON (or empty) — keep the defaults above.
+    /* not valid JSON — keep the defaults above */
   }
 
   event.waitUntil(
@@ -91,14 +74,10 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// A device can hold push subscriptions for several signed-in accounts at
-// once, so a notification's recipient (data.did) doesn't necessarily match
-// whichever account is currently active in the browser. The service worker
-// itself can't reliably call the API to switch accounts here — it has no
-// access to the app's VITE_API_URL, which may prefix every request (e.g.
-// "/api") depending on how the app is deployed. So instead of fetching here,
-// pass the recipient along as query params and let the page (which already
-// knows its own API base URL) perform the switch on load.
+// The notification's recipient is not necessarily the account active in the
+// browser, but this worker cannot switch accounts itself: VITE_API_URL, which
+// may prefix every request, is not available here. The recipient rides along as
+// query params so the page can do it on load.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data || {};

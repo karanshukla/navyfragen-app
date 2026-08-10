@@ -1,6 +1,6 @@
 /* v8 ignore start */
-// Bluesky's production PDS infrastructure runs on bsky.network (AWS us-east-2)
-// and the legacy bsky.social PDS. Self-hosted or unknown PDS defaults to EU.
+// Bluesky's own PDS infrastructure is US-hosted (bsky.network on AWS us-east-2,
+// plus the legacy bsky.social). Self-hosted and unknown PDSes default to EU.
 export function pdsRegion(pdsUrl: string): "us" | "eu" {
   /* v8 ignore stop */
   try {
@@ -9,7 +9,7 @@ export function pdsRegion(pdsUrl: string): "us" | "eu" {
       return "us";
     }
   } catch {
-    /* invalid URL — default to eu */
+    /* invalid URL */
   }
   return "eu";
 }

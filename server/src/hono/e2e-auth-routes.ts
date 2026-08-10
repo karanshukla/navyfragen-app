@@ -1,8 +1,5 @@
-// E2E-only login route using AT Protocol app passwords. Mounted only when
-// E2E_TESTING=true and NODE_ENV !== production — never active in production.
-// Extracted into its own module so it can be excluded from the unit-coverage
-// gate (it makes live network calls + DB writes, exercised by the Playwright
-// overlay, not unit tests). Mirrors the former src/routes/e2e-auth-routes.ts.
+// Its own module so it can be excluded from the unit-coverage gate: it makes
+// live network calls and DB writes, exercised by the Playwright overlay.
 
 import { AtpAgent } from "@atproto/api";
 import { z } from "zod";

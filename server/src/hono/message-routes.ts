@@ -1,7 +1,3 @@
-// Message, profile, settings, and notification route handlers. Business logic
-// stays in the services (reused unchanged); only the req/res I/O is Hono's
-// Context. Validation uses Zod schemas (the client already uses Zod v4).
-
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
@@ -19,7 +15,6 @@ import type { AppContext } from "#/index";
 
 const BOT_DID = "did:plc:3d4awubjiftylwrhhyp5vl7i";
 
-/** Optional injected services — production omits this (uses real services); tests pass mocks. */
 export interface MessageDeps {
   messageService?: MessageService;
   notificationService?: NotificationService;
@@ -32,7 +27,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
   const notificationService =
     deps.notificationService ?? new NotificationService(ctx.db, ctx.resolver, ctx.logger);
 
-  // --- POST /messages/example ---------------------------------------------
   app.post(
     "/messages/example",
     zValidator("json", z.object({ recipient: z.string().min(1) }), (r, c) => {
@@ -51,7 +45,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   );
 
-  // --- POST /messages/respond ---------------------------------------------
   app.post(
     "/messages/respond",
     zValidator(
@@ -103,7 +96,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   );
 
-  // --- POST /messages/send (anonymous) ------------------------------------
   app.post(
     "/messages/send",
     zValidator(
@@ -136,7 +128,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   );
 
-  // --- GET /messages/:recipient -------------------------------------------
   app.get("/messages/:recipient", async (c) => {
     const recipient = getSession(c)?.did;
     if (!recipient) return c.json({ error: "Not authenticated" }, 403);
@@ -152,7 +143,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   });
 
-  // --- DELETE /messages/:tid ----------------------------------------------
   app.delete("/messages/:tid", async (c) => {
     const tid = c.req.param("tid");
     if (!tid) return c.json({ error: "Message TID required" }, 400);
@@ -173,7 +163,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   });
 
-  // --- DELETE /delete-account ---------------------------------------------
   app.delete("/delete-account", async (c) => {
     const userSessionDid = getSession(c)?.did;
     if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
@@ -202,7 +191,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   });
 
-  // --- POST /messages/sync ------------------------------------------------
   app.post("/messages/sync", async (c) => {
     const userSessionDid = getSession(c)?.did;
     if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
@@ -230,7 +218,6 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
   return app;
 }
 
-/** Optional injected services — production omits this (uses real services); tests pass mocks. */
 export interface ProfileDeps {
   profileService?: ProfileService;
 }
@@ -240,7 +227,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
   const profileService =
     deps.profileService ?? new ProfileService(ctx.db, ctx.resolver, ctx.logger);
 
-  // --- GET /public-profile/:did -------------------------------------------
   app.get(
     "/public-profile/:did",
     zValidator("param", z.object({ did: z.string().min(1) }), (r, c) => {
@@ -261,7 +247,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
     }
   );
 
-  // --- GET /user-exists/:did ----------------------------------------------
   app.get(
     "/user-exists/:did",
     zValidator("param", z.object({ did: z.string().min(1) }), (r, c) => {
@@ -279,7 +264,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
     }
   );
 
-  // --- GET /friends -------------------------------------------------------
   app.get("/friends", async (c) => {
     const userDid = getSession(c)?.did;
     if (!userDid) return c.json({ error: "Not authenticated" }, 403);
@@ -292,7 +276,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
     }
   });
 
-  // --- GET /check-bot-follow ----------------------------------------------
   app.get("/check-bot-follow", async (c) => {
     const userDid = getSession(c)?.did;
     if (!userDid) return c.json({ error: "Not authenticated" }, 403);
@@ -307,7 +290,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
     }
   });
 
-  // --- GET /handle-pds/:handle --------------------------------------------
   app.get(
     "/handle-pds/:handle",
     zValidator("param", z.object({ handle: z.string().min(1) }), (r, c) => {
@@ -328,7 +310,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
     }
   );
 
-  // --- GET /handle-search -------------------------------------------------
   app.get(
     "/handle-search",
     zValidator("query", z.object({ q: z.string().min(1).max(64) }), (r, c) => {
@@ -346,7 +327,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
     }
   );
 
-  // --- GET /resolve-handle/:handle ----------------------------------------
   app.get(
     "/resolve-handle/:handle",
     zValidator("param", z.object({ handle: z.string().min(1) }), (r, c) => {
@@ -370,7 +350,6 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
   return app;
 }
 
-/** Optional injected services — production omits this (uses real services); tests pass mocks. */
 export interface SettingsDeps {
   settingsService?: SettingsService;
 }
@@ -420,8 +399,6 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     }
   });
 
-  // POST /settings — every field optional; mirrors the Express validator's
-  // .optional({ nullable: true }) semantics. Coerced booleans/strings only.
   const updateSchema = z.object({
     pdsSyncEnabled: z.boolean().optional(),
     imageTheme: z.string().min(1).nullable().optional(),
@@ -442,15 +419,12 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
       if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
       const body = c.req.valid("json");
       try {
-        // Preserve `null` vs `undefined` semantics: the service treats null as
-        // "clear this field" and undefined as "don't touch it" (the original
-        // Express controller passed req.body values straight through). Coercing
-        // null → undefined here would make clearing customPrompt/profileCardTheme/
-        // touchpointLocale/imageTheme a no-op — the customise E2E caught this.
+        // null and undefined are not interchangeable here: the service reads
+        // null as "clear this field" and undefined as "leave it alone", so
+        // collapsing them would make clearing a customisation a no-op.
         const updatedSettings = await settingsService.updateSettings(userSessionDid, {
           pdsSyncEnabled: body.pdsSyncEnabled,
-          // imageTheme is NOT nullable in the service (string only); coerce null
-          // → undefined ("don't touch"), matching the original .notEmpty() guard.
+          // imageTheme is not nullable in the service, so null means "leave it".
           imageTheme: body.imageTheme ?? undefined,
           inboxEnabled: body.inboxEnabled,
           profanityFilterEnabled: body.profanityFilterEnabled,
@@ -473,7 +447,6 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
   return app;
 }
 
-/** Optional injected services — production omits this (uses real services); tests pass mocks. */
 export interface NotificationDeps {
   notificationService?: NotificationService;
 }

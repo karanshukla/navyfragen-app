@@ -2,8 +2,8 @@ import { test as setup, expect } from "@playwright/test";
 
 const authFile = "e2e/.auth/user.json";
 
-// Logs in once via the E2E app-password bypass and saves auth state.
-// All spec files that depend on ["setup"] will reuse this stored session.
+// Logs in once via the E2E app-password bypass; every spec that depends on
+// ["setup"] reuses the stored session.
 setup("authenticate via e2e bypass", async ({ page }) => {
   const handle = process.env.E2E_HANDLE;
   const appPassword = process.env.E2E_APP_PASSWORD;

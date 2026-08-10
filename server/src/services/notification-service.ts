@@ -7,18 +7,13 @@ const { sendNotification, setVapidDetails } = webPush;
 
 import type { Database } from "../database/db";
 
-/**
- * Minimal shape NotificationService needs from the app's DID resolver, so
- * tests can stub it without pulling in the real AT Protocol resolution.
- */
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
 }
 
-// VAPID config is read live from process.env (rather than the frozen `env`
-// snapshot) so tests can toggle it per-case without reloading the module.
-// All three reads below share this single source.
-function readVapidConfig() {
+// Read live from process.env rather than the frozen `env` snapshot, so a test
+// can toggle VAPID on and off without reloading the module.
+function readVapidConfigFromLiveEnv() {
   return {
     publicKey: process.env.VAPID_PUBLIC_KEY || "",
     privateKey: process.env.VAPID_PRIVATE_KEY || "",
@@ -26,24 +21,11 @@ function readVapidConfig() {
   };
 }
 
-/**
- * True only when all three VAPID values are present in the environment.
- */
 export function isWebPushConfigured(): boolean {
-  const { publicKey, privateKey, subject } = readVapidConfig();
+  const { publicKey, privateKey, subject } = readVapidConfigFromLiveEnv();
   return Boolean(publicKey && privateKey && subject);
 }
 
-/**
- * Minimal in-process concurrency limiter (p-limit style). Returns a `run()`
- * that wraps an async task so at most `limit` run at once; the rest queue.
- * No new infrastructure, no worker threads — push delivery is I/O-bound, so
- * the event loop already handles it concurrently; this just caps the number
- * of simultaneous outbound HTTPS calls during a traffic spike.
- *
- * Exposed as a factory so the cap can be unit-tested in isolation against a
- * fresh instance, without disturbing the shared module-level limiter.
- */
 export function createConcurrencyLimiter(limit: number) {
   let active = 0;
   const queue: Array<() => void> = [];
@@ -81,11 +63,8 @@ export function createConcurrencyLimiter(limit: number) {
   };
 }
 
-/**
- * Cap on the number of `sendNotification` HTTPS calls in flight at once.
- * Shared across every NotificationService instance (there is one per route
- * module) because they share one Node process and one network egress.
- */
+// Shared across every NotificationService instance (one per route module):
+// they share one process and one network egress.
 export const PUSH_CONCURRENCY_LIMIT = 10;
 const pushLimiter = createConcurrencyLimiter(PUSH_CONCURRENCY_LIMIT);
 
@@ -96,18 +75,15 @@ export class NotificationService {
     private logger: Logger
   ) {}
 
-  /**
-   * The VAPID public key the browser needs to subscribe, or null when push is
-   * not configured (so the controller can surface a "not available" response).
-   */
   getVapidPublicKey(): string | null {
-    return readVapidConfig().publicKey || null;
+    return readVapidConfigFromLiveEnv().publicKey || null;
   }
 
   /**
-   * Save or update a push subscription for a user.
-   * Upserts by (did, endpoint) so a single device can hold a separate row
-   * per signed-in account instead of the newest account stealing the row.
+   * Upserts by (did, endpoint) so a device holds one row per signed-in account
+   * instead of the newest account stealing the row. Single-statement because a
+   * read-then-write races: two concurrent saves can both miss the existing row
+   * and the second INSERT then violates the unique constraint (migration 008).
    */
   async saveSubscription(
     did: string,
@@ -115,12 +91,6 @@ export class NotificationService {
     p256dh: string,
     auth: string
   ): Promise<void> {
-    // Single-statement upsert. The earlier read-then-write (SELECT then
-    // conditional UPDATE/INSERT) was both two round-trips and racy: two
-    // concurrent saves for the same (did, endpoint) could both miss the
-    // existing row and the second INSERT would fail on the unique constraint.
-    // The `push_subscription_did_endpoint_unique` constraint (migration 008)
-    // is the conflict target; on conflict, refresh the keys.
     await this.db
       .insertInto("push_subscription")
       .values({ did, endpoint, p256dh, auth, createdAt: new Date().toISOString() })
@@ -130,12 +100,10 @@ export class NotificationService {
   }
 
   /**
-   * Make push notifications device-wide: given every account remembered on
-   * one browser, copy whichever (endpoint, keys) rows already exist for any
-   * of them onto the accounts still missing a row. Called after enabling
-   * push and after switching accounts, so a device that's ever subscribed
-   * keeps every signed-in account covered, not just whichever was active at
-   * subscribe time.
+   * Given every account remembered on one browser, copies whichever device
+   * subscriptions already exist for any of them onto the accounts still
+   * missing one — so a device that has ever subscribed keeps every signed-in
+   * account covered, not just whichever was active at subscribe time.
    */
   async syncSubscriptionsAcrossAccounts(dids: string[]): Promise<void> {
     if (dids.length < 2) return;
@@ -166,9 +134,6 @@ export class NotificationService {
     await Promise.all(missing);
   }
 
-  /**
-   * Remove a specific push subscription by endpoint (called on unsubscribe).
-   */
   async deleteSubscription(did: string, endpoint: string): Promise<void> {
     await this.db
       .deleteFrom("push_subscription")
@@ -178,34 +143,75 @@ export class NotificationService {
     this.logger.info({ did }, "Push subscription deleted");
   }
 
-  /**
-   * Remove all push subscriptions for a user (called on account deletion).
-   */
   async deleteAllSubscriptionsForUser(did: string): Promise<void> {
     await this.db.deleteFrom("push_subscription").where("did", "=", did).execute();
     this.logger.info({ did }, "All push subscriptions deleted");
   }
 
+  private applyVapidDetails(recipientDid: string): boolean {
+    try {
+      const { subject, publicKey, privateKey } = readVapidConfigFromLiveEnv();
+      setVapidDetails(subject, publicKey, privateKey);
+      return true;
+    } catch (err) {
+      this.logger.error({ err, did: recipientDid }, "Failed to configure VAPID details");
+      return false;
+    }
+  }
+
   /**
-   * Send a push notification to every subscription registered for a recipient.
-   * No-ops when web push is not configured. Automatically removes subscriptions
-   * that the push service reports as expired/gone (410/404).
+   * Names the recipient account in the payload because one device can hold
+   * subscriptions for several accounts at once — the client uses `did`/`handle`
+   * to tell them apart and switch to the right account on click, rather than
+   * opening whichever account happens to be active in the browser.
    */
+  private async buildNewMessagePayload(recipientDid: string): Promise<string> {
+    const handle = await this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined);
+
+    return JSON.stringify({
+      title: handle ? `New question for @${handle}` : "New anonymous question",
+      body: "Someone sent you an anonymous question on Navyfragen!",
+      url: "/messages",
+      did: recipientDid,
+      handle,
+    });
+  }
+
+  private async deliverOrPrune(
+    recipientDid: string,
+    sub: { endpoint: string; p256dh: string; auth: string },
+    payload: string
+  ): Promise<void> {
+    try {
+      await pushLimiter.run(() =>
+        sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        )
+      );
+    } catch (err) {
+      const statusCode =
+        err && typeof err === "object" && "statusCode" in err
+          ? (err as { statusCode?: number }).statusCode
+          : undefined;
+      const subscriptionIsGone = statusCode === 410 || statusCode === 404;
+
+      if (subscriptionIsGone) {
+        await this.deleteSubscription(recipientDid, sub.endpoint);
+        this.logger.info({ did: recipientDid }, "Removed expired push subscription");
+      } else {
+        this.logger.error({ err, did: recipientDid }, "Failed to send push notification");
+      }
+    }
+  }
+
   async sendNewMessageNotification(recipientDid: string): Promise<void> {
     if (!isWebPushConfigured()) {
       this.logger.debug({ did: recipientDid }, "Web push not configured; skipping notification");
       return;
     }
 
-    // Re-assert VAPID details on each send (cheap, idempotent). Wrapped so a
-    // malformed subject never crashes the request — push just stays inert.
-    try {
-      const { subject, publicKey, privateKey } = readVapidConfig();
-      setVapidDetails(subject, publicKey, privateKey);
-    } catch (err) {
-      this.logger.error({ err, did: recipientDid }, "Failed to configure VAPID details");
-      return;
-    }
+    if (!this.applyVapidDetails(recipientDid)) return;
 
     const subscriptions = await this.db
       .selectFrom("push_subscription")
@@ -215,47 +221,10 @@ export class NotificationService {
 
     if (subscriptions.length === 0) return;
 
-    // A device can hold a push subscription for several accounts at once,
-    // so more than one account's notifications can land here side by side.
-    // Naming the recipient account up front (and passing its DID along) lets
-    // the client tell them apart and auto-switch to the right account on
-    // click, since clicking one shouldn't open whichever account happens to
-    // be active in the browser.
-    const handle = await this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined);
-
-    const payload = JSON.stringify({
-      title: handle ? `New question for @${handle}` : "New anonymous question",
-      body: "Someone sent you an anonymous question on Navyfragen!",
-      url: "/messages",
-      did: recipientDid,
-      handle,
-    });
+    const payload = await this.buildNewMessagePayload(recipientDid);
 
     await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        try {
-          // Gate the outbound HTTPS call through the shared concurrency limiter
-          // so a burst of messages can't open hundreds of sockets at once.
-          await pushLimiter.run(() =>
-            sendNotification(
-              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-              payload
-            )
-          );
-        } catch (err) {
-          const statusCode =
-            err && typeof err === "object" && "statusCode" in err
-              ? (err as { statusCode?: number }).statusCode
-              : undefined;
-          // 410 Gone / 404 Not Found → subscription is no longer valid; clean it up
-          if (statusCode === 410 || statusCode === 404) {
-            await this.deleteSubscription(recipientDid, sub.endpoint);
-            this.logger.info({ did: recipientDid }, "Removed expired push subscription");
-          } else {
-            this.logger.error({ err, did: recipientDid }, "Failed to send push notification");
-          }
-        }
-      })
+      subscriptions.map((sub) => this.deliverOrPrune(recipientDid, sub, payload))
     );
   }
   /* v8 ignore next 1 */

@@ -1,11 +1,7 @@
 /**
- * Shape of the JSON payload the server sends with a push event. All fields are
- * optional — the service worker falls back to sensible defaults for any that
- * are missing (see client/src/sw.ts).
- *
- * Shared between the service worker (sw.ts) and the server's push dispatcher
- * so the contract lives in one place. The server is expected to send a
- * superset of this shape; extra fields are ignored.
+ * The push-event contract, shared by sw.ts and the server's dispatcher. Every
+ * field is optional: the service worker defaults anything missing, and extra
+ * fields the server sends are ignored.
  */
 export interface PushPayload {
   title?: string;

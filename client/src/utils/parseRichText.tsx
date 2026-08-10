@@ -124,9 +124,9 @@ const renderToken = (token: Token, key: string): React.ReactNode => {
 
     case "link": {
       const href = ensureProtocol(token.url);
-      // A markdown link whose single child's raw text is identical to the url
-      // (e.g. `[https://example.com](https://example.com)`) is a bare-url link —
-      // shorten its display text the same way a plain autolink would.
+      // A markdown link whose child text equals its url is a bare-url link, so
+      // shorten it the way a plain autolink would.
+      // @see ../tests/utils/parseRichText.test.tsx
       const isBareUrlLink = token.children.length === 1 && token.children[0].raw === token.url;
       const displayText = isBareUrlLink
         ? toShortUrl(token.url)

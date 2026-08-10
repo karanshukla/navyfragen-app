@@ -1,13 +1,10 @@
 /* v8 ignore start */
 
-// In-memory store for app-password agents created during E2E testing.
-// Only populated when E2E_TESTING=true; always empty in production/unit tests.
+// Only populated when E2E_TESTING=true; always empty in production.
 import type { Agent, AtpAgent } from "@atproto/api";
 
-// The E2E login route builds an AtpAgent (app-password auth), while the OAuth
-// path produces an Agent. Both expose the same API surface the app calls
-// (getProfile, post, com.atproto.repo.*, app.bsky.*), so the store accepts
-// either and callers treat the result as an Agent-compatible client.
+// App-password login yields an AtpAgent, OAuth an Agent; both expose the API
+// surface this app calls, so callers treat either as an Agent-compatible client.
 export type E2EAgent = Agent | AtpAgent;
 
 interface E2EEntry {

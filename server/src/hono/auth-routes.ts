@@ -1,9 +1,3 @@
-// Auth route handlers (login, session, logout, switchAccount, OAuth callback/
-// consume, client-metadata, E2E login). Business logic stays in AuthService
-// and NotificationService (reused unchanged); only the req/res I/O is Hono's
-// Context. Validation uses @hono/zod-validator (the client already uses Zod v4,
-// so this consolidates the schema stack).
-
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
@@ -28,7 +22,6 @@ import { createE2EAuthHono } from "./e2e-auth-routes";
 import type { AppContext } from "#/index";
 import type { AppSessionData } from "#/auth/session";
 
-/** Optional injected services — production omits this (uses real services); tests pass mocks. */
 export interface AuthDeps {
   service?: AuthService;
   notificationService?: NotificationService;
@@ -40,8 +33,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   const notificationService =
     deps.notificationService ?? new NotificationService(ctx.db, ctx.resolver, ctx.logger);
 
-  // --- POST /login ---------------------------------------------------------
-  // Zod v4: custom messages on .min() use { error: "..." }.
   const loginSchema = z.object({
     handle: z.string().min(1, { error: "Invalid handle" }).max(64),
   });
@@ -69,7 +60,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     }
   );
 
-  // --- GET /session --------------------------------------------------------
   app.get("/session", async (c) => {
     let session = getSession(c);
     if (!session?.did) {
@@ -81,7 +71,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       let did = session.did;
       let profile = await service.checkSession(did);
 
-      // Active account expired — try to fall back to another remembered account.
       if (!profile) {
         session = mutateSession(session, (s) => removeAccount(s, did));
         const fallback = getAccounts(session)[0];
@@ -131,7 +120,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     }
   });
 
-  // --- POST /logout --------------------------------------------------------
   app.post("/logout", async (c) => {
     const session = getSession(c);
     if (!session?.did) {
@@ -154,14 +142,12 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       return c.json({ message: "Logged out, switched account", switched: true });
     }
     clearSession(c);
-    // Append (not replace) the nf-region expiry so both Set-Cookie headers
-    // reach the browser — clearSession already wrote nf-session's expiry, and
-    // c.header without append would clobber it.
+    // Appended, not set: clearSession already wrote nf-session's expiry and a
+    // non-appending c.header would clobber that Set-Cookie header.
     c.header("Set-Cookie", expireNfRegionCookie(), { append: true });
     return c.json({ message: "Logged out successfully" });
   });
 
-  // --- POST /accounts/switch ----------------------------------------------
   const switchSchema = z.object({
     did: z.string().min(1, { error: "did is required" }).max(512),
   });
@@ -202,9 +188,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
           mutateSession(updated, (s) => upsertAccount(s, toAccountEntry(profile)))
         );
         ctx.logger.info({ did }, "Switched active account");
-        // Fire-and-forget: if this device already has push enabled for another
-        // remembered account, extend it to the one just switched to. Never block
-        // the switch response on this.
+        // Fire-and-forget — the switch response must not wait on this.
         notificationService
           .syncSubscriptionsAcrossAccounts(getAccounts(updated).map((a) => a.did))
           .catch((err) =>
@@ -218,13 +202,8 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     }
   );
 
-  // --- GET /client-metadata.json ------------------------------------------
   app.get("/client-metadata.json", (c) => c.json(ctx.oauthClient.clientMetadata));
 
-  // --- GET /oauth/callback -------------------------------------------------
-  // Bluesky redirects here after the user authorises. The query carries the
-  // OAuth result; on success we persist the session and redirect the browser
-  // to the client's /oauth_callback with a short-lived encrypted token.
   app.get("/oauth/callback", async (c) => {
     const params = new URLSearchParams(c.req.url.split("?")[1] ?? "");
     try {
@@ -237,8 +216,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
         ctx.logger.error({ err: dbErr, did }, "Failed to create or confirm user profile entry.");
       }
       const existing = getSession(c) ?? ({} as AppSessionData);
-      // Preserve any previously remembered accounts (add-account flow), then
-      // make the newly authenticated account active.
       await setSession(c, { ...existing, did });
       ctx.logger.info({ did }, "OAuth callback successful, session created");
       let token: string;
@@ -261,9 +238,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     }
   });
 
-  // --- POST /oauth/consume -------------------------------------------------
-  // Exchanges the short-lived encrypted token (from /oauth/callback) for a real
-  // session cookie. Also sets the nf-region routing hint for Caddy.
   app.post("/oauth/consume", async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const oauthToken = body?.oauth_token;
@@ -286,8 +260,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       await setSession(c, { ...existing, did });
       ctx.logger.info({ did }, "Session set from oauth_token");
 
-      // PDS-region routing hint for Caddy. Non-fatal: a miss just means Caddy
-      // falls back to the EU backend.
+      // Non-fatal: without the hint Caddy falls back to the EU backend.
       try {
         const atData = await ctx.idResolver.did.resolveAtprotoData(did);
         const region = pdsRegion(atData.pds);
@@ -311,17 +284,10 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     }
   });
 
-  // --- POST /auth/e2e-login (E2E only, never in production) ----------------
-  // Extracted to src/hono/e2e-auth-routes.ts (its own module so it can be
-  // excluded from the unit-coverage gate — it makes live network calls).
-  // Mount only outside production when E2E testing is opted in.
   const e2eSubApp =
     env.E2E_TESTING && env.NODE_ENV !== "production" ? createE2EAuthHono(ctx, service) : null;
   if (e2eSubApp) app.route("/", e2eSubApp);
 
-  // --- helpers -------------------------------------------------------------
-
-  /** Apply a mutation to a copy of the session (helpers mutate in place). */
   function mutateSession(session: AppSessionData, fn: (s: AppSessionData) => void): AppSessionData {
     const copy: AppSessionData = {
       did: session.did,
@@ -332,7 +298,6 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     return copy;
   }
 
-  /** The Express build clears the `nf-region` routing cookie on logout. */
   function expireNfRegionCookie(): string {
     return "nf-region=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }

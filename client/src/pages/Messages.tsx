@@ -48,7 +48,6 @@ import { themes } from "../lib/themes";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import { surfaceBg } from "../styles/tokens";
 
-// Styles for the reply textarea inside the response box (white card on dark background)
 const replyTextareaStyles = {
   input: {
     background: "transparent",
@@ -80,7 +79,6 @@ export function formatTimestamp(dateStr: string): string {
   });
 }
 
-/** SVG circular character-count progress ring */
 function CharRing({ count, limit }: { count: number; limit: number }) {
   const r = 9;
   const circ = 2 * Math.PI * r;
@@ -324,7 +322,6 @@ function ThemeCardPreview({ value }: { value: string }) {
   );
 }
 
-/** Visual image theme picker card */
 function ThemeCard({
   value,
   label,
@@ -526,9 +523,8 @@ export default function Messages() {
   };
 
   const handleDeleteRequest = (tid: string) => {
-    // The trash ActionIcon's onClick already guards on `isPinned` (threadRootTid === msg.tid)
-    // before ever calling this handler, so this condition can never be true through the UI —
-    // see docs/testing-notes.md for details.
+    // Unreachable via the UI: the trash icon guards on isPinned first. See
+    // docs/testing-notes.md.
     /* istanbul ignore if */
     if (threadRootTid === tid) return;
     if (confirmBeforeDelete) {
@@ -567,10 +563,8 @@ export default function Messages() {
   };
 
   const handleConfirmDelete = () => {
-    // messageIdToDelete is always set in the same state update that opens the modal, and the
-    // Confirm button that invokes this handler only exists in the DOM while the modal is
-    // opened — so the false arm (messageIdToDelete === null) has no reachable UI path. See
-    // docs/testing-notes.md for details.
+    // Unreachable via the UI: the Confirm button only exists while the modal is
+    // open, and opening it sets messageIdToDelete. See docs/testing-notes.md.
     /* istanbul ignore else */
     if (messageIdToDelete) performDelete(messageIdToDelete, true);
   };
@@ -579,8 +573,8 @@ export default function Messages() {
     setRespondingTid(tid);
     setResponseText("");
     const idx = sortedMessages.findIndex((m) => m.tid === tid);
-    // Every call site passes a tid taken directly from a `sortedMessages` entry, so idx is
-    // always found — the -1 branch has no reachable UI path. See docs/testing-notes.md.
+    // Unreachable: every caller passes a tid from sortedMessages. See
+    // docs/testing-notes.md.
     /* istanbul ignore else */
     if (idx !== -1) setFocusedCardIndex(idx);
   };
@@ -666,12 +660,10 @@ export default function Messages() {
     if (respondingTid && textareaRef.current) {
       textareaRef.current.focus();
       const el = document.getElementById(`message-card-${respondingTid}`);
-      // respondingTid is always set (via handlePrepareResponse) to the tid of a card that is
-      // already rendered in the same commit, so el is always found — the false arm has no
-      // reachable UI path. See docs/testing-notes.md.
-      // Defer the scroll so it lands after the textarea-expansion layout shift
-      // settles; without the cleanup, the timer survives a respondingTid change
-      // (or unmount) and scrolls a card from a prior interaction.
+      // Unreachable false arm: respondingTid always names a card rendered in the
+      // same commit. See docs/testing-notes.md.
+      // Deferred so the scroll lands after the textarea-expansion layout shift;
+      // the cleanup stops a stale timer scrolling a card from a prior interaction.
       let handle: ReturnType<typeof setTimeout> | undefined;
       /* istanbul ignore else */
       if (el)
@@ -698,10 +690,8 @@ export default function Messages() {
     prevMsgCountRef.current = count;
     if (autoScrollToMessages && count > prev && messages?.[0]) {
       const newestCard = document.getElementById(`message-card-${messages[0].tid}`);
-      // newestCard is always found whenever this branch runs (messages[0] existing implies its
-      // card is rendered in the same commit), so the `?? messagesTopRef.current` fallback and
-      // the `if (target)` guard's false arm are both structurally unreachable. See
-      // docs/testing-notes.md.
+      // The fallback and the guard's false arm are both unreachable: messages[0]
+      // implies its card rendered in this commit. See docs/testing-notes.md.
       /* istanbul ignore next */
       const target = newestCard ?? messagesTopRef.current;
       /* istanbul ignore else */
@@ -722,8 +712,8 @@ export default function Messages() {
         event.preventDefault();
         const idx = sortedMessages.findIndex((m) => m.tid === respondingTid);
         setRespondingTid(null);
-        // respondingTid always corresponds to an entry in sortedMessages, so idx is always
-        // found — the -1 branch has no reachable UI path. See docs/testing-notes.md.
+        // Unreachable -1 branch: respondingTid is always in sortedMessages. See
+        // docs/testing-notes.md.
         /* istanbul ignore else */
         if (idx !== -1) messageCardRefs.current[idx]?.focus();
         return;
@@ -839,9 +829,8 @@ export default function Messages() {
                   )}
                 </CopyButton>
                 {(() => {
-                  // Localize the owner's own share copy in their selected
-                  // touchpoint language (#266) — this text leaves the DOM into
-                  // a tweet/DM, so Google Translate can't reach it.
+                  // Localised because this text leaves the DOM into a tweet/DM,
+                  // where Google Translate cannot reach it (#266).
                   const ownerName = session.profile?.displayName || session.profile?.handle || "";
                   const t = getTouchpointTranslations(userSettings?.touchpointLocale);
                   const sharePayload = {

@@ -10,18 +10,9 @@ import (
 	"time"
 )
 
-// Handler is the opengraph-service's HTTP entry point, factored out of
-// cmd/shim/main.go so the full request path (classify → proxy / generate →
-// cache serve) can be exercised end-to-end by an in-process integration test
-// with the external dependencies (indigo, html-to-image) stubbed. The same
-// Handler serves production traffic; main.go constructs it and wires it to a
-// real *http.Server.
-//
-// Routes:
-//   - GET /healthz → 200 {}
-//   - GET /og-cache/<safe-did>.png → cached PNG from the volume
-//   - everything else → Classify; DecisionGenerate → slow path, else reverse-proxy
-//     (via the embedded Caddy engine — see caddyproxy.go).
+// Handler is the opengraph-service's HTTP entry point. It is separate from
+// cmd/shim/main.go so the full request path can be driven end-to-end by an
+// in-process test with indigo and html-to-image stubbed.
 type Handler struct {
 	Proxy     http.Handler
 	Generator *Generator
@@ -30,24 +21,16 @@ type Handler struct {
 	// GenTimeout bounds the slow path so a stuck upstream cannot hold a
 	// connection forever. Defaults to 45s when zero (the production value).
 	GenTimeout time.Duration
-	// MaxConcurrentGenerate caps the number of generate-path requests that may
-	// be in flight at once. Generation is the slow path (indigo resolve + a
-	// headless-browser render against the shared html-to-image service). The
-	// Cardyb UA can be trivially spoofed, and singleflight only dedups per
-	// handle — an attacker rotating handles could otherwise drive unbounded
-	// concurrent renders, exhausting html-to-image for legitimate Cardyb
-	// traffic. Once the cap is hit, further generate requests fail fast with
-	// 503 (the fast proxy path is unaffected — see ServeHTTP). Defaults to
-	// DefaultMaxConcurrentGenerate when zero. Set to a negative value to
-	// disable the cap (use only in tests).
+	// MaxConcurrentGenerate caps in-flight generate-path requests; excess ones
+	// fail fast with 503. Zero means DefaultMaxConcurrentGenerate; negative
+	// disables the cap, for tests only.
 	MaxConcurrentGenerate int
 	genSem                chan struct{}
 }
 
-// DefaultMaxConcurrentGenerate bounds concurrent cold-path renders. Sized to
-// protect a single html-to-image instance (one Puppeteer at a time) from
-// spoofed-Cardyb-driven render storms while still allowing real Cardyb
-// concurrency to coalesce via singleflight. Tunable via the Handler field.
+// DefaultMaxConcurrentGenerate is sized to protect a single html-to-image
+// instance (one Puppeteer at a time) while still letting genuine Cardyb
+// concurrency coalesce through singleflight.
 const DefaultMaxConcurrentGenerate = 4
 
 // NewHandler wires the handler against an upstream client URL and the injected
@@ -63,9 +46,6 @@ func NewHandler(upstreamURL string, gen *Generator, cache *FileCache, origin str
 	if err != nil {
 		return nil, err
 	}
-	// The pass-through path is now proxied by an embedded Caddy engine (see
-	// caddyproxy.go) instead of a hand-rolled httputil.ReverseProxy — Caddy
-	// owns buffering, streaming, and upstream-failure handling.
 	proxy, err := newCaddyProxy(target)
 	if err != nil {
 		return nil, err
@@ -95,7 +75,9 @@ func (h *Handler) initSem() {
 	h.genSem = make(chan struct{}, h.MaxConcurrentGenerate)
 }
 
-// ServeHTTP routes the request per the comments on Handler.
+// ServeHTTP serves /healthz, streams /og-cache/<safe-did>.png from the volume,
+// and sends everything else to the generate slow path or the Caddy proxy
+// according to Classify.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/healthz":
@@ -130,12 +112,10 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	// Bound concurrent cold-path renders so a spoofed-Cardyb render storm
-	// (singleflight only dedups per handle; attackers rotate handles) cannot
-	// exhaust the shared html-to-image service. When the cap is hit, fail fast
-	// with 503 — the proxy fast path keeps serving and Cardyb will retry the
-	// link unfurl on its next crawl. Cache hits (the common case after warmup)
-	// do NOT hold the slot: we acquire only around the actual generate call.
+	// The Cardyb UA is trivially spoofable and singleflight only dedups per
+	// handle, so an attacker rotating handles could drive unbounded concurrent
+	// renders and exhaust the shared html-to-image service. Failing fast with
+	// 503 keeps the proxy path serving; Cardyb retries on its next crawl.
 	if h.genSem != nil {
 		select {
 		case h.genSem <- struct{}{}:
@@ -147,7 +127,6 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Bound the generation so a stuck upstream cannot hold a connection forever.
 	timeout := h.GenTimeout
 	if timeout <= 0 {
 		timeout = 45 * time.Second
@@ -166,9 +145,8 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	imageURL := "/og-cache/" + SafeDID(result.DID) + ".png"
 	htmlResp := BuildOGResponse(ResponseInput{
 		ProfileHandle: handle,
-		// The generation path does not surface the display name to the HTTP
-		// layer today (it is used only inside the composite render); the title
-		// falls back to the handle so the Cardyb-facing HTML is deterministic.
+		// The display name never reaches this layer — it is used only inside the
+		// composite render — so the title falls back to the handle.
 		DisplayName: strings.TrimPrefix(handle, "@"),
 		ImageURL:    imageURL,
 		Origin:      h.Origin,
@@ -180,15 +158,13 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 
 // serveCacheFile streams the stored PNG for a /og-cache/:did.png request.
 func (h *Handler) serveCacheFile(w http.ResponseWriter, r *http.Request) {
-	// Path shape: /og-cache/<safe-did>.png
 	base := strings.TrimPrefix(r.URL.Path, "/og-cache/")
 	base = strings.TrimPrefix(base, "/")
 	if base == "" || !strings.HasSuffix(base, ".png") {
 		http.NotFound(w, r)
 		return
 	}
-	// The base IS the SafeDID-derived filename. Re-sanitize defensively so a
-	// crafted URL cannot traverse the cache dir.
+	// Re-sanitized defensively: a crafted URL must not traverse the cache dir.
 	safe := h.Cache.SafePathFromBase(base)
 	if safe == "" {
 		http.NotFound(w, r)

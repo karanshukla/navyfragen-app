@@ -1,7 +1,8 @@
 /**
- * A remembered account entry cached in the browser session so the account
- * switcher can render without fetching every profile on each page load.
- * The active account's entry is refreshed on every `/session` call.
+ * Cached so the account switcher renders without refetching every profile.
+ *
+ * @see [session.test.ts](../tests/session.test.ts) — pins the merge-on-upsert
+ * and capacity-eviction behaviour of the helpers below.
  */
 export interface AccountEntry {
   did: string;
@@ -18,24 +19,16 @@ export interface AppSessionData {
   oauthState?: string;
 }
 
-/** Maximum number of accounts kept in a single browser session. */
 export const MAX_ACCOUNTS = 5;
 
-/** Returns the remembered accounts (never undefined). */
 export function getAccounts(session: AppSessionData | null): AccountEntry[] {
   return Array.isArray(session?.accounts) ? (session!.accounts as AccountEntry[]) : [];
 }
 
-/** Finds a remembered account by DID. */
 export function findAccount(session: AppSessionData | null, did: string): AccountEntry | undefined {
   return getAccounts(session).find((a) => a.did === did);
 }
 
-/**
- * Inserts or refreshes an account entry. Existing entries are merged so cached
- * handle/displayName/avatar are refreshed when fresh data is available.
- * When at capacity the oldest entry is dropped.
- */
 export function upsertAccount(session: AppSessionData, entry: AccountEntry): void {
   if (!session) return;
   if (!Array.isArray(session.accounts)) {
@@ -52,13 +45,11 @@ export function upsertAccount(session: AppSessionData, entry: AccountEntry): voi
   session.accounts.push(entry);
 }
 
-/** Removes a remembered account by DID (no-op if absent). */
 export function removeAccount(session: AppSessionData | null, did: string): void {
   if (!session || !Array.isArray(session.accounts)) return;
   session.accounts = session.accounts.filter((a) => a.did !== did);
 }
 
-/** Maps a full profile (from getProfile) to the minimal cached entry. */
 export function toAccountEntry(profile: {
   did: string;
   handle?: string;

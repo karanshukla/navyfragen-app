@@ -1,20 +1,12 @@
 /**
- * Hand-maintained translations for the handful of "touchpoint" strings that
- * leave the DOM (the OS share sheet / clipboard) or are the highest-conversion
- * copy on the app (the ask-card a stranger reads before sending a message).
+ * Deliberately not a full i18n rollout (#266). Only two kinds of string live
+ * here: copy that leaves the DOM into the OS share sheet, where browser-level
+ * Google Translate structurally cannot reach it, and the ask-card a stranger
+ * reads — which the profile OWNER pins to their audience's language, since a
+ * visitor's browser locale is the wrong signal for it.
  *
- * This is deliberately NOT a full client i18n rollout — the rest of the app is
- * a static SPA and browser-level Google Translate handles page chrome. These
- * specific strings are the ones Google Translate structurally cannot reach
- * (share payloads) or that a profile owner may want pinned to their audience's
- * language regardless of a visitor's browser settings (the ask-card).
- *
- * See issue #266 for the rationale. Whose preference controls it: the profile
- * OWNER (not the visitor) — they know what language their audience speaks.
- * Stored server-side in user_settings.touchpointLocale (null = English).
- *
- * Adding a locale = adding one object to `touchpointTranslations` and one entry
- * to `touchpointLocales`. No extraction tooling, no missing-key linting infra.
+ * Adding a locale = one object in `translations` and one entry in
+ * `touchpointLocales`. No extraction tooling, no missing-key linting.
  */
 
 export type TouchpointLocale = "en" | "es" | "pt" | "de" | "fr";
@@ -108,12 +100,7 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
   },
 };
 
-/**
- * Resolve a (possibly null/unknown) locale to its translations, falling back to
- * English for anything unset or not in the table. English is the default when
- * touchpointLocale is null, so a profile that never set a locale renders the
- * exact same strings it did before this feature existed.
- */
+/** Anything unset or unrecognised falls back to English. */
 export function getTouchpointTranslations(
   locale: string | null | undefined
 ): TouchpointTranslations {

@@ -46,52 +46,42 @@ class Semaphore {
   }
 }
 
-// Bounded deadline for waiting on images/fonts to load before a screenshot.
-// Long enough to absorb a slow CDN fetch (banners/avatars live on cdn.bsky.app,
-// fonts on fonts.googleapis.com), short enough that a hung host can't stall a
-// render. On timeout we proceed with the screenshot anyway — the common case
-// will have loaded, the pathological case degrades to the pre-fix behavior.
+// Long enough to absorb a slow CDN fetch, short enough that a hung host cannot
+// stall a render. A timeout screenshots anyway rather than failing the request.
 const VISUAL_READINESS_TIMEOUT_MS = 8000;
 
-// waitForVisualReadiness blocks until the page's webfonts and <img> elements
-// have loaded, so the screenshot doesn't race background-image/avatar fetches.
-// Without this, page.goto's 'load' event (the default wait) fires as soon as
-// the HTML's direct resources resolve, but CSS background-image and <img>
-// sources from a CDN (e.g. cdn.bsky.app banners/avatars) and webfonts are
-// frequently still in flight — producing flaky renders with blank banners or
-// fallback-font text. document.fonts.ready covers the FontFaceSet; the in-page
-// function covers <img> completeness. Both settle quickly on a local file URL
-// with no external assets.
-async function waitForVisualReadiness(page) {
-  await Promise.all([
-    // Best-effort font load. document.fonts.ready resolves once the FontFaceSet
-    // settles (all @font-face faces that the page actually uses have loaded or
-    // failed). Guarded — very old Chromium lacks document.fonts, though 23.x
-    // always has it.
-    page.evaluate(() => {
-      if (document.fonts && document.fonts.ready) {
-        return document.fonts.ready;
-      }
-      return Promise.resolve();
-    }),
-    // Every <img> must be complete with a non-zero naturalWidth (i.e. decoded,
-    // not broken/empty). waitForFunction polls until the predicate holds or
-    // the timeout elapses; on timeout it rejects, which we swallow so the
-    // screenshot still fires.
-    page.waitForFunction(
-      () => Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0),
-      { timeout: VISUAL_READINESS_TIMEOUT_MS }
-    ).catch(() => {}),
-  ]);
+function waitForWebfonts(page) {
+  return page.evaluate(() => {
+    if (document.fonts && document.fonts.ready) {
+      return document.fonts.ready;
+    }
+    return Promise.resolve();
+  });
 }
 
-// Railway's Serverless (app-sleeping) detects inactivity from *outbound
-// packets*: no packets for 10 minutes puts the service to sleep. A resident
-// Chromium never goes that quiet — its background services (component updater,
-// safe-browsing lists, field trials, domain reliability uploads) and its local
-// media-route discovery (mDNS/SSDP multicast for DIAL/Cast) all emit traffic on
-// timers with no page open. These flags shut those subsystems off so an idle
-// container is genuinely silent; the rest trim per-render RSS.
+function waitForDecodedImages(page) {
+  return page
+    .waitForFunction(
+      () => Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0),
+      { timeout: VISUAL_READINESS_TIMEOUT_MS }
+    )
+    .catch(() => {});
+}
+
+/**
+ * page.goto's 'load' event fires once the HTML's direct resources resolve, but
+ * CDN-hosted avatars/banners and webfonts are often still in flight then —
+ * screenshotting at that point yields blank banners and fallback-font text.
+ */
+async function waitForVisualReadiness(page) {
+  await Promise.all([waitForWebfonts(page), waitForDecodedImages(page)]);
+}
+
+// Railway's app-sleeping measures inactivity in *outbound packets*, and a
+// resident Chromium is never that quiet: its component updater, safe-browsing
+// lists, field trials, domain-reliability uploads, and mDNS/SSDP media-route
+// discovery all emit traffic on timers with no page open. These flags silence
+// those subsystems; the rest trim per-render RSS.
 export const CHROMIUM_LAUNCH_ARGS = [
   '--no-sandbox',
   '--no-zygote',
@@ -116,21 +106,18 @@ export const CHROMIUM_LAUNCH_ARGS = [
   '--mute-audio',
 ];
 
-// How long the browser may sit idle before it's closed. Must be comfortably
-// under Railway's 10-minute inactivity window so a silent stretch can actually
-// accumulate after the browser exits.
+// Must stay comfortably under Railway's 10-minute inactivity window, so a
+// genuinely silent stretch can accumulate after the browser exits.
 export const BROWSER_IDLE_TIMEOUT_MS = 90_000;
 
-// A Chromium instance accumulates RSS across many renders (cache/heap
-// fragmentation) even with every page closed. Under sustained traffic the idle
-// timer never fires, so this bounds growth by forcing a close at the first
-// moment nothing is in flight.
+// Chromium accumulates RSS across renders even with every page closed, and
+// under sustained traffic the idle timer never fires — so growth is bounded by
+// forcing a close at the first moment nothing is in flight.
 export const RENDERS_BEFORE_RECYCLE = 100;
 
-// createBrowserPool owns the Chromium lifecycle: launch on first use, close
-// once idle. Keeping the browser out of the process while nothing is rendering
-// is what lets the container fall silent (and drops idle RSS from ~500MB to
-// just the Node process).
+// Launch on first use, close once idle: keeping Chromium out of the process
+// between renders is what lets the container fall silent (and drops idle RSS
+// from ~500MB to just the server). Do not prewarm it.
 export function createBrowserPool({
   launch,
   idleTimeoutMs = BROWSER_IDLE_TIMEOUT_MS,
@@ -309,13 +296,9 @@ export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
   return app;
 }
 
-// Only run when this file is the entry point, not when imported by tests.
-// This whole block is process bootstrap (server listen + signal handlers) —
-// structurally unreachable under the test harness, since app.test.js imports
-// this module rather than executing it as the entry point. Bun (the runtime
-// since #314) does not honor per-block coverage markers, so the gate is the
-// import-meta path check instead — when the suite imports this module the
-// check is false and the block is skipped.
+// Process bootstrap, skipped when app.test.js imports this module. The
+// import-meta check is the gate because Bun honors no per-block coverage
+// marker.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = 3033;
 
