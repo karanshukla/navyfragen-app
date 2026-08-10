@@ -373,6 +373,24 @@ jobs:
       - name: Run tests
         run: bun test app.test.js
 
+  doc-links:
+    name: Doc Links
+    runs-on: ubuntu-latest
+
+    # CLAUDE.md lets a test carry a business rule in place of a comment, on the
+    # condition that the code links to that test. A renamed test breaks the link
+    # silently, which puts the rule back to being undocumented.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Check doc links resolve
+        run: bun run check:doc-links
+
   coveralls-finish:
     name: Coveralls Finish
     needs: [client-tests, server-tests]

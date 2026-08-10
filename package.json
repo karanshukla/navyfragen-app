@@ -1,39 +1,40 @@
 {
-    "name": "navyfragen-monorepo",
-    "private": true,
-    "workspaces": [
-        "client",
-        "server",
-        "html-to-image"
-    ],
-    "scripts": {
-        "dev": "bunx --bun concurrently \"bun run --cwd client dev\" \"bun run --cwd server dev\" \"bun run --cwd html-to-image start\"",
-        "html-to-image": "docker compose -f docker/docker-compose.yml up html-to-image --build",
-        "prepare": "bunx --bun husky || true",
-        "test:e2e": "playwright test",
-        "test:e2e:ui": "playwright test --ui"
-    },
-    "devDependencies": {
-        "@playwright/test": "^1.62.1",
-        "concurrently": "^10.0.4",
-        "dotenv": "^17.4.2",
-        "happy-dom": "^20.11.2",
-        "husky": "^9.1.7",
-        "lint-staged": "^17.3.0",
-        "prettier": "^3.9.6"
-    },
-    "dependencies": {
-        "@types/ws": "^8.18.1",
-        "ws": "^8.21.3"
-    },
-    "overrides": {
-        "esbuild": ">=0.28.1",
-        "brace-expansion": ">=5.0.9",
-        "fast-uri": ">=3.1.5",
-        "nanoid": ">=3.3.17",
-        "@atproto-labs/fetch-node": "0.3.7"
-    },
-    "patchedDependencies": {
-        "@atproto-labs/fetch-node@0.3.7": "patches/@atproto-labs%2Ffetch-node@0.3.7.patch"
-    }
+  "name": "navyfragen-monorepo",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "html-to-image"
+  ],
+  "scripts": {
+    "dev": "bunx --bun concurrently \"bun run --cwd client dev\" \"bun run --cwd server dev\" \"bun run --cwd html-to-image start\"",
+    "html-to-image": "docker compose -f docker/docker-compose.yml up html-to-image --build",
+    "prepare": "bunx --bun husky || true",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "check:doc-links": "bun scripts/check-doc-links.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "concurrently": "^10.0.4",
+    "dotenv": "^17.4.2",
+    "happy-dom": "^20.11.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6"
+  },
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "ws": "^8.21.3"
+  },
+  "overrides": {
+    "esbuild": ">=0.28.1",
+    "brace-expansion": ">=5.0.9",
+    "fast-uri": ">=3.1.5",
+    "nanoid": ">=3.3.17",
+    "@atproto-labs/fetch-node": "0.3.7"
+  },
+  "patchedDependencies": {
+    "@atproto-labs/fetch-node@0.3.7": "patches/@atproto-labs%2Ffetch-node@0.3.7.patch"
+  }
 }

@@ -142,13 +142,15 @@ A comment is the last resort, not the first. Work down this ladder and only writ
 
 1. **Abstraction and encapsulation.** Business logic explained by a comment in a controller belongs in a domain-named service method instead. Arithmetic spelled out in a comment (`// 360px minus 32px body padding minus 36px bubble padding`) belongs in named constants that compute it. A repeated coercion explained in two places belongs in one named helper (`fromDbBoolean`, `toDbBoolean`).
 2. **Human-readable subfunctions.** A comment labelling a block (`// Phase 2: cache lookup`, `// --- POST /login ---`) means the block wants to be a function, or the line below already says it. Name it and delete the label. Sentinel values get names too: `USE_APP_DEFAULT` beats `null // = use the default`.
-3. **Unit tests instead of inline comments.** A comment asserting behavior ("a flagged message still returns success", "reading an entry does not extend its TTL") is a test that hasn't been written. Write the test, then delete the comment.
-4. **Integration/E2E tests instead of WHY comments.** A WHY that only shows up across a boundary (cookie format, account switching, a settings round-trip) belongs in an E2E spec, not a paragraph above the code.
+3. **Unit tests that pin the rule, on both sides of its boundary.** A comment stating a business rule is a rule nothing enforces. Replace it with a pair of tests, one inside the boundary and one outside, named after the rule. A cap of five messages per inbox becomes "accepts a fifth message" and "rejects a sixth message", not `// max 5 per inbox`. The pair is the point: a single happy-path test documents a case, whereas the pair documents the limit and fails the day someone moves it. A comment goes stale silently.
+4. **Integration/E2E tests for rules that only exist across a boundary.** Same idea one level up. A rule that only shows up end to end (cookie format, account switching, a settings round-trip clearing a field) gets a spec, not a paragraph above the code.
 5. **Whatever 1-4 can't reach.** Hidden constraints, upstream bugs, production-incident history, protocol requirements, reachability arguments for coverage suppressions. These stay, but keep them tight: state the constraint, not its biography.
 
-### Point at the test that carries the explanation
+Tests augment the rule rather than merely restating it: the rule becomes executable, and the boundary that prose only asserted is now enforced. What is left over after the rule is pinned (a threat model, an incident, an upstream bug) is rung 5 and can stay, but it should be the residue, not the rule written twice.
 
-When rung 3 or 4 is what replaced a comment, leave a link to the test so the reasoning is still findable from the code. Both toolchains resolve these, so use the native form:
+### Point at the test that carries the rule
+
+When rung 3 or 4 is what replaced a comment, leave a link to the test so the rule stays findable from the code it governs. Both toolchains resolve these, so use the native form:
 
 - **TypeScript**: a markdown link in JSDoc, path relative to the file. VS Code renders it clickable on hover:
   ```ts
@@ -163,7 +165,9 @@ When rung 3 or 4 is what replaced a comment, leave a link to the test so the rea
   // pin both directions.
   ```
 
-Say what the test pins, not just that one exists. A bare `@see` is noise.
+Say which rule the test pins, not just that one exists. A bare `@see` is noise.
+
+`bun run check:doc-links` (run in CI by the `Doc Links` job in `Tests.yml`) fails on a `@see [name](path)` whose file is missing and on a Go `[TestName]` doc link with no matching `func TestName`. Without it a renamed test rots the link silently, which is the same staleness problem the comment had.
 
 ### What this does not license
 
