@@ -26,6 +26,19 @@ Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in product
 
 Schema and migrations live entirely in `src/database/db.ts`. Add new migrations as numbered keys (`"007"`, etc.) in the `migrations` object — Kysely applies them in order at startup via `migrateToLatest()`.
 
+### In-process state, and the replica count that makes it safe
+
+`RenderService` (`src/services/render-service.ts`) holds finished question-image renders in an in-process TTL cache until the user confirms the post. That is only correct because a user's render and their polls land on the same process:
+
+- Both server services run **one replica each** (`numReplicas: 1`, `us-east4-eqdc4a` and `europe-west4-drams3a`).
+- `caddy/Caddyfile` pins an authenticated session to NA or EU by the `nf-region` cookie, so a session does not cross regions either.
+
+The one exposure is **deploy overlap** — Railway starts the new instance before draining the old, so for a minute or two per deploy a poll can hit a process that never saw the render. That is handled rather than engineered away: a missing key reads as `unknown`, and the client re-renders instead of surfacing an error. Losing a few in-flight renders a few times a day is cheap; the work is pure and safe to redo.
+
+> **Tripwire: the day `numReplicas` goes above 1 in either region, this breaks silently.** `lb_policy round_robin` in the `(lb_settings)` snippet has no stickiness, so polls would round-robin across instances and mostly miss. At that point the result store has to move to a shared one, and it must be a **new, authenticated** Valkey — never the Anubis instance, which is deliberately passwordless (see `.claude/skills/railway-deployment/SKILL.md`) and would then be holding anonymous question text.
+
+The comment above `(lb_settings)` — "/api/\* is stateless JSON, so replaying a request costs nothing but latency" — still holds for retries against a single upstream, but it is no longer true that nothing behind `/api/*` keeps state.
+
 ### AT Protocol / Lexicons
 
 Custom lexicon `app.navyfragen.message` defines the record type for messages. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `bun run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.

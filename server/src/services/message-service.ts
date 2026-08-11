@@ -8,6 +8,8 @@ import { containsProfanity } from "../lib/profanity";
 import { ids } from "../lexicon/lexicons";
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message";
 import { imageGenerator } from "../lib/image-generator";
+import { readImageTheme } from "./image-theme";
+import type { RenderedQuestionImage } from "./render-service";
 
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
@@ -211,22 +213,12 @@ export class MessageService {
     };
   }
 
-  private async readImageTheme(did: string): Promise<string> {
-    const userSettings = await this.db
-      .selectFrom("user_settings")
-      .selectAll()
-      .where("did", "=", did)
-      .executeTakeFirst();
-    return userSettings?.imageTheme ?? "default";
-  }
-
-  private async buildQuestionImageEmbed(
+  private async renderQuestionImage(
     question: string,
     did: string,
-    handle: string | undefined,
-    agent: Agent
-  ): Promise<AppBskyFeedPost.Record["embed"]> {
-    const theme = await this.readImageTheme(did);
+    handle: string | undefined
+  ): Promise<RenderedQuestionImage> {
+    const theme = await readImageTheme(this.db, did);
     const { imageBlob, imageAltText, width, height } = await imageGenerator.generateQuestionImage(
       question,
       this.logger,
@@ -239,14 +231,20 @@ export class MessageService {
         "Image generation failed — the image service may still be starting up. Please try again in a moment."
       );
     }
+    return { imageBlob, imageAltText, width, height };
+  }
 
-    const uploadedImage = await agent.uploadBlob(imageBlob, { encoding: "image/png" });
+  private async buildQuestionImageEmbed(
+    image: RenderedQuestionImage,
+    agent: Agent
+  ): Promise<AppBskyFeedPost.Record["embed"]> {
+    const uploadedImage = await agent.uploadBlob(image.imageBlob, { encoding: "image/png" });
     const imageEmbed: AppBskyEmbedImages.Image = {
       image: uploadedImage.data.blob,
-      alt: imageAltText || "Image of the anonymous question",
+      alt: image.imageAltText || "Image of the anonymous question",
     };
-    if (width && height) {
-      imageEmbed.aspectRatio = { width, height };
+    if (image.width && image.height) {
+      imageEmbed.aspectRatio = { width: image.width, height: image.height };
     }
     return { $type: "app.bsky.embed.images", images: [imageEmbed] };
   }
@@ -276,7 +274,14 @@ export class MessageService {
     response: string,
     includeQuestionAsImage: boolean,
     agent: Agent,
-    replyTo?: { uri: string; cid?: string }
+    replyTo?: { uri: string; cid?: string },
+    /**
+     * A render the async pipeline already produced and the caller has claimed.
+     * When present the image service is never called: the bytes are uploaded
+     * and posted inside this authenticated request, which is the only place
+     * `agent.post` ever runs.
+     */
+    preRendered?: RenderedQuestionImage
   ): Promise<{ success: boolean; uri: string; cid: string; link?: string }> {
     try {
       const handle = await this.resolver.resolveDidToHandle(did);
@@ -291,7 +296,8 @@ export class MessageService {
       }
 
       if (includeQuestionAsImage) {
-        postRecord.embed = await this.buildQuestionImageEmbed(original, did, handle, agent);
+        const image = preRendered ?? (await this.renderQuestionImage(original, did, handle));
+        postRecord.embed = await this.buildQuestionImageEmbed(image, agent);
       } else {
         Object.assign(
           postRecord,
