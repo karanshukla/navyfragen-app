@@ -117,7 +117,7 @@ test("message language selector changes locale and is restored afterwards", asyn
 });
 
 test("profile card colour swatch changes theme and is restored afterwards", async ({ page }) => {
-  const ember = page.getByRole("button", { name: /ember theme/i });
+  const ember = page.getByRole("button", { name: /^ember$/i });
   await expect(ember).toBeVisible({ timeout: 10_000 });
   await expect(ember).toBeEnabled({ timeout: 10_000 });
 

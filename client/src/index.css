@@ -74,8 +74,8 @@ body {
   width: 1400px;
   max-width: 100vw;
   pointer-events: none;
-  border-left: 1px solid var(--nf-app-boundary-border);
-  border-right: 1px solid var(--nf-app-boundary-border);
+  border-left: 1px solid var(--nf-boundary-border);
+  border-right: 1px solid var(--nf-boundary-border);
   z-index: 200;
 }
 
@@ -102,95 +102,222 @@ body {
   }
 }
 
-/* Brand CSS tokens */
+/* ══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+
+   Three layers, and components may only read from the third:
+
+   1. Brand primitives — the raw palette and gradients. Scheme-independent.
+      Nothing outside this file should reference them directly; they exist so
+      the semantic layer has a single place to read a hue from.
+   2. Semantic tokens — named for the job rather than the colour (`--nf-surface`,
+      not `--nf-lavender-ish`). Light values live on `:root` and dark values
+      override them under [data-mantine-color-scheme="dark"], so a component
+      writes `var(--nf-surface)` once and both schemes follow. This is why no
+      component needs `useComputedColorScheme` to pick a background.
+   3. On-gradient tokens — the one family that is deliberately scheme-independent,
+      because the brand gradients are dark in both schemes, so text painted on
+      one has a single correct colour either way.
+
+   Contrast is not a matter of taste here: src/tests/theme/contrast.test.ts
+   parses this file and fails the build if any documented text/background pair
+   drops below WCAG AA.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Layer 1: brand primitives ── */
 :root {
   --nf-midnight: #1e1b4b;
   --nf-royal: #3b5bff;
+  --nf-royal-deep: #2a47e6;
   --nf-purple: #8b5cf6;
+  --nf-purple-deep: #7847e0;
   --nf-lavender: #c4b5fd;
   --nf-paper: #fdf8ff;
-  --nf-paper-2: #f2ebff;
   --nf-sunshine: #facc15;
-  --nf-void: #0b0a24;
-  --nf-surface-d: #15192b;
-  --nf-text-muted: #5b5680;
-  --nf-border: #e6ddff;
-  --nf-grad-hero: linear-gradient(135deg, #3b5bff 0%, #6626fc 55%, #491bff 100%);
+  --nf-crimson: #c92a2a;
+
   --nf-grad-mark: linear-gradient(135deg, #3349e0 0%, #5322c5 55%, #4f1fa6 100%);
   --nf-grad-dark: linear-gradient(135deg, #1e1b4b 0%, #3b2e78 50%, #6b3fd4 100%);
-  /* Curated ask-card colour presets (#275). All keep white headline/textarea
-     legible. royal reuses --nf-grad-mark (the pre-existing default). */
-  --nf-grad-aurora: linear-gradient(135deg, #2563eb 0%, #0ea5e9 55%, #06b6d4 100%);
-  --nf-grad-ember: linear-gradient(135deg, #ea580c 0%, #db2777 55%, #be185d 100%);
-  --nf-grad-verdant: linear-gradient(135deg, #0d9488 0%, #10b981 55%, #059669 100%);
+
+  /* Curated ask-card colour presets (#275). Every stop is dark enough that the
+     white headline / Send button clear AA across the whole ramp — the earlier
+     mid-tone cyan, emerald and orange stops did not. */
+  --nf-grad-aurora: linear-gradient(135deg, #1d4ed8 0%, #0369a1 55%, #0e7490 100%);
+  --nf-grad-ember: linear-gradient(135deg, #c2410c 0%, #be123c 55%, #9f1239 100%);
+  --nf-grad-verdant: linear-gradient(135deg, #0f766e 0%, #047857 55%, #065f46 100%);
+
   --nf-font-sans: "Inter", system-ui, sans-serif;
+  --nf-font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+
   --nf-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --nf-dur-fast: 120ms;
   --nf-dur-base: 200ms;
 
-  /* Nav active state — default (dark mode) */
-  --nf-nav-active-bg: rgba(107, 63, 212, 0.22);
-  --nf-nav-active-color: #fdf8ff;
-  --nf-nav-active-shadow: none;
-
-  /* App boundary divider — stronger than --nf-border since it sits between
-     two areas of identical background (no bg contrast to lean on) */
-  --nf-app-boundary-border: rgba(255, 255, 255, 0.14);
+  --nf-radius-card: 18px;
+  --nf-radius-panel: 16px;
+  --nf-radius-control: 12px;
+  --nf-radius-pill: 999px;
 }
 
-/* ── Light mode: white cards on cream page background ── */
-[data-mantine-color-scheme="light"] {
-  --mantine-color-body: #fdf8ff;
-  --mantine-color-default: #ffffff;
-  --mantine-color-default-border: #e6ddff;
+/* ── Layer 2: semantic tokens — light ── */
+:root {
+  /* Card sitting on the page background, and the barely-there step above it. */
+  --nf-surface: #f2ebff;
+  --nf-surface-ghost: #faf7ff;
+  /* Halo behind the login / OAuth panels. */
+  --nf-surface-glow: radial-gradient(
+    ellipse 60% 100% at 50% 0%,
+    rgba(196, 181, 253, 0.4),
+    transparent 70%
+  );
+  /* Keyboard-focus wash on a suggestion row. */
+  --nf-surface-highlight: rgba(51, 73, 224, 0.08);
 
-  /* Nav active state — light mode: subtle tint with dark text for accessibility */
+  --nf-link: var(--nf-purple-deep);
+  --nf-accent-text: var(--nf-royal-deep);
+
   --nf-nav-active-bg: #ede9ff;
-  --nf-nav-active-color: #1e1b4b;
-  --nf-nav-active-shadow: none;
+  --nf-nav-active-color: var(--nf-midnight);
 
-  --nf-app-boundary-border: rgba(30, 27, 75, 0.14);
+  /* Sits between two areas of identical background, so it needs to read
+     stronger than an ordinary card border. */
+  --nf-boundary-border: rgba(30, 27, 75, 0.14);
+
+  --nf-danger-fg: var(--nf-crimson);
+  --nf-danger-bg: rgba(201, 42, 42, 0.12);
+  --nf-selected-bg: rgba(59, 91, 255, 0.12);
+  --nf-selected-border: var(--nf-royal);
+
+  /* Alert title colours. The alert's own background is an alpha tint of the
+     tone, so these are read against a very pale wash and have to be far darker
+     than the tone itself. */
+  --nf-tone-red: #b02525;
+  --nf-tone-green: #166534;
+  --nf-tone-yellow: #7a6105;
+  --nf-tone-royal: #2a47e6;
+  --nf-tone-purple: #522ba3;
+
+  /* Fallbacks for the card-local foreground pair below. A question card
+     overrides both on its own root; anything using the classes outside one still
+     gets readable text rather than an unresolved var. */
+  --nf-card-fg: var(--mantine-color-text);
+  --nf-card-fg-muted: var(--mantine-color-dimmed);
+  --nf-card-fg-faint: var(--mantine-color-dimmed);
+  --nf-card-accent: var(--nf-link);
+  --nf-card-edge: var(--mantine-color-default-border);
 }
 
-/* ── Dark mode ── */
-[data-mantine-color-scheme="dark"] {
-  --nf-bg: #0b0a24;
-  --nf-surface: #15192b;
-  --nf-surface-subtle: #1a1f35;
-  --nf-text: var(--nf-paper);
-  --nf-text-muted: rgba(253, 248, 255, 0.55);
-  --nf-border: rgba(255, 255, 255, 0.06);
+/* ── Layer 2: semantic tokens — dark ── */
+:root[data-mantine-color-scheme="dark"] {
+  --nf-surface: rgba(255, 255, 255, 0.06);
+  --nf-surface-ghost: rgba(255, 255, 255, 0.03);
+  --nf-surface-glow: radial-gradient(
+    ellipse 60% 100% at 50% 0%,
+    rgba(139, 92, 246, 0.15),
+    transparent 70%
+  );
+  --nf-surface-highlight: rgba(107, 63, 212, 0.2);
 
-  /* Mantine card/border overrides for dark mode */
+  --nf-link: var(--nf-lavender);
+  --nf-accent-text: var(--nf-lavender);
+
+  --nf-nav-active-bg: rgba(107, 63, 212, 0.22);
+  --nf-nav-active-color: var(--nf-paper);
+
+  --nf-boundary-border: rgba(255, 255, 255, 0.14);
+
+  --nf-danger-fg: #fca5a5;
+  --nf-danger-bg: rgba(220, 38, 38, 0.18);
+  --nf-selected-bg: rgba(59, 91, 255, 0.18);
+  --nf-selected-border: #6178ff;
+
+  --nf-tone-red: #ff8787;
+  --nf-tone-green: #69db7c;
+  --nf-tone-yellow: #ffe57a;
+  --nf-tone-royal: #849bff;
+  --nf-tone-purple: #ac8afd;
+}
+
+/* ── Mantine bridges ── */
+/* Scoped to `:root[…]` rather than the bare attribute so these match the
+   specificity of Mantine's own scheme blocks; at (0,1,0) they were being
+   outranked and silently doing nothing. Only variables Mantine does not
+   re-emit at runtime can be set here — `--mantine-color-body` comes from
+   `theme.white` / `dark[7]` instead, and brand text uses the `--nf-*` tokens
+   above rather than fighting the provider's `-text` variables. */
+:root[data-mantine-color-scheme="light"] {
+  --mantine-color-default-border: #e6ddff;
+  /* Mantine's default (gray-6) reads 2.9:1 on --nf-surface, which had every
+     card description in the app below AA. */
+  --mantine-color-dimmed: #5b5680;
+}
+
+:root[data-mantine-color-scheme="dark"] {
   --mantine-color-default-border: rgba(255, 255, 255, 0.08);
-
-  /* Promo card — dark mode */
-  --nf-promo-bg: rgba(139, 92, 246, 0.1);
-  --nf-promo-border: rgba(139, 92, 246, 0.25);
+  --mantine-color-dimmed: #8b87b5;
 }
 
-/* Delete button hover */
+/* ── Layer 3: on-gradient tokens ── */
+/* The brand gradients are dark in both schemes, so these do not flip. -muted is
+   the lightest alpha that still clears AA over the lightest gradient stop;
+   -faint is for rules and progress tracks only, never text. */
+:root {
+  --nf-on-grad: var(--nf-paper);
+  --nf-on-grad-muted: rgba(253, 248, 255, 0.85);
+  --nf-on-grad-accent: #e9ddff;
+  --nf-on-grad-faint: rgba(253, 248, 255, 0.4);
+  --nf-on-grad-fill: rgba(253, 248, 255, 0.15);
+  --nf-on-grad-border: rgba(253, 248, 255, 0.25);
+}
+
+/* ── Reply composer ── */
+/* The composer is a paper affordance: it stays light on top of whichever card
+   surface it lands on, in both schemes, because it stands for the post being
+   written rather than for the app around it. Its accents therefore have to be
+   read against white, not against the page. */
+:root {
+  --nf-compose-bg: #ffffff;
+  --nf-compose-fg: var(--nf-midnight);
+  --nf-compose-fg-muted: #5b5680;
+  --nf-compose-border: var(--nf-royal);
+  --nf-compose-accent: var(--nf-royal);
+  --nf-compose-warn: #8f7206;
+  --nf-compose-track: rgba(30, 27, 75, 0.15);
+}
+
+/* ── Card-local foreground ── */
+/* A question card is painted either with a brand gradient or with the ordinary
+   surface, and its contents have to follow. The card sets these two on its own
+   root (see QuestionCard.styles.ts) and every descendant reads them, so the
+   choice is made once instead of at each Text. */
+.nf-oncard {
+  color: var(--nf-card-fg);
+}
+.nf-oncard-muted {
+  color: var(--nf-card-fg-muted);
+}
+
+/* ── Icon buttons on a question card ── */
 .nf-delete-btn:hover,
 .nf-delete-btn:focus-visible {
-  color: #fca5a5 !important;
-  background: rgba(220, 38, 38, 0.18) !important;
+  color: var(--nf-danger-fg) !important;
+  background: var(--nf-danger-bg) !important;
 }
 
-/* Pin button hover */
 .nf-pin-btn:hover,
 .nf-pin-btn:focus-visible {
   color: var(--nf-royal) !important;
-  background: rgba(59, 91, 255, 0.18) !important;
+  background: var(--nf-selected-bg) !important;
 }
 
-/* Pin button hover when already pinned (unpin action) */
+/* Already pinned, so the hover affordance is "unpin" rather than "pin". */
 .nf-pin-btn--active:hover,
 .nf-pin-btn--active:focus-visible {
-  color: var(--nf-lavender) !important;
+  color: var(--nf-on-grad-accent) !important;
   background: rgba(196, 181, 253, 0.15) !important;
 }
 
-/* Thread pin — card settle animation */
+/* ── Animation ── */
 @keyframes nf-pin-settle {
   from {
     opacity: 0.55;
@@ -220,8 +347,14 @@ body {
   animation: nf-bounce-spin 6s linear infinite;
 }
 
-/* Alert / notification brand radius */
-.mantine-Alert-root {
-  border-radius: 12px;
+@media (prefers-reduced-motion: reduce) {
+  .nf-pinned-card-enter,
+  .nf-bounce-spin {
+    animation: none;
+  }
 }
 
+/* Alert / notification brand radius */
+.mantine-Alert-root {
+  border-radius: var(--nf-radius-control);
+}

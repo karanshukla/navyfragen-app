@@ -1,22 +1,14 @@
-import {
-  Box,
-  Loader,
-  Stack,
-  Text,
-  Title,
-  Paper,
-  Button,
-  useComputedColorScheme,
-} from "@mantine/core";
+import { Box, Button, Loader, Text, Title } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
-import { useNavigate, useLocation } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 
 import { apiClient } from "../api/apiClient";
 import { authKeys } from "../api/authService";
+import { AuthPanel } from "../components/AuthPanel";
+import * as panelStyles from "../components/AuthPanel.styles";
 import { WinkMark } from "../components/WinkMark";
-import { surfaceBg } from "../styles/tokens";
+import { BRAND_GRADIENT, dangerText } from "../styles/tokens";
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
@@ -27,7 +19,6 @@ export default function OAuthCallback() {
     !token ? "Missing OAuth token in callback URL." : null
   );
   const [loading, setLoading] = useState(!!token);
-  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   useEffect(() => {
     if (!token) return;
@@ -47,69 +38,44 @@ export default function OAuthCallback() {
 
   return (
     <Box maw={480} mx="auto" mt="xl">
-      <Paper
-        radius="lg"
-        p="xl"
-        withBorder
-        style={{
-          background: surfaceBg(isDark),
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: isDark
-              ? "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(139,92,246,0.15), transparent 70%)"
-              : "radial-gradient(ellipse 60% 100% at 50% 0%, rgba(196,181,253,0.4), transparent 70%)",
-            pointerEvents: "none",
-          }}
-        />
+      <AuthPanel>
+        <Box ta="center">
+          <WinkMark size={60} sparkle={loading} style={panelStyles.mark} />
+        </Box>
 
-        <Stack gap="md" align="center" style={{ position: "relative" }}>
-          <WinkMark
-            size={60}
-            sparkle={loading}
-            style={{
-              borderRadius: 16,
-              boxShadow: "0 12px 30px -10px rgba(20,18,58,0.4)",
-            }}
-          />
-
-          {loading ? (
-            <>
-              <Title order={2} fw={800} fz={24} ta="center">
-                Logging you in…
-              </Title>
-              <Text size="sm" c="dimmed" ta="center">
-                Completing your Bluesky authentication
-              </Text>
+        {loading ? (
+          <>
+            <Title order={2} fw={800} fz={24} ta="center">
+              Logging you in…
+            </Title>
+            <Text size="sm" c="dimmed" ta="center">
+              Completing your Bluesky authentication
+            </Text>
+            <Box ta="center">
               <Loader size="sm" />
-            </>
-          ) : (
-            <>
-              <Title order={2} fw={800} fz={24} ta="center" c="red">
-                Login failed
-              </Title>
-              <Text size="sm" c="dimmed" ta="center">
-                {error}
-              </Text>
-              <Button
-                component={Link}
-                to="/login"
-                variant="gradient"
-                gradient={{ from: "royal", to: "purple", deg: 135 }}
-                fullWidth
-                radius="md"
-              >
-                Try again
-              </Button>
-            </>
-          )}
-        </Stack>
-      </Paper>
+            </Box>
+          </>
+        ) : (
+          <>
+            <Title order={2} fw={800} fz={24} ta="center" style={{ color: dangerText }}>
+              Login failed
+            </Title>
+            <Text size="sm" c="dimmed" ta="center">
+              {error}
+            </Text>
+            <Button
+              component={Link}
+              to="/login"
+              variant="gradient"
+              gradient={BRAND_GRADIENT}
+              fullWidth
+              radius="md"
+            >
+              Try again
+            </Button>
+          </>
+        )}
+      </AuthPanel>
 
       <Text size="xs" c="dimmed" ta="center" mt="md" style={{ lineHeight: 1.6 }}>
         You will be redirected automatically once login is complete.

@@ -333,6 +333,32 @@ describe("Navigation", () => {
       expect(screen.getByTestId("location")).toHaveTextContent("/login");
     });
 
+    it("an Alt shortcut with no route bound to it does nothing", () => {
+      mockSession({ isLoggedIn: true, did: TEST_DID });
+      renderWithProviders(
+        <>
+          <Navigation />
+          <LocationDisplay />
+        </>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "X", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
+    it("Alt+L does not navigate to login when already logged in", () => {
+      mockSession({ isLoggedIn: true, did: TEST_DID });
+      renderWithProviders(
+        <>
+          <Navigation />
+          <LocationDisplay />
+        </>,
+        { route: "/" }
+      );
+      fireEvent.keyDown(document, { key: "L", altKey: true });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+    });
+
     it("Alt+M does not navigate when logged out", () => {
       mockSession({ isLoggedIn: false });
       renderWithProviders(

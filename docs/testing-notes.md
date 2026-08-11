@@ -133,33 +133,52 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 
 **What it would take to test:** Same approach as `profileService.ts` — call `refetch()` on the hook rendered with a null argument; React Query v5 invokes `queryFn` regardless of `enabled` on explicit refetch.
 
-### `client/src/pages/PublicProfile.tsx` — defensive max-length guard in `handleSend`
+### `client/src/pages/PublicProfile.tsx` — defensive max-length guard in `handleSend` (removed)
 
-**Lines:** lines 86–89 (`if (message.length > MAX_MESSAGE_LENGTH) { setFormError(...); return; }`).
-
-**Why ignored:** The `<Textarea>` component's `onChange` handler unconditionally rejects any value longer than `MAX_MESSAGE_LENGTH` (`if (e.target.value.length <= MAX_MESSAGE_LENGTH) setMessage(...)`). As a result, the React `message` state can never exceed the limit through the UI, making the `handleSend` guard permanently unreachable in practice.
-
-**What it would take to test:** Export `handleSend` for direct unit testing, or access the component's internal state setter to bypass the `onChange` guard. Neither is practical without refactoring the component.
+**Status: gone.** The guard existed because the textarea's `onChange` rejected any
+value over `MAX_MESSAGE_LENGTH` outright, so `handleSend` could never see an
+over-long message. The frontend refactor moved the composer into
+`components/profile/AskCard.tsx`, whose `onChange` truncates
+(`value.slice(0, maxLength)`) instead of rejecting — pasting a long string now
+keeps the first 150 characters rather than nothing. With the invariant enforced by
+construction at the only entry point, the second check in `handleSend` had nothing
+left to defend and was deleted along with its marker.
 
 ### `client/src/pages/Messages.tsx` — collapsed reply Box/Button handlers (correction to a prior note)
 
 A previous version of this note claimed the collapsed `↩ Reply` Box's `stopPropagation` handler and the collapsed Button's `onClick` body were uncovered due to a Vitest/v8 source-map alignment bug with arrow functions nested in the non-first branch of a JSX ternary. That diagnosis was wrong. The real cause: `screen.getAllByRole("button", { name: /reply/i })` matches **both** the outer message-card `<Paper role="button">` (whose aggregated accessible name includes the nested "↩ Reply" text) **and** the actual nested `<button>` element. `.find((b) => b.textContent?.includes("↩"))` picked the first DOM-order match, which is the outer Paper card — so those "collapsed button" tests were actually clicking the card itself (which has its own unguarded `onClick` that produces the same visible outcome), never the real nested Box/Button. Querying with an **exact** name match (e.g. `screen.getAllByRole("button", { name: "↩ Reply" })`, exact matching excludes the Paper since its full accessible name is longer) or `document.querySelectorAll("button")` reliably isolates the real element and exercises these handlers normally — no ignore annotation or tooling workaround is needed. See `Messages.test.tsx` for the corrected tests ("collapsed reply Box wrapper stops click propagation…", "collapsed reply Button (exact match) opens the response box…", "collapsed reply Button does nothing when blocked…").
 
-### `client/src/pages/Messages.tsx` — six structurally-unreachable defensive guards
+### `client/src/pages/Messages.tsx` — six structurally-unreachable defensive guards (five removed)
 
-**Lines (as of this writing):** `handleDeleteRequest`'s `if (threadRootTid === tid) return;`; `handleConfirmDelete`'s `if (messageIdToDelete) performDelete(...)`; `handlePrepareResponse`'s `if (idx !== -1) setFocusedCardIndex(idx);`; the `if (el) setTimeout(...)` in the respondingTid scroll-into-view `useEffect`; the `newestCard ?? messagesTopRef.current` fallback plus its `if (target)` guard in the auto-scroll `useEffect`; and the `if (idx !== -1) messageCardRefs.current[idx]?.focus();` in the global Escape-key handler.
+**Status: one left.** These were six guards whose unhappy arm could not be reached
+given the call graph — the kind of suppression that is correct but accumulates. The
+frontend refactor removed the _reason_ for five of them rather than re-annotating
+them, which is the preferred outcome:
 
-**Why ignored:** All six are defensive guards whose "unhappy" arm can never be reached given the app's actual call graph:
-- `handleDeleteRequest`'s guard duplicates a check the trash `ActionIcon`'s `onClick` already performs (`if (isPinned) return;`) before ever calling the handler — by the time `handleDeleteRequest` runs, `threadRootTid === tid` is already known false.
-- `handleConfirmDelete`'s guard: `messageIdToDelete` is always set in the same state update that opens the confirmation modal, and the only element that invokes this handler (the modal's Confirm button) doesn't exist in the DOM unless the modal is open.
-- `handlePrepareResponse`'s `idx` lookup: every call site passes a `tid` taken directly from a `sortedMessages` entry (the same array being searched), so the entry is always found.
-- The scroll-into-view effect's `el` lookup: `respondingTid` is only ever set (via `handlePrepareResponse`) to the tid of a card that is already rendered in the same commit, so `document.getElementById` always finds it.
-- The auto-scroll effect's `newestCard` lookup: whenever the guarding `messages?.[0]` check passes, that message's card is rendered in the same commit, so `newestCard` is always truthy, making both the `??` fallback and the `if (target)` guard's false arm dead.
-- The Escape-key handler's `idx` lookup: same reasoning as `handlePrepareResponse` — `respondingTid` always corresponds to a `sortedMessages` entry.
+- `handleDeleteRequest`'s `if (threadRootTid === tid) return;` — deleted. It
+  duplicated a check the trash `ActionIcon` already performs, and that button now
+  lives in `QuestionCard`, where the check is visibly adjacent to the affordance.
+- `handleConfirmDelete`'s `if (messageIdToDelete)` — deleted. The modal's
+  `onConfirm` asserts non-null (`performDelete(messageIdToDelete!, true)`), which
+  states the same invariant to the type system instead of to the coverage tool.
+- `handlePrepareResponse`'s `if (idx !== -1)` — deleted. `QuestionGrid` maps over
+  the message list, so expanding a card already knows its index; there is no lookup
+  to fail.
+- The auto-scroll effect's `newestCard ?? messagesTopRef.current` fallback and its
+  `if (target)` guard — collapsed to a single early return. The spare ref that
+  existed only as a fallback target is gone too.
+- The global Escape handler's `if (idx !== -1)` — deleted. `useCardKeyboardNav`
+  receives `expandedIndex` as a prop and already gates on `!== -1` before using it,
+  so the inner re-check was the same condition twice.
 
-Each is annotated in place with the narrowest istanbul hint for its shape — `/* istanbul ignore if */` where the guard body is unreachable, `/* istanbul ignore else */` where the guard always passes — plus an inline comment explaining the reachability argument. The scroll-into-view effect additionally needs `/* istanbul ignore next */` on the `setTimeout` callback, which the suite's fake timers never run.
+What remains is the `setTimeout` callback in the expand-scroll effect
+(`QuestionGrid.tsx`), which the suite's fake timers never run, plus a
+`/* istanbul ignore next */` on `if (!newest) return;` in `useScrollToNewMessages`,
+where a message present in the list always has a card rendered in the same commit.
 
-**What it would take to test:** Each would require calling the relevant internal function directly with an argument that violates the invariant enforced by its sole caller (e.g. a `tid` not present in `sortedMessages`, or firing the modal's `onConfirm` with `messageIdToDelete` forced to `null`) — not reachable by driving the rendered UI, since every caller already enforces the invariant before invoking these functions.
+**What it would take to test:** for the timer, run the suite with real timers and a
+`scrollIntoView` spy; for the `newest` lookup, render a message list whose first
+entry has no corresponding DOM node, which no code path produces.
 
 ## V8 JIT Module-Scope Artifacts
 
@@ -174,6 +193,7 @@ Each is annotated in place with the narrowest istanbul hint for its shape — `/
 **Lines:** 1–4 (the opening comment lines and function declaration).
 
 **Why suppressed with `/* v8 ignore start/stop */`:** V8's block-coverage format creates two structurally-unreachable branch ranges for every module:
+
 1. The **module-scope "not-initialized" branch** — V8 records an implicit branch at offset 0 for "was this module's wrapper function not entered". Since Node.js always fully executes the module wrapper on import, the "not entered" arm is never taken. This maps back to the first line of the source file.
 2. The **function-declaration branch** — V8 tracks whether a named function was compiled via the JIT fast-path or deferred. The "deferred/not-compiled" arm never fires for a function that is actually called. This maps to `pdsRegion(` on the `export function` line.
 
@@ -188,6 +208,7 @@ These branches are V8 JIT internals; no user-written test can reach them. The sa
 **Lines:** line 1 (module-scope artifact) and the last `}` of the class (class-declaration artifact).
 
 **Why suppressed with `/* v8 ignore start/stop */` and `/* v8 ignore next 1 */`:** The same two V8 JIT artifact branches appear in every module. For class-based modules:
+
 1. The **module-scope "not-initialized" branch** maps to line 1 — suppressed by `/* v8 ignore start */` as the very first line of each file, with `/* v8 ignore stop */` placed right after the constructor close so that all method bodies are still measured normally.
 2. The **class-declaration branch** maps to the closing `}` of the class — suppressed by `/* v8 ignore next 1 */` placed on the line immediately before the final `}`.
 
@@ -263,12 +284,12 @@ The mock now spreads the real module (`exports: { ...realSessionAgent, initializ
 
 The following "uncovered" lines are not executable TypeScript — they are blank lines, type annotations, or closing punctuation of multi-line expressions that tsx maps back to the wrong source position. The underlying code **is** executed and tested; only V8's source-map alignment is imprecise.
 
-| File | Lines | Kind |
-|------|-------|------|
-| `server/src/services/auth-service.ts` | 77 | `const cryptr = new Cryptr(secret)` in `decryptDid` — identical structure to `encryptDid` above it; tsx maps both to the same JS position |
-| `server/src/services/message-service.ts` | 80, 106, 162, 297, 303 | Blank lines, TypeScript parameter-type annotations, and closing-parenthesis lines of multi-line `logger.error(...)` calls |
-| `server/src/services/settings-service.ts` | 128 | Blank line between `getUserSettings` call and `if (!existingSettings)` inside `updateSettings` |
-| `server/src/lib/image-generator.ts` | 144, 454–459 | TypeScript return-type annotation on `generateThemeSpecificHtml` (line 144); static CSS string content inside a multi-hundred-line template literal in `generateTwitterHtml` (lines 454–459) — V8 does not track every line within a template literal |
+| File                                      | Lines                  | Kind                                                                                                                                                                                                                                                  |
+| ----------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server/src/services/auth-service.ts`     | 77                     | `const cryptr = new Cryptr(secret)` in `decryptDid` — identical structure to `encryptDid` above it; tsx maps both to the same JS position                                                                                                             |
+| `server/src/services/message-service.ts`  | 80, 106, 162, 297, 303 | Blank lines, TypeScript parameter-type annotations, and closing-parenthesis lines of multi-line `logger.error(...)` calls                                                                                                                             |
+| `server/src/services/settings-service.ts` | 128                    | Blank line between `getUserSettings` call and `if (!existingSettings)` inside `updateSettings`                                                                                                                                                        |
+| `server/src/lib/image-generator.ts`       | 144, 454–459           | TypeScript return-type annotation on `generateThemeSpecificHtml` (line 144); static CSS string content inside a multi-hundred-line template literal in `generateTwitterHtml` (lines 454–459) — V8 does not track every line within a template literal |
 
 No `/* v8 ignore */` annotations are added for these because the underlying logic IS reached by tests; the gaps are purely a source-map rendering artefact.
 
@@ -290,10 +311,10 @@ Work has raised `internal/shim` package coverage from 78.8% to 95.3%, across `ca
 - **`cache.go` — `writeMeta`'s `json.Marshal` failure branch.** Marshaling `struct{ MimeType string }` with a plain Go string field cannot fail; there is no invalid state reachable through `Store`'s public API that would make it error.
 - **`cache.go` — `evictIfNeeded`'s `e.Info()` error branch in the second (eviction) loop.** `DirEntry.Info()` fails only on a TOCTOU race — the entry disappearing between `os.ReadDir` and the `.Info()` call — not reproducible deterministically in a single-process test.
 - **`generate.go` — `Generate`'s `!ok` type-assertion guard** on the singleflight return value. `generateOnce` (the only function ever passed to `group.Do`) always returns `(GenerateResult, error)`, so the failed-assertion arm is unreachable without changing that contract. The source comment already documents this as defense against "a future refactor"; `TestGenerate_TypeAssertionGuard` exercises the happy path to confirm the guard doesn't false-positive, but cannot reach the guard itself.
-- **`handler.go` — `NewHandler`'s `newCaddyProxy` error branch.** `newCaddyProxy` fails only if the process-wide embedded Caddy engine (`ensureCaddyEngine`, guarded by a `sync.Once`) fails to start. Once any test in the package successfully constructs a `Handler` (nearly all of `handler_test.go` does, via `newIntegrationHandler`), the engine is up for the rest of the test binary's life — there is no way to force a fresh failure afterward without restructuring the engine lifecycle away from `sync.Once`. The same reasoning applies to `caddyproxy.go`'s `ensureCaddyEngine` itself (its `net.Listen`/`adapter.Adapt`/`caddy.Load` failure branches) and the remainder of `newCaddyProxy` — none of these can be exercised without either forcing the *first* engine start in the whole test binary to fail (impossible to target at just one test given `sync.Once` and Go's parallel/ordered test execution within a package) or restructuring the engine lifecycle. `IsErrServerClosed` and `proxyErrorHandler`, the two functions in `caddyproxy.go` that don't depend on the engine, are fully tested (100%) in `caddyproxy_test.go`.
+- **`handler.go` — `NewHandler`'s `newCaddyProxy` error branch.** `newCaddyProxy` fails only if the process-wide embedded Caddy engine (`ensureCaddyEngine`, guarded by a `sync.Once`) fails to start. Once any test in the package successfully constructs a `Handler` (nearly all of `handler_test.go` does, via `newIntegrationHandler`), the engine is up for the rest of the test binary's life — there is no way to force a fresh failure afterward without restructuring the engine lifecycle away from `sync.Once`. The same reasoning applies to `caddyproxy.go`'s `ensureCaddyEngine` itself (its `net.Listen`/`adapter.Adapt`/`caddy.Load` failure branches) and the remainder of `newCaddyProxy` — none of these can be exercised without either forcing the _first_ engine start in the whole test binary to fail (impossible to target at just one test given `sync.Once` and Go's parallel/ordered test execution within a package) or restructuring the engine lifecycle. `IsErrServerClosed` and `proxyErrorHandler`, the two functions in `caddyproxy.go` that don't depend on the engine, are fully tested (100%) in `caddyproxy_test.go`.
 - **`response.go` — `AbsoluteImageURL`'s second `if imageURL == "" { return base }` check.** This is dead code: the function's first statement already returns `""` when `imageURL == ""` (line 64-66), so by the time execution reaches line 77 `imageURL` cannot be empty. Left as-is (not deleted) since removing it is a source-behavior change outside the scope of a test-coverage pass, not a test gap to close.
 - **`renderer.go` — `Render`'s `json.Marshal` failure branch.** Same reasoning as `writeMeta` above: `renderRequest{Source: htmlSrc, Format: "png", Options: map[string]any{...}}` always contains a Go string and two ints, none of which `encoding/json` can fail to marshal (invalid UTF-8 in `htmlSrc` is replaced with U+FFFD, not an error).
-- **`renderer.go` — `Render`'s `if wait <= 0 { break }` branch**, distinct from the (tested) `if remaining <= 0 { break }` check earlier in the same loop iteration. Reaching it requires the retry deadline to expire specifically *during* the `r.attempt(...)` call — after the top-of-loop check saw time remaining, but before the post-attempt wait calculation. `attempt`'s own bounded context makes this a single-digit-millisecond window that depends on OS scheduling jitter; not reliably forceable in a single-process test without also risking flaking on slower CI runners. `TestRender_ZeroWaitBudgetBreaksRetryLoop` exercises the same short-timeout-retry shape and confirms the loop still exits cleanly with `ErrRenderFailed`, without being able to pin down which of the two break points fired.
+- **`renderer.go` — `Render`'s `if wait <= 0 { break }` branch**, distinct from the (tested) `if remaining <= 0 { break }` check earlier in the same loop iteration. Reaching it requires the retry deadline to expire specifically _during_ the `r.attempt(...)` call — after the top-of-loop check saw time remaining, but before the post-attempt wait calculation. `attempt`'s own bounded context makes this a single-digit-millisecond window that depends on OS scheduling jitter; not reliably forceable in a single-process test without also risking flaking on slower CI runners. `TestRender_ZeroWaitBudgetBreaksRetryLoop` exercises the same short-timeout-retry shape and confirms the loop still exits cleanly with `ErrRenderFailed`, without being able to pin down which of the two break points fired.
 - **`shim.go` — `firstGlyph`'s `if len(r) == 0 { return "" }` check.** Dead code: the function already returns early when `strings.TrimSpace(s) == ""` (two lines above), so `[]rune(s)` on a string that passed that check can never be empty.
 
 ## `html-to-image/app.js`
@@ -302,7 +323,7 @@ This service runs on Bun (#314 — migrated from Node). CI (`html-to-image-tests
 
 **Entry-point bootstrap block:** the `if (process.argv[1] === fileURLToPath(import.meta.url)) { ... }` block at the bottom of `app.js` (server listen + `SIGINT`/`SIGTERM` handlers) only runs when the file is executed directly, never when `app.test.js` imports it — the same rationale as excluding `server/src/index.ts` on the server side. Under Node this region was wrapped in `/* node:coverage disable */`/`/* node:coverage enable */` markers, which Node's reporter honored. Bun does **not** honor per-block coverage markers (same limitation documented for the server in #287), so the markers were removed in #314 and the gate is the import-meta path check alone — structurally unreachable under the test harness, just not suppressed from a coverage report.
 
-**`waitForVisualReadiness`'s in-page callbacks (`page.evaluate`'s fonts-ready check, `page.waitForFunction`'s image-completeness predicate) are exercised by calling the captured function directly** in the relevant tests (`"evaluate callback waits on document.fonts.ready when present"`, `"waitForFunction predicate checks every image is complete..."`), with a fake `document` global standing in for the real page's — these functions are serialized by Puppeteer and actually execute in the browser page context, not in the Bun process, so the mock `page.evaluate`/`page.waitForFunction` in `app.test.js` only *record* the function reference; a test has to invoke it explicitly to get real coverage and verify its logic.
+**`waitForVisualReadiness`'s in-page callbacks (`page.evaluate`'s fonts-ready check, `page.waitForFunction`'s image-completeness predicate) are exercised by calling the captured function directly** in the relevant tests (`"evaluate callback waits on document.fonts.ready when present"`, `"waitForFunction predicate checks every image is complete..."`), with a fake `document` global standing in for the real page's — these functions are serialized by Puppeteer and actually execute in the browser page context, not in the Bun process, so the mock `page.evaluate`/`page.waitForFunction` in `app.test.js` only _record_ the function reference; a test has to invoke it explicitly to get real coverage and verify its logic.
 
 **Remaining branch gap, accepted without a test:** the `browserPromise ?? startBrowser()` fallback on the final line of `getBrowser()` (the `?? startBrowser()` half) requires a concurrent caller to observe `browserPromise` as `null` at that exact point — i.e., a third overlapping `getBrowser()`/`closeBrowser()` racing in between a second caller's "someone else already relaunched" check and its own fallback read. `"a second caller racing a crash reuses the relaunch the first caller already started"` covers the more common two-way race (second caller sees the relaunch already in flight and reuses it), but forcing the three-way race deterministically would require reaching into the pool's internal timing rather than testing its public behavior. Same category as the Express generic error-handler's `err.status || 500` / `err.message || 'Internal server error'` fallbacks in `createApp` — every `next(err)` call in this file's own validation middleware always supplies both fields, so those defaults only guard against a genuinely unexpected error escaping from somewhere outside this codebase (e.g. body-parser or the rate limiter throwing a bare error) and are not reachable through this app's own code paths.
 
@@ -311,6 +332,7 @@ This service runs on Bun (#314 — migrated from Node). CI (`html-to-image-tests
 The following files are excluded from coverage metrics entirely. See the root-level notes in `CLAUDE.md` under "Coverage Exclusions".
 
 **Server** (excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml`):
+
 - `src/lexicon/**` — auto-generated AT Protocol types
 - `src/index.ts` — Hono app + Bun.serve boot + signal handlers
 - `src/auth/client.ts`, `src/auth/storage.ts`, `src/auth/session.ts` — OAuth wiring
@@ -321,15 +343,55 @@ The following files are excluded from coverage metrics entirely. See the root-le
 - `src/hono/session-middleware.ts` — signed-cookie session I/O; covered by the E2E suite (real cookies), not unit tests
 
 **Client** (excluded via `coverage.exclude` in `vite.config.ts`):
+
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and entry point
 - `src/vite-env.d.ts` — ambient declarations
 - `src/styles/tokens.ts` — pure style constants
+- `src/**/*.styles.ts` — per-component style modules (see below)
+
+### Client `*.styles.ts` modules
+
+The frontend refactor split rendering from styling: a component's CSS objects live
+in a sibling `Thing.styles.ts` that the `.tsx` imports as a namespace. These files
+export style constants and the pure functions that select between them
+(`card({ gradient, pinned, focused })` → a `CSSProperties`), so they are the same
+category as `src/styles/tokens.ts` — declarative values with no behaviour, where an
+assertion could only restate the literal it is reading.
+
+The exclusion is a glob rather than a per-file list so the convention scales, and it
+carries an obligation: nothing but visual mapping may live in one. If a style
+function ever needs to know a business rule, that is the signal to move the decision
+back into the component or a hook, where it is measured.
+
+**What it would take to test:** snapshot the returned objects. That would pin the
+literals against themselves and fail on every deliberate visual change, which is the
+noise the exclusion exists to avoid. The colours these files reference are covered
+differently and more usefully — see below.
+
+### Client theme contrast (`src/tests/theme/`)
+
+`contrast.test.ts` is not excluded; it is the reason several of these files can be.
+It parses `client/src/index.css`, resolves `var()` indirection per colour scheme, and
+asserts WCAG AA on every text/background pair the UI actually renders — including
+alpha-composited surfaces, every sampled point along each gradient ramp (not just the
+declared stops, which is how the old cyan and emerald ask-card presets looked
+compliant at 2.4:1), and every `Alert` tone against its own tint in both schemes.
+
+It also enforces token hygiene in both directions: a declared `--nf-*` token that no
+source references fails, and a referenced token that nothing declares fails. The
+second direction caught `--nf-font-mono`, which two components had been asking for
+without it ever having been defined.
+
+Its helpers (`colorMath.ts`, `readTokens.ts`) live under `src/tests/` rather than
+`src/lib/` because nothing ships them — they exist to check the palette, not to
+render with it, so they fall under the existing `src/tests/**` exclusion.
 
 ## SQLite driver (`server/src/database/db.ts`)
 
 `db.ts` is excluded from coverage (it's the Kysely migration runner). The SQLite driver is `bun:sqlite` (`bun:sqlite` resolves only under the Bun runtime; `@types/bun` provides its types), bridged onto Kysely's stock `SqliteDialect` via a small `BunSqliteDatabase`/`BunSqliteStatement` adapter added in #263. `better-sqlite3` (the former Node driver) was removed entirely in #288 when the Node code path was retired — there is no runtime gate left, `bun:sqlite` is used unconditionally. The adapter is exercised by the `Probe SQLite data layer` step in `.github/workflows/Tests.yml`, which runs the real `createDb` → `migrateToLatest` → insert/select path and gates on `OK`.
 
 The two API deltas the adapter bridges (both verified locally under Bun):
+
 - `bun:sqlite`'s `Statement` has no `reader` flag — derived as `columnNames.length > 0`, the same rule `better-sqlite3` used internally to set its `reader` flag.
 - `bun:sqlite`'s `Statement.all/run/iterate` take variadic params, not an array — the adapter spreads the params array Kysely passes.
 
@@ -401,14 +463,14 @@ Every worker throws, the run finishes in ~6s instead of ~20s, and the summary re
 
 The gate did not get weaker:
 
-| | v8 (before, on Node) | istanbul (now, on Bun) |
-| --- | --- | --- |
-| statements | 100% (1228/1228) | 100% (1246/1246) |
-| branches | 100% (937/937) | 100% (952/952) |
-| functions | 100% (380/380) | 100% (382/382) |
-| lines | 100% (1146/1146) | 100% (1160/1160) |
-| enforced by | Coveralls threshold only | `coverage.thresholds` in `vite.config.ts` + Coveralls |
-| lcov branch records | yes | yes (`BRDA`) |
+|                     | v8 (before, on Node)     | istanbul (now, on Bun)                                |
+| ------------------- | ------------------------ | ----------------------------------------------------- |
+| statements          | 100% (1228/1228)         | 100% (1246/1246)                                      |
+| branches            | 100% (937/937)           | 100% (952/952)                                        |
+| functions           | 100% (380/380)           | 100% (382/382)                                        |
+| lines               | 100% (1146/1146)         | 100% (1160/1160)                                      |
+| enforced by         | Coveralls threshold only | `coverage.thresholds` in `vite.config.ts` + Coveralls |
+| lcov branch records | yes                      | yes (`BRDA`)                                          |
 
 istanbul's denominators are larger because it instruments defensive branches v8 folds away. Reaching 100% on them was annotation work, not new tests: 29 sites were uncovered on the first istanbul run, and all 29 already carried a `/* v8 ignore */` marker that istanbul does not honor. See "Coverage Suppression Markers" above for the conversion and for the placement rule that bit two of them.
 
@@ -426,10 +488,10 @@ Zod v4's entrypoint does `import * as z from "./v4/classic/external.js"; export 
 
 Isolating the layer, since the fix belongs at the narrowest one:
 
-| path | Node | Bun |
-| --- | --- | --- |
-| `import("zod")` directly | `z` present | `z` present |
-| `viteServer.ssrLoadModule("zod")` | `z` present | `z` present |
+| path                                 | Node        | Bun               |
+| ------------------------------------ | ----------- | ----------------- |
+| `import("zod")` directly             | `z` present | `z` present       |
+| `viteServer.ssrLoadModule("zod")`    | `z` present | `z` present       |
 | Vitest module runner (happy-dom env) | `z` present | **`z` undefined** |
 
 Only the last combination breaks, so this is Vitest's module runner over the prebundled dependency on Bun, not Bun's ESM loader and not Vite's transform. The namespace import is the form zod's own docs use, costs nothing, and sidesteps it. The regression guard is CI running the suite on Bun: reverting to `import { z }` fails it immediately. The probe script deliberately does not assert this, since a bare `import("zod")` inside the probe passes on both runtimes and would give false assurance.
@@ -463,10 +525,10 @@ Not worth pursuing. Microsoft does not support Bun as a Playwright runtime, the 
 
 ### Remaining Node in the repo
 
-| Location | What | Why it stays |
-| --- | --- | --- |
-| `.github/workflows/E2E.yml` | `actions/setup-node@v4` | Playwright, see above |
-| root `package.json` | `test:e2e`, `test:e2e:ui` | Playwright, same |
+| Location                    | What                      | Why it stays          |
+| --------------------------- | ------------------------- | --------------------- |
+| `.github/workflows/E2E.yml` | `actions/setup-node@v4`   | Playwright, see above |
+| root `package.json`         | `test:e2e`, `test:e2e:ui` | Playwright, same      |
 
 That is the whole list. Every other script in every workspace routes through `bunx --bun` or is Bun-native, all five Dockerfiles are `FROM oven/bun`, and `Tests.yml` sets up no Node in any job. The `tsx` loader was dropped from `server/` (Bun runs the lexicon-publishing script's TypeScript directly) and the html-to-image CI job now uses `bunx puppeteer browsers install chrome` instead of `npx`.
 

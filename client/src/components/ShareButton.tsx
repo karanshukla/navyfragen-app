@@ -4,6 +4,19 @@ import { IconShare } from "@tabler/icons-react";
 import React from "react";
 import { useHaptic } from "use-haptic";
 
+import { onGrad, onGradBorder, onGradFill } from "../styles/tokens";
+
+/**
+ * Chrome for a button that sits directly on a brand gradient — a translucent
+ * wash of the gradient's own foreground rather than a surface colour, which
+ * would fight it. Exported because the inbox hero pairs Copy with this Share.
+ */
+export const onGradientButton = {
+  background: onGradFill,
+  border: `1px solid ${onGradBorder}`,
+  "--button-color": onGrad,
+} as React.CSSProperties;
+
 interface ShareButtonProps {
   shareData: {
     title?: string;
@@ -62,13 +75,7 @@ const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
       radius="xl"
       variant="transparent"
       leftSection={<IconShare size={14} />}
-      style={
-        {
-          background: "rgba(255,255,255,0.15)",
-          border: "1px solid rgba(255,255,255,0.2)",
-          "--button-color": "var(--mantine-white)",
-        } as React.CSSProperties
-      }
+      style={onGradientButton}
     >
       Share
     </Button>

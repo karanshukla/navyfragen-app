@@ -333,6 +333,33 @@ describe("PublicProfile page", () => {
     expect(screen.queryByText(/are you sure/i)).toBeNull();
   });
 
+  it("typing an ordinary key in the textarea does not call handleSend", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Hello!" } });
+    fireEvent.keyDown(textarea, { key: "a" });
+    expect(screen.queryByText(/are you sure/i)).toBeNull();
+  });
+
+  it("pressing Alt+Enter in textarea does not call handleSend", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Hello!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", altKey: true });
+    expect(screen.queryByText(/are you sure/i)).toBeNull();
+  });
+
+  it("pressing Meta+Enter in textarea does not call handleSend", async () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "Hello!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", metaKey: true });
+    expect(screen.queryByText(/are you sure/i)).toBeNull();
+  });
+
   it("clicking the clear button empties the message", async () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);

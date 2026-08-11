@@ -8,6 +8,8 @@ interface ConfirmationModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Colours the confirm button as a destructive action rather than a primary one. */
+  destructive?: boolean;
   loading?: boolean;
 }
 
@@ -19,6 +21,7 @@ export function ConfirmationModal({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  destructive = false,
   loading = false,
 }: ConfirmationModalProps) {
   return (
@@ -28,13 +31,7 @@ export function ConfirmationModal({
         <Button variant="default" onClick={onClose} disabled={loading}>
           {cancelLabel}
         </Button>
-        <Button
-          color="blue"
-          onClick={() => {
-            onConfirm();
-          }}
-          loading={loading}
-        >
+        <Button color={destructive ? "crimson" : "royal"} onClick={onConfirm} loading={loading}>
           {confirmLabel}
         </Button>
       </Group>
