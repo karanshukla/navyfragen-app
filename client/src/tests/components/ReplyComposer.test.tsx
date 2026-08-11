@@ -18,6 +18,7 @@ function renderComposer(overrides: Partial<React.ComponentProps<typeof ReplyComp
       blocked={false}
       inThread={false}
       includesImage={false}
+      awaitingRender={false}
       textareaRef={React.createRef<HTMLTextAreaElement>()}
       {...overrides}
     />
@@ -66,5 +67,18 @@ describe("ReplyComposer status line", () => {
       vi.advanceTimersByTime(SLOW_REQUEST_HINT_MS);
     });
     expect(screen.getByText("Still going…")).toBeInTheDocument();
+  });
+
+  it("says the send is waiting on the image while the render is still running", () => {
+    renderComposer({ sending: true, includesImage: true, awaitingRender: true });
+    expect(screen.getByText("Rendering your question image…")).toBeInTheDocument();
+  });
+
+  it("keeps blaming the render, not the post, once the wait becomes notable", () => {
+    renderComposer({ sending: true, includesImage: true, awaitingRender: true });
+    act(() => {
+      vi.advanceTimersByTime(SLOW_REQUEST_HINT_MS);
+    });
+    expect(screen.getByText("Still rendering your question image…")).toBeInTheDocument();
   });
 });

@@ -27,6 +27,8 @@ export interface ResponseMessageRequest {
   response: string;
   includeQuestionAsImage?: boolean;
   replyTo?: { uri: string; cid: string };
+  /** A render the server already holds; omitting it falls back to a sync render. */
+  renderId?: string;
 }
 
 export interface ResponseMessageResponse {
@@ -36,10 +38,65 @@ export interface ResponseMessageResponse {
   link?: string;
 }
 
+/**
+ * Where a queued question-image render has got to. `unknown` means the key is
+ * gone — expired, or lost to a deploy that moved the in-process store — which is
+ * a reason to render again, not a failure.
+ */
+export type RenderStatus = "pending" | "rendering" | "ready" | "failed" | "unknown";
+
+export interface StartRenderRequest {
+  tid: string;
+  original: string;
+  theme?: string;
+}
+
+export interface StartRenderResponse {
+  renderId: string;
+  status: RenderStatus;
+}
+
+export interface RenderStatusResponse {
+  status: RenderStatus;
+  /** The specific failure, present only on `failed`. */
+  error?: string;
+}
+
 export const messageKeys = {
   all: ["messages"] as const,
   detail: (did: string) => [...messageKeys.all, did] as const,
+  /**
+   * `attempt` separates successive polls of the same render key. The key is a
+   * content hash, so a re-render after a loss returns the *same* id, and without
+   * this the fresh poll would read the previous attempt's terminal result and
+   * conclude the same thing forever.
+   */
+  render: (renderId: string, attempt: number) =>
+    [...messageKeys.all, "render", renderId, attempt] as const,
 };
+
+/** Tight enough to catch a warm render, before easing off for a cold one. */
+export const RENDER_POLL_FAST_MS = 1000;
+export const RENDER_POLL_SLOW_MS = 3000;
+/** Polls served at the fast cadence before backing off to the slow one. */
+export const RENDER_POLL_FAST_POLLS = 5;
+
+const RENDER_IN_PROGRESS: readonly RenderStatus[] = ["pending", "rendering"];
+
+/**
+ * How long to wait before polling a render again, or `false` once there is
+ * nothing left to wait for.
+ *
+ * @see [messageService.test.ts](../tests/messageService.test.ts): pins both
+ * sides of the back-off boundary and that every settled status stops the poll.
+ */
+export function renderPollInterval(
+  status: RenderStatus | undefined,
+  polls: number
+): number | false {
+  if (status !== undefined && !RENDER_IN_PROGRESS.includes(status)) return false;
+  return polls < RENDER_POLL_FAST_POLLS ? RENDER_POLL_FAST_MS : RENDER_POLL_SLOW_MS;
+}
 
 export const messageService = {
   getMessages: (did: string): Promise<MessagesResponse> => {
@@ -59,6 +116,14 @@ export const messageService = {
       "/messages/respond",
       data
     );
+  },
+
+  startRender: async (data: StartRenderRequest): Promise<StartRenderResponse> => {
+    return apiClient.post<StartRenderResponse, StartRenderRequest>("/messages/render", data);
+  },
+
+  getRenderStatus: async (renderId: string): Promise<RenderStatusResponse> => {
+    return apiClient.get<RenderStatusResponse>(`/messages/render/${encodeURIComponent(renderId)}`);
   },
 
   /**
@@ -91,6 +156,32 @@ export function useMessages(
         : /* istanbul ignore next */ Promise.reject("No DID provided"),
     enabled: !!did, // Only run if DID is provided
     ...(options || {}),
+  });
+}
+
+export function useStartRender() {
+  return useMutation({
+    mutationFn: (data: StartRenderRequest) => messageService.startRender(data),
+  });
+}
+
+export function useRenderStatus(
+  renderId: string | null,
+  attempt: number
+): UseQueryResult<RenderStatusResponse, ApiError> {
+  return useQuery<RenderStatusResponse, ApiError>({
+    queryKey: renderId ? messageKeys.render(renderId, attempt) : messageKeys.all,
+    queryFn: () =>
+      renderId
+        ? messageService.getRenderStatus(renderId)
+        : /* istanbul ignore next */ Promise.reject("No renderId provided"),
+    enabled: !!renderId,
+    staleTime: 0,
+    // A settled render is read-once on the server: a focus refetch would clear a
+    // failure the composer has not shown yet.
+    refetchOnWindowFocus: false,
+    refetchInterval: (query) =>
+      renderPollInterval(query.state.data?.status, query.state.dataUpdateCount),
   });
 }
 

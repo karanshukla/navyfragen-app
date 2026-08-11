@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -12,7 +12,13 @@ import {
   useRespondToMessage,
   useAddExampleMessages,
   useSyncMessages,
+  useStartRender,
+  useRenderStatus,
   messageKeys,
+  renderPollInterval,
+  RENDER_POLL_FAST_MS,
+  RENDER_POLL_FAST_POLLS,
+  RENDER_POLL_SLOW_MS,
 } from "../api/messageService";
 import { settingsKeys } from "../api/settingsService";
 
@@ -174,6 +180,58 @@ describe("messageService", () => {
     });
   });
 
+  describe("render endpoints", () => {
+    it("startRender posts the question the render is for", async () => {
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ renderId: "r1", status: "pending" });
+
+      const result = await messageService.startRender({
+        tid: "tid1",
+        original: "Original message",
+        theme: "sunset",
+      });
+
+      expect(result).toEqual({ renderId: "r1", status: "pending" });
+      expect(apiClient.post).toHaveBeenCalledWith("/messages/render", {
+        tid: "tid1",
+        original: "Original message",
+        theme: "sunset",
+      });
+    });
+
+    it("getRenderStatus reads the render key back, escaped into the path", async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ status: "ready" });
+
+      const result = await messageService.getRenderStatus("a/b");
+
+      expect(result).toEqual({ status: "ready" });
+      expect(apiClient.get).toHaveBeenCalledWith("/messages/render/a%2Fb");
+    });
+  });
+
+  describe("renderPollInterval", () => {
+    it("polls fast for the last poll before the back-off boundary", () => {
+      expect(renderPollInterval("rendering", RENDER_POLL_FAST_POLLS - 1)).toBe(RENDER_POLL_FAST_MS);
+    });
+
+    it("backs off once the boundary is reached", () => {
+      expect(renderPollInterval("rendering", RENDER_POLL_FAST_POLLS)).toBe(RENDER_POLL_SLOW_MS);
+    });
+
+    it("polls fast before the first result has arrived", () => {
+      expect(renderPollInterval(undefined, 0)).toBe(RENDER_POLL_FAST_MS);
+    });
+
+    it("keeps polling while the render is still pending", () => {
+      expect(renderPollInterval("pending", 0)).toBe(RENDER_POLL_FAST_MS);
+    });
+
+    it("stops on every status that has nothing left to wait for", () => {
+      expect(renderPollInterval("ready", 0)).toBe(false);
+      expect(renderPollInterval("failed", 0)).toBe(false);
+      expect(renderPollInterval("unknown", 0)).toBe(false);
+    });
+  });
+
   describe("warmImageService", () => {
     it("posts to the warm endpoint", async () => {
       vi.mocked(apiClient.post).mockResolvedValueOnce({ ok: true });
@@ -288,6 +346,36 @@ describe("message hooks", () => {
     expect(vi.mocked(qc.invalidateQueries)).toHaveBeenCalledWith({
       queryKey: messageKeys.all,
     });
+  });
+
+  it("useStartRender.mutationFn calls messageService.startRender", async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ renderId: "r1", status: "pending" });
+    const { result } = renderHook(() => useStartRender(), {
+      wrapper: makeWrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ tid: "t1", original: "Q" });
+    });
+    expect(apiClient.post).toHaveBeenCalledWith("/messages/render", {
+      tid: "t1",
+      original: "Q",
+    });
+  });
+
+  it("useRenderStatus polls the render key it was given", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ status: "pending" });
+    const { result } = renderHook(() => useRenderStatus("r1", 0), {
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.data).toEqual({ status: "pending" }));
+    expect(apiClient.get).toHaveBeenCalledWith("/messages/render/r1");
+  });
+
+  it("useRenderStatus stays idle until there is a key to poll", () => {
+    const { result } = renderHook(() => useRenderStatus(null, 0), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
   });
 
   it("useSyncMessages.onSuccess invalidates queries", async () => {

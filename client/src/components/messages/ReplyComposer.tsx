@@ -21,6 +21,8 @@ interface ReplyComposerProps {
   inThread: boolean;
   /** Whether this reply will carry a rendered question image, which is the slow path. */
   includesImage: boolean;
+  /** True while the send is held back by the question image, not by Bluesky. */
+  awaitingRender: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -29,10 +31,13 @@ interface ReplyComposerProps {
  * the same reply posted four times.
  *
  * @see [ReplyComposer.test.tsx](../../tests/components/ReplyComposer.test.tsx) —
- * pins both sides of the hint delay and that a text-only reply is never blamed
- * on the image renderer.
+ * pins both sides of the hint delay, that a text-only reply is never blamed on
+ * the image renderer, and that a queued send says it is waiting on the image.
  */
-function sendingStatus(slow: boolean, includesImage: boolean): string {
+function sendingStatus(slow: boolean, includesImage: boolean, awaitingRender: boolean): string {
+  if (awaitingRender) {
+    return slow ? "Still rendering your question image…" : "Rendering your question image…";
+  }
   if (!slow) return "Posting…";
   return includesImage ? "Still going, waking the image renderer…" : "Still going…";
 }
@@ -47,6 +52,7 @@ export function ReplyComposer({
   blocked,
   inThread,
   includesImage,
+  awaitingRender,
   textareaRef,
 }: ReplyComposerProps) {
   const { triggerHaptic } = useHaptic(1);
@@ -80,7 +86,9 @@ export function ReplyComposer({
         <Group gap={8} align="center">
           <CharRing count={value.length} limit={characterLimit} />
           <Text size="xs" style={styles.count} role={sending ? "status" : undefined}>
-            {sending ? sendingStatus(slow, includesImage) : `${value.length}/${characterLimit}`}
+            {sending
+              ? sendingStatus(slow, includesImage, awaitingRender)
+              : `${value.length}/${characterLimit}`}
           </Text>
         </Group>
         <Tooltip
