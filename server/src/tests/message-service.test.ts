@@ -414,6 +414,19 @@ describe("MessageService", () => {
     assert.deepStrictEqual((generateQuestionImageMock.mock.calls[0] as any[])[3], "ocean-breeze");
   });
 
+  test("warmImageService delegates to the image generator with the service logger", async () => {
+    const warmMock = mock(async () => {});
+    const original = imageGenerator.warmImageService;
+    imageGenerator.warmImageService = warmMock as any;
+    try {
+      await messageService.warmImageService();
+      assert.strictEqual(warmMock.mock.calls.length, 1);
+      assert.strictEqual((warmMock.mock.calls[0] as any[])[0], mockLogger);
+    } finally {
+      imageGenerator.warmImageService = original;
+    }
+  });
+
   test("respondToMessage with text", async () => {
     (mockResolver.resolveDidToHandle as any).mockImplementationOnce(async () => "handle");
     const result = await messageService.respondToMessage(

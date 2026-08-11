@@ -2,6 +2,7 @@ import { Box, Button, Group, Text, Textarea, Tooltip } from "@mantine/core";
 import { IconSend2 } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import { useSlowRequestHint } from "../../lib/useSlowRequestHint";
 import { BRAND_GRADIENT } from "../../styles/tokens";
 
 import { CharRing } from "./CharRing";
@@ -18,7 +19,22 @@ interface ReplyComposerProps {
   blocked: boolean;
   /** Whether sending will chain onto an existing thread rather than post fresh. */
   inThread: boolean;
+  /** Whether this reply will carry a rendered question image, which is the slow path. */
+  includesImage: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}
+
+/**
+ * What to say while a reply is in flight. A wait nobody explains is what got
+ * the same reply posted four times.
+ *
+ * @see [ReplyComposer.test.tsx](../../tests/components/ReplyComposer.test.tsx) —
+ * pins both sides of the hint delay and that a text-only reply is never blamed
+ * on the image renderer.
+ */
+function sendingStatus(slow: boolean, includesImage: boolean): string {
+  if (!slow) return "Posting…";
+  return includesImage ? "Still going, waking the image renderer…" : "Still going…";
 }
 
 export function ReplyComposer({
@@ -30,9 +46,11 @@ export function ReplyComposer({
   sending,
   blocked,
   inThread,
+  includesImage,
   textareaRef,
 }: ReplyComposerProps) {
   const { triggerHaptic } = useHaptic(1);
+  const slow = useSlowRequestHint(sending);
 
   return (
     <Box onClick={(e) => e.stopPropagation()} style={styles.panel}>
@@ -61,8 +79,8 @@ export function ReplyComposer({
       <Group justify="space-between" align="center" mt={8}>
         <Group gap={8} align="center">
           <CharRing count={value.length} limit={characterLimit} />
-          <Text size="xs" style={styles.count}>
-            {value.length}/{characterLimit}
+          <Text size="xs" style={styles.count} role={sending ? "status" : undefined}>
+            {sending ? sendingStatus(slow, includesImage) : `${value.length}/${characterLimit}`}
           </Text>
         </Group>
         <Tooltip

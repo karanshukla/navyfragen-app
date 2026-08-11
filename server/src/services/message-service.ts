@@ -251,6 +251,10 @@ export class MessageService {
     return { $type: "app.bsky.embed.images", images: [imageEmbed] };
   }
 
+  async warmImageService(): Promise<void> {
+    await imageGenerator.warmImageService(this.logger);
+  }
+
   private async resolveBskyWebUrl(postUri: string, agent: Agent): Promise<string | undefined> {
     const match = postUri.match(/^at:\/\/(.+?)\/app\.bsky\.feed\.post\/(.+)$/);
     if (!match) return undefined;

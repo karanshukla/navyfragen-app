@@ -45,6 +45,20 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
   );
 
+  /**
+   * @see [message-controller.test.ts](../tests/message-controller.test.ts) —
+   * pins that a warm the image service cannot serve still answers 202, since
+   * the caller is typing rather than waiting.
+   */
+  app.post("/messages/warm-image", async (c) => {
+    const did = getSession(c)?.did;
+    if (!did) return c.json({ error: "Not authenticated" }, 403);
+    messageService
+      .warmImageService()
+      .catch((err) => ctx.logger.error({ err, did }, "Failed to warm image service"));
+    return c.json({ ok: true }, 202);
+  });
+
   app.post(
     "/messages/respond",
     zValidator(

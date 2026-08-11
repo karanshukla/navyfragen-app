@@ -19,6 +19,7 @@ vi.mock("../../api/messageService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/messageService")>();
   return {
     ...actual,
+    messageService: { ...actual.messageService, warmImageService: vi.fn() },
     useMessages: vi.fn(),
     useDeleteMessage: vi.fn(),
     useRespondToMessage: vi.fn(),
@@ -307,6 +308,53 @@ describe("Messages page", () => {
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
 
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+  });
+
+  it("pressing Enter while a response is already in flight does not submit again", async () => {
+    // The other side of the test above. A cold image render leaves the composer
+    // silent for seconds, and an unguarded Enter is how one reply became four.
+    const mockRespondMutate = vi.fn();
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: true,
+    } as any);
+    renderWithProviders(<Messages />);
+
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
+
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    fireEvent.change(textarea, { target: { value: "My answer!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+
+    expect(mockRespondMutate).not.toHaveBeenCalled();
+  });
+
+  it("opening the composer warms the image service when replies carry an image", async () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
+
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    expect(messageService.messageService.warmImageService).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not warm the image service when replies are text only", async () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    fireEvent.click(screen.getByLabelText(/question as image/i));
+
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
+
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    expect(messageService.messageService.warmImageService).not.toHaveBeenCalled();
   });
 
   it("clicking 'Add example messages' calls addExamples; onSuccess calls refetch", async () => {

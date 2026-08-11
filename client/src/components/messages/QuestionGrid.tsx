@@ -25,6 +25,8 @@ interface QuestionGridProps {
   characterLimitFor: (message: Message) => number;
   onSend: (message: Message, response: string) => void;
   sending: boolean;
+  /** Whether replies will carry a rendered question image, which is the slow path. */
+  includesImage: boolean;
   deletingTid: string | null;
   onDelete: (tid: string) => void;
   onTogglePin: (tid: string) => void;
@@ -47,6 +49,7 @@ export function QuestionGrid({
   characterLimitFor,
   onSend,
   sending,
+  includesImage,
   deletingTid,
   onDelete,
   onTogglePin,
@@ -135,6 +138,7 @@ export function QuestionGrid({
                 sending={sending}
                 blocked={blocked}
                 inThread={inThread}
+                includesImage={includesImage}
                 textareaRef={textareaRef}
               />
             }

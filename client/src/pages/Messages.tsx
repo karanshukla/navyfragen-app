@@ -6,6 +6,7 @@ import { useHaptic } from "use-haptic";
 import { ApiError } from "../api/apiClient";
 import { useSession } from "../api/authService";
 import {
+  messageService,
   useMessages,
   useDeleteMessage,
   useRespondToMessage,
@@ -124,6 +125,14 @@ export default function Messages() {
     });
   };
 
+  // Opening the composer is the earliest honest signal that a render is coming,
+  // and the image service launches Chromium lazily from a sleeping container.
+  const openComposer = (tid: string) => {
+    setRespondingTid(tid);
+    setResponseText("");
+    if (includeQuestionAsImage) void messageService.warmImageService();
+  };
+
   const handleDeleteRequest = (tid: string) => {
     if (confirmBeforeDelete) {
       setMessageIdToDelete(tid);
@@ -133,7 +142,15 @@ export default function Messages() {
     performDelete(tid);
   };
 
+  /**
+   * @see [Messages.test.tsx](../tests/pages/Messages.test.tsx) — "pressing Enter
+   * while a response is already in flight does not submit again" pins the guard
+   * below. Nothing downstream of it is idempotent: /messages/respond creates a
+   * fresh Bluesky post per call.
+   */
   const handleSendResponse = (message: Message, response: string) => {
+    if (respondLoading) return;
+
     if (!response.trim()) {
       notifications.show({
         title: "Empty Response",
@@ -256,16 +273,14 @@ export default function Messages() {
             thread={thread}
             gradient={useGradients}
             respondingTid={respondingTid}
-            onExpand={(tid) => {
-              setRespondingTid(tid);
-              setResponseText("");
-            }}
+            onExpand={openComposer}
             onCollapse={() => setRespondingTid(null)}
             responseText={responseText}
             onResponseTextChange={setResponseText}
             characterLimitFor={characterLimitFor}
             onSend={handleSendResponse}
             sending={respondLoading}
+            includesImage={includeQuestionAsImage}
             deletingTid={deletingTid}
             onDelete={handleDeleteRequest}
             onTogglePin={(tid) => {

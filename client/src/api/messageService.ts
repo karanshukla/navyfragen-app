@@ -61,6 +61,15 @@ export const messageService = {
     );
   },
 
+  /**
+   * @see [messageService.test.ts](../tests/messageService.test.ts) — pins that a
+   * failed warm resolves quietly; it is a latency hint, and the render that
+   * follows carries the real error handling.
+   */
+  warmImageService: async (): Promise<void> => {
+    await apiClient.post("/messages/warm-image").catch(() => undefined);
+  },
+
   addExampleMessages: async (recipient: string): Promise<MessagesResponse> => {
     return apiClient.post<MessagesResponse>("/messages/example", { recipient });
   },

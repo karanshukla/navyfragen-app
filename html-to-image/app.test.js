@@ -74,6 +74,53 @@ describe('GET /', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Warm endpoint
+// ---------------------------------------------------------------------------
+describe('POST /warm', () => {
+  test('invokes warm and returns 200', async () => {
+    let warmed = 0;
+    const { server, url } = await startServer(async () => { throw new Error('no browser'); }, {
+      warm: async () => { warmed++; },
+    });
+    try {
+      const res = await fetch(`${url}/warm`, { method: 'POST' });
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { status: 'warm' });
+      assert.equal(warmed, 1);
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  test('is not rejected by the render validation that requires a source body', async () => {
+    // /warm carries no 'source', so it only works because it is registered
+    // ahead of the render validation middleware.
+    const { server, url } = await startServer(async () => { throw new Error('no browser'); }, {
+      warm: async () => {},
+    });
+    try {
+      const res = await post(`${url}/warm`, {});
+      assert.equal(res.status, 200);
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  test('returns 503 when the browser cannot be launched', async () => {
+    const { server, url } = await startServer(async () => { throw new Error('no browser'); }, {
+      warm: async () => { throw new Error('launch failed'); },
+    });
+    try {
+      const res = await fetch(`${url}/warm`, { method: 'POST' });
+      assert.equal(res.status, 503);
+      assert.match((await res.json()).error, /launch failed/);
+    } finally {
+      await stopServer(server);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Validation middleware
 // ---------------------------------------------------------------------------
 describe('POST / validation', () => {
@@ -681,6 +728,48 @@ describe('createBrowserPool', () => {
     const revived = await pool.getBrowser();
     assert.equal(revived.connected, true);
     assert.equal(launchCount, 2, 'pool should have relaunched after the idle close');
+  });
+
+  test('warm launches the browser ahead of any render', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch });
+
+    await pool.warm();
+
+    assert.equal(launched.length, 1);
+    assert.equal(launched[0].connected, true);
+  });
+
+  test('a warm that is never followed by a render still closes on idle', async () => {
+    // The other half of the pair below. Without warm() arming the idle close,
+    // a composer opened and abandoned would pin Chromium up forever and the
+    // container would never sleep.
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 5 });
+
+    await pool.warm();
+
+    await waitFor(() => launched[0].closed);
+    assert.ok(launched[0].closed);
+  });
+
+  test('a render arriving after a warm reuses the warmed browser and defers the close', async () => {
+    const { launch, launched } = makeLaunchSpy();
+    const pool = createBrowserPool({ launch, idleTimeoutMs: 30 });
+
+    await pool.warm();
+    const rendered = await pool.getBrowser();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(launched.length, 1, 'the render must not launch a second browser');
+    assert.equal(rendered, launched[0]);
+    assert.equal(launched[0].closed, false, 'getBrowser should have cancelled the warm idle timer');
+  });
+
+  test('warm surfaces a launch failure to its caller', async () => {
+    const pool = createBrowserPool({ launch: async () => { throw new Error('launch failed'); } });
+
+    await assert.rejects(() => pool.warm(), /launch failed/);
   });
 
   test('shutdown closes a running browser', async () => {

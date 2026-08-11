@@ -93,6 +93,35 @@ export async function fetchWithRetry(
   throw lastError;
 }
 
+// Shorter than a render's budget since nobody is blocked on it, but still a
+// retry budget and not a bare fetch: the first packet wakes the container, and
+// Railway's edge answers 502 until that wake finishes.
+const IMAGE_SERVICE_WARM_DEADLINE_MS = 15_000;
+
+/**
+ * Asks the image service to launch Chromium ahead of a render expected shortly.
+ *
+ * @see [image-generator.test.ts](../tests/image-generator.test.ts) — pins that a
+ * failed warm stays silent rather than reaching the user.
+ */
+export async function warmImageService(
+  logger: Logger,
+  deadlineMs: number = IMAGE_SERVICE_WARM_DEADLINE_MS
+): Promise<void> {
+  const url = new URL("warm", env.EXPORT_HTML_URL).toString();
+  try {
+    const response = await fetchWithRetry(url, { method: "POST" }, deadlineMs);
+    await response.text().catch(() => "");
+    if (!response.ok) {
+      logger.warn({ status: response.status }, "Image service warm did not complete");
+      return;
+    }
+    logger.debug("Image service warmed ahead of render");
+  } catch (err) {
+    logger.warn({ err }, "Image service warm failed");
+  }
+}
+
 export async function generateQuestionImage(
   originalMessage: string,
   logger: Logger,
@@ -606,5 +635,6 @@ function generateTwitterHtml(
 
 export const imageGenerator = {
   generateQuestionImage,
+  warmImageService,
   /* v8 ignore next 1 */
 };
