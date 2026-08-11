@@ -388,6 +388,11 @@ jobs:
         with:
           bun-version: latest
 
+      # The checker silently missed a wrapped @see once, so it is pinned by its
+      # own boundary pairs before it is trusted to gate anything.
+      - name: Test the checker
+        run: bun run test:doc-links
+
       - name: Check doc links resolve
         run: bun run check:doc-links
 
