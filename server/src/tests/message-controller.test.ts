@@ -46,6 +46,7 @@ describe("Messages (Hono)", () => {
       deleteMessage: mock(async () => {}),
       deleteUserData: mock(async () => {}),
       syncMessages: mock(async () => ({ synced: 1 })),
+      warmImageService: mock(async () => {}),
       ...overrides,
     };
   }
@@ -91,6 +92,39 @@ describe("Messages (Hono)", () => {
   const jsonHeaders = (h: Record<string, string>) => ({ ...h, "Content-Type": "application/json" });
   const restoreSuccess = mock(async () => ({ sub: "did:foo" }));
   const restoreNull = mock(async () => null);
+
+  describe("POST /messages/warm-image", () => {
+    test("returns 403 when no session", async () => {
+      const { app, service } = makeApp({ session: null });
+      const res = await app.request("/messages/warm-image", {
+        method: "POST",
+        headers: sessionHeader(null),
+      });
+      assert.strictEqual(res.status, 403);
+      assert.strictEqual(service.warmImageService.mock.calls.length, 0);
+    });
+
+    test("accepts the hint and asks the service to warm", async () => {
+      const { app, service, headers } = makeApp();
+      const res = await app.request("/messages/warm-image", { method: "POST", headers });
+      assert.strictEqual(res.status, 202);
+      assert.strictEqual(service.warmImageService.mock.calls.length, 1);
+    });
+
+    test("still answers 202 when the warm itself fails", async () => {
+      // The caller is typing, not waiting: a warm that cannot reach the image
+      // service must not surface as a failed request.
+      const { app, headers } = makeApp({
+        serviceOverride: {
+          warmImageService: mock(async () => {
+            throw new Error("unreachable");
+          }),
+        },
+      });
+      const res = await app.request("/messages/warm-image", { method: "POST", headers });
+      assert.strictEqual(res.status, 202);
+    });
+  });
 
   describe("POST /messages/example", () => {
     test("returns 403 when no session", async () => {

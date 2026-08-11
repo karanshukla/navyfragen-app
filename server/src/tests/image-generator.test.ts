@@ -3,10 +3,24 @@ import { test, describe, afterEach, mock, spyOn } from "bun:test";
 
 import {
   fetchWithRetry,
+  warmImageService,
   wrapLines,
   msgFontSize,
   generateThemeSpecificHtml,
 } from "../lib/image-generator";
+
+function stubLogger() {
+  const warnings: unknown[] = [];
+  const debugs: unknown[] = [];
+  return {
+    warnings,
+    debugs,
+    logger: {
+      warn: (...args: unknown[]) => warnings.push(args),
+      debug: (...args: unknown[]) => debugs.push(args),
+    } as any,
+  };
+}
 
 describe("fetchWithRetry", () => {
   afterEach(() => {
@@ -176,6 +190,55 @@ describe("fetchWithRetry", () => {
     assert.deepStrictEqual(passedInit.headers, init.headers);
     assert.strictEqual(passedInit.body, init.body);
     assert.ok(passedInit.signal instanceof AbortSignal, "Should include an AbortSignal");
+  });
+});
+
+describe("warmImageService", () => {
+  afterEach(() => {
+    mock.restore();
+  });
+
+  test("posts to the service's /warm path", async () => {
+    const capturedArgs: any[] = [];
+    spyOn(globalThis, "fetch").mockImplementation(async (...args: any[]) => {
+      capturedArgs.push(args);
+      return new Response("{}", { status: 200 });
+    });
+    const { logger } = stubLogger();
+
+    await warmImageService(logger);
+
+    assert.strictEqual(capturedArgs[0][0], "http://localhost:3033/warm");
+    assert.strictEqual(capturedArgs[0][1].method, "POST");
+  });
+
+  test("stays silent when the warm succeeds", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}", { status: 200 }));
+    const { logger, warnings } = stubLogger();
+
+    await warmImageService(logger);
+
+    assert.strictEqual(warnings.length, 0);
+  });
+
+  test("warns rather than throwing when the service answers non-OK", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response("nope", { status: 500 })
+    );
+    const { logger, warnings } = stubLogger();
+
+    await assert.doesNotReject(() => warmImageService(logger));
+    assert.strictEqual(warnings.length, 1);
+  });
+
+  test("swallows a network failure so a failed warm never reaches the user", async () => {
+    spyOn(globalThis, "fetch").mockImplementation(async () => {
+      throw new Error("connection refused");
+    });
+    const { logger, warnings } = stubLogger();
+
+    await assert.doesNotReject(() => warmImageService(logger, 50));
+    assert.strictEqual(warnings.length, 1);
   });
 });
 

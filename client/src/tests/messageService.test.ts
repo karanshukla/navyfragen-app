@@ -174,6 +174,19 @@ describe("messageService", () => {
     });
   });
 
+  describe("warmImageService", () => {
+    it("posts to the warm endpoint", async () => {
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ ok: true });
+      await messageService.warmImageService();
+      expect(apiClient.post).toHaveBeenCalledWith("/messages/warm-image");
+    });
+
+    it("resolves even when the warm request fails, so a hint never surfaces an error", async () => {
+      vi.mocked(apiClient.post).mockRejectedValueOnce(new Error("offline"));
+      await expect(messageService.warmImageService()).resolves.toBeUndefined();
+    });
+  });
+
   describe("syncMessages", () => {
     it("should call apiClient.post with the correct endpoint", async () => {
       vi.mocked(apiClient.post).mockResolvedValueOnce(mockMessagesResponse);

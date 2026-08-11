@@ -156,4 +156,44 @@ describe("apiClient", () => {
       );
     });
   });
+
+  // API_URL is resolved once at module load, so each case re-imports the module
+  // under a stubbed env rather than relying on whatever the ambient one is. A
+  // local client/.env setting VITE_API_URL would otherwise decide which of the
+  // two branches ran, and the other would read as dead code.
+  describe("API base URL", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    async function loadApiClientWith(apiUrl: string | undefined) {
+      vi.resetModules();
+      vi.stubEnv("VITE_API_URL", apiUrl);
+      return (await import("../api/apiClient")).apiClient;
+    }
+
+    function captureFetchUrl() {
+      window.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+      return () => vi.mocked(window.fetch).mock.calls[0][0];
+    }
+
+    it("prefixes requests with VITE_API_URL when one is configured", async () => {
+      const client = await loadApiClientWith("https://api.example.test");
+      const url = captureFetchUrl();
+
+      await client.get("/test-endpoint");
+
+      expect(url()).toBe("https://api.example.test/test-endpoint");
+    });
+
+    it("falls back to same-origin when VITE_API_URL is unset", async () => {
+      const client = await loadApiClientWith(undefined);
+      const url = captureFetchUrl();
+
+      await client.get("/test-endpoint");
+
+      expect(url()).toBe("/test-endpoint");
+    });
+  });
 });

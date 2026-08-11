@@ -31,6 +31,7 @@ dist-ssr
 #claude
 .claude/*
 !.claude/settings.json
+!.claude/skills/
 .claude/settings.local.json
 
 # Playwright

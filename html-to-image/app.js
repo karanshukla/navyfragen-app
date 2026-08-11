@@ -206,14 +206,25 @@ export function createBrowserPool({
     }
   }
 
+  // Launches ahead of a render the caller knows is coming. Arms the idle close
+  // itself because no onRenderComplete follows a warm.
+  //
+  // @see [app.test.js](./app.test.js): 'a warm that is never followed by a
+  // render still closes on idle' pins that this cannot pin the container awake.
+  async function warm() {
+    await getBrowser();
+    scheduleIdleClose();
+  }
+
   return {
     getBrowser,
+    warm,
     onRenderComplete,
     shutdown: () => closeBrowser('shutdown'),
   };
 }
 
-export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
+export function createApp(getBrowser, { onRenderComplete = () => {}, warm = async () => {} } = {}) {
   const app = express();
   const renderSemaphore = new Semaphore(MAX_CONCURRENT_RENDERS);
 
@@ -224,6 +235,19 @@ export function createApp(getBrowser, { onRenderComplete = () => {} } = {}) {
   // Health check responds immediately so Railway can mark the instance ready
   // without waiting for the browser to finish launching.
   app.get('/', (_req, res) => res.json({ status: 'ok' }));
+
+  // Must stay ahead of the render validation below, which rejects a POST
+  // carrying no 'source'.
+  // @see [app.test.js](./app.test.js): 'is not rejected by the render
+  // validation that requires a source body'.
+  app.post('/warm', async (_req, res) => {
+    try {
+      await warm();
+      res.json({ status: 'warm' });
+    } catch (err) {
+      res.status(503).json({ error: 'Browser unavailable: ' + err.message });
+    }
+  });
 
   app.use((req, res, next) => {
     if (req.method !== 'POST') return next({ status: 405, message: 'Method not allowed' });
@@ -312,7 +336,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     log: (message) => console.log(message),
   });
 
-  const app = createApp(pool.getBrowser, { onRenderComplete: pool.onRenderComplete });
+  const app = createApp(pool.getBrowser, {
+    onRenderComplete: pool.onRenderComplete,
+    warm: pool.warm,
+  });
   // Bind to :: so Railway's IPv6 internal network can reach this service.
   app.listen(port, '::', () => console.log(`html-to-image listening on port ${port}`));
 

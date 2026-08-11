@@ -1,5 +1,35 @@
 # Server (`server/`)
 
+## Architecture
+
+Two-layer pattern: **route handlers → services**
+
+- `src/hono/*.ts` — Hono route handlers (request/response I/O, session checks, agent initialization) + signed-cookie session middleware + Zod validators. Each domain (auth, message, profile, settings, notification) is a `create<Domain>Hono(ctx)` sub-app mounted in `src/index.ts`.
+- `src/services/*.ts` — Business logic, database access, AT Protocol calls
+
+`AppContext` (defined in `src/index.ts`) carries `db`, `logger`, `oauthClient`, `resolver`, and `idResolver` and is passed through the entire stack.
+
+### Authentication Flow
+
+1. Client POSTs handle to `/login` → server initiates AT Protocol OAuth redirect
+2. User authenticates on Bluesky → redirected to `/oauth/callback`
+3. Server stores OAuth session in DB; sets `c.var.session.did` via the signed-cookie session middleware (`src/hono/session-middleware.ts`)
+4. Subsequent authenticated requests restore the AT Protocol `Agent` via `initializeAgentFromHonoSession()` in `src/hono/session-agent-hono.ts` (thin wrapper over `initializeAgentForDid`)
+
+Session is intentionally thin — Bluesky OAuth acts as the authorization proxy. If the Bluesky session expires, the Navyfragen session is also invalidated.
+
+> **Cookie format note (#316):** the session cookie uses Hono's signed-cookie (single `nf-session` cookie, HMAC-SHA256, `name=value.signature`). This is NOT wire-compatible with the former cookie-session/keygrip scheme (dual `navyfragen` + `navyfragen.sig` cookies, SHA1) — the migration invalidated existing sessions, so a one-time re-login was required.
+
+### Database
+
+Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in production (when `POSTGRESQL_URL` is set). The SQLite driver is `bun:sqlite` (`src/database/db.ts`), bridged onto Kysely's stock `SqliteDialect` via a small adapter (#263). `better-sqlite3` (the former Node driver) was removed entirely in #288 when the Node code path was retired — the server runs exclusively under Bun. Kysely's `SqliteDialect` is dialect-agnostic; the adapter only bridges two `bun:sqlite` API deltas (no `reader` flag → derived from `columnNames`; variadic params → spread).
+
+Schema and migrations live entirely in `src/database/db.ts`. Add new migrations as numbered keys (`"007"`, etc.) in the `migrations` object — Kysely applies them in order at startup via `migrateToLatest()`.
+
+### AT Protocol / Lexicons
+
+Custom lexicon `app.navyfragen.message` defines the record type for messages. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `bun run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.
+
 ### Logging
 
 The server uses Pino (`src/index.ts` → `createLogger()`). In development, stdout is piped through `pino-pretty` via the dev script. In production, when `AXIOM_TOKEN` and `AXIOM_DATASET` are both set, logs are shipped to Axiom via `@axiomhq/pino` as a transport target alongside stdout. Without those vars the logger falls back to stdout only.
