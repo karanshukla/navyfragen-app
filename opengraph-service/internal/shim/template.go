@@ -57,7 +57,16 @@ const (
 	// fixed number the test can assert, not a function of what is behind them.
 	ogChipBG   = "#2C2560"
 	ogHairline = "#332B6B"
+
+	// The flat darken over a user banner, copied from ProfileCard.styles.ts's
+	// bannerScrim. It exists to keep the avatar ring readable on a bright photo,
+	// not to make text legible — no text sits on the banner.
+	ogBannerScrim = "rgba(0,0,0,0.2)"
 )
+
+// ogFontMono mirrors --nf-font-mono, the face ProfileUrlBar sets the share
+// link in.
+const ogFontMono = `ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, monospace`
 
 // ogSurfaces / ogTextColors enumerate the palette for the contrast test: every
 // text colour must clear AA against every surface it can land on.
@@ -94,79 +103,62 @@ const ogFontLink = `<link href="https://fonts.googleapis.com/css2?family=Inter:w
 // grows over the footer. [TestOGGeometry_VerticalBandsFitTheCanvas] adds them
 // up, so a future type-scale tweak fails a test instead of shipping a collision.
 const (
-	bannerHeight = 180
-	gutter       = 64
-	avatarSize   = 136
-	// The avatar straddles the banner seam the way it does on a profile page.
-	avatarOverlap = 52
+	bannerHeight  = 170
+	gutter        = 64
+	avatarSize    = 124
 	contentPadBot = 44
 
 	nameFontSize   = 50
 	nameLineBox    = 55 // nameFontSize * 1.1
+	nameGap        = 14 // avatar bottom → display name
 	handleFontSize = 27
 	handleLineBox  = 37 // handleFontSize * 1.35
 
-	promptGap      = 30
+	promptGap      = 28
 	promptFontSize = 56
 	promptLineBox  = 65 // promptFontSize * 1.15
 	// A prompt longer than this is ellipsised by -webkit-line-clamp rather than
 	// allowed to push into the footer.
-	promptMaxLines = 3
+	promptMaxLines = 2
 
 	footerPadTop  = 26
 	footerBorder  = 2
-	footerRowBox  = 52 // chip: 24px line + 14px padding top and bottom
+	footerRowBox  = 52 // pill: 24px line + 14px padding top and bottom
 	markSize      = 44
 	chipRadiusPx  = 999
 	hairlineWidth = footerBorder
 )
 
-// identityRowHeight is the taller of the avatar and the name/handle column. The
-// column is the taller one: .meta is padded down by avatarOverlap so its text
-// clears the banner seam and stays on the surface whose contrast is asserted.
-var identityRowHeight = maxInt(avatarSize, avatarOverlap+nameLineBox+handleLineBox)
+// The avatar overhangs the banner by half its height and the name sits *below*
+// it, matching ProfileCard.styles.ts (`top: -AVATAR_SIZE / 2`, then `pt={48}`
+// on the name row) rather than sitting beside it.
+const avatarOverlap = avatarSize / 2
+
+// avatarRadius keeps Mantine's `radius="xl"` proportion — the theme sets xl to
+// 22px and ProfileCard renders an 84px avatar, so the app's avatar is a rounded
+// square, not a circle. Scaling the ratio keeps that shape at OG size.
+//
+// [TestOGGeometry_AvatarIsARoundedSquareNotACircle] pins it.
+const avatarRadius = avatarSize * 22 / 84
+
+// ogVerticalBands is the stack of bands down the canvas, in order. The avatar
+// is pulled up into the banner, so it only occupies the half below the seam.
+var ogVerticalBands = []int{
+	bannerHeight,
+	avatarSize - avatarOverlap,
+	nameGap,
+	nameLineBox,
+	handleLineBox,
+	promptGap,
+	promptMaxLines * promptLineBox,
+	footerPadTop + footerBorder + footerRowBox,
+	contentPadBot,
+}
 
 // promptMaxHeight is the clamp's hard ceiling. -webkit-line-clamp alone counts
 // lines, not pixels, so a font that renders taller than promptLineBox would
 // still overrun; this bounds it either way.
 const promptMaxHeight = promptMaxLines * promptLineBox
-
-// ogVerticalBands is the stack of bands down the canvas, in order. The identity
-// row is pulled up into the banner by avatarOverlap, so it only occupies the
-// remainder below the seam.
-var ogVerticalBands = []int{
-	bannerHeight,
-	identityRowHeight - avatarOverlap,
-	promptGap,
-	promptMaxHeight,
-	footerPadTop + footerBorder + footerRowBox,
-	contentPadBot,
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-// transparentOf turns "#rrggbb" into the same colour at zero alpha, for the
-// far end of a fade-to-surface gradient. Spelling the rgba() out by hand would
-// be a second copy of the surface colour that drifts the day the first one is
-// retuned; a literal `transparent` is not equivalent, because engines that
-// interpolate un-premultiplied fade through transparent *black* and leave a
-// grey haze over the banner.
-//
-// [TestTransparentOf] pins the conversion.
-func transparentOf(hex string) string {
-	var r, g, b int
-	if _, err := fmt.Sscanf(strings.TrimPrefix(hex, "#"), "%02x%02x%02x", &r, &g, &b); err != nil {
-		// Unreachable for the package's own constants, which the palette test
-		// parses as #rrggbb; `transparent` is the closest safe stand-in.
-		return "transparent"
-	}
-	return fmt.Sprintf("rgba(%d,%d,%d,0)", r, g, b)
-}
 
 // shareDomain is the short domain the app hands out for a profile — the form
 // PublicProfile.tsx builds and ProfileUrlBar.tsx displays. The OG card shows
@@ -213,8 +205,8 @@ const ogTemplate = `<!DOCTYPE html>
     flex-direction: column;
   }
 
-  /* Banner strip. Fixed height, clipped, with the surface colour feathered in
-     at the bottom so the seam reads as a fade rather than a cut. */
+  /* Banner strip, ending in a hard edge — the app's ProfileCard cuts here too,
+     and a fade would read as a blur over the user's photo. */
   .banner {
     position: relative;
     height: {{BANNER_H}}px;
@@ -227,16 +219,19 @@ const ogTemplate = `<!DOCTYPE html>
     object-fit: cover; object-position: center;
     display: block;
   }
+  /* Flat 20% darken, the same scrim ProfileCard.styles.ts applies, and for the
+     same reason: it keeps the avatar's ring readable on a bright photo. It is
+     deliberately not a gradient — no text sits here, so nothing needs more. */
   .banner::after {
     content: "";
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, {{SURFACE_TOP_CLEAR}} 55%, {{SURFACE_TOP}} 100%);
+    background: {{BANNER_SCRIM}};
   }
 
   /* Positioned so it paints above .banner. .banner is position:relative for its
-     ::after feather, which puts it in the positioned layer — an in-flow
-     .content would render underneath it and the avatar's overlap would be
-     clipped by the banner's own overflow:hidden. */
+     ::after scrim, which puts it in the positioned layer — an in-flow .content
+     would render underneath it and the avatar's overhang would be clipped by
+     the banner's own overflow:hidden. */
   .content {
     position: relative;
     z-index: 1;
@@ -246,30 +241,28 @@ const ogTemplate = `<!DOCTYPE html>
     padding: 0 {{GUTTER}}px {{PAD_BOT}}px;
   }
 
+  /* The avatar overhangs the banner by half its height and the name stacks
+     underneath, the arrangement ProfileCard uses. */
   .identity {
-    display: flex;
-    align-items: center;
-    gap: 26px;
     margin-top: -{{AVATAR_OVERLAP}}px;
+    min-width: 0;
   }
   .avatar {
     width: {{AVATAR}}px; height: {{AVATAR}}px;
-    border-radius: 50%;
+    /* A rounded square, not a circle — Mantine radius="xl" on ProfileCard's
+       Avatar. */
+    border-radius: {{AVATAR_RADIUS}}px;
     object-fit: cover;
-    flex-shrink: 0;
     background: {{GRAD_MARK}};
     border: 6px solid {{SURFACE_TOP}};
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
     /* Glyph fallback shares this box, so it centres its letter. */
     display: flex; align-items: center; justify-content: center;
     color: {{TEXT}};
-    font-size: 62px; font-weight: 800; line-height: 1;
+    font-size: 58px; font-weight: 800; line-height: 1;
   }
-  /* The identity row is pushed up into the banner, so its text has to clear the
-     avatar's overlap to stay on the surface where contrast is guaranteed. */
   .meta {
     min-width: 0;
-    padding-top: {{AVATAR_OVERLAP}}px;
+    padding-top: {{NAME_GAP}}px;
   }
   .name {
     font-size: {{NAME_FS}}px; font-weight: 800; line-height: 1.1;
@@ -315,18 +308,21 @@ const ogTemplate = `<!DOCTYPE html>
   }
   .wordmark span { color: {{TEXT_ACCENT}}; }
   /* The share link, in the same "fragen.navy/<handle>" pill the profile page
-     uses (client/src/components/profile/ProfileUrlBar.tsx): domain muted, the
-     handle emphasised, because the handle is the part a reader has to retype. */
+     uses (client/src/components/profile/ProfileUrlBar.tsx): monospace, bordered,
+     domain muted and the handle emphasised, because the handle is the part a
+     reader has to retype. */
   .chip {
     min-width: 0;
     background: {{CHIP_BG}};
+    border: 2px solid {{HAIRLINE}};
     color: {{TEXT_MUTED}};
-    font-size: 24px; font-weight: 600; line-height: 1;
-    padding: 14px 22px;
+    font-family: {{FONT_MONO}};
+    font-size: 24px; font-weight: 400; line-height: 1;
+    padding: 12px 22px;
     border-radius: {{CHIP_RADIUS}}px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .chip b { color: {{TEXT_ACCENT}}; font-weight: 700; }
+  .chip b { color: {{TEXT}}; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -390,7 +386,6 @@ func BuildOGTemplate(in OGInput) string {
 		"{{H}}", fmt.Sprint(OGHeight),
 		"{{GRAD_MARK}}", ogGradMark,
 		"{{SURFACE_TOP}}", ogSurfaceTop,
-		"{{SURFACE_TOP_CLEAR}}", transparentOf(ogSurfaceTop),
 		"{{SURFACE_BOTTOM}}", ogSurfaceBottom,
 		"{{TEXT}}", ogText,
 		"{{TEXT_MUTED}}", ogTextMuted,
@@ -401,6 +396,10 @@ func BuildOGTemplate(in OGInput) string {
 		"{{GUTTER}}", fmt.Sprint(gutter),
 		"{{AVATAR}}", fmt.Sprint(avatarSize),
 		"{{AVATAR_OVERLAP}}", fmt.Sprint(avatarOverlap),
+		"{{AVATAR_RADIUS}}", fmt.Sprint(avatarRadius),
+		"{{NAME_GAP}}", fmt.Sprint(nameGap),
+		"{{BANNER_SCRIM}}", ogBannerScrim,
+		"{{FONT_MONO}}", ogFontMono,
 		"{{PAD_BOT}}", fmt.Sprint(contentPadBot),
 		"{{NAME_FS}}", fmt.Sprint(nameFontSize),
 		"{{HANDLE_FS}}", fmt.Sprint(handleFontSize),
