@@ -82,20 +82,6 @@ func TestOGTemplate_NoTextSitsOnTheBanner(t *testing.T) {
 	}
 }
 
-func TestTransparentOf(t *testing.T) {
-	if got := transparentOf(ogSurfaceTop); got != "rgba(27,23,71,0)" {
-		t.Fatalf("transparentOf(%s) = %q", ogSurfaceTop, got)
-	}
-	if got := transparentOf("#FFFFFF"); got != "rgba(255,255,255,0)" {
-		t.Fatalf("transparentOf(#FFFFFF) = %q", got)
-	}
-	// The fade must carry the surface's own hue, not black — otherwise an engine
-	// interpolating un-premultiplied leaves a grey haze across the banner.
-	if got := transparentOf(ogSurfaceTop); got == "rgba(0,0,0,0)" || got == "transparent" {
-		t.Fatalf("fade end lost the surface hue: %q", got)
-	}
-}
-
 // ── Font stack ───────────────────────────────────────────────────────────────
 
 // 'Noto Color Emoji' gives U+0020 a 1.25em advance. Anywhere but last in the
@@ -184,20 +170,82 @@ func TestOGGeometry_BandsUseMostOfTheCanvas(t *testing.T) {
 	}
 }
 
-func TestOGGeometry_AvatarOverlapsTheBannerSeam(t *testing.T) {
-	if avatarOverlap <= 0 {
-		t.Fatal("avatar must straddle the banner seam to read as a profile header")
+// ProfileCard.styles.ts positions the avatar at `top: -AVATAR_SIZE / 2`, so it
+// hangs exactly half over the banner. Matching that is what makes the OG card
+// read as the same component.
+func TestOGGeometry_AvatarHangsHalfOverTheBanner(t *testing.T) {
+	if avatarOverlap != avatarSize/2 {
+		t.Fatalf("avatar overhang is %dpx of a %dpx avatar; ProfileCard hangs it by exactly half",
+			avatarOverlap, avatarSize)
 	}
-	if avatarOverlap >= avatarSize {
-		t.Fatalf("avatarOverlap %d swallows the whole %dpx avatar", avatarOverlap, avatarSize)
+	// Half an avatar has to fit inside the banner, or it hangs off the top edge.
+	if avatarOverlap > bannerHeight {
+		t.Fatalf("avatar overhang %dpx exceeds the %dpx banner", avatarOverlap, bannerHeight)
 	}
-	// The name/handle column is pushed down by the same overlap so it clears the
-	// seam; if it were not, the text would sit on the banner and escape the
-	// contrast guarantee asserted above.
-	if identityRowHeight < avatarOverlap+nameLineBox+handleLineBox {
-		t.Fatalf("identity row %dpx does not account for meta pushed down by %dpx",
-			identityRowHeight, avatarOverlap)
+}
+
+// The app's avatar is a rounded square, not a circle: Mantine's theme sets
+// radius xl to 22px and ProfileCard renders an 84px Avatar with radius="xl".
+// A 50% radius here would be the single most visible mismatch with the app.
+func TestOGGeometry_AvatarIsARoundedSquareNotACircle(t *testing.T) {
+	if avatarRadius >= avatarSize/2 {
+		t.Fatalf("avatar radius %d on a %dpx avatar is a circle; the app uses a rounded square",
+			avatarRadius, avatarSize)
 	}
+	if avatarRadius <= 0 {
+		t.Fatalf("avatar radius %d has no rounding at all", avatarRadius)
+	}
+	// Same proportion as the app's 22px radius on an 84px avatar, within a pixel
+	// of rounding.
+	want := avatarSize * 22 / 84
+	if avatarRadius != want {
+		t.Fatalf("avatar radius %d does not keep the app's 22/84 proportion (want %d)", avatarRadius, want)
+	}
+	css := between(BuildOGTemplate(OGInput{Handle: "a.bsky.social"}), "<style>", "</style>")
+	if rule := between(css, ".avatar {", "}"); strings.Contains(rule, "border-radius: 50%") {
+		t.Fatalf(".avatar is rendered as a circle:\n%s", rule)
+	}
+}
+
+// "no blur or anything": the banner ends in a hard cut, and its scrim is the
+// app's flat darken rather than a fade into the surface. A gradient here reads
+// as a blur over the user's photo.
+func TestOGTemplate_BannerHasNoFadeOrBlur(t *testing.T) {
+	css := between(BuildOGTemplate(OGInput{
+		Handle: "a.bsky.social",
+		Banner: "https://cdn.bsky.app/b.jpg",
+	}), "<style>", "</style>")
+	scrim := between(css, ".banner::after {", "}")
+	if strings.Contains(scrim, "gradient") {
+		t.Errorf(".banner::after fades into the surface; the banner should end in a hard cut\n%s", scrim)
+	}
+	if !strings.Contains(scrim, ogBannerScrim) {
+		t.Errorf(".banner::after should carry ProfileCard's flat scrim %q\n%s", ogBannerScrim, scrim)
+	}
+	// Scanned across every .banner rule — the element, its image, and the scrim.
+	// An earlier version of this test only looked at .banner and .banner::after,
+	// and a `filter: blur()` on `.banner img` sailed straight past it.
+	for _, selector := range bannerSelectors(css) {
+		rule := between(css, selector+" {", "}")
+		for _, banned := range []string{"blur", "filter", "backdrop"} {
+			if strings.Contains(rule, banned) {
+				t.Errorf("%s uses %q; the banner photo must render sharp\n%s", selector, banned, rule)
+			}
+		}
+	}
+}
+
+// bannerSelectors returns every rule head in css that styles the banner, so a
+// blur added to a new sub-element is caught rather than missed.
+func bannerSelectors(css string) []string {
+	var out []string
+	for _, line := range strings.Split(css, "\n") {
+		head, _, ok := strings.Cut(strings.TrimSpace(line), " {")
+		if ok && strings.HasPrefix(head, ".banner") {
+			out = append(out, head)
+		}
+	}
+	return out
 }
 
 func TestOGTemplate_PromptIsClampedNotAllowedToGrow(t *testing.T) {
