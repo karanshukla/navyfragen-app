@@ -163,6 +163,30 @@ describe("RenderService", () => {
       assert.strictEqual(generate.mock.calls.length, 1);
     });
 
+    test("text shifted across a field boundary produces a different key", async () => {
+      stubImageGenerator();
+      const a = makeService({ question: "x" });
+      const b = makeService({ question: "bx" });
+
+      const first = await a.service.enqueue({
+        did: "did:foo",
+        tid: "tid-1",
+        original: "x",
+        theme: "ab",
+      });
+      const second = await b.service.enqueue({
+        did: "did:foo",
+        tid: "tid-1",
+        original: "bx",
+        theme: "a",
+      });
+      await settle();
+
+      // Concatenated without a separator both are "…abx", so this is what the
+      // separator buys: one user's theme cannot borrow another's question text.
+      assert.notStrictEqual(first.renderId, second.renderId);
+    });
+
     test("a theme change produces a second render", async () => {
       const generate = stubImageGenerator();
       const { service } = makeService();
