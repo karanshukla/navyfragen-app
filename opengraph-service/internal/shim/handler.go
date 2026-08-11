@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,20 +19,48 @@ type Handler struct {
 	Generator *Generator
 	Cache     *FileCache
 	Origin    string // public site origin for absolute OG URLs
-	// GenTimeout bounds the slow path so a stuck upstream cannot hold a
-	// connection forever. Defaults to 45s when zero (the production value).
+	// GenTimeout bounds one background render so a stuck upstream cannot hold a
+	// goroutine forever. Defaults to DefaultGenTimeout when zero.
 	GenTimeout time.Duration
-	// MaxConcurrentGenerate caps in-flight generate-path requests; excess ones
-	// fail fast with 503. Zero means DefaultMaxConcurrentGenerate; negative
-	// disables the cap, for tests only.
+	// MaxConcurrentGenerate caps in-flight renders; excess ones are dropped.
+	// Zero means DefaultMaxConcurrentGenerate; negative disables the cap, for
+	// tests only.
 	MaxConcurrentGenerate int
-	genSem                chan struct{}
+	// BackgroundCtx is the lifetime of fire-and-forget renders rather than any
+	// one request's context: main cancels it on shutdown so a render that has
+	// not started yet gives up instead of outliving the server. Nil means
+	// context.Background().
+	BackgroundCtx context.Context
+
+	genSem     chan struct{}
+	background sync.WaitGroup
 }
 
 // DefaultMaxConcurrentGenerate is sized to protect a single html-to-image
 // instance (one Puppeteer at a time) while still letting genuine Cardyb
 // concurrency coalesce through singleflight.
 const DefaultMaxConcurrentGenerate = 4
+
+// DefaultGenTimeout bounds one background render when GenTimeout is unset.
+const DefaultGenTimeout = 45 * time.Second
+
+// Route prefixes the handler owns outright — they are matched before Classify,
+// so neither the Cardyb UA check nor the proxy fast path can shadow them.
+const (
+	// OGCachePathPrefix serves the stored PNG a generated og:image points at.
+	OGCachePathPrefix = "/og-cache/"
+	// WarmPathPrefix accepts POST /og-warm/:handle, the client's share-intent
+	// warm, so the first real crawl after a share finds a warm cache.
+	WarmPathPrefix = "/og-warm/"
+)
+
+// Cache-Control for the two things the cache route can serve. The fallback's
+// max-age is deliberately short: a crawler that caught it must come back soon
+// for the real render, which is at most seconds behind it.
+const (
+	renderedImageCacheControl = "public, max-age=86400"
+	fallbackImageCacheControl = "public, max-age=60"
+)
 
 // NewHandler wires the handler against an upstream client URL and the injected
 // generator/cache. upstreamURL is the client's base URL (e.g. http://client:3000).
@@ -55,7 +84,7 @@ func NewHandler(upstreamURL string, gen *Generator, cache *FileCache, origin str
 		Generator:             gen,
 		Cache:                 cache,
 		Origin:                origin,
-		GenTimeout:            45 * time.Second,
+		GenTimeout:            DefaultGenTimeout,
 		MaxConcurrentGenerate: DefaultMaxConcurrentGenerate,
 	}
 	h.initSem()
@@ -75,16 +104,25 @@ func (h *Handler) initSem() {
 	h.genSem = make(chan struct{}, h.MaxConcurrentGenerate)
 }
 
+// WaitBackground blocks until every fire-and-forget render this handler started
+// has finished. main calls it beside srv.Shutdown; a test MUST call it before
+// returning, because a render still in flight writes into the t.TempDir() that
+// cleanup is already walking (the flake fixed in 4df67ba).
+func (h *Handler) WaitBackground() { h.background.Wait() }
+
 // ServeHTTP serves /healthz, streams /og-cache/<safe-did>.png from the volume,
-// and sends everything else to the generate slow path or the Caddy proxy
-// according to Classify.
+// accepts /og-warm/<handle>, and sends everything else to the generate slow
+// path or the Caddy proxy according to Classify.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/healthz":
 		h.handleHealthz(w, r)
 		return
-	case strings.HasPrefix(r.URL.Path, "/og-cache/"):
+	case strings.HasPrefix(r.URL.Path, OGCachePathPrefix):
 		h.serveCacheFile(w, r)
+		return
+	case strings.HasPrefix(r.URL.Path, WarmPathPrefix):
+		h.handleWarm(w, r)
 		return
 	}
 	dec := Classify(r.Header.Get("User-Agent"), r.URL.Path)
@@ -101,54 +139,47 @@ func (h *Handler) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("{}"))
 }
 
-// handleGenerate runs the slow path. On success it returns HTML whose og:image
-// points at the cached PNG. On failure it degrades gracefully: a 404 for an
-// unresolvable handle, a 502 for an indigo/render failure, a 503 when the
-// concurrent-render cap is hit. Critically, a failure here must NOT panic or
-// hang the hot path — the proxy fast path is unaffected.
+// handleGenerate answers a crawler from the resolved DID alone. A render never
+// blocks the response: on a cache miss the same HTML goes out immediately, the
+// render runs in the background, this crawl's image fetch gets the branded
+// fallback, and the next crawl finds a warm cache. Only the handle resolution
+// can fail the request — a 404 for an unresolvable handle, a 502 for an indigo
+// failure. A failure here must NOT panic or hang the hot path; the proxy fast
+// path is unaffected.
+//
+// [TestHandler_CacheMiss_RespondsWithoutAwaitingTheRender] and
+// [TestHandler_CacheMiss_BackgroundRenderWarmsTheNextRequest] pin both halves.
 func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	handle := ProfileHandle(r.URL.Path)
 	if handle == "" {
 		http.NotFound(w, r)
 		return
 	}
-	// The Cardyb UA is trivially spoofable and singleflight only dedups per
-	// handle, so an attacker rotating handles could drive unbounded concurrent
-	// renders and exhaust the shared html-to-image service. Failing fast with
-	// 503 keeps the proxy path serving; Cardyb retries on its next crawl.
-	if h.genSem != nil {
-		select {
-		case h.genSem <- struct{}{}:
-			defer func() { <-h.genSem }()
-		default:
-			log.Printf("opengraph-service: generate %s rejected: %d concurrent renders in flight",
-				handle, cap(h.genSem))
-			http.Error(w, "og generation busy", http.StatusServiceUnavailable)
-			return
-		}
-	}
-	timeout := h.GenTimeout
-	if timeout <= 0 {
-		timeout = 45 * time.Second
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), timeout)
+	ctx, cancel := context.WithTimeout(r.Context(), h.genTimeout())
 	defer cancel()
 
-	result, err := h.Generator.Generate(ctx, handle)
+	resolved, err := h.Generator.Resolve(ctx, handle)
 	if err != nil {
 		status := AsHTTPStatus(err)
-		log.Printf("opengraph-service: generate %s failed: %v (status %d)", handle, err, status)
+		log.Printf("opengraph-service: resolve %s failed: %v (status %d)", handle, err, status)
 		http.Error(w, "og generation failed", status)
 		return
 	}
+	if !resolved.Cached {
+		h.spawnRender(handle, func(ctx context.Context) error {
+			return h.Generator.EnsureRendered(ctx, resolved.DID)
+		})
+	}
+	h.writeOGResponse(w, handle, resolved.DID)
+}
 
-	imageURL := "/og-cache/" + SafeDID(result.DID) + ".png"
+func (h *Handler) writeOGResponse(w http.ResponseWriter, handle, did string) {
 	htmlResp := BuildOGResponse(ResponseInput{
 		ProfileHandle: handle,
 		// The display name never reaches this layer — it is used only inside the
 		// composite render — so the title falls back to the handle.
 		DisplayName: strings.TrimPrefix(handle, "@"),
-		ImageURL:    imageURL,
+		ImageURL:    OGCachePathPrefix + SafeDID(did) + ".png",
 		Origin:      h.Origin,
 	})
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -156,27 +187,158 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(htmlResp))
 }
 
-// serveCacheFile streams the stored PNG for a /og-cache/:did.png request.
+// handleWarm accepts a fire-and-forget warm for a profile so the first real
+// crawl after a share finds a warm cache instead of the fallback. The response
+// is 202 whether or not a render actually started: the caller is a share or
+// copy-link handler and must never surface a failure to the user.
+//
+// This route is unauthenticated, which is the exposure the spoofable Cardyb UA
+// already accepts. What keeps that bounded is that it reaches html-to-image
+// only through spawnRender, so it shares the render cap with the crawler path
+// and is shed rather than queued once that cap is saturated.
+//
+// [TestHandler_WarmOnColdProfile_TriggersExactlyOneRender] and
+// [TestHandler_WarmOnFreshProfile_TriggersNoRender] pin the no-op-when-warm
+// rule; [TestHandler_WarmIsBoundedByTheRenderCap] pins the bound.
+func (h *Handler) handleWarm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	handle := WarmHandle(r.URL.Path)
+	if handle == "" {
+		http.NotFound(w, r)
+		return
+	}
+	started := h.spawnRender(handle, func(ctx context.Context) error {
+		resolved, err := h.Generator.Resolve(ctx, handle)
+		if err != nil {
+			return err
+		}
+		if resolved.Cached {
+			return nil
+		}
+		return h.Generator.EnsureRendered(ctx, resolved.DID)
+	})
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusAccepted)
+	if started {
+		_, _ = w.Write([]byte(`{"warming":true}`))
+		return
+	}
+	_, _ = w.Write([]byte(`{"warming":false}`))
+}
+
+// spawnRender runs work in a joinable background goroutine under the render
+// cap, reporting whether it started. Both entry points to html-to-image are
+// unauthenticated (a spoofable Cardyb UA, and the warm route), and singleflight
+// only dedups per DID, so an attacker rotating handles could otherwise drive
+// unbounded concurrent renders against the shared service. Work that cannot get
+// a slot is dropped, never queued — queueing would move the unbounded growth
+// into memory and hand the crawler a stale render minutes later anyway.
+//
+// [TestHandler_RenderCap_RunsBackgroundRenderWhenASlotIsFree] and
+// [TestHandler_RenderCap_DropsBackgroundRenderWhenSaturated] pin both sides of
+// the bound.
+func (h *Handler) spawnRender(handle string, work func(context.Context) error) bool {
+	if err := h.backgroundContext().Err(); err != nil {
+		return false
+	}
+	if !h.acquireRenderSlot() {
+		log.Printf("opengraph-service: background render for %s dropped: %d concurrent renders in flight",
+			handle, cap(h.genSem))
+		return false
+	}
+	h.background.Add(1)
+	go func() {
+		defer h.background.Done()
+		defer h.releaseRenderSlot()
+		ctx, cancel := context.WithTimeout(h.backgroundContext(), h.genTimeout())
+		defer cancel()
+		if err := work(ctx); err != nil {
+			log.Printf("opengraph-service: background render for %s failed: %v", handle, err)
+		}
+	}()
+	return true
+}
+
+func (h *Handler) backgroundContext() context.Context {
+	if h.BackgroundCtx != nil {
+		return h.BackgroundCtx
+	}
+	return context.Background()
+}
+
+func (h *Handler) genTimeout() time.Duration {
+	if h.GenTimeout > 0 {
+		return h.GenTimeout
+	}
+	return DefaultGenTimeout
+}
+
+func (h *Handler) acquireRenderSlot() bool {
+	if h.genSem == nil {
+		return true
+	}
+	select {
+	case h.genSem <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (h *Handler) releaseRenderSlot() {
+	if h.genSem == nil {
+		return
+	}
+	<-h.genSem
+}
+
+// serveCacheFile streams the stored PNG for an /og-cache/:did.png request. A
+// DID whose render has not landed yet is not an error — one is in flight behind
+// it — so a miss serves the branded fallback under a short max-age instead of
+// handing the crawler a 404. A malformed path is a bad request rather than a
+// pending render and still 404s.
+//
+// [TestHandler_OgCacheMiss_ServesFallbackWithShortMaxAge],
+// [TestHandler_OgCacheHit_ServesRenderWithLongMaxAge] and
+// [TestHandler_OgCacheMalformedName_Returns404NotFallback] pin all three.
 func (h *Handler) serveCacheFile(w http.ResponseWriter, r *http.Request) {
-	base := strings.TrimPrefix(r.URL.Path, "/og-cache/")
-	base = strings.TrimPrefix(base, "/")
-	if base == "" || !strings.HasSuffix(base, ".png") {
+	name := h.cacheFileName(r.URL.Path)
+	if name == "" {
 		http.NotFound(w, r)
 		return
 	}
-	// Re-sanitized defensively: a crafted URL must not traverse the cache dir.
-	safe := h.Cache.SafePathFromBase(base)
-	if safe == "" {
-		http.NotFound(w, r)
-		return
-	}
-	p := filepath.Join(h.Cache.Dir(), safe)
-	entry, err := h.Cache.LoadByPath(p)
+	entry, err := h.Cache.LoadByPath(filepath.Join(h.Cache.Dir(), name))
 	if err != nil {
-		http.NotFound(w, r)
+		writeImage(w, "image/png", FallbackOGImage(), fallbackImageCacheControl)
 		return
 	}
-	w.Header().Set("Content-Type", entry.MimeType)
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	_, _ = w.Write(entry.Bytes)
+	writeImage(w, entry.MimeType, entry.Bytes, renderedImageCacheControl)
+}
+
+// cacheFileName returns the on-disk filename an /og-cache/ request maps to, or
+// "" when the request is malformed. Sanitizing is not enough now that a miss is
+// answered rather than refused: a name that *changes* under sanitization was a
+// traversal or a non-image request, so it is rejected here instead of being
+// rewritten into some other DID's miss and served the fallback.
+func (h *Handler) cacheFileName(path string) string {
+	base := strings.TrimPrefix(path, OGCachePathPrefix)
+	if base == "" || strings.ContainsAny(base, `/\`) {
+		return ""
+	}
+	if safe := h.Cache.SafePathFromBase(base); safe == base {
+		return safe
+	}
+	return ""
+}
+
+func writeImage(w http.ResponseWriter, mimeType string, body []byte, cacheControl string) {
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Cache-Control", cacheControl)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
 }

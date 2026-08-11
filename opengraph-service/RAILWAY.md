@@ -11,6 +11,20 @@ it generates and serves a per-profile OG image (see the [workflow summary](../.c
 - **Port:** Railway injects `$PORT` automatically — **do not set it yourself**.
 - **Health:** `GET /healthz` returns `200` once the proxy is wired up.
 
+## Routes the shim owns
+
+Everything else is proxied to `FRONTEND_URL` unchanged.
+
+| Route | Behaviour |
+|---|---|
+| `GET /healthz` | `200 {}`. |
+| `GET /og-cache/<safe-did>.png` | The cached render (`max-age=86400`). A DID with no render yet gets the branded fallback card under `max-age=60`, so the crawler comes back once the render lands. A malformed or traversing name is `404`. |
+| `POST /og-warm/<handle>` | `202 {"warming":true\|false}`, fire-and-forget. Schedules a background render if the profile is not already cached; `false` means the render cap shed it. Any other method is `405`, an empty/multi-segment handle is `404`. Unauthenticated by design — the work it can trigger is bounded by the same render cap as the crawler path. |
+| `GET /profile/<handle>` with the `Bluesky Cardyb` UA | The synthesized OG HTML, answered from the resolved DID alone. A cache miss never blocks the crawler: the render runs in the background and this crawl's image fetch gets the fallback. |
+
+`POST /og-warm/` is called by the client's share/copy handlers and is
+same-origin in production (the shim fronts the SPA), so it needs no CORS.
+
 ## What to set (the short version)
 
 You only need to configure **two variables** and **one volume**. Everything else

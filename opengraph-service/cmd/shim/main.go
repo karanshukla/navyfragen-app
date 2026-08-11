@@ -59,6 +59,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("build handler: %v", err)
 	}
+	// Renders outlive the request that scheduled them, so they hang off a
+	// process-lifetime context rather than any request's. Cancelling it stops
+	// renders that have not started; the ones already running are joined below.
+	backgroundCtx, stopBackground := context.WithCancel(context.Background())
+	defer stopBackground()
+	handler.BackgroundCtx = backgroundCtx
 
 	log.Printf("opengraph-service shim listening on %s, proxying to %s (cache %s, ttl %s)",
 		*addr, *frontendURL, *cacheDir, ttl)
@@ -74,18 +80,45 @@ func main() {
 	}
 
 	// Graceful shutdown: stop accepting new connections, finish in-flight
-	// pass-throughs. Generation requests rely on the renderer's own deadline.
+	// pass-throughs, then join the background renders so a half-written cache
+	// entry cannot be left behind.
+	shutdownDone := make(chan struct{})
 	go func() {
+		defer close(shutdownDone)
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 		defer cancel()
 		_ = srv.Shutdown(ctx)
+		stopBackground()
+		drain(handler.WaitBackground, shutdownGrace)
 	}()
 
 	if err := srv.ListenAndServe(); !shim.IsErrServerClosed(err) {
 		log.Fatalf("listen: %v", err)
+	}
+	<-shutdownDone
+}
+
+// shutdownGrace bounds both halves of shutdown: draining connections, then
+// joining background renders.
+const shutdownGrace = 10 * time.Second
+
+// drain runs wait with a ceiling. A background render's own deadline can exceed
+// the platform's SIGTERM-to-SIGKILL window, and an unbounded join would then
+// turn a graceful shutdown into a killed one; the cache write it was racing is
+// atomic either way.
+func drain(wait func(), grace time.Duration) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		wait()
+	}()
+	select {
+	case <-done:
+	case <-time.After(grace):
+		log.Printf("opengraph-service: background renders still running after %s, exiting anyway", grace)
 	}
 }
 

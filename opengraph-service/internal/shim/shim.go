@@ -36,11 +36,22 @@ func Classify(userAgent, path string) Decision {
 	return DecisionGenerate
 }
 
+// ProfilePathPrefix is the client route a link preview points at, and the only
+// route the Cardyb UA triggers generation on.
+const ProfilePathPrefix = "/profile/"
+
 // ProfileHandle extracts the :handle from a /profile/:handle path, or "" if
-// the path does not match. It deliberately ignores query strings and trailing
+// the path does not match.
+func ProfileHandle(path string) string { return handleAfterPrefix(path, ProfilePathPrefix) }
+
+// WarmHandle extracts the :handle from an /og-warm/:handle path, or "" if the
+// path does not match — the warm route's counterpart to ProfileHandle.
+func WarmHandle(path string) string { return handleAfterPrefix(path, WarmPathPrefix) }
+
+// handleAfterPrefix returns the single path segment following prefix, or "" if
+// there is not exactly one. It deliberately ignores query strings and trailing
 // slashes so /profile/foo/ and /profile/foo?bar=baz both resolve to "foo".
-func ProfileHandle(path string) string {
-	const prefix = "/profile/"
+func handleAfterPrefix(path, prefix string) string {
 	if !strings.HasPrefix(path, prefix) {
 		return ""
 	}
