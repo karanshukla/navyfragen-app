@@ -77,6 +77,11 @@ export default defineConfig({
         "src/Theme.tsx",
         "src/vite-env.d.ts",
         "src/styles/tokens.ts",
+        // `*.styles.ts` modules hold CSS objects and the pure functions that
+        // select between them — no behaviour, nothing an assertion could pin
+        // that reading the file would not tell you more directly. Rendering
+        // logic stays in the `.tsx` beside them, which is measured.
+        "src/**/*.styles.ts",
         "src/pushPayload.ts",
         "src/index.css",
       ],

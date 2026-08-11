@@ -20,7 +20,7 @@ export function Wordmark({ size = 22, showMark = true }: WordmarkProps) {
       {showMark && <WinkMark size={size + 10} sparkle={false} aria-hidden />}
       <span
         style={{
-          fontFamily: "Inter, sans-serif",
+          fontFamily: "var(--nf-font-sans)",
           fontWeight: 800,
           fontSize: size,
           letterSpacing: "-0.04em",

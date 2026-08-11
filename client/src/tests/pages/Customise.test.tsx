@@ -145,7 +145,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    fireEvent.click(screen.getByLabelText(/ember theme/i));
+    fireEvent.click(screen.getByRole("button", { name: /ember/i }));
     expect(mutate).toHaveBeenCalledWith({ profileCardTheme: "ember" });
   });
 
@@ -206,7 +206,7 @@ describe("Customise page", () => {
     } as any);
     renderWithProviders(<Customise />);
 
-    expect(screen.getByLabelText(/ember theme/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /ember/i })).toBeDisabled();
   });
 
   it("renders correctly in dark mode", () => {

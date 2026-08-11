@@ -1,27 +1,26 @@
 import {
-  Title,
-  Grid,
-  Text,
-  Stack,
-  Group,
   Alert,
+  Badge,
   Button,
+  Grid,
+  Group,
   Select,
+  Skeleton,
   Switch,
   TextInput,
-  Skeleton,
-  Badge,
+  Title,
 } from "@mantine/core";
 import { useState, useEffect } from "react";
-import { useComputedColorScheme } from "@mantine/core";
 
 import { useSession } from "../api/authService";
 import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
+import { ProfileThemeSwatches } from "../components/customise/ProfileThemeSwatches";
+import { SettingsSection } from "../components/customise/SettingsSection";
 import { SettingsCard } from "../components/SettingsCard";
-import { profileCardThemes } from "../lib/themes";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 
 const MAX_PROMPT_LENGTH = 100;
+const CARD_SPAN = { base: 12, md: 6, lg: 4 };
 
 /**
  * SQLite sends 0/1 and Postgres sends false/true for the same column.
@@ -33,7 +32,6 @@ function on(value: number | boolean | null | undefined): boolean {
 }
 
 export default function Customise() {
-  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
   const { data: session, isLoading: sessionLoading } = useSession();
   const {
     data: userSettings,
@@ -51,251 +49,157 @@ export default function Customise() {
     setPromptDraft(userSettings?.customPrompt ?? "");
   }, [userSettings?.customPrompt]);
 
-  const settingsLoadError = (
-    <Alert color="red" title="Failed to load settings" withCloseButton={false}>
-      <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
-        Retry
-      </Button>
-    </Alert>
-  );
-
   const busy = updateSettings.isPending;
+
+  /** Every card shows the same three states, so they share one renderer. */
+  const field = (skeletonHeight: number, control: React.ReactNode) => {
+    if (settingsLoading) return <Skeleton height={skeletonHeight} radius="sm" />;
+    if (settingsError) {
+      return (
+        <Alert color="red" title="Failed to load settings" withCloseButton={false}>
+          <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
+            Retry
+          </Button>
+        </Alert>
+      );
+    }
+    return control;
+  };
+
+  if (!session?.isLoggedIn && !sessionLoading) {
+    return (
+      <Alert title="Error" color="red">
+        You cannot access this page without logging in.
+      </Alert>
+    );
+  }
 
   return (
     <>
-      {!session?.isLoggedIn && !sessionLoading ? (
-        <Alert title="Error" color="red">
-          You cannot access this page without logging in.
-        </Alert>
-      ) : (
-        <>
-          <Group gap="sm" align="center" mb="xs">
-            <Title order={1} style={{ letterSpacing: "-0.03em" }}>
-              Customise
-            </Title>
-            <Badge color="purple" variant="light" radius="sm">
-              Beta
-            </Badge>
-          </Group>
+      <Group gap="sm" align="center" mb="xs">
+        <Title order={1} style={{ letterSpacing: "-0.03em" }}>
+          Customise
+        </Title>
+        <Badge color="purple" variant="light" radius="sm">
+          Beta
+        </Badge>
+      </Group>
 
-          <Section
-            eyebrow="Your public profile"
-            help="What visitors see before they send you an anonymous message."
+      <SettingsSection
+        eyebrow="Your public profile"
+        help="What visitors see before they send you an anonymous message."
+      >
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title="Profile prompt"
+            description="The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”."
           >
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
-              <SettingsCard
-                title="Profile prompt"
-                description="The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”."
-                isDark={isDark}
-              >
-                {settingsLoading ? (
-                  <Skeleton height={36} radius="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <TextInput
-                    value={promptDraft}
-                    onChange={(e) => setPromptDraft(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
-                    onBlur={() => {
-                      if (promptInSync) return;
-                      updateSettings.mutate({ customPrompt: promptDraft.trim() || null });
-                    }}
-                    placeholder="Ask me anything…"
-                    maxLength={MAX_PROMPT_LENGTH}
-                    disabled={busy}
-                    aria-label="Profile prompt"
-                    description={`${promptDraft.length}/${MAX_PROMPT_LENGTH}`}
-                  />
-                )}
-              </SettingsCard>
-            </Grid.Col>
+            {field(
+              36,
+              <TextInput
+                value={promptDraft}
+                onChange={(e) => setPromptDraft(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
+                onBlur={() => {
+                  if (promptInSync) return;
+                  updateSettings.mutate({ customPrompt: promptDraft.trim() || null });
+                }}
+                placeholder="Ask me anything…"
+                maxLength={MAX_PROMPT_LENGTH}
+                disabled={busy}
+                aria-label="Profile prompt"
+                description={`${promptDraft.length}/${MAX_PROMPT_LENGTH}`}
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
 
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
-              <SettingsCard
-                title="Message language"
-                description="Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting."
-                isDark={isDark}
-              >
-                {settingsLoading ? (
-                  <Skeleton height={36} radius="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <Select
-                    data={touchpointLocales}
-                    value={
-                      touchpointLocales.some((l) => l.value === userSettings?.touchpointLocale)
-                        ? userSettings!.touchpointLocale!
-                        : "en"
-                    }
-                    onChange={(value) => {
-                      // allowDeselect={false} — Mantine never emits null/"" here.
-                      /* istanbul ignore next */
-                      updateSettings.mutate({ touchpointLocale: value || null });
-                    }}
-                    disabled={busy}
-                    allowDeselect={false}
-                    aria-label="Message language"
-                  />
-                )}
-              </SettingsCard>
-            </Grid.Col>
-
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
-              <SettingsCard
-                title="Profile card colour"
-                description="The colour treatment of your ask card. Curated presets keep the text and button legible on every option."
-                isDark={isDark}
-              >
-                {settingsLoading ? (
-                  <Skeleton height={56} radius="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <ProfileThemeSwatches
-                    value={userSettings?.profileCardTheme ?? null}
-                    disabled={busy}
-                    onPick={(value) => updateSettings.mutate({ profileCardTheme: value })}
-                  />
-                )}
-              </SettingsCard>
-            </Grid.Col>
-          </Section>
-
-          <Section
-            eyebrow="Message intake"
-            help="Who can reach your inbox, and what gets through."
-            last
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title="Message language"
+            description="Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting."
           >
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
-              <SettingsCard
-                title="Inbox"
-                description="Turn off to stop receiving new messages while keeping your account, history, and settings intact. Visitors see a “not accepting messages” state."
-                isDark={isDark}
-              >
-                {settingsLoading ? (
-                  <Skeleton height={28} radius="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <Switch
-                    label="Accepting messages"
-                    checked={on(userSettings?.inboxEnabled)}
-                    onChange={(e) =>
-                      updateSettings.mutate({ inboxEnabled: e.currentTarget.checked })
-                    }
-                    disabled={busy}
-                    aria-label="Accepting messages"
-                  />
-                )}
-              </SettingsCard>
-            </Grid.Col>
+            {field(
+              36,
+              <Select
+                data={touchpointLocales}
+                value={
+                  touchpointLocales.some((l) => l.value === userSettings?.touchpointLocale)
+                    ? userSettings!.touchpointLocale!
+                    : "en"
+                }
+                onChange={(value) => {
+                  // allowDeselect={false} — Mantine never emits null/"" here.
+                  /* istanbul ignore next */
+                  updateSettings.mutate({ touchpointLocale: value || null });
+                }}
+                disabled={busy}
+                allowDeselect={false}
+                aria-label="Message language"
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
 
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} style={{ display: "flex" }}>
-              <SettingsCard
-                title="Profanity filter"
-                description="When on, incoming messages are screened against a wordlist. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
-                isDark={isDark}
-              >
-                {settingsLoading ? (
-                  <Skeleton height={28} radius="sm" />
-                ) : settingsError ? (
-                  settingsLoadError
-                ) : (
-                  <Switch
-                    label="Filter enabled"
-                    checked={on(userSettings?.profanityFilterEnabled)}
-                    onChange={(e) =>
-                      updateSettings.mutate({
-                        profanityFilterEnabled: e.currentTarget.checked,
-                      })
-                    }
-                    disabled={busy}
-                    aria-label="Filter enabled"
-                  />
-                )}
-              </SettingsCard>
-            </Grid.Col>
-          </Section>
-        </>
-      )}
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title="Profile card colour"
+            description="The colour treatment of your ask card. Curated presets keep the text and button legible on every option."
+          >
+            {field(
+              56,
+              <ProfileThemeSwatches
+                value={userSettings?.profileCardTheme ?? null}
+                disabled={busy}
+                onPick={(value) => updateSettings.mutate({ profileCardTheme: value })}
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
+      </SettingsSection>
+
+      <SettingsSection
+        eyebrow="Message intake"
+        help="Who can reach your inbox, and what gets through."
+        last
+      >
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title="Inbox"
+            description="Turn off to stop receiving new messages while keeping your account, history, and settings intact. Visitors see a “not accepting messages” state."
+          >
+            {field(
+              28,
+              <Switch
+                label="Accepting messages"
+                checked={on(userSettings?.inboxEnabled)}
+                onChange={(e) => updateSettings.mutate({ inboxEnabled: e.currentTarget.checked })}
+                disabled={busy}
+                aria-label="Accepting messages"
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
+
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title="Profanity filter"
+            description="When on, incoming messages are screened against a wordlist. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
+          >
+            {field(
+              28,
+              <Switch
+                label="Filter enabled"
+                checked={on(userSettings?.profanityFilterEnabled)}
+                onChange={(e) =>
+                  updateSettings.mutate({ profanityFilterEnabled: e.currentTarget.checked })
+                }
+                disabled={busy}
+                aria-label="Filter enabled"
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
+      </SettingsSection>
     </>
-  );
-}
-
-interface SectionProps {
-  eyebrow: string;
-  help: string;
-  last?: boolean;
-  children: React.ReactNode;
-}
-
-function Section({ eyebrow, help, last, children }: SectionProps) {
-  return (
-    <div style={{ marginBottom: last ? 0 : 34 }}>
-      <Text tt="uppercase" fw={700} fz={12} c="dimmed" style={{ letterSpacing: "0.05em" }}>
-        {eyebrow}
-      </Text>
-      <Text c="dimmed" fz={13} mb="md">
-        {help}
-      </Text>
-      <Grid style={{ gap: "var(--mantine-spacing-md)" }}>{children}</Grid>
-    </div>
-  );
-}
-
-/** Lighter-weight sibling of Messages.tsx's ThemeCard: the preview is a
- * gradient fill rather than a card mockup. */
-function ProfileThemeSwatches({
-  value,
-  disabled,
-  onPick,
-}: {
-  value: string | null;
-  disabled: boolean;
-  onPick: (value: string) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        gap: 10,
-      }}
-    >
-      {Object.entries(profileCardThemes).map(([themeValue, theme]) => {
-        const selected = (value ?? "royal") === themeValue;
-        return (
-          <button
-            key={themeValue}
-            type="button"
-            onClick={() => onPick(themeValue)}
-            disabled={disabled}
-            aria-pressed={selected}
-            aria-label={`${theme.label} theme`}
-            style={{
-              background: selected ? "rgba(59,91,255,0.12)" : "transparent",
-              border: selected
-                ? "1.5px solid #3B5BFF"
-                : "1.5px solid var(--mantine-color-default-border)",
-              borderRadius: 10,
-              padding: 8,
-              cursor: disabled ? "default" : "pointer",
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-            }}
-          >
-            <div
-              style={{
-                aspectRatio: "4/3",
-                borderRadius: 5,
-                background: theme.gradient,
-              }}
-            />
-          </button>
-        );
-      })}
-    </div>
   );
 }

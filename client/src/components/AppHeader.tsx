@@ -1,32 +1,26 @@
 import {
   ActionIcon,
-  Avatar,
   Box,
   Burger,
   Button,
   Flex,
   Group,
   Loader,
-  Menu,
-  Text,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
-import { showNotification } from "@mantine/notifications";
-import { IconCheck, IconLogout, IconMoon, IconPlus, IconSun, IconUser } from "@tabler/icons-react";
+import { IconMoon, IconSun } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router";
 import { useHaptic } from "use-haptic";
 
-import { ApiError } from "../api/apiClient";
-import { type AccountEntry, useLogout, useSession, useSwitchAccount } from "../api/authService";
-import { buildAccountSwitchUrl } from "../lib/accountSwitchToast";
+import { useLogout, useSession } from "../api/authService";
 import { useHasBounceGap } from "../lib/useHasBounceGap";
-import { surfaceBg } from "../styles/tokens";
+import { BRAND_GRADIENT, surface, textDefault } from "../styles/tokens";
 
 import { useBounceLogos } from "./BounceLogosContext";
+import { UserMenu } from "./header/UserMenu";
 import { UpdateAvailableButton } from "./UpdateAvailableButton";
-import { WinkMark } from "./WinkMark";
 import { Wordmark } from "./Wordmark";
 
 interface AppHeaderProps {
@@ -36,22 +30,29 @@ interface AppHeaderProps {
   onNavClose: () => void;
 }
 
+const chipStyle = { background: surface, color: textDefault, border: "none" };
+
 export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: AppHeaderProps) {
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
-  const { toggleColorScheme } = useMantineColorScheme();
   const { enabled: bounceLogosEnabled, setEnabled: setBounceLogosEnabled } = useBounceLogos();
   const hasBounceGap = useHasBounceGap();
   const { triggerHaptic } = useHaptic(1);
-  const computedColorScheme = useComputedColorScheme("light", {
-    getInitialValueInEffect: true,
-  });
 
-  const isDark = computedColorScheme === "dark";
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const userProfile = sessionData?.profile;
-  const accounts = sessionData?.accounts ?? [];
-  const activeDid = sessionData?.did ?? undefined;
+
+  const handleLogout = () => {
+    try {
+      document.body.style.pointerEvents = "none";
+      document.body.style.opacity = "0.5";
+      logout();
+    } catch {
+      document.body.style.pointerEvents = "";
+      document.body.style.opacity = "";
+    }
+    onNavClose();
+  };
 
   return (
     <Group h="100%" px="md">
@@ -68,11 +69,7 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
       <Box
         component={Link}
         to="/"
-        style={{
-          textDecoration: "none",
-          display: "flex",
-          alignItems: "center",
-        }}
+        style={{ textDecoration: "none", display: "flex", alignItems: "center" }}
       >
         <Wordmark size={18} />
       </Box>
@@ -89,52 +86,22 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
             variant="default"
             size="xs"
             radius="xl"
-            style={{
-              background: surfaceBg(isDark),
-              color: "var(--mantine-color-text)",
-              border: "none",
-            }}
+            style={chipStyle}
           >
             {bounceLogosEnabled ? "Disable animations" : "Enable animations"}
           </Button>
         )}
 
-        <ActionIcon
-          onClick={() => {
-            triggerHaptic();
-            toggleColorScheme();
-          }}
-          aria-label="Toggle color scheme"
-          size={36}
-          radius="xl"
-          variant="transparent"
-          style={{
-            background: surfaceBg(isDark),
-            color: "var(--mantine-color-text)",
-          }}
-        >
-          {isDark ? <IconSun size={18} /> : <IconMoon size={18} />}
-        </ActionIcon>
+        <ColorSchemeToggle />
 
         {isLoading ? (
           <Loader size="sm" />
         ) : isLoggedIn && userProfile ? (
           <UserMenu
             userProfile={userProfile}
-            accounts={accounts}
-            activeDid={activeDid}
-            isDark={isDark}
-            onLogout={() => {
-              try {
-                document.body.style.pointerEvents = "none";
-                document.body.style.opacity = "0.5";
-                logout();
-              } catch {
-                document.body.style.pointerEvents = "";
-                document.body.style.opacity = "";
-              }
-              onNavClose();
-            }}
+            accounts={sessionData?.accounts ?? []}
+            activeDid={sessionData?.did ?? undefined}
+            onLogout={handleLogout}
             onNavigate={onNavClose}
           />
         ) : (
@@ -142,7 +109,7 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
             component={Link}
             to="/login"
             variant="gradient"
-            gradient={{ from: "royal", to: "purple", deg: 135 }}
+            gradient={BRAND_GRADIENT}
             size="xs"
             onClick={() => {
               triggerHaptic();
@@ -157,179 +124,24 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
   );
 }
 
-interface UserMenuProps {
-  userProfile: {
-    avatar?: string | null;
-    displayName?: string | null;
-    handle?: string;
-  };
-  accounts: AccountEntry[];
-  activeDid?: string;
-  isDark: boolean;
-  onLogout: () => void;
-  onNavigate: () => void;
-}
-
-function UserMenu({
-  userProfile,
-  accounts,
-  activeDid,
-  isDark,
-  onLogout,
-  onNavigate,
-}: UserMenuProps) {
+function ColorSchemeToggle() {
+  const { toggleColorScheme } = useMantineColorScheme();
   const { triggerHaptic } = useHaptic(1);
-  const { mutate: switchAccount, isPending: isSwitching } = useSwitchAccount();
-  const hasMultiple = accounts.length > 1; // gates the "Accounts" label only
-
-  const handleSwitch = (did: string, handle: string) => {
-    /* istanbul ignore if */
-    if (did === activeDid || isSwitching) return;
-    triggerHaptic();
-
-    /* istanbul ignore next */
-    try {
-      document.body.style.pointerEvents = "none";
-      document.body.style.opacity = "0.5";
-    } catch {
-      document.body.style.pointerEvents = "";
-      document.body.style.opacity = "";
-    }
-
-    switchAccount(
-      { did },
-      {
-        onSuccess: () => {
-          window.location.href = buildAccountSwitchUrl(handle);
-        },
-        onError: (err: ApiError) => {
-          showNotification({
-            title: "Couldn't switch account",
-            message: err.error || "Please try again.",
-            color: "red",
-          });
-        },
-      }
-    );
-  };
+  const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   return (
-    <Menu
-      shadow="md"
-      width={260}
-      position="bottom-end"
-      middlewares={{ shift: true, flip: true }}
-      styles={{
-        item: { padding: "10px 14px", fontSize: "var(--mantine-font-size-sm)" },
-        itemLabel: { overflow: "hidden" },
+    <ActionIcon
+      onClick={() => {
+        triggerHaptic();
+        toggleColorScheme();
       }}
+      aria-label="Toggle color scheme"
+      size={36}
+      radius="xl"
+      variant="transparent"
+      style={chipStyle}
     >
-      <Menu.Target>
-        <Button
-          onClick={triggerHaptic}
-          variant="transparent"
-          px={8}
-          radius="xl"
-          style={{
-            background: surfaceBg(isDark),
-            height: 36,
-            color: "var(--mantine-color-text)",
-          }}
-        >
-          <Group gap="xs">
-            <Avatar
-              size={28}
-              src={userProfile.avatar || undefined}
-              alt={userProfile.displayName || "User Avatar"}
-              radius="xl"
-            >
-              <WinkMark size={22} sparkle={false} aria-hidden />
-            </Avatar>
-            <Box visibleFrom="sm">
-              <Text size="sm" fw={600} truncate maw={120}>
-                {userProfile.displayName}
-              </Text>
-            </Box>
-          </Group>
-        </Button>
-      </Menu.Target>
-
-      <Menu.Dropdown>
-        {/* Account switcher — the active profile row always renders above
-            "Add account", even when only one account is signed in. The
-            "Accounts" label is shown only when there are other switchable
-            accounts to list beneath the current one. */}
-        {accounts.length > 0 && (
-          <>
-            {hasMultiple && <Menu.Label>Accounts</Menu.Label>}
-            {accounts.map((acct) => {
-              const isActive = acct.did === activeDid;
-              const label = acct.displayName || acct.handle || acct.did;
-              return (
-                <Menu.Item
-                  key={acct.did}
-                  disabled={isActive || isSwitching}
-                  onClick={() => handleSwitch(acct.did, acct.handle || acct.did)}
-                  leftSection={
-                    <Avatar size={20} src={acct.avatar || undefined} radius="xl">
-                      {(acct.handle || "?").charAt(0).toUpperCase()}
-                    </Avatar>
-                  }
-                  rightSection={isActive ? <IconCheck size={14} stroke={2.5} /> : undefined}
-                >
-                  <Box style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
-                    <Text size="sm" fw={500} truncate>
-                      {label}
-                    </Text>
-                    {acct.handle && (
-                      <Text size="xs" c="dimmed" truncate>
-                        @{acct.handle}
-                      </Text>
-                    )}
-                  </Box>
-                </Menu.Item>
-              );
-            })}
-            <Menu.Divider />
-          </>
-        )}
-
-        <Menu.Item
-          component={Link}
-          to="/login?add=1"
-          onClick={() => {
-            triggerHaptic();
-            onNavigate();
-          }}
-          leftSection={<IconPlus size="1.2rem" stroke={1.5} />}
-        >
-          Add account
-        </Menu.Item>
-
-        <Menu.Divider />
-
-        <Menu.Item
-          component={Link}
-          to={`/profile/${userProfile.handle}`}
-          onClick={() => {
-            triggerHaptic();
-            onNavigate();
-          }}
-          leftSection={<IconUser size="1.2rem" stroke={1.5} />}
-        >
-          View Profile
-        </Menu.Item>
-
-        <Menu.Item
-          onClick={() => {
-            triggerHaptic();
-            onLogout();
-          }}
-          leftSection={<IconLogout size="1.2rem" stroke={1.5} />}
-        >
-          {`Log out @${userProfile.handle}`}
-        </Menu.Item>
-      </Menu.Dropdown>
-    </Menu>
+      {isDark ? <IconSun size={18} /> : <IconMoon size={18} />}
+    </ActionIcon>
   );
 }

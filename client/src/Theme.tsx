@@ -52,6 +52,24 @@ const sunshine: MantineColorsTuple = [
   "#665104",
 ];
 
+/**
+ * Destructive actions. Previously spelled `color="crimson"`, which is not a
+ * Mantine palette entry — it fell through to the CSS named colour and so had no
+ * hover, light or outline variants.
+ */
+const crimson: MantineColorsTuple = [
+  "#FFF0F0",
+  "#FFD8D8",
+  "#F5A9A9",
+  "#E97C7C",
+  "#DC5A5A",
+  "#D13F3F",
+  "#C92A2A",
+  "#A82121",
+  "#8A1B1B",
+  "#6B1414",
+];
+
 // Dark mode surface colors — body=#0B0A24 (void), Paper/card=#15192B
 const dark: MantineColorsTuple = [
   "#C4C0DC", // [0] light text
@@ -66,10 +84,33 @@ const dark: MantineColorsTuple = [
   "#050412", // [9]
 ];
 
+/**
+ * Semantic tones for `Alert`. One row per colour instead of three parallel
+ * lookup tables, so a tone cannot be half-defined. The tints are alpha over
+ * whatever the page background is, which reads correctly in both schemes; the
+ * title colour cannot be, so it comes from a scheme-aware token.
+ *
+ * @see [contrast.test.ts](./tests/theme/contrast.test.ts): pins every title
+ * colour against its own tint at WCAG AA.
+ */
+export const ALERT_TONES = {
+  red: { rgb: "220,38,38", title: "var(--nf-tone-red)" },
+  crimson: { rgb: "201,42,42", title: "var(--nf-tone-red)" },
+  green: { rgb: "34,197,94", title: "var(--nf-tone-green)" },
+  yellow: { rgb: "250,204,21", title: "var(--nf-tone-yellow)" },
+  royal: { rgb: "59,91,255", title: "var(--nf-tone-royal)" },
+  blue: { rgb: "59,91,255", title: "var(--nf-tone-royal)" },
+  purple: { rgb: "139,92,246", title: "var(--nf-tone-purple)" },
+} as const;
+
+const DEFAULT_ALERT_TONE = ALERT_TONES.royal;
+
 const navyfragenTheme = createTheme({
   primaryColor: "royal",
-  primaryShade: { light: 6, dark: 4 },
-  colors: { royal, purple, midnight, sunshine, dark },
+  // Flat rather than {light: 6, dark: 4}: shade 4 as a filled background puts
+  // white button labels at 3.6:1. Text keeps its own per-scheme token below.
+  primaryShade: 6,
+  colors: { royal, purple, midnight, sunshine, crimson, dark },
   white: "#FDF8FF",
   black: "#1E1B4B",
 
@@ -101,34 +142,17 @@ const navyfragenTheme = createTheme({
   components: {
     Alert: Alert.extend({
       styles: (_theme, props) => {
-        // Map semantic colors to brand-consistent translucent backgrounds.
-        // Keeps the semantic signal without clashing with the purple-dominant palette.
-        const bg: Record<string, string> = {
-          red: "rgba(220,38,38,0.09)",
-          green: "rgba(34,197,94,0.09)",
-          yellow: "rgba(250,204,21,0.09)",
-          royal: "rgba(59,91,255,0.09)",
-          blue: "rgba(59,91,255,0.09)",
-          purple: "rgba(139,92,246,0.09)",
-        };
-        const bd: Record<string, string> = {
-          red: "1px solid rgba(220,38,38,0.22)",
-          green: "1px solid rgba(34,197,94,0.22)",
-          yellow: "1px solid rgba(250,204,21,0.22)",
-          royal: "1px solid rgba(59,91,255,0.22)",
-          blue: "1px solid rgba(59,91,255,0.22)",
-          purple: "1px solid rgba(139,92,246,0.22)",
-        };
-        const c = (props.color as string | undefined) ?? "royal";
+        const tone = ALERT_TONES[props.color as keyof typeof ALERT_TONES] ?? DEFAULT_ALERT_TONE;
         return {
           root: {
-            borderRadius: 12,
-            background: bg[c] ?? bg.royal,
-            border: bd[c] ?? bd.royal,
+            borderRadius: "var(--nf-radius-control)",
+            background: `rgba(${tone.rgb},0.09)`,
+            border: `1px solid rgba(${tone.rgb},0.22)`,
           },
           title: {
-            fontFamily: "Inter, sans-serif",
+            fontFamily: "var(--nf-font-sans)",
             fontWeight: 700,
+            color: tone.title,
           },
         };
       },
@@ -136,22 +160,10 @@ const navyfragenTheme = createTheme({
 
     Notification: Notification.extend({
       styles: {
-        root: { borderRadius: 12 },
-        title: { fontFamily: "Inter, sans-serif", fontWeight: 700 },
+        root: { borderRadius: "var(--nf-radius-control)" },
+        title: { fontFamily: "var(--nf-font-sans)", fontWeight: 700 },
       },
     }),
-  },
-
-  other: {
-    gradHero: "linear-gradient(135deg, #3B5BFF 0%, #8B5CF6 55%, #C4B5FD 100%)",
-    gradMark: "linear-gradient(135deg, #3349E0 0%, #6B3FD4 55%, #4F1FA6 100%)",
-    gradDark: "linear-gradient(135deg, #1E1B4B 0%, #3B2E78 50%, #6B3FD4 100%)",
-    paper2: "#F2EBFF",
-    lavender: "#C4B5FD",
-    ease: "cubic-bezier(.2,.7,.2,1)",
-    durFast: "120ms",
-    durBase: "200ms",
-    durSlow: "360ms",
   },
 });
 

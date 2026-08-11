@@ -13,6 +13,7 @@ The explicit `--bun` flag is load-bearing: `bun run <script>` hands a node-sheba
 ## Data Layer
 
 React Query is the data layer. Each domain (auth, messages, profile, settings) has a service file in `src/api/` that exports plain functions and React Query hooks:
+
 - `src/api/apiClient.ts` — thin fetch wrapper; reads `VITE_API_URL` env var (defaults to `""`, so same-origin)
 - `src/api/authService.ts` — exports `useSession`, `useLogin`, `useLogout`
 - `src/api/messageService.ts`, `profileService.ts`, `settingsService.ts` — similar pattern
@@ -22,6 +23,7 @@ All API calls use `credentials: "include"` for cookie forwarding.
 ### Form Validation
 
 The client uses **Zod v4** (`^4.4.3`). Zod v4 has breaking syntax changes from v3:
+
 - Import it as `import * as z from "zod"`, never `import { z }` (see below)
 - Custom messages on `.min()` / `.max()` use `{ error: "..." }` instead of a plain string
 - Validation errors are accessed via `.issues` not `.errors`
@@ -32,19 +34,75 @@ The client uses **Zod v4** (`^4.4.3`). Zod v4 has breaking syntax changes from v
 
 Transient feedback (success, error) uses Mantine's `showNotification()` from `@mantine/notifications` rather than inline alert state. The `<Notifications>` component is mounted in `src/main.tsx` with `position="bottom-right"` and `autoClose={5000}`. Use `showNotification()` for any new transient messages — don't add stateful alert components to pages.
 
+## Styling
+
+### Rendering and styling are separate files
+
+A `.tsx` describes structure and behaviour; the CSS objects it needs live in a
+sibling `*.styles.ts`, imported as `import * as styles from "./Thing.styles"`.
+Anything computed from props is a small named function there
+(`card({ gradient, pinned, focused })`), not a ternary inline in JSX. Style
+modules are excluded from coverage — they are constants and the pure functions
+that pick between them, with no behaviour an assertion could pin. Do not let
+logic drift into one: if a "style" function needs to know a business rule, the
+rule belongs in the component or a hook.
+
 ### Design Tokens
 
-Brand CSS custom properties live in `client/src/index.css` under the `--nf-*` namespace and are the single source of truth for colors and gradients. Key gradient tokens:
+`client/src/index.css` is the single source of truth for colour, and it is
+layered — components may only read from the last two layers:
 
-- `--nf-grad-mark` — the primary brand gradient (`#3349E0 → #6B3FD4 → #4F1FA6`); use this for all interactive card backgrounds (login, ask, inbox hero, question cards with gradient enabled)
-- `--nf-grad-dark` — reserved exclusively for the "default" image-export theme preview in the `ThemeCard` selector; do not use it for new UI elements
-- `--nf-grad-hero` — defined but no longer applied to any UI element; do not reintroduce it for text or nav items
+1. **Brand primitives** (`--nf-royal`, `--nf-grad-mark`, …) — scheme-independent
+   raw palette. Referenced only by the semantic layer in the same file.
+2. **Semantic tokens** (`--nf-surface`, `--nf-link`, `--nf-nav-active-bg`, …) —
+   named for the job. Light values on `:root`, dark overrides under
+   `:root[data-mantine-color-scheme="dark"]`. **This is why no component calls
+   `useComputedColorScheme` to choose a colour** — the browser picks. If you find
+   yourself adding an `isDark` prop, add a token instead.
+3. **On-gradient tokens** (`--nf-on-grad`, `--nf-on-grad-muted`,
+   `--nf-on-grad-accent`) — deliberately _not_ scheme-aware, because the brand
+   gradients are dark in both schemes. `--nf-on-grad-faint` is for rules and
+   progress tracks; it is not strong enough for text and a test pins that.
 
-Nav active state uses a solid tint (`--nf-nav-active-bg`) — no gradients on nav items. Gradient text (`background-clip: text`) is not used in the app; brand color (`--nf-royal`) is used for highlighted text instead.
+`src/styles/tokens.ts` gives these TypeScript handles so a renamed token is a
+compile error rather than a colour that silently resolves to nothing.
+
+Gradient usage:
+
+- `--nf-grad-mark` — the primary brand gradient; use it for every interactive
+  card background (login, ask, inbox hero, gradient question cards)
+- `--nf-grad-dark` — reserved for the "default" image-export theme preview; not a
+  UI surface
+- ask-card presets (`aurora`/`ember`/`verdant`) are curated so white text clears
+  AA across the whole ramp — check `contrast.test.ts` before changing a stop
+
+Nav active state uses a solid tint (`--nf-nav-active-bg`) — no gradients on nav
+items. Gradient text (`background-clip: text`) is used only in the `Wordmark`.
+
+### Overriding a Mantine variable
+
+Mantine declares its scheme variables at `:root[data-mantine-color-scheme="…"]`
+(specificity 0,2,0). A bare `[data-mantine-color-scheme="…"]` block loses to it
+and silently does nothing — which is what had happened to the light-mode
+`--mantine-color-body` and `--mantine-color-default-border` overrides. Match the
+selector exactly, and only for variables the provider does not re-emit at
+runtime: `--mantine-color-body` comes from `theme.white` / `dark[7]`, and brand
+text colours come from `--nf-accent-text` / `--nf-link` rather than fighting the
+provider's `--mantine-color-*-text`.
+
+### Contrast is enforced, not reviewed
+
+`src/tests/theme/contrast.test.ts` parses `index.css`, resolves the tokens, and
+fails if any documented text/background pair drops below WCAG AA — including
+across the full ramp of every gradient, both colour schemes, and every `Alert`
+tone against its own tint. It also fails on a declared `--nf-*` token nothing
+references and on a referenced token nothing declares, so the palette cannot
+accumulate dead entries or typos.
 
 ## Testing & Coverage
 
 Run coverage from `client/`:
+
 ```bash
 bun run test:coverage
 ```
@@ -58,11 +116,13 @@ The client targets **100% across all four metrics** (statements, lines, branches
 Suppress unreachable code with istanbul's markers. `/* v8 ignore */` is inert under the istanbul provider and there are none left in `src/`; do not reintroduce them.
 
 Pick the narrowest form:
+
 - `/* istanbul ignore if */` — the `if` body is unreachable (a defensive early-return guard whose condition can't hold)
 - `/* istanbul ignore else */` — the implicit else is unreachable (a guard that always passes)
 - `/* istanbul ignore next */` — the whole next statement or function, for `catch` blocks wrapping non-throwing DOM operations and for callbacks tests never invoke
 
 Use them **only** for:
+
 1. `catch {}` blocks that wrap non-throwing DOM operations (e.g. the AppHeader `handleSwitch` catch that resets `body.style` — the try never throws in practice)
 2. TypeScript-narrowed union branches, and UI guards, that are structurally unreachable at runtime
 
@@ -73,9 +133,11 @@ Do **not** use them to skip real business logic. Document any usage in `docs/tes
 ### Coverage Exclusions
 
 Excluded via `coverage.exclude` in `vite.config.ts`:
+
 - `src/tests/**`, `src/main.tsx`, `src/Theme.tsx` — test infra and app entry point
 - `src/vite-env.d.ts` — ambient declarations
 - `src/styles/tokens.ts` — pure style constant exports
+- `src/**/*.styles.ts` — per-component style modules, same rationale
 - `src/pushPayload.ts` — a type-only `interface` with no runtime code to execute
 - `src/index.css` — a stylesheet; Vite's CSS import handling registers it as a coverage-tracked module with zero instrumentable statements
 

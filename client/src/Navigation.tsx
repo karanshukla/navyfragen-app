@@ -1,56 +1,36 @@
+import { Box, Group, NavLink, Skeleton, Stack, Text } from "@mantine/core";
 import {
-  NavLink,
-  Text,
-  Box,
-  Skeleton,
-  Stack,
-  Avatar,
-  Group,
-  Collapse,
-  UnstyledButton,
-} from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
-import {
+  IconAdjustments,
   IconHome,
-  IconMessage,
   IconLogin,
+  IconMessage,
   IconSettings,
   IconUser,
-  IconChevronDown,
-  IconAdjustments,
 } from "@tabler/icons-react";
-import { useEffect } from "react";
-import { useLocation, Link, useNavigate } from "react-router";
+import { useLocation, Link } from "react-router";
 import { useHaptic } from "use-haptic";
 
 import { useSession } from "./api/authService";
-import { useFriends, Friend } from "./api/profileService";
+import { useFriends } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
-import { WinkMark } from "./components/WinkMark";
+import { FriendSection } from "./components/nav/FriendSection";
+import { MessageCountBadge } from "./components/nav/MessageCountBadge";
+import * as styles from "./Navigation.styles";
+import { useNavShortcuts } from "./lib/useNavShortcuts";
+
+/** The three ways a Navyfragen user can be related to you. */
+const FRIEND_GROUPS = [
+  { key: "moots", label: "Moots", emptyText: "No mutuals on Navyfragen yet." },
+  { key: "following", label: "Following", emptyText: "No one-sided follows on Navyfragen yet." },
+  { key: "oomfs", label: "Oomfs", emptyText: "None of your followers are on Navyfragen yet." },
+] as const;
 
 interface NavigationProps {
   onLinkClick?: () => void;
 }
 
-const activeNavStyle = {
-  background: "var(--nf-nav-active-bg)",
-  borderRadius: 12,
-  color: "var(--nf-nav-active-color)",
-  boxShadow: "var(--nf-nav-active-shadow)",
-};
-
-const inactiveNavStyle = {
-  borderRadius: 12,
-  transition: "background 120ms ease",
-};
-
-const friendNavLinkStyles = {
-  root: { borderRadius: 10, transition: "background 120ms ease" },
-};
-
 export function Navigation({ onLinkClick }: NavigationProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const { data: sessionData, isLoading: isSessionLoading } = useSession();
   const isLoggedIn = !!sessionData?.isLoggedIn;
   const did = sessionData?.did ?? undefined;
@@ -65,104 +45,43 @@ export function Navigation({ onLinkClick }: NavigationProps) {
     onLinkClick?.();
   };
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const targetNodeName = (event.target as HTMLElement)?.nodeName;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(targetNodeName)) return;
-
-      if (event.altKey) {
-        let targetPath: string | null = null;
-        switch (event.key.toUpperCase()) {
-          case "H":
-            targetPath = "/";
-            break;
-          case "M":
-            if (isLoggedIn) targetPath = "/messages";
-            break;
-          case "C":
-            if (isLoggedIn) targetPath = "/customise";
-            break;
-          case "S":
-            if (isLoggedIn) targetPath = "/settings";
-            break;
-          case "L":
-            if (!isLoggedIn && !isSessionLoading) targetPath = "/login";
-            break;
-        }
-        if (targetPath) {
-          event.preventDefault();
-          navigate(targetPath);
-          onLinkClick?.();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isLoggedIn, isSessionLoading, navigate, onLinkClick]);
+  useNavShortcuts({ isLoggedIn, isSessionLoading, onNavigate: onLinkClick });
 
   const isActive = (path: string) => location.pathname === path;
-
-  const navItemStyles = (path: string) => ({
-    root: isActive(path) ? activeNavStyle : inactiveNavStyle,
-    label: {
-      fontFamily: "Inter, sans-serif",
-      fontSize: 16,
-      fontWeight: isActive(path) ? 600 : 500,
-    },
+  const linkProps = (path: string, label: string, icon: React.ReactNode) => ({
+    my: 2,
+    label,
+    component: Link,
+    to: path,
+    active: isActive(path),
+    onClick: handleClick,
+    leftSection: icon,
+    styles: styles.navItem(isActive(path)),
   });
 
-  const profileMatch = location.pathname.match(/^\/profile\/(.+)$/);
-  const viewingHandle = profileMatch ? profileMatch[1] : null;
+  const viewingHandle = location.pathname.match(/^\/profile\/(.+)$/)?.[1];
+  const unread = userStats?.messageCount ?? 0;
 
   return (
-    <Box style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <Box style={styles.root}>
       <Box style={{ flexShrink: 0 }}>
-        <NavLink
-          my={2}
-          label="Home"
-          component={Link}
-          to="/"
-          active={isActive("/")}
-          onClick={handleClick}
-          leftSection={<IconHome size={16} stroke={1.5} />}
-          styles={navItemStyles("/")}
-        />
+        <NavLink {...linkProps("/", "Home", <IconHome size={16} stroke={1.5} />)} />
+
         {isLoggedIn ? (
           <>
             <NavLink
-              my={2}
-              label="Messages"
-              component={Link}
-              to="/messages"
-              active={isActive("/messages")}
-              onClick={handleClick}
-              leftSection={<IconMessage size={16} stroke={1.5} />}
+              {...linkProps("/messages", "Messages", <IconMessage size={16} stroke={1.5} />)}
               rightSection={
-                !isActive("/messages") && (userStats?.messageCount ?? 0) > 0 ? (
-                  <MessageCountBadge count={userStats!.messageCount} />
+                !isActive("/messages") && unread > 0 ? (
+                  <MessageCountBadge count={unread} />
                 ) : undefined
               }
-              styles={navItemStyles("/messages")}
             />
             <NavLink
-              my={2}
-              label="Customise"
-              component={Link}
-              to="/customise"
-              active={isActive("/customise")}
-              onClick={handleClick}
-              leftSection={<IconAdjustments size={16} stroke={1.5} />}
-              styles={navItemStyles("/customise")}
+              {...linkProps("/customise", "Customise", <IconAdjustments size={16} stroke={1.5} />)}
             />
             <NavLink
-              my={2}
-              label="Settings"
-              component={Link}
-              to="/settings"
-              active={isActive("/settings")}
-              onClick={handleClick}
-              leftSection={<IconSettings size={16} stroke={1.5} />}
-              styles={navItemStyles("/settings")}
+              {...linkProps("/settings", "Settings", <IconSettings size={16} stroke={1.5} />)}
             />
           </>
         ) : isSessionLoading ? (
@@ -171,88 +90,27 @@ export function Navigation({ onLinkClick }: NavigationProps) {
             <Skeleton height={12} width="40%" radius="sm" />
           </Group>
         ) : (
-          <NavLink
-            my={2}
-            label="Login"
-            component={Link}
-            to="/login"
-            active={isActive("/login")}
-            onClick={handleClick}
-            leftSection={<IconLogin size={16} stroke={1.5} />}
-            styles={navItemStyles("/login")}
-          />
+          <NavLink {...linkProps("/login", "Login", <IconLogin size={16} stroke={1.5} />)} />
         )}
 
-        {viewingHandle && (
-          <Box
-            mt={4}
-            px={12}
-            py={8}
-            style={{
-              borderRadius: 12,
-              background: "var(--mantine-color-default)",
-              border: "1px solid var(--mantine-color-default-border)",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
-            <Box style={{ minWidth: 0 }}>
-              <Text fz={9} c="dimmed">
-                Viewing profile
-              </Text>
-              <Text fz={12} fw={600} truncate>
-                @{viewingHandle}
-              </Text>
-            </Box>
-          </Box>
-        )}
+        {viewingHandle && <ViewingProfile handle={viewingHandle} />}
       </Box>
 
       {isLoggedIn && did && (
-        <Box style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <Box style={styles.friendsScroller}>
           {friendsLoading ? (
-            <>
-              <Box mt="lg" mb="xs" px={2}>
-                <Skeleton height={10} width="60%" radius="sm" />
-              </Box>
-              <Stack gap={6}>
-                {[0, 1, 2].map((i) => (
-                  <Group key={i} gap="xs" px={4} py={4}>
-                    <Skeleton circle height={28} width={28} style={{ flexShrink: 0 }} />
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Skeleton height={10} mb={4} radius="sm" />
-                      <Skeleton height={8} width="60%" radius="sm" />
-                    </Box>
-                  </Group>
-                ))}
-              </Stack>
-            </>
+            <FriendsSkeleton />
           ) : (
-            <>
+            FRIEND_GROUPS.map(({ key, label, emptyText }) => (
               <FriendSection
-                label="Moots"
-                friends={friendsData?.moots ?? []}
-                emptyText="No mutuals on Navyfragen yet."
+                key={key}
+                label={label}
+                friends={friendsData?.[key] ?? []}
+                emptyText={emptyText}
                 onLinkClick={handleClick}
                 did={did}
               />
-              <FriendSection
-                label="Following"
-                friends={friendsData?.following ?? []}
-                emptyText="No one-sided follows on Navyfragen yet."
-                onLinkClick={handleClick}
-                did={did}
-              />
-              <FriendSection
-                label="Oomfs"
-                friends={friendsData?.oomfs ?? []}
-                emptyText="None of your followers are on Navyfragen yet."
-                onLinkClick={handleClick}
-                did={did}
-              />
-            </>
+            ))
           )}
         </Box>
       )}
@@ -262,148 +120,40 @@ export function Navigation({ onLinkClick }: NavigationProps) {
   );
 }
 
-function sectionKey(did: string) {
-  return `navyfragen_friends_sections_open_${did}`;
-}
-
-function getSectionOpen(label: string, did: string): boolean {
-  try {
-    const raw = localStorage.getItem(sectionKey(did));
-    if (!raw) return true;
-    const parsed = JSON.parse(raw);
-    return parsed[label] !== false;
-  } catch {
-    return true;
-  }
-}
-
-function setSectionOpen(label: string, open: boolean, did: string) {
-  try {
-    const raw = localStorage.getItem(sectionKey(did));
-    const parsed = raw ? JSON.parse(raw) : {};
-    localStorage.setItem(sectionKey(did), JSON.stringify({ ...parsed, [label]: open }));
-  } catch {
-    // localStorage unavailable (private browsing quota, etc.)
-  }
-}
-
-function FriendSection({
-  label,
-  friends,
-  emptyText,
-  onLinkClick,
-  did,
-}: {
-  label: string;
-  friends: Friend[];
-  emptyText: string;
-  onLinkClick: () => void;
-  did: string;
-}) {
-  const [opened, { toggle }] = useDisclosure(getSectionOpen(label, did));
-  const { triggerHaptic } = useHaptic(1);
-
-  const handleToggle = () => {
-    triggerHaptic();
-    setSectionOpen(label, !opened, did);
-    toggle();
-  };
-
+/** Context chip shown while looking at someone else's public profile. */
+function ViewingProfile({ handle }: { handle: string }) {
   return (
-    <>
-      <UnstyledButton
-        onClick={handleToggle}
-        mb="xs"
-        px={2}
-        aria-expanded={opened}
-        aria-label={`${label} — ${opened ? "collapse" : "expand"}`}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          width: "100%",
-          cursor: "pointer",
-          position: "sticky",
-          top: 0,
-          zIndex: 1,
-          background: "var(--mantine-color-body)",
-          paddingTop: "var(--mantine-spacing-lg)",
-        }}
-      >
-        <Text size="xs" fw={600} c="dimmed" style={{ flex: 1 }}>
-          {label}
+    <Box mt={4} px={12} py={8} style={styles.viewingProfile}>
+      <IconUser size={13} stroke={1.5} style={{ opacity: 0.5, flexShrink: 0 }} />
+      <Box style={{ minWidth: 0 }}>
+        <Text fz={9} c="dimmed">
+          Viewing profile
         </Text>
-        <IconChevronDown
-          size={12}
-          style={{
-            color: "var(--mantine-color-dimmed)",
-            transition: "transform 150ms ease",
-            transform: opened ? "rotate(0deg)" : "rotate(-90deg)",
-            flexShrink: 0,
-          }}
-        />
-      </UnstyledButton>
-      <Collapse expanded={opened}>
-        {friends.length > 0 ? (
-          <Box style={{ overflowX: "hidden" }}>
-            {friends.map((friend) => (
-              <NavLink
-                key={friend.did}
-                label={
-                  <Group gap={10} wrap="nowrap" style={{ overflow: "hidden", width: "100%" }}>
-                    <Avatar
-                      size={28}
-                      radius="xl"
-                      src={friend.avatar || undefined}
-                      alt={friend.displayName || friend.handle}
-                      style={{ flexShrink: 0 }}
-                    >
-                      <WinkMark size={22} sparkle={false} aria-hidden />
-                    </Avatar>
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Text fz={13} fw={600} truncate style={{ lineHeight: 1.3 }}>
-                        {friend.displayName || friend.handle}
-                      </Text>
-                      <Text fz={10} c="dimmed" truncate style={{ lineHeight: 1.3 }}>
-                        @{friend.handle}
-                      </Text>
-                    </Box>
-                  </Group>
-                }
-                component={Link}
-                to={`/profile/${friend.handle}`}
-                onClick={onLinkClick}
-                py={4}
-                styles={friendNavLinkStyles}
-              />
-            ))}
-          </Box>
-        ) : (
-          <Text size="xs" c="dimmed" px={2} style={{ lineHeight: 1.6 }}>
-            {emptyText}
-          </Text>
-        )}
-      </Collapse>
-    </>
+        <Text fz={12} fw={600} truncate>
+          @{handle}
+        </Text>
+      </Box>
+    </Box>
   );
 }
 
-/** Sunshine badge showing unread message count in the nav sidebar. */
-function MessageCountBadge({ count }: { count: number }) {
+function FriendsSkeleton() {
   return (
-    <span
-      style={{
-        background: "var(--nf-sunshine)",
-        color: "var(--nf-midnight)",
-        padding: "1px 7px",
-        borderRadius: 999,
-        fontFamily: "var(--nf-font-mono)",
-        fontSize: 9,
-        fontWeight: 700,
-        lineHeight: 1.6,
-      }}
-    >
-      {count}
-    </span>
+    <>
+      <Box mt="lg" mb="xs" px={2}>
+        <Skeleton height={10} width="60%" radius="sm" />
+      </Box>
+      <Stack gap={6}>
+        {[0, 1, 2].map((i) => (
+          <Group key={i} gap="xs" px={4} py={4}>
+            <Skeleton circle height={28} width={28} style={{ flexShrink: 0 }} />
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Skeleton height={10} mb={4} radius="sm" />
+              <Skeleton height={8} width="60%" radius="sm" />
+            </Box>
+          </Group>
+        ))}
+      </Stack>
+    </>
   );
 }

@@ -16,6 +16,7 @@ import Messages from "./pages/Messages";
 import OAuthCallback from "./pages/OAuthCallback";
 import PublicProfile from "./pages/PublicProfile";
 import Settings from "./pages/Settings";
+import { dangerText } from "./styles/tokens";
 
 export function AppLayout() {
   const [navOpen, setNavOpen] = React.useState(false);
@@ -116,7 +117,7 @@ function NotFoundPage() {
   return (
     <Container>
       <Paper p="xl" radius="md" withBorder shadow="xs">
-        <Title order={2} c="red">
+        <Title order={2} style={{ color: dangerText }}>
           404 - Not Found
         </Title>
         <Text c="dimmed" mt="md">

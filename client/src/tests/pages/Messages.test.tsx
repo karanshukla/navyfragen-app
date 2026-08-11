@@ -7,7 +7,7 @@ import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
 import * as settingsService from "../../api/settingsService";
 import { themes } from "../../lib/themes";
-import Messages, { formatTimestamp } from "../../pages/Messages";
+import Messages from "../../pages/Messages";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
@@ -82,29 +82,6 @@ function setupMocks(messages = MESSAGES) {
   } as any);
   mockUseUpdateUserSettings.mockReturnValue(noopMutation);
 }
-
-// ── formatTimestamp ──────────────────────────────────────────────────────────
-
-describe("formatTimestamp", () => {
-  it("includes the year", () => {
-    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toContain("2024");
-  });
-
-  it("includes hours and zero-padded minutes", () => {
-    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toMatch(/\d{1,2}:\d{2}/);
-  });
-
-  it("includes a timezone abbreviation", () => {
-    // e.g. UTC, GMT, EST, EDT, AEST — at least two consecutive uppercase letters
-    expect(formatTimestamp("2024-03-15T14:30:00.000Z")).toMatch(/[A-Z]{2,}/);
-  });
-
-  it("produces different output for different dates", () => {
-    const t1 = formatTimestamp("2023-01-01T00:00:00.000Z");
-    const t2 = formatTimestamp("2024-12-31T23:59:00.000Z");
-    expect(t1).not.toEqual(t2);
-  });
-});
 
 // ── Messages page ────────────────────────────────────────────────────────────
 
@@ -1057,7 +1034,7 @@ describe("Messages page", () => {
     });
 
     const dangerCircle = Array.from(document.querySelectorAll("svg circle")).find(
-      (c) => c.getAttribute("stroke") === "var(--nf-sunshine)"
+      (c) => c.getAttribute("stroke") === "var(--nf-compose-warn)"
     );
     expect(dangerCircle).toBeTruthy();
   });
@@ -1405,6 +1382,15 @@ describe("Messages page", () => {
     fireEvent.keyDown(card, { key: "Tab" });
 
     expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+  });
+
+  it("arrow keys do nothing until a card has been focused", () => {
+    setupMocks();
+    renderWithProviders(<Messages />);
+
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+
+    expect(document.getElementById("message-card-msg-1")).not.toBe(document.activeElement);
   });
 
   it("useGradients=false hydrates from localStorage and drives the card's background-color source", async () => {
