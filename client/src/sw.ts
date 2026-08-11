@@ -1,13 +1,20 @@
 /// <reference lib="webworker" />
 
-import { precacheAndRoute } from "workbox-precaching";
+import { addPlugins, precacheAndRoute } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 import { NetworkFirst, CacheFirst } from "workbox-strategies";
 
+import { isWafInterstitial } from "./lib/wafInterstitial";
 import type { PushPayload } from "./pushPayload";
 
 declare const self: ServiceWorkerGlobalScope;
 
+const rejectWafInterstitials = {
+  cacheWillUpdate: async ({ request, response }: { request: Request; response: Response }) =>
+    isWafInterstitial(request.url, response.headers.get("content-type")) ? null : response,
+};
+
+addPlugins([rejectWafInterstitials]);
 precacheAndRoute(self.__WB_MANIFEST);
 
 // Only ever skip waiting on request. Calling skipWaiting() at parse time takes
@@ -37,6 +44,7 @@ const navigationRoute = new NavigationRoute(
   new NetworkFirst({
     cacheName: CACHE_STATIC,
     networkTimeoutSeconds: 10,
+    plugins: [rejectWafInterstitials],
   })
 );
 registerRoute(navigationRoute);
@@ -44,7 +52,7 @@ registerRoute(navigationRoute);
 registerRoute(
   ({ request, url }) =>
     url.origin === SW_ORIGIN && ["script", "style", "image", "font"].includes(request.destination),
-  new CacheFirst({ cacheName: CACHE_STATIC })
+  new CacheFirst({ cacheName: CACHE_STATIC, plugins: [rejectWafInterstitials] })
 );
 
 const APP_ICON = "/android-chrome-192x192.png";

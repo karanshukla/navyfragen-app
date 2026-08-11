@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const precacheAndRouteMock = vi.fn();
+const addPluginsMock = vi.fn();
 const registerRouteMock = vi.fn();
 const networkFirstCtor = vi.fn();
 const cacheFirstCtor = vi.fn();
@@ -8,6 +9,7 @@ const navigationRouteCtor = vi.fn();
 
 vi.mock("workbox-precaching", () => ({
   precacheAndRoute: (...args: unknown[]) => precacheAndRouteMock(...args),
+  addPlugins: (...args: unknown[]) => addPluginsMock(...args),
 }));
 vi.mock("workbox-routing", () => ({
   registerRoute: (...args: unknown[]) => registerRouteMock(...args),
@@ -61,6 +63,7 @@ async function loadServiceWorker() {
 describe("sw.ts", () => {
   beforeEach(async () => {
     precacheAndRouteMock.mockClear();
+    addPluginsMock.mockClear();
     registerRouteMock.mockClear();
     networkFirstCtor.mockClear();
     cacheFirstCtor.mockClear();
@@ -102,8 +105,54 @@ describe("sw.ts", () => {
   it("registers the network-only, navigation, and static-asset routes", () => {
     expect(registerRouteMock).toHaveBeenCalledTimes(3);
     expect(networkFirstCtor).toHaveBeenCalled();
-    expect(cacheFirstCtor).toHaveBeenCalledWith({ cacheName: "nf-static-v2" });
+    expect(cacheFirstCtor).toHaveBeenCalledWith({
+      cacheName: "nf-static-v2",
+      plugins: [expect.objectContaining({ cacheWillUpdate: expect.any(Function) })],
+    });
     expect(navigationRouteCtor).toHaveBeenCalled();
+  });
+
+  describe("WAF interstitial guard", () => {
+    // Anubis answers a challenged request with its interstitial under HTTP 200,
+    // so every caching path here has to refuse it explicitly. Precaching is the
+    // one that actually bit on 2026-08-11: it fetches the whole asset manifest
+    // outside any page context, and each fetch was challenged in turn.
+    function plugin() {
+      return addPluginsMock.mock.calls[0][0][0] as {
+        cacheWillUpdate: (arg: {
+          request: Request;
+          response: Response;
+        }) => Promise<Response | null>;
+      };
+    }
+
+    function fakeExchange(url: string, contentType: string) {
+      return {
+        request: { url } as Request,
+        response: { headers: new Headers({ "content-type": contentType }) } as Response,
+      };
+    }
+
+    it("drops a challenge page fetched under an asset URL", async () => {
+      const exchange = fakeExchange("https://nf.example.com/assets/app.js", "text/html");
+
+      await expect(plugin().cacheWillUpdate(exchange)).resolves.toBeNull();
+    });
+
+    it("keeps the real asset", async () => {
+      const exchange = fakeExchange("https://nf.example.com/assets/app.js", "text/javascript");
+
+      await expect(plugin().cacheWillUpdate(exchange)).resolves.toBe(exchange.response);
+    });
+
+    it("guards the precache, the navigation route, and the static-asset cache alike", () => {
+      const guard = plugin();
+
+      expect(networkFirstCtor).toHaveBeenCalledWith(
+        expect.objectContaining({ plugins: [guard], networkTimeoutSeconds: 10 })
+      );
+      expect(cacheFirstCtor).toHaveBeenCalledWith(expect.objectContaining({ plugins: [guard] }));
+    });
   });
 
   describe("network-only route matcher", () => {

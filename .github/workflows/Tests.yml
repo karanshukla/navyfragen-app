@@ -396,6 +396,25 @@ jobs:
       - name: Check doc links resolve
         run: bun run check:doc-links
 
+  bot-policy:
+    name: Anubis Bot Policy
+    runs-on: ubuntu-latest
+
+    # The policy allowed /site.webmanifest long after vite-plugin-pwa started
+    # emitting /manifest.webmanifest, so the real file was challenged while the
+    # rule sat there looking correct. Nothing caught it because nothing read the
+    # policy and the client build together.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Check the policy allows what the client ships
+        run: bun run test:bot-policy
+
   coveralls-finish:
     name: Coveralls Finish
     needs: [client-tests, server-tests]
