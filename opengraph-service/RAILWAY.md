@@ -19,7 +19,7 @@ Everything else is proxied to `FRONTEND_URL` unchanged.
 |---|---|
 | `GET /healthz` | `200 {}`. |
 | `GET /og-cache/<safe-did>.png` | The cached render (`max-age=86400`). A DID with no render yet gets the branded fallback card under `max-age=60`, so the crawler comes back once the render lands. A malformed or traversing name is `404`. |
-| `POST /og-warm/<handle>` | `202 {"warming":true\|false}`, fire-and-forget. Schedules a background render if the profile is not already cached; `false` means the render cap shed it. Any other method is `405`, an empty/multi-segment handle is `404`. Unauthenticated by design — the work it can trigger is bounded by the same render cap as the crawler path. |
+| `POST /og-warm/<handle>` | `202 {"warming":true\|false}`, fire-and-forget. Resolves the handle on the request, then schedules a background render only if the profile is not already cached. `false` means no render started: already fresh, the handle did not resolve, or the render cap shed it. Any other method is `405`, an empty/multi-segment handle is `404`. Unauthenticated by design — the work it can trigger is bounded by the same render cap as the crawler path, and a warm with nothing to do takes no slot. |
 | `GET /profile/<handle>` with the `Bluesky Cardyb` UA | The synthesized OG HTML, answered from the resolved DID alone. A cache miss never blocks the crawler: the render runs in the background and this crawl's image fetch gets the fallback. |
 
 `POST /og-warm/` is called by the client's share/copy handlers and is

@@ -24,19 +24,29 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) await new Promise((resolve) => setImmediate(resolve));
 }
 
-function makeCtx(): AppContext {
+/**
+ * The inbox the render route checks against. `question: null` is an inbox that
+ * holds nothing under the tid, which is what a render of a question the caller
+ * does not own looks like from the DB.
+ */
+function stubDb(question: string | null = RESPOND_BODY.original): any {
   return {
-    db: {
-      selectFrom: mock(() => ({
-        selectAll: mock(function (this: any) {
-          return this;
-        }),
-        where: mock(function (this: any) {
-          return this;
-        }),
-        executeTakeFirst: mock(async () => undefined),
-      })),
-    } as any,
+    selectFrom: mock((table: string) => {
+      const builder: any = {
+        selectAll: () => builder,
+        select: () => builder,
+        where: () => builder,
+        executeTakeFirst: async () =>
+          table === "message" && question !== null ? { message: question } : undefined,
+      };
+      return builder;
+    }),
+  };
+}
+
+function makeCtx(question: string | null = RESPOND_BODY.original): AppContext {
+  return {
+    db: stubDb(question) as any,
     oauthClient: { restore: mock(async () => ({ sub: "did:foo" })) } as any,
     resolver: { resolveDidToHandle: mock(async () => "alice.bsky.social") } as any,
     idResolver: {} as any,
@@ -56,8 +66,8 @@ describe("Question image render pipeline (Hono)", () => {
     );
   }
 
-  function makeApp(deps: Partial<MessageDeps> = {}) {
-    const ctx = makeCtx();
+  function makeApp(deps: Partial<MessageDeps> = {}, inboxQuestion?: string | null) {
+    const ctx = makeCtx(inboxQuestion === undefined ? RESPOND_BODY.original : inboxQuestion);
     const messageService: any = {
       respondToMessage: mock(async () => ({ success: true, uri: "at://x", cid: "c" })),
       warmImageService: mock(async () => {}),
@@ -129,6 +139,32 @@ describe("Question image render pipeline (Hono)", () => {
       const res = await postJson(app, "/messages/render", headers, { tid: "tid-1" });
 
       assert.strictEqual(res.status, 400);
+    });
+
+    test("returns 404 for a question the caller's inbox does not hold", async () => {
+      const generate = stubImageGenerator();
+      const { app, headers } = makeApp({}, null);
+
+      const res = await postJson(app, "/messages/render", headers, {
+        tid: "tid-1",
+        original: "text nobody ever asked me",
+      });
+
+      assert.strictEqual(res.status, 404);
+      await settle();
+      assert.strictEqual(generate.mock.calls.length, 0);
+    });
+
+    test("rejects a question longer than an inbox can hold, before any DB work", async () => {
+      const { app, headers, ctx } = makeApp();
+
+      const res = await postJson(app, "/messages/render", headers, {
+        tid: "tid-1",
+        original: "x".repeat(501),
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual((ctx.db.selectFrom as any).mock.calls.length, 0);
     });
 
     test("returns 500 when the enqueue itself fails", async () => {

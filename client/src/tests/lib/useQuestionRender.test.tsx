@@ -2,7 +2,11 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as messageServiceModule from "../../api/messageService";
-import { RENDER_LOST_MESSAGE, useQuestionRender } from "../../lib/useQuestionRender";
+import {
+  RENDER_LOST_MESSAGE,
+  RENDER_UNREACHABLE_MESSAGE,
+  useQuestionRender,
+} from "../../lib/useQuestionRender";
 
 vi.mock("../../api/messageService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/messageService")>();
@@ -36,6 +40,8 @@ let deferStart = false;
 let startFails = false;
 let pendingStart: StartCallbacks | undefined;
 let nextRenderId = "render-1";
+/** Set when the status endpoint itself is what the caller cannot reach. */
+let pollError: { error: string; status?: number } | undefined;
 
 const startRender = vi.fn((_data: unknown, callbacks?: StartCallbacks) => {
   if (deferStart) {
@@ -66,10 +72,16 @@ describe("useQuestionRender", () => {
     startFails = false;
     pendingStart = undefined;
     nextRenderId = "render-1";
+    pollError = undefined;
     mockUseStartRender.mockReturnValue(startRenderResult as any);
     // Mirrors the real query, which is disabled until there is a key to poll.
     mockUseRenderStatus.mockImplementation(
-      (renderId, attempt) => ({ data: renderId ? polled(attempt) : undefined }) as any
+      (renderId, attempt) =>
+        ({
+          data: renderId ? polled(attempt) : undefined,
+          isError: !!renderId && !!pollError,
+          error: renderId ? pollError : undefined,
+        }) as any
     );
   });
 
@@ -216,6 +228,36 @@ describe("useQuestionRender", () => {
     rerender({ target: TARGET, theme: "sunset", enabled: true });
     expect(startRender).toHaveBeenCalledTimes(2);
     expect(startRender.mock.calls[1][0]).toMatchObject({ theme: "sunset" });
+  });
+
+  it("fails, rather than waiting on pending forever, when the poll cannot be read", () => {
+    pollError = { error: "Too many requests", status: 429 };
+    const { result } = renderQuestionRender();
+    expect(result.current.status).toBe("failed");
+    expect(result.current.error).toBe("Too many requests");
+    expect(result.current.readyRenderId).toBeNull();
+  });
+
+  it("falls back to a generic message when the failing poll carries no error text", () => {
+    pollError = { error: "" };
+    const { result } = renderQuestionRender();
+    expect(result.current.status).toBe("failed");
+    expect(result.current.error).toBe(RENDER_UNREACHABLE_MESSAGE);
+  });
+
+  it("retry() clears an unreadable poll so a recovered endpoint is used again", () => {
+    pollError = { error: "Service unavailable", status: 503 };
+    const { result } = renderQuestionRender();
+    expect(result.current.status).toBe("failed");
+
+    act(() => {
+      pollError = undefined;
+      polled = always({ status: "rendering" });
+      result.current.retry();
+    });
+
+    expect(result.current.status).toBe("rendering");
+    expect(result.current.error).toBeUndefined();
   });
 
   it("ignores the failure of a render the composer has already moved on from", () => {

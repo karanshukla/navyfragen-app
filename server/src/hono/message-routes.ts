@@ -6,7 +6,11 @@ import { errorMessage } from "#/lib/errors";
 import { MessageService } from "#/services/message-service";
 import { NotificationService } from "#/services/notification-service";
 import { ProfileService } from "#/services/profile-service";
-import { RenderService, type RenderedQuestionImage } from "#/services/render-service";
+import {
+  QUESTION_NOT_IN_INBOX,
+  RenderService,
+  type RenderedQuestionImage,
+} from "#/services/render-service";
 import { SettingsService } from "#/services/settings-service";
 import { getAccounts } from "#/auth/session";
 import { clearSession, getSession } from "./session-middleware";
@@ -18,6 +22,9 @@ const BOT_DID = "did:plc:3d4awubjiftylwrhhyp5vl7i";
 
 /** The key expired, was lost to a deploy, or has already been posted with. */
 const NO_READY_RENDER = "That question image is no longer available.";
+
+/** What `/messages/send` accepts, and so the longest a stored question can be. */
+const MAX_MESSAGE_LENGTH = 500;
 
 export interface MessageDeps {
   messageService?: MessageService;
@@ -73,9 +80,14 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
    * cold is the common case rather than the edge case, so the user watched a
    * spinner for the whole wake and lost the reply outright if it timed out.
    *
+   * Unlike `/messages/respond`, nothing downstream of this costs the caller a
+   * Bluesky post, so the render itself is the only thing rationing it. The
+   * question has to be one of theirs and it has to fit what an inbox can hold.
+   *
    * @see [render-controller.test.ts](../tests/render-controller.test.ts) — pins
    * that an identical enqueue produces one render and a theme change produces
-   * a second, and that an unknown key reads as `unknown` rather than `failed`.
+   * a second, that an unknown key reads as `unknown` rather than `failed`, and
+   * that a question outside the caller's inbox is refused before it renders.
    */
   app.post(
     "/messages/render",
@@ -83,7 +95,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       "json",
       z.object({
         tid: z.string().min(1),
-        original: z.string().min(1),
+        original: z.string().min(1).max(MAX_MESSAGE_LENGTH),
         theme: z.string().min(1).optional(),
       }),
       (r, c) => {
@@ -98,8 +110,13 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
         const enqueued = await renderService.enqueue({ did, tid, original, theme });
         return c.json(enqueued, 202);
       } catch (err) {
+        const msg = errorMessage(err);
+        if (msg === QUESTION_NOT_IN_INBOX) {
+          ctx.logger.warn({ tid, did }, "Render requested for a question outside the inbox");
+          return c.json({ error: msg }, 404);
+        }
         ctx.logger.error({ err, tid, did }, "Failed to enqueue question image render");
-        return c.json({ error: errorMessage(err) || "Failed to start the image render" }, 500);
+        return c.json({ error: msg || "Failed to start the image render" }, 500);
       }
     }
   );
@@ -117,8 +134,8 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       z.object({
         tid: z.string().min(1),
         recipient: z.string().min(1),
-        original: z.string().min(1),
-        response: z.string().min(1).max(500),
+        original: z.string().min(1).max(MAX_MESSAGE_LENGTH),
+        response: z.string().min(1).max(MAX_MESSAGE_LENGTH),
         includeQuestionAsImage: z.boolean().optional(),
         renderId: z.string().min(1).optional(),
         replyTo: z.object({ uri: z.string(), cid: z.string().optional() }).passthrough().optional(),
@@ -183,7 +200,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       "json",
       z.object({
         recipient: z.string().min(1),
-        message: z.string().min(1).max(500),
+        message: z.string().min(1).max(MAX_MESSAGE_LENGTH),
       }),
       (r, c) => {
         if (!r.success) return c.json({ errors: r.error.issues }, 400);

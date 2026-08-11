@@ -17,6 +17,10 @@ export type QuestionRenderStatus = RenderStatus | "idle" | "unavailable";
 /** What a second loss of the same render key leaves the composer to say. */
 export const RENDER_LOST_MESSAGE = "The question image could not be rendered. Try sending again.";
 
+/** What a poll the server will not answer leaves the composer to say. */
+export const RENDER_UNREACHABLE_MESSAGE =
+  "Could not check on the question image. Try sending again.";
+
 export interface QuestionRenderArgs {
   /** The question whose composer is open, or null when none is. */
   target: { tid: string; original: string } | null;
@@ -50,8 +54,9 @@ export interface QuestionRender {
  * @see [useQuestionRender.test.tsx](../tests/lib/useQuestionRender.test.tsx):
  * pins that both of those entry paths start a render, that an `unknown` poll
  * re-renders rather than erroring, that a second `unknown` for the same key
- * stops instead of looping, and that a render which cannot be queued at all
- * reports `unavailable` rather than stranding the send.
+ * stops instead of looping, that a render which cannot be queued at all reports
+ * `unavailable` rather than stranding the send, and that a poll the server will
+ * not answer fails rather than waiting on `pending` forever.
  */
 export function useQuestionRender({ target, theme, enabled }: QuestionRenderArgs): QuestionRender {
   const tid = target?.tid ?? null;
@@ -121,17 +126,27 @@ export function useQuestionRender({ target, theme, enabled }: QuestionRenderArgs
     recover();
   }, [polled, recover]);
 
+  // A poll that cannot be read is a render that will never be handed over: the
+  // status query is what carries every terminal answer, so leaving it out of the
+  // ladder below leaves the caller waiting on `pending` forever.
+  const unreachable = poll.isError;
+
   const idle = !enabled || tid === null || original === null;
   let status: QuestionRenderStatus = "pending";
   if (idle) status = "idle";
   else if (unavailable) status = "unavailable";
   else if (lost) status = "failed";
+  else if (unreachable) status = "failed";
   else if (polled !== undefined) status = polled;
+
+  let error = poll.data?.error;
+  if (lost) error = RENDER_LOST_MESSAGE;
+  else if (unreachable) error = poll.error?.error || RENDER_UNREACHABLE_MESSAGE;
 
   return {
     status,
     readyRenderId: status === "ready" ? renderId : null,
-    error: lost ? RENDER_LOST_MESSAGE : poll.data?.error,
+    error,
     retry,
     recover,
   };

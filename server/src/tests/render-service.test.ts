@@ -22,17 +22,30 @@ function stubLogger(): any {
   return { info: mock(), error: mock(), warn: mock(), debug: mock() };
 }
 
-function stubDb(imageTheme: string | null = null): any {
+/** The question every enqueue in this file is for, and so the one the inbox holds. */
+const QUESTION = "why is the sky blue?";
+
+/**
+ * Two tables answer here: `user_settings` for the theme, and `message` for the
+ * inbox check that gates the enqueue. `question: null` is an inbox that holds
+ * nothing under the tid, which is what a render of someone else's question, or
+ * of text that was never a question at all, looks like from the DB.
+ */
+function stubDb(opts: { imageTheme?: string | null; question?: string | null } = {}): any {
+  const { imageTheme = null, question = QUESTION } = opts;
   return {
-    selectFrom: mock(() => ({
-      selectAll: mock(function (this: any) {
-        return this;
-      }),
-      where: mock(function (this: any) {
-        return this;
-      }),
-      executeTakeFirst: mock(async () => (imageTheme === null ? undefined : { imageTheme })),
-    })),
+    selectFrom: mock((table: string) => {
+      const builder: any = {
+        selectAll: () => builder,
+        select: () => builder,
+        where: () => builder,
+        executeTakeFirst: async () => {
+          if (table === "message") return question === null ? undefined : { message: question };
+          return imageTheme === null ? undefined : { imageTheme };
+        },
+      };
+      return builder;
+    }),
   };
 }
 
@@ -66,11 +79,13 @@ function recordingStore<V>(): TtlCache<V> & { ttls: number[] } {
   };
 }
 
-function makeService(opts: { store?: TtlCache<any>; imageTheme?: string | null } = {}) {
+function makeService(
+  opts: { store?: TtlCache<any>; imageTheme?: string | null; question?: string | null } = {}
+) {
   const logger = stubLogger();
   const resolver = { resolveDidToHandle: mock(async () => "alice.bsky.social") };
   const service = new RenderService(
-    stubDb(opts.imageTheme ?? null),
+    stubDb({ imageTheme: opts.imageTheme ?? null, question: opts.question }),
     resolver as any,
     logger,
     opts.store
@@ -93,6 +108,45 @@ describe("RenderService", () => {
       impl ?? (async () => ({ imageBlob: PNG, imageAltText: "alt", width: 720, height: 720 }))
     );
   }
+
+  describe("the inbox bounds what can be rendered", () => {
+    test("renders a question the caller's inbox holds", async () => {
+      const generate = stubImageGenerator();
+      const { service } = makeService();
+
+      const { status } = await service.enqueue(enqueueArgs());
+      await settle();
+
+      assert.strictEqual(status, "pending");
+      assert.strictEqual(generate.mock.calls.length, 1);
+    });
+
+    test("refuses a question the caller's inbox does not hold", async () => {
+      const generate = stubImageGenerator();
+      const { service } = makeService({ question: null });
+
+      await assert.rejects(
+        () => service.enqueue(enqueueArgs({ original: "text nobody ever asked me" })),
+        /Question not found/
+      );
+      await settle();
+
+      assert.strictEqual(generate.mock.calls.length, 0);
+    });
+
+    test("refuses text that does not match the question stored under the tid", async () => {
+      const generate = stubImageGenerator();
+      const { service } = makeService({ question: "why is the sky blue?" });
+
+      await assert.rejects(
+        () => service.enqueue(enqueueArgs({ original: "why is the sky green?" })),
+        /Question not found/
+      );
+      await settle();
+
+      assert.strictEqual(generate.mock.calls.length, 0);
+    });
+  });
 
   describe("content-addressed dedup", () => {
     test("two identical render requests produce one render", async () => {

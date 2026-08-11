@@ -197,9 +197,17 @@ func (h *Handler) writeOGResponse(w http.ResponseWriter, handle, did string) {
 // only through spawnRender, so it shares the render cap with the crawler path
 // and is shed rather than queued once that cap is saturated.
 //
+// Resolution happens on the request, before a slot is taken, exactly as on the
+// crawler path. Taking the slot first would let warms for handles that are
+// already fresh — or that do not resolve at all — hold the whole cap for a
+// generation timeout each, and since spawnRender drops rather than queues, every
+// crawl arriving in that window would schedule no render and serve the fallback.
+//
 // [TestHandler_WarmOnColdProfile_TriggersExactlyOneRender] and
 // [TestHandler_WarmOnFreshProfile_TriggersNoRender] pin the no-op-when-warm
-// rule; [TestHandler_WarmIsBoundedByTheRenderCap] pins the bound.
+// rule; [TestHandler_WarmIsBoundedByTheRenderCap] pins the bound; and
+// [TestHandler_WarmOnFreshProfile_HoldsNoRenderSlot] pins that a warm with
+// nothing to do leaves the cap alone.
 func (h *Handler) handleWarm(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -211,16 +219,7 @@ func (h *Handler) handleWarm(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	started := h.spawnRender(handle, func(ctx context.Context) error {
-		resolved, err := h.Generator.Resolve(ctx, handle)
-		if err != nil {
-			return err
-		}
-		if resolved.Cached {
-			return nil
-		}
-		return h.Generator.EnsureRendered(ctx, resolved.DID)
-	})
+	started := h.warmProfile(r.Context(), handle)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusAccepted)
@@ -229,6 +228,27 @@ func (h *Handler) handleWarm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write([]byte(`{"warming":false}`))
+}
+
+// warmProfile resolves the handle on the caller's context and spawns a render
+// only for a profile that has none, reporting whether one started. A resolve
+// failure is a warm that did nothing: the caller is a share or copy-link
+// handler, and the crawl that follows will surface the same failure properly.
+func (h *Handler) warmProfile(reqCtx context.Context, handle string) bool {
+	ctx, cancel := context.WithTimeout(reqCtx, h.genTimeout())
+	defer cancel()
+
+	resolved, err := h.Generator.Resolve(ctx, handle)
+	if err != nil {
+		log.Printf("opengraph-service: warm resolve %s failed: %v", handle, err)
+		return false
+	}
+	if resolved.Cached {
+		return false
+	}
+	return h.spawnRender(handle, func(ctx context.Context) error {
+		return h.Generator.EnsureRendered(ctx, resolved.DID)
+	})
 }
 
 // spawnRender runs work in a joinable background goroutine under the render

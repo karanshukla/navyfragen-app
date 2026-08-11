@@ -208,6 +208,43 @@ describe("messageService", () => {
     });
   });
 
+  describe("messageKeys", () => {
+    /**
+     * Invalidation matches by prefix, so this is the boundary that keeps every
+     * message mutation from force-refetching a live render poll. Both terminal
+     * render statuses are read-once on the server, so a forced refetch reads
+     * `unknown` and queues a fresh Chromium render for an answered question.
+     */
+    it("a message invalidation refreshes the message list", async () => {
+      const qc = new QueryClient();
+      const listKey = messageKeys.detail("did:plc:abc");
+      qc.setQueryData(listKey, { messages: [] });
+
+      await qc.invalidateQueries({ queryKey: messageKeys.all });
+
+      expect(qc.getQueryState(listKey)?.isInvalidated).toBe(true);
+    });
+
+    it("a message invalidation leaves a live render poll alone", async () => {
+      const qc = new QueryClient();
+      const renderKey = messageKeys.render("render-abc", 0);
+      qc.setQueryData(renderKey, { status: "ready" });
+
+      await qc.invalidateQueries({ queryKey: messageKeys.all });
+
+      expect(qc.getQueryState(renderKey)?.isInvalidated).toBe(false);
+    });
+
+    it("parks a poll with no key to read outside the message list namespace", async () => {
+      const qc = new QueryClient();
+      qc.setQueryData(messageKeys.noRender, { status: "pending" });
+
+      await qc.invalidateQueries({ queryKey: messageKeys.all });
+
+      expect(qc.getQueryState(messageKeys.noRender)?.isInvalidated).toBe(false);
+    });
+  });
+
   describe("renderPollInterval", () => {
     it("polls fast for the last poll before the back-off boundary", () => {
       expect(renderPollInterval("rendering", RENDER_POLL_FAST_POLLS - 1)).toBe(RENDER_POLL_FAST_MS);
@@ -229,6 +266,15 @@ describe("messageService", () => {
       expect(renderPollInterval("ready", 0)).toBe(false);
       expect(renderPollInterval("failed", 0)).toBe(false);
       expect(renderPollInterval("unknown", 0)).toBe(false);
+    });
+
+    it("keeps polling a render still in flight that has answered every poll", () => {
+      expect(renderPollInterval("rendering", 0, false)).toBe(RENDER_POLL_FAST_MS);
+    });
+
+    it("stops once the poll itself is failing, rather than retrying forever", () => {
+      expect(renderPollInterval("rendering", 0, true)).toBe(false);
+      expect(renderPollInterval(undefined, 0, true)).toBe(false);
     });
   });
 

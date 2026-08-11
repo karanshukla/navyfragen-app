@@ -376,6 +376,75 @@ describe("Messages page", () => {
     expect(mockRespondMutate).not.toHaveBeenCalled();
   });
 
+  /**
+   * Opens msg-1's composer, types a reply and sends it, leaving the send queued
+   * on a render that never settles. Returns the textarea so a test can force the
+   * re-render that a settled poll would otherwise arrive on.
+   */
+  async function queueSendOnAStuckRender(respondMutate: ReturnType<typeof vi.fn>) {
+    setupMocks();
+    mockUseRespondToMessage.mockReturnValue({ mutate: respondMutate, isPending: false } as any);
+    renderPoll = () => ({ status: "rendering" });
+    renderWithProviders(<Messages />);
+
+    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
+    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+
+    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    fireEvent.change(textarea, { target: { value: "My answer!" } });
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+
+    await screen.findByText(/rendering your question image/i);
+    expect(respondMutate).not.toHaveBeenCalled();
+    return textarea;
+  }
+
+  it("opening another question while a send waits on its render does not move the composer", async () => {
+    const mockRespondMutate = vi.fn();
+    await queueSendOnAStuckRender(mockRespondMutate);
+
+    fireEvent.click(screen.getByText("What is your favorite color?"));
+
+    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    expect(document.getElementById("message-card-msg-1")!.contains(textarea)).toBe(true);
+  });
+
+  it("posts the queued reply with its own question's render, not a later question's", async () => {
+    const mockRespondMutate = vi.fn();
+    const textarea = await queueSendOnAStuckRender(mockRespondMutate);
+
+    // The click the guard refuses. Without it the render retargets to msg-2 and
+    // the key below would carry msg-2's image into msg-1's reply.
+    fireEvent.click(screen.getByText("What is your favorite color?"));
+
+    renderPoll = () => ({ status: "ready" });
+    fireEvent.change(textarea, { target: { value: "My answer, still typing" } });
+
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalledTimes(1));
+    expect(mockRespondMutate.mock.calls[0][0]).toMatchObject({
+      tid: "msg-1",
+      original: "Hello?",
+      renderId: RENDER_ID,
+    });
+  });
+
+  it("sends the queued reply text-only when the image toggle goes off mid-wait", async () => {
+    const mockRespondMutate = vi.fn();
+    await queueSendOnAStuckRender(mockRespondMutate);
+
+    // Nothing will ever settle this render now, so a status the queue does not
+    // release leaves the send stuck with no error and no way to retry.
+    fireEvent.click(screen.getByLabelText(/question as image/i));
+
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalledTimes(1));
+    expect(mockRespondMutate.mock.calls[0][0]).toMatchObject({
+      tid: "msg-1",
+      includeQuestionAsImage: false,
+    });
+    expect(mockRespondMutate.mock.calls[0][0].renderId).toBeUndefined();
+  });
+
   it("opening the composer warms the image service when replies carry an image", async () => {
     setupMocks();
     renderWithProviders(<Messages />);

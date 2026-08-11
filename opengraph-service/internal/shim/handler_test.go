@@ -606,6 +606,31 @@ func TestHandler_WarmOnFreshProfile_TriggersNoRender(t *testing.T) {
 	}
 }
 
+// A warm only takes a render slot once it knows there is a render to run.
+// Acquiring first and resolving inside the goroutine let warms for fresh or
+// unresolvable handles hold the whole cap for a generation timeout each, and
+// spawnRender drops rather than queues, so every crawl arriving in that window
+// scheduled no render and served the fallback card.
+func TestHandler_WarmOnFreshProfile_HoldsNoRenderSlot(t *testing.T) {
+	cache := newTempCache(t)
+	fetcher, renderer := defaultStubs()
+	h := newHandlerOn(t, cache, fetcher, renderer)
+	h.MaxConcurrentGenerate = 1
+	h.initSem()
+	if err := cache.Store("did:plc:integration", []byte("\x89PNGREAL"), "image/png"); err != nil {
+		t.Fatalf("Store: %v", err)
+	}
+
+	rec := doMethod(t, h, http.MethodPost, "", "/og-warm/integration.test")
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202", rec.Code)
+	}
+	if body := rec.Body.String(); body != `{"warming":false}` {
+		t.Fatalf("body = %q, want {\"warming\":false} — a fresh profile takes no render slot", body)
+	}
+	h.WaitBackground()
+}
+
 func TestHandler_WarmWithNonPostMethod_Returns405(t *testing.T) {
 	fetcher, renderer := defaultStubs()
 	h := newIntegrationHandler(t, fetcher, renderer)
@@ -651,6 +676,11 @@ func TestHandler_WarmFailure_StillAccepts(t *testing.T) {
 	rec := doMethod(t, h, http.MethodPost, "", "/og-warm/nobody.bsky.social")
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202 even when the warm cannot succeed", rec.Code)
+	}
+	// A handle that does not resolve has no render to run, so it must not have
+	// taken a slot the crawler path needs.
+	if body := rec.Body.String(); body != `{"warming":false}` {
+		t.Fatalf("body = %q, want {\"warming\":false} when the handle does not resolve", body)
 	}
 	h.WaitBackground()
 	if c := atomic.LoadInt32(&renderer.Calls); c != 0 {

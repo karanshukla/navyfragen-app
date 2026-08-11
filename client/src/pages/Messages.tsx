@@ -144,7 +144,18 @@ export default function Messages() {
     });
   };
 
+  /**
+   * The open composer is what the render follows, so moving it while a send is
+   * waiting would hand that send the *new* question's image. `claimReady` only
+   * checks the DID, so the wrong image would post to Bluesky rather than be
+   * rejected.
+   *
+   * @see [Messages.test.tsx](../tests/pages/Messages.test.tsx) — "opening
+   * another question while a send waits on its render does not move the
+   * composer" and "posts the queued reply with its own question's render".
+   */
   const openComposer = (tid: string) => {
+    if (queuedSend) return;
     setRespondingTid(tid);
     setResponseText("");
   };
@@ -246,7 +257,10 @@ export default function Messages() {
   useEffect(() => {
     if (!queuedSend) return;
     // No render to wait for: send it the old way and let the server render it.
-    if (render.status === "unavailable") {
+    // `idle` belongs here too — the image toggle going off mid-wait, or the open
+    // message leaving the list, ends the render without ever settling it, and a
+    // status this effect does not release strands the send with no way back.
+    if (render.status === "unavailable" || render.status === "idle") {
       setQueuedSend(null);
       postResponse(queuedSend.message, queuedSend.response);
       return;
