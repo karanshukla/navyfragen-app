@@ -41,7 +41,7 @@ export const onGradFill = "var(--nf-on-grad-fill)";
 export const onGradBorder = "var(--nf-on-grad-border)";
 
 /**
- * The primary brand gradient. Per client/CLAUDE.md this is the background for
+ * The primary brand gradient. Per docs/design-tokens.md this is the background for
  * every interactive card — login, ask, inbox hero, gradient question cards.
  */
 export const gradMark = "var(--nf-grad-mark)";
