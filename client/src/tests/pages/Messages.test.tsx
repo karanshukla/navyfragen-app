@@ -1,5 +1,5 @@
 import { notifications } from "@mantine/notifications";
-import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 
@@ -381,9 +381,15 @@ describe("Messages page", () => {
    * on a render that never settles. Returns the textarea so a test can force the
    * re-render that a settled poll would otherwise arrive on.
    */
-  async function queueSendOnAStuckRender(respondMutate: ReturnType<typeof vi.fn>) {
+  async function queueSendOnAStuckRender(
+    respondMutate: ReturnType<typeof vi.fn>,
+    deleteMutate?: ReturnType<typeof vi.fn>
+  ) {
     setupMocks();
     mockUseRespondToMessage.mockReturnValue({ mutate: respondMutate, isPending: false } as any);
+    if (deleteMutate) {
+      mockUseDeleteMessage.mockReturnValue({ mutate: deleteMutate, isPending: false } as any);
+    }
     renderPoll = () => ({ status: "rendering" });
     renderWithProviders(<Messages />);
 
@@ -427,6 +433,26 @@ describe("Messages page", () => {
       original: "Hello?",
       renderId: RENDER_ID,
     });
+  });
+
+  it("refuses to delete the question whose reply is in flight", async () => {
+    const mockDeleteMutate = vi.fn();
+    await queueSendOnAStuckRender(vi.fn(), mockDeleteMutate);
+
+    const card = document.getElementById("message-card-msg-1")!;
+    fireEvent.click(within(card).getByRole("button", { name: /cannot delete while posting/i }));
+
+    expect(mockDeleteMutate).not.toHaveBeenCalled();
+  });
+
+  it("still allows deleting a question whose reply is not in flight", async () => {
+    const mockDeleteMutate = vi.fn();
+    await queueSendOnAStuckRender(vi.fn(), mockDeleteMutate);
+
+    const other = document.getElementById("message-card-msg-2")!;
+    fireEvent.click(within(other).getByRole("button", { name: /^delete message$/i }));
+
+    expect(mockDeleteMutate).toHaveBeenCalledWith("msg-2", expect.any(Object));
   });
 
   it("sends the queued reply text-only when the image toggle goes off mid-wait", async () => {

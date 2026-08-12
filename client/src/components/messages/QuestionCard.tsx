@@ -17,6 +17,8 @@ interface QuestionCardProps {
   expanded: boolean;
   justPinned: boolean;
   deleting: boolean;
+  /** True while this card's own reply is in flight. */
+  locked: boolean;
   /** True while an unanswered thread root is holding this reply back. */
   blocked: boolean;
   /** A reply here would chain onto a pinned root rather than post standalone. */
@@ -40,6 +42,7 @@ export function QuestionCard({
   expanded,
   justPinned,
   deleting,
+  locked,
   blocked,
   inThread,
   threadLink,
@@ -51,6 +54,11 @@ export function QuestionCard({
   composer,
 }: QuestionCardProps) {
   const { triggerHaptic } = useHaptic(1);
+  const deleteRefusal = pinned
+    ? { tooltip: "Unpin thread first", label: "Cannot delete thread root" }
+    : locked
+      ? { tooltip: "Finish posting first", label: "Cannot delete while posting" }
+      : null;
 
   return (
     <Paper
@@ -102,25 +110,25 @@ export function QuestionCard({
               </ActionIcon>
             </Tooltip>
             <Tooltip
-              label={pinned ? "Unpin thread first" : "Delete message"}
+              label={deleteRefusal?.tooltip ?? "Delete message"}
               withArrow
               position="left"
               openDelay={500}
             >
               <ActionIcon
                 size="lg"
-                className={pinned ? undefined : "nf-delete-btn"}
-                aria-label={pinned ? "Cannot delete thread root" : "Delete message"}
+                className={deleteRefusal ? undefined : "nf-delete-btn"}
+                aria-label={deleteRefusal?.label ?? "Delete message"}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (pinned) return;
+                  if (deleteRefusal) return;
                   triggerHaptic();
                   onDelete();
                 }}
                 variant="transparent"
                 radius="md"
                 loading={deleting}
-                style={pinned ? styles.disabledIconButton : styles.iconButton(false)}
+                style={deleteRefusal ? styles.disabledIconButton : styles.iconButton(false)}
               >
                 <IconTrash size={18} />
               </ActionIcon>

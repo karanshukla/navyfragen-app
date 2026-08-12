@@ -34,6 +34,18 @@ describe("ReplyComposer status line", () => {
     vi.useRealTimers();
   });
 
+  it("accepts edits to the draft before the reply is sent", () => {
+    renderComposer();
+    expect(screen.getByRole("textbox", { name: /your response/i })).not.toHaveAttribute("readonly");
+  });
+
+  it("refuses edits to the draft while the reply is in flight", () => {
+    // The send captured this text when it was committed, so an edit landing
+    // now would post the old draft while showing the new one.
+    renderComposer({ sending: true });
+    expect(screen.getByRole("textbox", { name: /your response/i })).toHaveAttribute("readonly");
+  });
+
   it("shows the character count when idle", () => {
     renderComposer();
     expect(screen.getByText("9/280")).toBeInTheDocument();

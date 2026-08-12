@@ -118,6 +118,7 @@ export function QuestionGrid({
             expanded={expanded}
             justPinned={thread.justPinnedTid === message.tid}
             deleting={deletingTid === message.tid}
+            locked={sending && expanded}
             blocked={blocked}
             inThread={inThread}
             threadLink={pinned ? thread.linkFor(message.tid) : undefined}

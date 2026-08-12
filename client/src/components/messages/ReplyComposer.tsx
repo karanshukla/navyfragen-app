@@ -64,6 +64,7 @@ export function ReplyComposer({
         ref={textareaRef}
         value={value}
         maxLength={characterLimit}
+        readOnly={sending}
         onChange={(e) => onChange(e.target.value)}
         autosize
         minRows={2}
