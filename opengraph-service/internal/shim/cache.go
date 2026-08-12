@@ -73,22 +73,50 @@ func (c *FileCache) metaPath(did string) string {
 // clock); the .png ModTime (the TTL freshness clock) is left untouched so the
 // TTL is measured from generation time, not last access.
 func (c *FileCache) Load(did string) (*CacheEntry, error) {
-	p := c.pngPath(did)
-	info, err := os.Stat(p)
-	if err != nil {
+	mod, ok := c.freshModTime(did)
+	if !ok {
 		return nil, ErrCacheMiss
 	}
-	if c.TTL > 0 && time.Since(info.ModTime()) >= c.TTL {
-		return nil, ErrCacheMiss
-	}
-	bytes, err := os.ReadFile(p)
+	bytes, err := os.ReadFile(c.pngPath(did))
 	if err != nil {
 		return nil, ErrCacheMiss
 	}
 	mime := c.readMeta(did)
 	// Update LRU recency without refreshing the TTL clock.
 	c.touchLRU(did)
-	return &CacheEntry{Bytes: bytes, ModTime: info.ModTime(), MimeType: mime}, nil
+	return &CacheEntry{Bytes: bytes, ModTime: mod, MimeType: mime}, nil
+}
+
+// Fresh reports whether a live (within-TTL) entry exists for did without
+// reading the image bytes. The generate path asks this on every crawl purely to
+// decide whether to schedule a render, and reading a ~350KB PNG only to discard
+// it would make the fast answer as expensive as the slow one. Like Load, a hit
+// bumps LRU recency and leaves the TTL clock alone.
+//
+// [TestFileCache_FreshWithinTTL_ReportsTrue] and
+// [TestFileCache_FreshPastTTL_ReportsFalse] pin that it agrees with Load on both
+// sides of the TTL boundary; [TestFileCache_FreshDoesNotRefreshTTL] pins that
+// probing does not extend an image's life.
+func (c *FileCache) Fresh(did string) bool {
+	if _, ok := c.freshModTime(did); !ok {
+		return false
+	}
+	c.touchLRU(did)
+	return true
+}
+
+// freshModTime is the one place the TTL clock is read: it returns the .png
+// ModTime when a live entry exists for did, and reports false on an absent or
+// expired one.
+func (c *FileCache) freshModTime(did string) (time.Time, bool) {
+	info, err := os.Stat(c.pngPath(did))
+	if err != nil {
+		return time.Time{}, false
+	}
+	if c.TTL > 0 && time.Since(info.ModTime()) >= c.TTL {
+		return time.Time{}, false
+	}
+	return info.ModTime(), true
 }
 
 // touchLRU bumps the .meta sidecar's ModTime. It no-ops when no sidecar

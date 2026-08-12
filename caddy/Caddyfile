@@ -71,10 +71,15 @@
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
 
-	# Everything else (index.html, manifest, etc.) must revalidate on every load
+	# Everything else (index.html, manifest, etc.) must revalidate on every load.
+	# /og-cache/* is excluded because this directive *replaces* the header: the
+	# shim varies it deliberately, a long max-age for a stored render and a short
+	# one for the fallback it serves while a render is still in flight, and
+	# no-store here would flatten both to "never cache" for every crawler.
 	@non_assets {
 		not path /assets/*
 		not path /api/*
+		not path /og-cache/*
 	}
 	header @non_assets Cache-Control "no-cache, no-store, must-revalidate"
 

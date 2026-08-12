@@ -2,109 +2,89 @@
 
 ## Architecture
 
-Two-layer pattern: **route handlers → services**
+Two layers: **route handlers → services**.
 
-- `src/hono/*.ts` — Hono route handlers (request/response I/O, session checks, agent initialization) + signed-cookie session middleware + Zod validators. Each domain (auth, message, profile, settings, notification) is a `create<Domain>Hono(ctx)` sub-app mounted in `src/index.ts`.
-- `src/services/*.ts` — Business logic, database access, AT Protocol calls
+- `src/hono/*.ts` — Hono route handlers (request/response I/O, session checks, agent
+  init), signed-cookie session middleware, Zod validators. Each domain (auth,
+  message, profile, settings, notification) is a `create<Domain>Hono(ctx)` sub-app
+  mounted in `src/index.ts`.
+- `src/services/*.ts` — business logic, database access, AT Protocol calls.
 
-`AppContext` (defined in `src/index.ts`) carries `db`, `logger`, `oauthClient`, `resolver`, and `idResolver` and is passed through the entire stack.
+`AppContext` (`src/index.ts`) carries `db`, `logger`, `oauthClient`, `resolver`, and
+`idResolver` through the entire stack.
 
-### Authentication Flow
+### Authentication
 
-1. Client POSTs handle to `/login` → server initiates AT Protocol OAuth redirect
-2. User authenticates on Bluesky → redirected to `/oauth/callback`
-3. Server stores OAuth session in DB; sets `c.var.session.did` via the signed-cookie session middleware (`src/hono/session-middleware.ts`)
-4. Subsequent authenticated requests restore the AT Protocol `Agent` via `initializeAgentFromHonoSession()` in `src/hono/session-agent-hono.ts` (thin wrapper over `initializeAgentForDid`)
+Client POSTs a handle to `/login` → AT Protocol OAuth redirect → `/oauth/callback`
+stores the OAuth session in the DB and sets `c.var.session.did` via
+`src/hono/session-middleware.ts`. Later authenticated requests restore the AT
+Protocol `Agent` through `initializeAgentFromHonoSession()` in
+`src/hono/session-agent-hono.ts` (a thin wrapper over `initializeAgentForDid`).
 
-Session is intentionally thin — Bluesky OAuth acts as the authorization proxy. If the Bluesky session expires, the Navyfragen session is also invalidated.
-
-> **Cookie format note (#316):** the session cookie uses Hono's signed-cookie (single `nf-session` cookie, HMAC-SHA256, `name=value.signature`). This is NOT wire-compatible with the former cookie-session/keygrip scheme (dual `navyfragen` + `navyfragen.sig` cookies, SHA1) — the migration invalidated existing sessions, so a one-time re-login was required.
+The session is intentionally thin — Bluesky OAuth is the authorization proxy, so an
+expired Bluesky session invalidates the Navyfragen session too. The cookie is Hono's
+signed-cookie (single `nf-session`, HMAC-SHA256), not wire-compatible with the former
+cookie-session/keygrip scheme.
 
 ### Database
 
-Kysely ORM. SQLite in development (`:memory:` by default), PostgreSQL in production (when `POSTGRESQL_URL` is set). The SQLite driver is `bun:sqlite` (`src/database/db.ts`), bridged onto Kysely's stock `SqliteDialect` via a small adapter (#263). `better-sqlite3` (the former Node driver) was removed entirely in #288 when the Node code path was retired — the server runs exclusively under Bun. Kysely's `SqliteDialect` is dialect-agnostic; the adapter only bridges two `bun:sqlite` API deltas (no `reader` flag → derived from `columnNames`; variadic params → spread).
+Kysely. SQLite in development (`:memory:` by default) via `bun:sqlite`, PostgreSQL in
+production when `POSTGRESQL_URL` is set. Schema and migrations live entirely in
+`src/database/db.ts` — add new ones as numbered keys (`"007"`, …) in the `migrations`
+object; Kysely applies them in order at startup via `migrateToLatest()`.
 
-Schema and migrations live entirely in `src/database/db.ts`. Add new migrations as numbered keys (`"007"`, etc.) in the `migrations` object — Kysely applies them in order at startup via `migrateToLatest()`.
+### In-process state, and the replica count that makes it safe
 
-### AT Protocol / Lexicons
+`RenderService` (`src/services/render-service.ts`) holds finished question-image
+renders in an in-process TTL cache until the user confirms the post. That is only
+correct because a user's render and their polls land on the same process: both server
+services run **one replica each** (`numReplicas: 1`, NA + EU), and `caddy/Caddyfile`
+pins an authenticated session to a region by the `nf-region` cookie.
 
-Custom lexicon `app.navyfragen.message` defines the record type for messages. Generated TypeScript types live in `src/lexicon/` — do **not** edit these manually; regenerate with `bun run lexgen`. Avoid running `lexgen` on Windows as it can delete generated files; use WSL2.
+Deploy overlap is the one exposure — Railway starts the new instance before draining
+the old, so for a minute or two a poll can hit a process that never saw the render.
+Handled, not engineered away: a missing key reads as `unknown` and the client
+re-renders. The work is pure and safe to redo.
+
+> **Tripwire: the day `numReplicas` goes above 1 in either region, this breaks
+> silently.** `lb_policy round_robin` has no stickiness, so polls would round-robin
+> across instances and mostly miss. The result store then has to move to a **new,
+> authenticated** Valkey — never the Anubis instance, which is deliberately
+> passwordless (`.claude/skills/railway-deployment/SKILL.md`) and would then be
+> holding anonymous question text.
+
+### AT Protocol / lexicons
+
+Custom lexicon `app.navyfragen.message` defines the message record type. Generated
+types in `src/lexicon/` are **not** hand-edited — regenerate with `bun run lexgen`
+(never on Windows; it can delete the generated files — use WSL2).
 
 ### Logging
 
-The server uses Pino (`src/index.ts` → `createLogger()`). In development, stdout is piped through `pino-pretty` via the dev script. In production, when `AXIOM_TOKEN` and `AXIOM_DATASET` are both set, logs are shipped to Axiom via `@axiomhq/pino` as a transport target alongside stdout. Without those vars the logger falls back to stdout only.
+Pino (`src/index.ts` → `createLogger()`). Development pipes stdout through
+`pino-pretty`; production ships to Axiom via `@axiomhq/pino` when `AXIOM_TOKEN` and
+`AXIOM_DATASET` are both set, falling back to stdout only.
 
-Key events that are instrumented:
-- OAuth flow: login initiation, callback success/failure, session creation, token consumption, logout
-- Anonymous message sent, response posted to Bluesky (with AT URI)
-- Account deletion, PDS sync (with counts)
-- Settings changes (pdsSyncEnabled, imageTheme)
-- All 500-class errors across controllers and services carry structured `{ err, did }` fields
+Instrumented: the OAuth flow (login, callback success/failure, session creation,
+token consumption, logout), anonymous message sent, response posted to Bluesky (with
+AT URI), account deletion, PDS sync (with counts), settings changes. All 500-class
+errors across controllers and services carry structured `{ err, did }` fields.
 
-## Testing & Coverage
+## Testing & coverage
 
-Run coverage from `server/`:
 ```bash
-bun run test:coverage
+bun run test:coverage   # run from server/
 ```
 
-The **server** targets 97% via Bun's built-in coverage (`coverageThreshold = 0.97` in `server/bunfig.toml`), applied to **lines** — Bun's lcov carries line + function coverage only, with **no branch data** (verified on 1.3.14; documented in `docs/testing-notes.md`). Bun also does **not** honor `/* v8 ignore */` source annotations, so per-file exclusion is done via `coveragePathIgnorePatterns` globs in `bunfig.toml`. These two limitations are the accepted trade-off of moving coverage onto the production runtime (#287); the prior c8/Node path that did honor `v8 ignore` and report branches was retired with the Node test path in #288.
+97% via Bun's built-in coverage (`coverageThreshold` in `bunfig.toml`), applied to
+**lines** — Bun's lcov has no branch data and honors no ignore markers, so per-file
+exclusion goes in `coveragePathIgnorePatterns` in `bunfig.toml`. Check that file for
+the current list and per-file rationale; it is the source of truth and can drift ahead
+of this note. Adding an exclusion requires an entry in `docs/testing-notes.md`
+explaining why and what it would take to test.
 
-### Coverage Exclusions
-
-Excluded via `coveragePathIgnorePatterns` in `server/bunfig.toml` (coverage is collected by Bun's built-in reporter) — check that file directly for the current list and per-file rationale; it is the source of truth and can drift ahead of this note.
-
-Adding a new exclusion requires a comment in `docs/testing-notes.md` explaining why and what it would take to test.
-
-### Module Mocking in Server Tests
-
-The server test suite runs under `bun:test` (#288). Import `test`/`describe`/hooks/`mock`/`spyOn` from `bun:test` and `assert` from `node:assert` (Bun runs `node:assert` natively):
-
-```typescript
-import assert from "node:assert";
-import { test, describe, beforeAll, afterEach, mock, spyOn } from "bun:test";
-```
-
-`mock` is `bun:test`'s mock factory. The API surface (and the differences from the former `node:test`/shim shape worth knowing):
-- Create a mock fn: `mock(impl?)` (was `mock.fn(...)`). Its `.mock.calls` is an array of **bare argument arrays** (`calls[0][0]`), not `[{ arguments }]` objects — read args as `m.mock.calls[0][0]`, not `.calls[0].arguments[0]`.
-- `mockImplementation`/`mockImplementationOnce`/`mockReturnValue`/`mockReturnValueOnce` live on the function directly (`m.mockImplementation(...)`), **not** under `.mock`.
-- Clear call history with `m.mockClear()` (was `m.mock.resetCalls()`); drop implementations with `m.mockReset()`; restore a spy with `m.mockRestore()`. Global cleanup: `mock.clearAllMocks()` (call history) and `mock.restore()` (restore all spies).
-- Spy on a method (e.g. `globalThis.fetch`): `spyOn(globalThis, "fetch").mockImplementation(impl)` — `spyOn` takes no implementation arg; chain the impl on. `mock.method(target, name, impl)` from the old shim maps to this.
-- `bun:test` uses `beforeAll`/`afterAll` (not `before`/`after`) for the once-per-file hooks.
-
-The default mocking strategy is **dependency injection** (chainable DB builders passed into constructors). `mock.module` is reserved for code that constructs a dependency at module scope with no injection seam — e.g. `auth-service.ts` → `session-agent.ts`'s `new Agent(...)`. The pattern, from `auth-service.test.ts`:
-
-```typescript
-let AuthService: typeof import("../services/auth-service").AuthService;
-let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
-
-beforeAll(async () => {
-  mockAgent = { getProfile: mock(async () => ({ data: undefined })) };
-  // Spread the real module so every export it has keeps working and only
-  // initializeAgentForDid is swapped (see the note on --isolate below).
-  const realSessionAgent = await import("../auth/session-agent");
-  mock.module("../auth/session-agent", () => ({
-    ...realSessionAgent,
-    initializeAgentForDid: async (ctx, did) => { /* ... */ return mockAgent; },
-  }));
-  // Register the mock BEFORE importing the module under test so its
-  // transitive import of session-agent picks up the fakes.
-  const mod = await import("../services/auth-service");
-  AuthService = mod.AuthService;
-});
-```
-
-Notes:
-- `mock.module` must run **before** the SUT is imported — so the SUT is loaded via a dynamic `import()` in `beforeAll()`, never a top-level static import. Bun's `mock.module` takes a factory `() => exports` (the opposite of node:test's `{ exports }` shape) and is synchronous (returns `void`).
-- Mock the **nearest seam** to the SUT, not the deepest leaf. `auth-service.ts` imports `initializeAgentForDid` from `../auth/session-agent`; mocking that module (not `@atproto/api` directly) avoids having to re-export every other `@atproto/api` symbol (`RichText`, `AtpAgent`, …) that other transitively-imported modules use.
-- **`mock.module` is process-global and not restorable.** `mock.restore()`/`clearAllMocks()` clear mock call history and restore spies but do **not** unmock modules, so a partial mock registered in one file leaks into every other file that imports the real module. The `test`/`test:coverage` scripts pass `--isolate` for a fresh per-file module registry. Do not let `--isolate` be the only thing keeping a mock contained: **spread the real module into the mock** (`() => ({ ...realModule, theOneYouAreFaking })`) so a partial mock can't take out files that import the real exports with a missing-export `SyntaxError`.
-- The mock should faithfully reproduce the real module's branching (e.g. return the e2e agent when present, `null` on restore-miss) so existing tests that rely on the real behavior keep passing.
-
-#### Bun-runtime specifics (#269, #270, #288)
-
-- `bun run test` / `test:coverage` add `--no-env-file` (Bun otherwise auto-loads `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override) and `--isolate` (per-file module isolation). Bun **1.3.14+** is required (the floor `@types/bun` is pinned to).
-- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws `webidl.util.markAsUncloneable is not a function` under Bun) and the `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see `patches/@atproto-labs%2Ffetch-node@0.3.7.patch` (applied via `patchedDependencies` in the root `package.json`). The patch lazy-imports `undici_v8` (so it never loads under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces the unicast rules**: it runs the package's own `unicastLookup` before the request, so a handle resolving to a loopback/private/link-local address is rejected exactly as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname` returns `undefined` for a DNS name, so on its own it lets `http://internal.example.com/` straight through, and handle resolution fetches user-supplied hostnames. The branch also rejects non-HTTP(S) schemes, which the Node path got for free from undici: every unicast check keys on `url.hostname`, which is `""` for `file:`, and Bun's `fetch` reads `file:` URLs where Node's refuses them. The one gap versus the old Node path: the check runs before the connection rather than on the socket, so DNS rebinding between check and connect is not caught.
-- **Never call `dns.setServers()` unconditionally.** Under Node it only rebinds the `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; under Bun it steers `dns.lookup` too, so the process forgets every name the system resolver owns — container DNS included. `src/index.ts` keeps its Windows TXT-lookup workaround gated behind `process.platform === "win32"` for that reason.
-- **The listen address is negotiated, not hardcoded** (`listenPreferringDualStack` in `src/index.ts`). A wildcard `HOST` (`"::"` or `"0.0.0.0"`) binds `"::"` so a single dual-stack listener serves both families — required in production, where Caddy reaches this service only over Railway's private network and that network is IPv6-only (`BACKEND_DOMAIN = ${{Backend.RAILWAY_PRIVATE_DOMAIN}}`). Where the network has no IPv6 at all — every Docker bridge network in CI and local compose — the bind falls back to `"0.0.0.0"`; Bun surfaces that case as a spurious `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does. A non-wildcard `HOST` is bound verbatim, so `HOST=127.0.0.1` still means loopback. **In production a non-wildcard `HOST` is refused at boot** (`assertProductionBindHost` in `src/lib/assert-production-bind-host.ts`, called first in `Server.create()`) — a loopback bind boots "healthy" but is unreachable from Caddy, with no error signal in the server's own logs, which caused a full outage on both Railway server services on 2026-07-25 (#298). The guard is a no-op outside `NODE_ENV=production`, so local loopback testing and the test suite are unaffected. See "Production server services must bind a wildcard HOST" in the root CLAUDE.md.
-- **The OAuth login path has its own CI probe** (`Probe SQLite data layer + OAuth handle resolution under Bun` in `Tests.yml`). E2E signs in through `/auth/e2e-login` with an app password and never resolves a handle, so without this the one production surface that runs through the patched `fetch-node` would be untested. Its Bun failure mode is silent — bluesky-social/atproto#3511 has resolution returning `undefined`, surfacing only as "does not resolve to a DID" — so the probe asserts a `did:` string comes back rather than trusting the call not to throw. The SQLite probe (`createDb` → `migrateToLatest` → insert/select through the `bun:sqlite` adapter) gates the data layer the test suite mocks around.
-- Coverage comes from Bun's built-in reporter (`bun test --coverage`, configured in `server/bunfig.toml`). It does **not** honor `/* v8 ignore */` and its lcov carries line + function coverage only (no branch data) — see "Coverage under Bun" in `docs/testing-notes.md` for the rationale and accepted trade-offs.
+Mocking: dependency injection first (chainable DB builders passed into constructors),
+`mock.module` only where a dependency is constructed at module scope with no seam.
+The `bun:test` API surface, the `mock.module` pattern, and the `--isolate` footgun are
+in `docs/server-test-mocking.md`. Bun-runtime specifics (the patched `fetch-node`,
+`dns.setServers`, the negotiated listen address) are in `docs/runtime-notes.md`.

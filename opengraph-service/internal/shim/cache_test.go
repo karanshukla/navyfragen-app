@@ -3,6 +3,7 @@ package shim
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -515,5 +516,67 @@ func TestFileCache_EvictIfNeeded_FallsBackToPngModTimeWhenMetaMissing(t *testing
 	mustStore(t, c, "did:plc:c", "C")
 	if _, err := c.Load("did:plc:a"); err != ErrCacheMiss {
 		t.Fatalf("did:plc:a should have been evicted via the png-modtime fallback, got %v", err)
+	}
+}
+
+// Fresh is the generate path's cheap freshness probe, so it has to agree with
+// Load on both sides of the TTL boundary — a disagreement would either schedule
+// a render the cache route then answers from disk, or skip one the route then
+// answers with the fallback forever.
+func TestFileCache_FreshWithinTTL_ReportsTrue(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	if err := c.Store("did:plc:fresh", []byte("X"), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	if !c.Fresh("did:plc:fresh") {
+		t.Fatal("Fresh should be true for an entry inside TTL")
+	}
+	if _, err := c.Load("did:plc:fresh"); err != nil {
+		t.Fatalf("Load disagrees with Fresh inside TTL: %v", err)
+	}
+}
+
+func TestFileCache_FreshPastTTL_ReportsFalse(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	if err := c.Store("did:plc:stale", []byte("X"), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(c.pngPath("did:plc:stale"), past, past); err != nil {
+		t.Fatal(err)
+	}
+	if c.Fresh("did:plc:stale") {
+		t.Fatal("Fresh should be false for an entry past TTL")
+	}
+	if _, err := c.Load("did:plc:stale"); !errors.Is(err, ErrCacheMiss) {
+		t.Fatalf("Load disagrees with Fresh past TTL: %v", err)
+	}
+}
+
+// Fresh runs on every crawl, so like Load it must move only the LRU clock —
+// otherwise a popular profile would never expire and never be re-rendered.
+func TestFileCache_FreshDoesNotRefreshTTL(t *testing.T) {
+	c := newTestCache(t, 100, time.Hour)
+	if err := c.Store("did:plc:probe", []byte("X"), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	pngPath := c.pngPath("did:plc:probe")
+	nearExpiry := time.Now().Add(-55 * time.Minute)
+	if err := os.Chtimes(pngPath, nearExpiry, nearExpiry); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 50; i++ {
+		if !c.Fresh("did:plc:probe") {
+			t.Fatalf("probe %d: entry should still be inside TTL", i)
+		}
+	}
+
+	got, err := os.Stat(pngPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.ModTime().Equal(nearExpiry) {
+		t.Fatalf("Fresh refreshed the TTL clock: %s != %s", got.ModTime(), nearExpiry)
 	}
 }

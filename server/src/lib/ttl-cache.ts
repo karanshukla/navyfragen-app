@@ -32,6 +32,10 @@ class LruMap<V> {
     }
   }
 
+  delete(key: string): void {
+    this.#entries.delete(key);
+  }
+
   get size(): number {
     return this.#entries.size;
   }
@@ -40,6 +44,12 @@ class LruMap<V> {
 export interface TtlCache<V> {
   get(key: string): V | undefined;
   set(key: string, value: V, ttlMs: number): void;
+  /**
+   * Reads and removes in one synchronous step, so concurrent callers cannot
+   * both observe the same entry. The render store relies on that to make a
+   * ready render single-use.
+   */
+  take(key: string): V | undefined;
   readonly size: number;
 }
 
@@ -54,15 +64,22 @@ export interface TtlCache<V> {
 export function createTtlCache<V>(maxEntries: number): TtlCache<V> {
   const cache = new LruMap<CacheEntry<V>>(maxEntries);
 
+  const read = (key: string): V | undefined => {
+    const entry = cache.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expiresAt) return undefined;
+    return entry.value;
+  };
+
   return {
-    get(key: string): V | undefined {
-      const entry = cache.get(key);
-      if (!entry) return undefined;
-      if (Date.now() > entry.expiresAt) return undefined;
-      return entry.value;
-    },
+    get: read,
     set(key: string, value: V, ttlMs: number): void {
       cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+    },
+    take(key: string): V | undefined {
+      const value = read(key);
+      cache.delete(key);
+      return value;
     },
     get size() {
       return cache.size;

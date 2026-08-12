@@ -25,6 +25,8 @@ interface QuestionGridProps {
   characterLimitFor: (message: Message) => number;
   onSend: (message: Message, response: string) => void;
   sending: boolean;
+  /** True while the open composer's send is held back by its question image. */
+  awaitingRender: boolean;
   /** Whether replies will carry a rendered question image, which is the slow path. */
   includesImage: boolean;
   deletingTid: string | null;
@@ -49,6 +51,7 @@ export function QuestionGrid({
   characterLimitFor,
   onSend,
   sending,
+  awaitingRender,
   includesImage,
   deletingTid,
   onDelete,
@@ -115,6 +118,7 @@ export function QuestionGrid({
             expanded={expanded}
             justPinned={thread.justPinnedTid === message.tid}
             deleting={deletingTid === message.tid}
+            locked={sending && expanded}
             blocked={blocked}
             inThread={inThread}
             threadLink={pinned ? thread.linkFor(message.tid) : undefined}
@@ -139,6 +143,7 @@ export function QuestionGrid({
                 blocked={blocked}
                 inThread={inThread}
                 includesImage={includesImage}
+                awaitingRender={awaitingRender}
                 textareaRef={textareaRef}
               />
             }

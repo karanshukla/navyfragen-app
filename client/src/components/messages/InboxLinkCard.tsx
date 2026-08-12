@@ -2,6 +2,7 @@ import { Box, Button, CopyButton, Group, Paper, Text, Tooltip } from "@mantine/c
 import { IconClipboard } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import { warmOgCard } from "../../lib/ogWarm";
 import ShareButton, { onGradientButton } from "../ShareButton";
 
 import * as styles from "./InboxLinkCard.styles";
@@ -10,11 +11,14 @@ interface InboxLinkCardProps {
   /** Display form, e.g. "fragen.navy/karan.bsky.social". */
   shortUrl: string;
   fullUrl: string;
+  /** Whose OG card to warm — copying or sharing means a crawler is coming. */
+  handle: string;
   shareData: { title: string; text: string; url: string };
 }
 
-export function InboxLinkCard({ shortUrl, fullUrl, shareData }: InboxLinkCardProps) {
+export function InboxLinkCard({ shortUrl, fullUrl, handle, shareData }: InboxLinkCardProps) {
   const { triggerHaptic } = useHaptic(1);
+  const warmShareTarget = () => warmOgCard(handle);
 
   return (
     <Paper mb="md" p="lg" style={styles.card}>
@@ -35,6 +39,7 @@ export function InboxLinkCard({ shortUrl, fullUrl, shareData }: InboxLinkCardPro
                   onClick={() => {
                     triggerHaptic();
                     copy();
+                    warmShareTarget();
                   }}
                   size="sm"
                   radius="xl"
@@ -47,7 +52,7 @@ export function InboxLinkCard({ shortUrl, fullUrl, shareData }: InboxLinkCardPro
               </Tooltip>
             )}
           </CopyButton>
-          <ShareButton shareData={shareData} />
+          <ShareButton shareData={shareData} onSuccess={warmShareTarget} />
         </Group>
       </Group>
     </Paper>

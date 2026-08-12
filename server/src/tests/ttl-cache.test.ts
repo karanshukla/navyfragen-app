@@ -49,6 +49,29 @@ describe("createTtlCache", () => {
     assert.strictEqual(cache.get("c"), 3);
   });
 
+  test("take returns the stored value", () => {
+    const cache = createTtlCache<string>(10);
+    cache.set("a", "value", ONE_MINUTE);
+    assert.strictEqual(cache.take("a"), "value");
+  });
+
+  test("take removes the entry, so a second take misses", () => {
+    const cache = createTtlCache<string>(10);
+    cache.set("a", "value", ONE_MINUTE);
+    cache.take("a");
+
+    assert.strictEqual(cache.take("a"), undefined);
+    assert.strictEqual(cache.size, 0);
+  });
+
+  test("take misses on an expired entry and still clears it", () => {
+    const cache = createTtlCache<string>(10);
+    cache.set("a", "value", -1);
+
+    assert.strictEqual(cache.take("a"), undefined);
+    assert.strictEqual(cache.size, 0);
+  });
+
   test("overwriting a key does not consume an extra slot", () => {
     const cache = createTtlCache<number>(2);
     cache.set("a", 1, ONE_MINUTE);
