@@ -39,6 +39,7 @@ func main() {
 		cacheTTL    = flag.String("cache-ttl", envOr("OG_CACHE_TTL", "720h"), "cache TTL (Go duration; ~1 month)")
 		cacheMaxStr = flag.String("cache-max-entries", envOr("OG_CACHE_MAX_ENTRIES", "0"), "max cache entries; 0 = built-in default")
 		renderTO    = flag.String("render-timeout", envOr("OG_RENDER_TIMEOUT", "30s"), "html-to-image render deadline")
+		pendingWait = flag.String("pending-render-wait", envOr("OG_PENDING_RENDER_WAIT", ""), "how long /og-cache/ waits on an in-flight render; empty = built-in default")
 		origin      = flag.String("origin", envOr("PUBLIC_URL", "https://navyfragen.app"), "public site origin for absolute OG URLs")
 		addr        = flag.String("addr", normalizeAddr(envOr("PORT", "8080")), "listen address")
 	)
@@ -65,6 +66,10 @@ func main() {
 	backgroundCtx, stopBackground := context.WithCancel(context.Background())
 	defer stopBackground()
 	handler.BackgroundCtx = backgroundCtx
+	// Tunable because the ceiling that matters is Cardyb's own timeout, which is
+	// not published: the wait has to be shortened from the outside if a card ever
+	// starts failing outright rather than falling back.
+	handler.PendingRenderWait = parseDurationOr(*pendingWait, shim.DefaultPendingRenderWait)
 
 	log.Printf("opengraph-service shim listening on %s, proxying to %s (cache %s, ttl %s)",
 		*addr, *frontendURL, *cacheDir, ttl)

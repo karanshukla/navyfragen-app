@@ -439,11 +439,12 @@ type sentinelErr struct{ msg string }
 
 func (e *sentinelErr) Error() string { return e.msg }
 
-// TestHandler_OgCacheMiss_ServesFallbackWithShortMaxAge pins the inverse fix for
-// the crawler: a DID with no render yet is a pending render, not an error, so
-// the route answers with the branded card under a short max-age that expires
-// long before a real render's — the crawler comes back and gets the real image.
-func TestHandler_OgCacheMiss_ServesFallbackWithShortMaxAge(t *testing.T) {
+// TestHandler_OgCacheMiss_ServesFallbackAsNoStore pins the inverse fix for the
+// crawler: a DID with no render is not an error, so the route answers with the
+// branded card rather than a 404 — and answers it uncacheable, so a consumer
+// that would come back for the real render is never held to the generic card by
+// a header of ours.
+func TestHandler_OgCacheMiss_ServesFallbackAsNoStore(t *testing.T) {
 	fetcher, renderer := defaultStubs()
 	h := newIntegrationHandler(t, fetcher, renderer)
 
@@ -462,8 +463,228 @@ func TestHandler_OgCacheMiss_ServesFallbackWithShortMaxAge(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
 		t.Fatalf("Content-Type = %q, want image/png", ct)
 	}
-	if cc := rec.Header().Get("Cache-Control"); cc != fallbackImageCacheControl {
-		t.Fatalf("Cache-Control = %q, want %q", cc, fallbackImageCacheControl)
+	if cc := rec.Header().Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("Cache-Control = %q, want no-store — the fallback must never be cached as the profile's card", cc)
+	}
+}
+
+// TestHandler_OgCacheMiss_WaitsForTheInFlightRenderAndServesIt is the fix for
+// the cache poisoning in #371: Cardyb fetches the card image exactly once and
+// uploads those bytes into the post record, so a first share of a cold profile
+// used to pin the generic fallback permanently. The image fetch now parks on the
+// render already running behind the OG HTML and serves it when it lands.
+//
+// The 40ms release is one-directional: a scheduler slow enough to let the render
+// finish first makes this test prove less, never fail.
+func TestHandler_OgCacheMiss_WaitsForTheInFlightRenderAndServesIt(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	started, release := make(chan struct{}, 4), make(chan struct{})
+	blocked := &blockingRenderer{FakeRenderer: renderer, startedCh: started, releaseCh: release}
+	h := newIntegrationHandler(t, fetcher, blocked)
+	h.PendingRenderWait = 5 * time.Second
+
+	if rec := do(t, h, CardybUA, "/profile/integration.test"); rec.Code != http.StatusOK {
+		t.Fatalf("crawl: status %d", rec.Code)
+	}
+	<-started
+	if c := atomic.LoadInt32(&renderer.Calls); c != 0 {
+		t.Fatalf("renderer completed %d times before the image fetch — nothing was left to wait on", c)
+	}
+	go func() {
+		time.Sleep(40 * time.Millisecond)
+		close(release)
+	}()
+
+	imgRec := do(t, h, "Mozilla/5.0", "/og-cache/did-plc-integration.png")
+
+	if imgRec.Code != http.StatusOK {
+		t.Fatalf("cache serve: status %d, want 200", imgRec.Code)
+	}
+	if got := imgRec.Body.String(); got != string(renderer.PNG) {
+		t.Fatalf("served %q, want the render this fetch waited for %q", got, renderer.PNG)
+	}
+	if cc := imgRec.Header().Get("Cache-Control"); cc != renderedImageCacheControl {
+		t.Fatalf("Cache-Control = %q, want %q (a real render, not the fallback)", cc, renderedImageCacheControl)
+	}
+}
+
+// TestHandler_OgCacheMiss_RenderOutlastsTheWait_ServesFallback is the cap on the
+// wait: a render still running past PendingRenderWait gives the fallback, so a
+// cold Railway wake plus a Chromium launch cannot hold the crawler's connection
+// past its own timeout and turn a fallback card into no card at all.
+func TestHandler_OgCacheMiss_RenderOutlastsTheWait_ServesFallback(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	started, release := make(chan struct{}, 4), make(chan struct{})
+	blocked := &blockingRenderer{FakeRenderer: renderer, startedCh: started, releaseCh: release}
+	h := newIntegrationHandler(t, fetcher, blocked)
+	h.PendingRenderWait = 20 * time.Millisecond
+	defer close(release)
+
+	if rec := do(t, h, CardybUA, "/profile/integration.test"); rec.Code != http.StatusOK {
+		t.Fatalf("crawl: status %d", rec.Code)
+	}
+	<-started
+
+	imgRec := do(t, h, "Mozilla/5.0", "/og-cache/did-plc-integration.png")
+
+	if imgRec.Code != http.StatusOK {
+		t.Fatalf("cache serve: status %d, want 200 (the fallback)", imgRec.Code)
+	}
+	if !bytes.Equal(imgRec.Body.Bytes(), FallbackOGImage()) {
+		t.Fatal("a render that outlasts the wait must fall back, not hold the crawler")
+	}
+}
+
+// TestHandler_OgCacheMiss_NothingInFlight_ServesFallbackImmediately keeps the
+// wait off every request it could not possibly help. The route is
+// unauthenticated and takes an arbitrary DID, so parking on one nobody is
+// rendering would let anyone hold connections open a wait at a time.
+func TestHandler_OgCacheMiss_NothingInFlight_ServesFallbackImmediately(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	h := newIntegrationHandler(t, fetcher, renderer)
+	// Long enough that taking the wait is unmistakable rather than a slow machine.
+	h.PendingRenderWait = time.Minute
+
+	start := time.Now()
+	rec := do(t, h, "Mozilla/5.0", "/og-cache/did-plc-nobody-is-rendering.png")
+	elapsed := time.Since(start)
+
+	if !bytes.Equal(rec.Body.Bytes(), FallbackOGImage()) {
+		t.Fatal("a DID with no render in flight must get the fallback")
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("waited %s on a render that does not exist", elapsed)
+	}
+}
+
+// TestHandler_OgCacheMiss_ClientDisconnects_StopsWaiting releases the wait when
+// the crawler hangs up. Serving a fallback nobody will read costs a goroutine;
+// holding it for the rest of the wait costs one for every crawler that gave up.
+func TestHandler_OgCacheMiss_ClientDisconnects_StopsWaiting(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	started, release := make(chan struct{}, 4), make(chan struct{})
+	blocked := &blockingRenderer{FakeRenderer: renderer, startedCh: started, releaseCh: release}
+	h := newIntegrationHandler(t, fetcher, blocked)
+	h.PendingRenderWait = time.Minute
+	defer close(release)
+
+	if rec := do(t, h, CardybUA, "/profile/integration.test"); rec.Code != http.StatusOK {
+		t.Fatalf("crawl: status %d", rec.Code)
+	}
+	<-started
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+	req := httptest.NewRequest(http.MethodGet, "/og-cache/did-plc-integration.png", nil).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	start := time.Now()
+	h.ServeHTTP(rec, req)
+	elapsed := time.Since(start)
+	cancel()
+
+	if elapsed > 5*time.Second {
+		t.Fatalf("kept waiting %s after the client went away", elapsed)
+	}
+	if !bytes.Equal(rec.Body.Bytes(), FallbackOGImage()) {
+		t.Fatal("an abandoned wait must still resolve to the fallback, not hang or 404")
+	}
+}
+
+// TestHandler_NegativePendingRenderWait_ServesFallbackImmediately pins the
+// escape hatch. If the wait ever turns out to overrun Cardyb's own timeout —
+// which is not published, so this is a guess until production says otherwise —
+// a negative value reverts the route to answering every miss immediately, with
+// a render in flight for that exact DID.
+func TestHandler_NegativePendingRenderWait_ServesFallbackImmediately(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	started, release := make(chan struct{}, 4), make(chan struct{})
+	blocked := &blockingRenderer{FakeRenderer: renderer, startedCh: started, releaseCh: release}
+	h := newIntegrationHandler(t, fetcher, blocked)
+	h.PendingRenderWait = -1
+	defer close(release)
+
+	if rec := do(t, h, CardybUA, "/profile/integration.test"); rec.Code != http.StatusOK {
+		t.Fatalf("crawl: status %d", rec.Code)
+	}
+	<-started
+
+	rec := do(t, h, "Mozilla/5.0", "/og-cache/did-plc-integration.png")
+
+	if !bytes.Equal(rec.Body.Bytes(), FallbackOGImage()) {
+		t.Fatal("a disabled wait must serve the fallback rather than park on the render")
+	}
+}
+
+// TestHandler_DroppedRender_DoesNotParkTheImageFetch joins the wait to the
+// render cap: a render the cap shed was never registered, so the image fetch
+// behind it answers immediately instead of waiting out a render that will never
+// run.
+func TestHandler_DroppedRender_DoesNotParkTheImageFetch(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	started, release := make(chan struct{}, 8), make(chan struct{})
+	blocked := &blockingRenderer{FakeRenderer: renderer, startedCh: started, releaseCh: release}
+	h := newHandlerOn(t, newTempCache(t), &handleDIDFetcher{FakeFetcher: fetcher}, blocked)
+	h.MaxConcurrentGenerate = 1
+	h.initSem()
+	h.PendingRenderWait = time.Minute
+	defer close(release)
+
+	// Leader: parked inside the renderer, holding the only slot.
+	if rec := do(t, h, CardybUA, "/profile/leader.test"); rec.Code != http.StatusOK {
+		t.Fatalf("leader: status %d", rec.Code)
+	}
+	<-started
+	// Follower: a different DID, so its render is shed rather than coalesced.
+	if rec := do(t, h, CardybUA, "/profile/follower.test"); rec.Code != http.StatusOK {
+		t.Fatalf("follower: status %d", rec.Code)
+	}
+
+	start := time.Now()
+	rec := do(t, h, "Mozilla/5.0", "/og-cache/did-plc-follower-test.png")
+	elapsed := time.Since(start)
+
+	if !bytes.Equal(rec.Body.Bytes(), FallbackOGImage()) {
+		t.Fatal("a shed render must leave the fallback in place")
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("waited %s on a render the cap dropped", elapsed)
+	}
+}
+
+// TestHandler_WarmThenCrawl_ImageFetchWaitsOnTheWarmsRender is the sequence a
+// share actually produces: the client warms on copy, Cardyb crawls moments
+// later. The crawl's image fetch has to park on the warm's render — it is the
+// same DID, so singleflight means there is only ever one render to wait for.
+func TestHandler_WarmThenCrawl_ImageFetchWaitsOnTheWarmsRender(t *testing.T) {
+	fetcher, renderer := defaultStubs()
+	started, release := make(chan struct{}, 4), make(chan struct{})
+	blocked := &blockingRenderer{FakeRenderer: renderer, startedCh: started, releaseCh: release}
+	h := newIntegrationHandler(t, fetcher, blocked)
+	h.PendingRenderWait = 5 * time.Second
+
+	if rec := doMethod(t, h, http.MethodPost, "", "/og-warm/integration.test"); rec.Code != http.StatusAccepted {
+		t.Fatalf("warm: status %d", rec.Code)
+	}
+	<-started
+	go func() {
+		time.Sleep(40 * time.Millisecond)
+		close(release)
+	}()
+
+	if rec := do(t, h, CardybUA, "/profile/integration.test"); rec.Code != http.StatusOK {
+		t.Fatalf("crawl: status %d", rec.Code)
+	}
+	imgRec := do(t, h, "Mozilla/5.0", "/og-cache/did-plc-integration.png")
+
+	if got := imgRec.Body.String(); got != string(renderer.PNG) {
+		t.Fatalf("served %q, want the warm's render %q", got, renderer.PNG)
+	}
+	h.WaitBackground()
+	if c := atomic.LoadInt32(&renderer.Calls); c != 1 {
+		t.Fatalf("renderer called %d times, want 1 (the crawl must join the warm's render)", c)
 	}
 }
 

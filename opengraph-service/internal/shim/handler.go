@@ -26,6 +26,10 @@ type Handler struct {
 	// Zero means DefaultMaxConcurrentGenerate; negative disables the cap, for
 	// tests only.
 	MaxConcurrentGenerate int
+	// PendingRenderWait bounds how long an /og-cache/ request parks on a render
+	// that is already in flight before serving the fallback. Zero means
+	// DefaultPendingRenderWait; negative disables the wait.
+	PendingRenderWait time.Duration
 	// BackgroundCtx is the lifetime of fire-and-forget renders rather than any
 	// one request's context: main cancels it on shutdown so a render that has
 	// not started yet gives up instead of outliving the server. Nil means
@@ -34,6 +38,7 @@ type Handler struct {
 
 	genSem     chan struct{}
 	background sync.WaitGroup
+	pending    pendingRenders
 }
 
 // DefaultMaxConcurrentGenerate is sized to protect a single html-to-image
@@ -43,6 +48,15 @@ const DefaultMaxConcurrentGenerate = 4
 
 // DefaultGenTimeout bounds one background render when GenTimeout is unset.
 const DefaultGenTimeout = 45 * time.Second
+
+// DefaultPendingRenderWait bounds how long an image fetch parks on a render
+// that is already in flight. It is a fraction of DefaultGenTimeout on purpose:
+// the wait is spent holding the crawler's own connection, and Cardyb fetches
+// the card image exactly once — the bytes it gets are uploaded as a blob into
+// the post record, so there is no later fetch to hand a warm cache to. That
+// makes waiting worth it, and makes overrunning the crawler's timeout the one
+// outcome worse than serving the fallback.
+const DefaultPendingRenderWait = 3 * time.Second
 
 // Route prefixes the handler owns outright — they are matched before Classify,
 // so neither the Cardyb UA check nor the proxy fast path can shadow them.
@@ -54,12 +68,15 @@ const (
 	WarmPathPrefix = "/og-warm/"
 )
 
-// Cache-Control for the two things the cache route can serve. The fallback's
-// max-age is deliberately short: a crawler that caught it must come back soon
-// for the real render, which is at most seconds behind it.
+// Cache-Control for the two things the cache route can serve. The fallback is
+// no-store rather than briefly cacheable: it is a placeholder for a render that
+// did not land in time, so any consumer willing to ask again must be allowed to
+// rather than be pinned to the generic card by a header of ours. Cardyb does
+// not re-fetch either way, which is why the wait below — not this header — is
+// what actually saves a first share.
 const (
 	renderedImageCacheControl = "public, max-age=86400"
-	fallbackImageCacheControl = "public, max-age=60"
+	fallbackImageCacheControl = "no-store"
 )
 
 // NewHandler wires the handler against an upstream client URL and the injected
@@ -140,12 +157,14 @@ func (h *Handler) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 // handleGenerate answers a crawler from the resolved DID alone. A render never
-// blocks the response: on a cache miss the same HTML goes out immediately, the
-// render runs in the background, this crawl's image fetch gets the branded
-// fallback, and the next crawl finds a warm cache. Only the handle resolution
-// can fail the request — a 404 for an unresolvable handle, a 502 for an indigo
-// failure. A failure here must NOT panic or hang the hot path; the proxy fast
-// path is unaffected.
+// blocks the HTML response: on a cache miss the same HTML goes out immediately
+// and the render runs in the background. The crawl's image fetch is where a
+// cold profile is won or lost — serveCacheFile parks it on that render for a
+// bounded wait — so the HTML going out first is a head start for the render,
+// not a decision to serve the fallback. Only the handle resolution can fail the
+// request — a 404 for an unresolvable handle, a 502 for an indigo failure. A
+// failure here must NOT panic or hang the hot path; the proxy fast path is
+// unaffected.
 //
 // [TestHandler_CacheMiss_RespondsWithoutAwaitingTheRender] and
 // [TestHandler_CacheMiss_BackgroundRenderWarmsTheNextRequest] pin both halves.
@@ -166,9 +185,7 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !resolved.Cached {
-		h.spawnRender(handle, func(ctx context.Context) error {
-			return h.Generator.EnsureRendered(ctx, resolved.DID)
-		})
+		h.spawnRender(handle, resolved.DID)
 	}
 	h.writeOGResponse(w, handle, resolved.DID)
 }
@@ -246,12 +263,10 @@ func (h *Handler) warmProfile(reqCtx context.Context, handle string) bool {
 	if resolved.Cached {
 		return false
 	}
-	return h.spawnRender(handle, func(ctx context.Context) error {
-		return h.Generator.EnsureRendered(ctx, resolved.DID)
-	})
+	return h.spawnRender(handle, resolved.DID)
 }
 
-// spawnRender runs work in a joinable background goroutine under the render
+// spawnRender renders did in a joinable background goroutine under the render
 // cap, reporting whether it started. Both entry points to html-to-image are
 // unauthenticated (a spoofable Cardyb UA, and the warm route), and singleflight
 // only dedups per DID, so an attacker rotating handles could otherwise drive
@@ -259,10 +274,15 @@ func (h *Handler) warmProfile(reqCtx context.Context, handle string) bool {
 // a slot is dropped, never queued — queueing would move the unbounded growth
 // into memory and hand the crawler a stale render minutes later anyway.
 //
+// The render is registered as pending before the goroutine starts, not inside
+// it, so the image fetch that follows this crawl's HTML response can never
+// arrive in a window where the render exists but is not yet waitable.
+//
 // [TestHandler_RenderCap_RunsBackgroundRenderWhenASlotIsFree] and
 // [TestHandler_RenderCap_DropsBackgroundRenderWhenSaturated] pin both sides of
-// the bound.
-func (h *Handler) spawnRender(handle string, work func(context.Context) error) bool {
+// the bound; [TestHandler_DroppedRender_DoesNotParkTheImageFetch] pins that a
+// render the cap shed leaves nothing behind to wait on.
+func (h *Handler) spawnRender(handle, did string) bool {
 	if err := h.backgroundContext().Err(); err != nil {
 		return false
 	}
@@ -271,13 +291,15 @@ func (h *Handler) spawnRender(handle string, work func(context.Context) error) b
 			handle, cap(h.genSem))
 		return false
 	}
+	donePending := h.pending.begin(SafeDID(did))
 	h.background.Add(1)
 	go func() {
 		defer h.background.Done()
 		defer h.releaseRenderSlot()
+		defer donePending()
 		ctx, cancel := context.WithTimeout(h.backgroundContext(), h.genTimeout())
 		defer cancel()
-		if err := work(ctx); err != nil {
+		if err := h.Generator.EnsureRendered(ctx, did); err != nil {
 			log.Printf("opengraph-service: background render for %s failed: %v", handle, err)
 		}
 	}()
@@ -296,6 +318,13 @@ func (h *Handler) genTimeout() time.Duration {
 		return h.GenTimeout
 	}
 	return DefaultGenTimeout
+}
+
+func (h *Handler) pendingRenderWait() time.Duration {
+	if h.PendingRenderWait == 0 {
+		return DefaultPendingRenderWait
+	}
+	return h.PendingRenderWait
 }
 
 func (h *Handler) acquireRenderSlot() bool {
@@ -318,12 +347,13 @@ func (h *Handler) releaseRenderSlot() {
 }
 
 // serveCacheFile streams the stored PNG for an /og-cache/:did.png request. A
-// DID whose render has not landed yet is not an error — one is in flight behind
-// it — so a miss serves the branded fallback under a short max-age instead of
-// handing the crawler a 404. A malformed path is a bad request rather than a
-// pending render and still 404s.
+// DID whose render has not landed yet is not an error — one is usually in
+// flight behind it — so a miss waits briefly for that render and, if it does
+// not arrive, serves the branded fallback rather than handing the crawler a
+// 404. A malformed path is a bad request rather than a pending render and still
+// 404s.
 //
-// [TestHandler_OgCacheMiss_ServesFallbackWithShortMaxAge],
+// [TestHandler_OgCacheMiss_ServesFallbackAsNoStore],
 // [TestHandler_OgCacheHit_ServesRenderWithLongMaxAge] and
 // [TestHandler_OgCacheMalformedName_Returns404NotFallback] pin all three.
 func (h *Handler) serveCacheFile(w http.ResponseWriter, r *http.Request) {
@@ -332,12 +362,55 @@ func (h *Handler) serveCacheFile(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	entry, err := h.Cache.LoadByPath(filepath.Join(h.Cache.Dir(), name))
+	path := filepath.Join(h.Cache.Dir(), name)
+	entry, err := h.Cache.LoadByPath(path)
+	if err != nil && h.awaitPendingRender(r.Context(), pendingKey(name)) {
+		entry, err = h.Cache.LoadByPath(path)
+	}
 	if err != nil {
 		writeImage(w, "image/png", FallbackOGImage(), fallbackImageCacheControl)
 		return
 	}
 	writeImage(w, entry.MimeType, entry.Bytes, renderedImageCacheControl)
+}
+
+// awaitPendingRender parks the request on the render already in flight for key,
+// reporting whether it finished within the wait and the cache is therefore
+// worth a second look. This is what stops a first share of a cold profile from
+// baking the generic fallback into the post record: Cardyb fetches the card
+// image once, so the only chance to give it the profile card is while it is
+// still holding this connection.
+//
+// It never starts a render. A DID nobody is rendering answers immediately with
+// the fallback, which keeps the wait off requests that could only ever time out
+// — including the ones an unauthenticated caller can invent by the thousand.
+//
+// [TestHandler_OgCacheMiss_WaitsForTheInFlightRenderAndServesIt] pins the win,
+// [TestHandler_OgCacheMiss_RenderOutlastsTheWait_ServesFallback] pins the cap,
+// [TestHandler_OgCacheMiss_NothingInFlight_ServesFallbackImmediately] pins that
+// nothing else waits, [TestHandler_OgCacheMiss_ClientDisconnects_StopsWaiting]
+// pins the hangup, and
+// [TestHandler_NegativePendingRenderWait_ServesFallbackImmediately] pins the
+// off switch.
+func (h *Handler) awaitPendingRender(ctx context.Context, key string) bool {
+	wait := h.pendingRenderWait()
+	if wait <= 0 {
+		return false
+	}
+	done := h.pending.watch(key)
+	if done == nil {
+		return false
+	}
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return true
+	case <-timer.C:
+		return false
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // cacheFileName returns the on-disk filename an /og-cache/ request maps to, or
@@ -355,6 +428,10 @@ func (h *Handler) cacheFileName(path string) string {
 	}
 	return ""
 }
+
+// pendingKey maps a validated /og-cache/ filename back to the key spawnRender
+// registered the render under, which is the SafeDID the file is named for.
+func pendingKey(name string) string { return strings.TrimSuffix(name, ".png") }
 
 func writeImage(w http.ResponseWriter, mimeType string, body []byte, cacheControl string) {
 	w.Header().Set("Content-Type", mimeType)

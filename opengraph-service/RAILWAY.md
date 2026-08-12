@@ -18,9 +18,9 @@ Everything else is proxied to `FRONTEND_URL` unchanged.
 | Route | Behaviour |
 |---|---|
 | `GET /healthz` | `200 {}`. |
-| `GET /og-cache/<safe-did>.png` | The cached render (`max-age=86400`). A DID with no render yet gets the branded fallback card under `max-age=60`, so the crawler comes back once the render lands. A malformed or traversing name is `404`. |
+| `GET /og-cache/<safe-did>.png` | The cached render (`max-age=86400`). A DID whose render is still in flight parks for up to `OG_PENDING_RENDER_WAIT` and serves the render if it lands; past that — or with no render in flight at all — it gets the branded fallback under `no-store`. A malformed or traversing name is `404`. |
 | `POST /og-warm/<handle>` | `202 {"warming":true\|false}`, fire-and-forget. Resolves the handle on the request, then schedules a background render only if the profile is not already cached. `false` means no render started: already fresh, the handle did not resolve, or the render cap shed it. Any other method is `405`, an empty/multi-segment handle is `404`. Unauthenticated by design — the work it can trigger is bounded by the same render cap as the crawler path, and a warm with nothing to do takes no slot. |
-| `GET /profile/<handle>` with the `Bluesky Cardyb` UA | The synthesized OG HTML, answered from the resolved DID alone. A cache miss never blocks the crawler: the render runs in the background and this crawl's image fetch gets the fallback. |
+| `GET /profile/<handle>` with the `Bluesky Cardyb` UA | The synthesized OG HTML, answered from the resolved DID alone. A cache miss never blocks the HTML: the render runs in the background and the crawl's image fetch waits on it instead. |
 
 `POST /og-warm/` is called by the client's share/copy handlers and is
 same-origin in production (the shim fronts the SPA), so it needs no CORS.
@@ -50,6 +50,7 @@ That's it for a working deploy. `PORT` is auto-injected by Railway; all `OG_*`,
 | `OG_CACHE_TTL` | `720h` (~30 days) | How long a cached image is served before a fresh indigo+render round-trip. Go duration string (`720h`, `168h`, etc.). Accepted staleness tradeoff — see issue #227. |
 | `OG_CACHE_MAX_ENTRIES` | `10000` | Max entries before LRU eviction. `0` = built-in default. One entry = one user (keyed by DID). |
 | `OG_RENDER_TIMEOUT` | `30s` | Deadline for a single `html-to-image` render. Go duration string. |
+| `OG_PENDING_RENDER_WAIT` | `3s` | How long a `/og-cache/` request holds the crawler's connection waiting on a render already in flight before serving the fallback. Go duration string; the ceiling that matters is Cardyb's own (unpublished) timeout, so shorten this if cards start failing outright rather than falling back. |
 
 ## Volume
 
