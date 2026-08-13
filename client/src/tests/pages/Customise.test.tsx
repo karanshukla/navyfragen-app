@@ -98,7 +98,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const toggle = screen.getByLabelText(/accepting messages/i) as HTMLInputElement;
+    const toggle = screen.getByRole("switch", { name: /^inbox$/i });
     fireEvent.click(toggle);
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -110,7 +110,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const toggle = screen.getByLabelText(/filter enabled/i) as HTMLInputElement;
+    const toggle = screen.getByRole("switch", { name: /profanity filter/i });
     fireEvent.click(toggle);
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -195,10 +195,10 @@ describe("Customise page", () => {
     expect(screen.getByText(/customise/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/profile prompt/i)).toBeNull();
     expect(screen.queryByLabelText(/message language/i)).toBeNull();
-    expect(screen.queryByLabelText(/accepting messages/i)).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
   });
 
-  it("disables the profile theme swatches while a mutation is pending", () => {
+  it("disables every control while a mutation is pending", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());
     mockUseUpdateUserSettings.mockReturnValue({
       mutate: vi.fn(),
@@ -207,6 +207,20 @@ describe("Customise page", () => {
     renderWithProviders(<Customise />);
 
     expect(screen.getByRole("button", { name: /ember/i })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: /^inbox$/i })).toBeDisabled();
+  });
+
+  it("spins only the switch whose field is in the in-flight payload", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      variables: { inboxEnabled: false },
+    } as any);
+    const { container } = renderWithProviders(<Customise />);
+
+    // One thumb spinner on the page — the inbox switch, not the filter switch.
+    expect(container.querySelectorAll(".mantine-Loader-root")).toHaveLength(1);
   });
 
   it("renders correctly in dark mode", () => {

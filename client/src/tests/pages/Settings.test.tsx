@@ -14,7 +14,7 @@ vi.mock("../../api/authService", async (importOriginal) => {
   return { ...actual, useSession: vi.fn() };
 });
 
-// Settings renders <PushNotificationsButton>, whose usePushAvailable() hook
+// Settings renders <PushNotificationsCard>, whose usePushAvailable() hook
 // otherwise makes a real apiClient.get() fetch call that races with (and can
 // consume) the delete-account fetch mocks used by several tests below.
 vi.mock("../../api/notificationService", async (importOriginal) => {
@@ -197,8 +197,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    // pdsSyncEnabled is truthy, so the toggle button reads "PDS Sync Enabled"
-    fireEvent.click(screen.getByRole("button", { name: /pds sync enabled/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /pds sync/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ pdsSyncEnabled: false }));
@@ -267,7 +266,7 @@ describe("Settings page", () => {
     });
   });
 
-  it("shows 'Notifications enabled' when user follows the bot", () => {
+  it("offers to view, not follow, when the user already follows the bot", () => {
     setupLoggedIn();
     mockUseBotFollow.mockReturnValue({
       data: { following: true },
@@ -288,7 +287,8 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    expect(screen.getByText(/notifications enabled/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view bot on bluesky/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /follow the bot/i })).toBeNull();
   });
 
   it("opens delete account modal when 'Delete my Data' is clicked", async () => {
@@ -624,14 +624,14 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    fireEvent.click(screen.getByRole("button", { name: /pds sync enabled/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /pds sync/i }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ imageTheme: "default" }));
     });
   });
 
-  it("renders PDS sync button in a loading state when updateSettings is pending", () => {
+  it("disables the PDS sync switch while the update is in flight", () => {
     mockUseUpdateUserSettings.mockReturnValue({
       mutate: vi.fn(),
       isPending: true,
@@ -652,8 +652,7 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    // isPending=true covers the Button `loading` branch
-    expect(screen.getByRole("button", { name: /pds sync enabled/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /pds sync/i })).toBeDisabled();
   });
 
   it("shows skeleton for daily notifications card while bot-follow status is loading", () => {

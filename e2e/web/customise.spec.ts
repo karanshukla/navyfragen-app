@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { flipSettingsSwitch, settingsSwitch } from "../helpers/settings-switch";
+
 test.use({ storageState: "e2e/.auth/user.json" });
 
 const handle = () => {
@@ -42,19 +44,18 @@ test("customise page renders the wired cards", async ({ page }) => {
 });
 
 test("inbox toggle flips and is restored afterwards", async ({ page }) => {
-  const toggle = page.getByRole("switch", { name: /accepting messages/i });
+  const toggle = settingsSwitch(page, "Inbox");
   await expect(toggle).toBeVisible({ timeout: 10_000 });
-  await expect(toggle).toBeEnabled({ timeout: 10_000 });
   const initiallyChecked = await toggle.isChecked();
 
-  await toggle.click();
+  await flipSettingsSwitch(toggle);
   // The switch follows the settings query, so wait for the server value first.
   await expect.poll(async () => Boolean((await getSettings(page)).inboxEnabled), {
     timeout: 10_000,
   }).toBe(!initiallyChecked);
   await expect(toggle).toBeChecked({ checked: !initiallyChecked });
 
-  await toggle.click();
+  await flipSettingsSwitch(toggle);
   await expect.poll(async () => Boolean((await getSettings(page)).inboxEnabled), {
     timeout: 10_000,
   }).toBe(initiallyChecked);
@@ -62,18 +63,17 @@ test("inbox toggle flips and is restored afterwards", async ({ page }) => {
 });
 
 test("profanity filter toggle flips and is restored afterwards", async ({ page }) => {
-  const toggle = page.getByRole("switch", { name: /filter enabled/i });
+  const toggle = settingsSwitch(page, "Profanity filter");
   await expect(toggle).toBeVisible({ timeout: 10_000 });
-  await expect(toggle).toBeEnabled({ timeout: 10_000 });
   const initiallyChecked = await toggle.isChecked();
 
-  await toggle.click();
+  await flipSettingsSwitch(toggle);
   await expect.poll(async () => Boolean((await getSettings(page)).profanityFilterEnabled), {
     timeout: 10_000,
   }).toBe(!initiallyChecked);
   await expect(toggle).toBeChecked({ checked: !initiallyChecked });
 
-  await toggle.click();
+  await flipSettingsSwitch(toggle);
   await expect.poll(async () => Boolean((await getSettings(page)).profanityFilterEnabled), {
     timeout: 10_000,
   }).toBe(initiallyChecked);

@@ -6,21 +6,25 @@ import {
   Group,
   Select,
   Skeleton,
-  Switch,
   TextInput,
   Title,
 } from "@mantine/core";
 import { useState, useEffect } from "react";
 
 import { useSession } from "../api/authService";
-import { useUserSettings, useUpdateUserSettings } from "../api/settingsService";
+import { useUserSettings, useUpdateUserSettings, type UserSettings } from "../api/settingsService";
 import { ProfileThemeSwatches } from "../components/customise/ProfileThemeSwatches";
 import { SettingsSection } from "../components/customise/SettingsSection";
 import { SettingsCard } from "../components/SettingsCard";
+import { SettingsToggle } from "../components/SettingsToggle";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 
+import * as styles from "./Customise.styles";
+
 const MAX_PROMPT_LENGTH = 100;
-const CARD_SPAN = { base: 12, md: 6, lg: 4 };
+const CARD_SPAN = { base: 12, md: 6 };
+/** The swatch picker needs the width; on mobile every card is full width anyway. */
+const FULL_ROW_SPAN = 12;
 
 /**
  * SQLite sends 0/1 and Postgres sends false/true for the same column.
@@ -51,19 +55,29 @@ export default function Customise() {
 
   const busy = updateSettings.isPending;
 
-  /** Every card shows the same three states, so they share one renderer. */
+  /** One mutation hook serves every card, so the in-flight payload names the field. */
+  const saving = (field: keyof UserSettings) => busy && field in (updateSettings.variables ?? {});
+
+  const loadError = (
+    <Alert color="red" title="Failed to load settings" withCloseButton={false}>
+      <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
+        Retry
+      </Button>
+    </Alert>
+  );
+
+  /** Every bottom-anchored control shows the same three states. */
   const field = (skeletonHeight: number, control: React.ReactNode) => {
     if (settingsLoading) return <Skeleton height={skeletonHeight} radius="sm" />;
-    if (settingsError) {
-      return (
-        <Alert color="red" title="Failed to load settings" withCloseButton={false}>
-          <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
-            Retry
-          </Button>
-        </Alert>
-      );
-    }
+    if (settingsError) return loadError;
     return control;
+  };
+
+  /** Header switches shrink to a track-sized skeleton; the error goes in the body. */
+  const headerToggle = (toggle: React.ReactNode) => {
+    if (settingsLoading) return <Skeleton height={22} width={38} radius="xl" />;
+    if (settingsError) return null;
+    return toggle;
   };
 
   if (!session?.isLoggedIn && !sessionLoading) {
@@ -108,6 +122,7 @@ export default function Customise() {
                 disabled={busy}
                 aria-label="Profile prompt"
                 description={`${promptDraft.length}/${MAX_PROMPT_LENGTH}`}
+                styles={styles.promptCounter}
               />
             )}
           </SettingsCard>
@@ -140,7 +155,7 @@ export default function Customise() {
           </SettingsCard>
         </Grid.Col>
 
-        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+        <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="Profile card colour"
             description="The colour treatment of your ask card. Curated presets keep the text and button legible on every option."
@@ -166,17 +181,17 @@ export default function Customise() {
           <SettingsCard
             title="Inbox"
             description="Turn off to stop receiving new messages while keeping your account, history, and settings intact. Visitors see a “not accepting messages” state."
-          >
-            {field(
-              28,
-              <Switch
-                label="Accepting messages"
+            control={headerToggle(
+              <SettingsToggle
+                label="Inbox"
                 checked={on(userSettings?.inboxEnabled)}
-                onChange={(e) => updateSettings.mutate({ inboxEnabled: e.currentTarget.checked })}
+                onChange={(checked) => updateSettings.mutate({ inboxEnabled: checked })}
                 disabled={busy}
-                aria-label="Accepting messages"
+                saving={saving("inboxEnabled")}
               />
             )}
+          >
+            {settingsError ? loadError : null}
           </SettingsCard>
         </Grid.Col>
 
@@ -184,19 +199,17 @@ export default function Customise() {
           <SettingsCard
             title="Profanity filter"
             description="When on, incoming messages are screened against a wordlist. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
-          >
-            {field(
-              28,
-              <Switch
-                label="Filter enabled"
+            control={headerToggle(
+              <SettingsToggle
+                label="Profanity filter"
                 checked={on(userSettings?.profanityFilterEnabled)}
-                onChange={(e) =>
-                  updateSettings.mutate({ profanityFilterEnabled: e.currentTarget.checked })
-                }
+                onChange={(checked) => updateSettings.mutate({ profanityFilterEnabled: checked })}
                 disabled={busy}
-                aria-label="Filter enabled"
+                saving={saving("profanityFilterEnabled")}
               />
             )}
+          >
+            {settingsError ? loadError : null}
           </SettingsCard>
         </Grid.Col>
       </SettingsSection>

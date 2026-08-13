@@ -1,5 +1,6 @@
-import { Alert, Button, Grid, Loader, Skeleton, Title } from "@mantine/core";
+import { Alert, Button, Grid, Skeleton, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { IconDownload, IconExternalLink, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 import { useHaptic } from "use-haptic";
 
@@ -14,9 +15,10 @@ import {
 } from "../api/settingsService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { useInstallPrompt } from "../components/InstallPromptContext";
-import { PushNotificationsButton } from "../components/PushNotificationsButton";
+import { PushNotificationsCard } from "../components/PushNotificationsCard";
 import { AccountOverview, type Stat } from "../components/settings/AccountOverview";
 import { SettingsCard } from "../components/SettingsCard";
+import { SettingsToggle } from "../components/SettingsToggle";
 
 const NOTIFICATION_BOT = "https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i";
 const CARD_SPAN = { base: 12, md: 6, lg: 4 };
@@ -46,6 +48,7 @@ export default function Settings() {
   const { data: botFollowData, isLoading: botFollowLoading } = useBotFollow(
     Boolean(session?.isLoggedIn)
   );
+  const isFollowingBot = Boolean(botFollowData?.following);
 
   const { triggerHaptic } = useHaptic(1);
 
@@ -64,6 +67,22 @@ export default function Settings() {
         Retry
       </Button>
     </Alert>
+  );
+
+  const pdsSyncControl = settingsLoading ? (
+    <Skeleton height={22} width={38} radius="xl" />
+  ) : settingsError ? null : (
+    <SettingsToggle
+      label="PDS Sync"
+      checked={Boolean(userSettings?.pdsSyncEnabled)}
+      saving={updateSettings.isPending}
+      onChange={(checked) => {
+        updateSettings.mutate({
+          pdsSyncEnabled: checked,
+          imageTheme: userSettings?.imageTheme || "default",
+        });
+      }}
+    />
   );
 
   const stats: Stat[] = [
@@ -100,13 +119,13 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="Install Application"
-            description="Install the app for faster access. Works with almost any device you own, including tablets and laptops. Uninstall the app anytime. On iOS or Android, it will be added to your home screen and run with the same browser."
+            description="Install the app for faster access on any device: phone, tablet or laptop. It runs in the same browser, and you can uninstall it any time."
           >
             <Button
               onClick={handleInstallClick}
               fullWidth
               disabled={!installPrompt}
-              title={!installPrompt ? "Refresh the page to enable install" : ""}
+              leftSection={<IconDownload size={16} />}
             >
               Install Navyfragen
             </Button>
@@ -116,37 +135,15 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="PDS Sync"
-            description="By default, Navyfragen syncs your anonymous messages with your Bluesky PDS (Personal Data Server). Disable this if you wish to keep your data on Navyfragen's servers. Will not change your ability to post to Bluesky directly."
+            description="Navyfragen syncs your anonymous messages to your Bluesky PDS (Personal Data Server). Turn this off to keep them on Navyfragen's servers only. Posting to Bluesky is unaffected."
+            control={pdsSyncControl}
           >
-            {settingsLoading ? (
-              <Loader size="sm" />
-            ) : settingsError ? (
-              settingsLoadError
-            ) : (
-              <Button
-                fullWidth
-                variant={userSettings?.pdsSyncEnabled ? "filled" : "outline"}
-                loading={updateSettings.isPending}
-                onClick={() => {
-                  updateSettings.mutate({
-                    pdsSyncEnabled: !userSettings?.pdsSyncEnabled,
-                    imageTheme: userSettings?.imageTheme || "default",
-                  });
-                }}
-              >
-                {userSettings?.pdsSyncEnabled ? "PDS Sync Enabled" : "Enable PDS Sync"}
-              </Button>
-            )}
+            {settingsError ? settingsLoadError : null}
           </SettingsCard>
         </Grid.Col>
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
-          <SettingsCard
-            title="Push Notifications"
-            description="Receive a push notification of new messages. Accept your browser or phone's notification prompt to enable. Clearing your site data will disable this option. If you have multiple accounts signed in on this device, enabling notifications here turns them on for all of them, and each notification names the account it's for."
-          >
-            <PushNotificationsButton />
-          </SettingsCard>
+          <PushNotificationsCard />
         </Grid.Col>
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
@@ -161,6 +158,7 @@ export default function Settings() {
               rel="noopener noreferrer"
               fullWidth
               variant="outline"
+              rightSection={<IconExternalLink size={14} />}
             >
               Open Feed on Bluesky
             </Button>
@@ -181,11 +179,10 @@ export default function Settings() {
                 target="_blank"
                 rel="noopener noreferrer"
                 fullWidth
-                variant={botFollowData?.following ? "filled" : "outline"}
+                variant="outline"
+                rightSection={<IconExternalLink size={14} />}
               >
-                {botFollowData?.following
-                  ? "Daily Notifications enabled"
-                  : "Follow Notification Bot"}
+                {isFollowingBot ? "View bot on Bluesky" : "Follow the bot on Bluesky"}
               </Button>
             )}
           </SettingsCard>
@@ -202,6 +199,7 @@ export default function Settings() {
               fw={600}
               color="crimson"
               variant="filled"
+              leftSection={<IconTrash size={16} />}
               onClick={() => {
                 triggerHaptic();
                 setDeleteModalOpened(true);
