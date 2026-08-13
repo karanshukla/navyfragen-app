@@ -2,7 +2,7 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as notificationService from "../../api/notificationService";
-import { PushNotificationsButton } from "../../components/PushNotificationsButton";
+import { PushNotificationsCard } from "../../components/PushNotificationsCard";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/notificationService", async (importOriginal) => {
@@ -23,10 +23,9 @@ const mockUseDisablePushNotifications = vi.mocked(notificationService.useDisable
 
 const SUBSCRIBED_FLAG = "nf-push-subscribed";
 
-// Renders as a plain <button>, mirroring the rest of the settings actions.
-const toggleButton = (name: RegExp) => screen.getByRole("button", { name });
+const pushSwitch = () => screen.getByRole("switch", { name: /push notifications/i });
 
-describe("PushNotificationsButton", () => {
+describe("PushNotificationsCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -41,51 +40,65 @@ describe("PushNotificationsButton", () => {
     } as any);
   });
 
-  it("shows a loader while availability is being checked", () => {
+  it("shows a placeholder instead of the switch while availability is being checked", () => {
     mockUsePushAvailable.mockReturnValue({ data: undefined, isLoading: true } as any);
     mockGetPushPermission.mockReturnValue("default");
-    renderWithProviders(<PushNotificationsButton />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    renderWithProviders(<PushNotificationsCard />);
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
-  it("renders a disabled button when the server does not support push", () => {
+  it("disables the switch and says why when the server does not support push", () => {
     mockUsePushAvailable.mockReturnValue({ data: false, isLoading: false } as any);
     mockGetPushPermission.mockReturnValue("default");
-    renderWithProviders(<PushNotificationsButton />);
-    expect(toggleButton(/push notifications unavailable/i)).toBeDisabled();
+    renderWithProviders(<PushNotificationsCard />);
+    expect(pushSwitch()).toBeDisabled();
+    expect(screen.getByText(/not configured on this server/i)).toBeInTheDocument();
   });
 
-  it("renders a disabled button when the browser is unsupported", () => {
+  it("disables the switch and says why when the browser is unsupported", () => {
     mockGetPushPermission.mockReturnValue("unsupported");
-    renderWithProviders(<PushNotificationsButton />);
-    expect(toggleButton(/push notifications unavailable/i)).toBeDisabled();
+    renderWithProviders(<PushNotificationsCard />);
+    expect(pushSwitch()).toBeDisabled();
+    expect(screen.getByText(/browser cannot receive push/i)).toBeInTheDocument();
   });
 
-  it("renders a disabled button when permission was denied", () => {
+  it("disables the switch and says why when permission was denied", () => {
     mockGetPushPermission.mockReturnValue("denied");
-    renderWithProviders(<PushNotificationsButton />);
-    expect(toggleButton(/push notifications unavailable/i)).toBeDisabled();
+    renderWithProviders(<PushNotificationsCard />);
+    expect(pushSwitch()).toBeDisabled();
+    expect(screen.getByText(/blocked in your browser settings/i)).toBeInTheDocument();
   });
 
-  it("renders an Enable button when not subscribed", () => {
+  it("renders an enabled, unchecked switch when not subscribed", () => {
     mockGetPushPermission.mockReturnValue("default");
-    renderWithProviders(<PushNotificationsButton />);
-    expect(toggleButton(/enable push notifications/i)).not.toBeDisabled();
+    renderWithProviders(<PushNotificationsCard />);
+    expect(pushSwitch()).not.toBeDisabled();
+    expect(pushSwitch()).not.toBeChecked();
   });
 
-  it("renders an Enabled button when subscribed and permission is granted", () => {
+  it("renders a checked switch when subscribed and permission is granted", () => {
     localStorage.setItem(SUBSCRIBED_FLAG, "1");
     mockGetPushPermission.mockReturnValue("granted");
-    renderWithProviders(<PushNotificationsButton />);
-    expect(toggleButton(/push notifications enabled/i)).toBeInTheDocument();
+    renderWithProviders(<PushNotificationsCard />);
+    expect(pushSwitch()).toBeChecked();
+  });
+
+  it("disables the switch while a subscription change is in flight", () => {
+    mockUseEnablePushNotifications.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: true,
+    } as any);
+    mockGetPushPermission.mockReturnValue("default");
+    renderWithProviders(<PushNotificationsCard />);
+    expect(pushSwitch()).toBeDisabled();
   });
 
   it("enables push notifications on toggle and persists the subscribed flag", async () => {
     const mutateAsync = vi.fn().mockResolvedValue("endpoint");
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
-    renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(toggleButton(/enable push notifications/i));
+    renderWithProviders(<PushNotificationsCard />);
+    fireEvent.click(pushSwitch());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(localStorage.getItem(SUBSCRIBED_FLAG)).toBe("1"));
   });
@@ -95,8 +108,8 @@ describe("PushNotificationsButton", () => {
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     mockUseDisablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("granted");
-    renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(toggleButton(/push notifications enabled/i));
+    renderWithProviders(<PushNotificationsCard />);
+    fireEvent.click(pushSwitch());
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(localStorage.getItem(SUBSCRIBED_FLAG)).toBeNull());
   });
@@ -105,8 +118,8 @@ describe("PushNotificationsButton", () => {
     const mutateAsync = vi.fn().mockRejectedValue({ error: "Boom" });
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
-    renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(toggleButton(/enable push notifications/i));
+    renderWithProviders(<PushNotificationsCard />);
+    fireEvent.click(pushSwitch());
     await waitFor(() => expect(screen.getByText("Boom")).toBeInTheDocument());
   });
 
@@ -114,8 +127,8 @@ describe("PushNotificationsButton", () => {
     const mutateAsync = vi.fn().mockRejectedValue({});
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
-    renderWithProviders(<PushNotificationsButton />);
-    fireEvent.click(toggleButton(/enable push notifications/i));
+    renderWithProviders(<PushNotificationsCard />);
+    fireEvent.click(pushSwitch());
     await waitFor(() =>
       expect(screen.getByText(/something went wrong. please try again/i)).toBeInTheDocument()
     );
