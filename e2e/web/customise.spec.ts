@@ -42,7 +42,7 @@ test("customise page renders the wired cards", async ({ page }) => {
 });
 
 test("inbox toggle flips and is restored afterwards", async ({ page }) => {
-  const toggle = page.getByRole("switch", { name: /accepting messages/i });
+  const toggle = page.getByRole("switch", { name: "Inbox" });
   await expect(toggle).toBeVisible({ timeout: 10_000 });
   await expect(toggle).toBeEnabled({ timeout: 10_000 });
   const initiallyChecked = await toggle.isChecked();
@@ -62,7 +62,7 @@ test("inbox toggle flips and is restored afterwards", async ({ page }) => {
 });
 
 test("profanity filter toggle flips and is restored afterwards", async ({ page }) => {
-  const toggle = page.getByRole("switch", { name: /filter enabled/i });
+  const toggle = page.getByRole("switch", { name: "Profanity filter" });
   await expect(toggle).toBeVisible({ timeout: 10_000 });
   await expect(toggle).toBeEnabled({ timeout: 10_000 });
   const initiallyChecked = await toggle.isChecked();
