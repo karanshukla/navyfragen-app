@@ -16,7 +16,8 @@ func SafeDID(did string) string {
 	did = strings.ReplaceAll(did, ":", "-")
 	did = strings.ReplaceAll(did, "/", "-")
 	did = strings.ReplaceAll(did, "\\", "-")
-	// Collapse ".." so a crafted DID cannot form a parent-directory reference.
+	// [TestSafeDID_StripsParentTraversal] pins that no crafted DID survives as a
+	// parent-directory reference.
 	did = strings.ReplaceAll(did, "..", "")
 	return did
 }

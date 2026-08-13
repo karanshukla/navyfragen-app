@@ -32,7 +32,7 @@ export function UserMenu({
 }: UserMenuProps) {
   const { triggerHaptic } = useHaptic(1);
   const { mutate: switchAccount, isPending: isSwitching } = useSwitchAccount();
-  const hasMultiple = accounts.length > 1; // gates the "Accounts" label only
+  const showsAccountsLabel = accounts.length > 1;
 
   const handleSwitch = (did: string, handle: string) => {
     /* istanbul ignore if */
@@ -101,11 +101,10 @@ export function UserMenu({
 
       <Menu.Dropdown>
         {/* The active profile row always renders above "Add account", even with
-            one account signed in. The "Accounts" label appears only when there
-            are other switchable accounts listed beneath it. */}
+            one account signed in. */}
         {accounts.length > 0 && (
           <>
-            {hasMultiple && <Menu.Label>Accounts</Menu.Label>}
+            {showsAccountsLabel && <Menu.Label>Accounts</Menu.Label>}
             {accounts.map((acct) => {
               const isActive = acct.did === activeDid;
               return (

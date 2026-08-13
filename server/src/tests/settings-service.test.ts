@@ -368,6 +368,7 @@ describe("SettingsService", () => {
         pdsSyncEnabled: 1,
         imageTheme: "default",
         inboxEnabled: 1,
+        profanityFilterEnabled: 0,
         customPrompt: "previously set",
         profileCardTheme: null,
         touchpointLocale: null,

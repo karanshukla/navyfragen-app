@@ -4,29 +4,39 @@ import React from "react";
 const WHITESPACE_REGEX = /^\s+|\s+$| +(?=\n)|\n(?=(?: *\n){2}) */g;
 const TRIM_HOST_RE = /^www\./;
 
+const MAX_DISPLAY_URL_LENGTH = 80;
+const TRUNCATED_URL_LENGTH = 76;
+
 const linkStyle: React.CSSProperties = {
   color: "inherit",
   fontWeight: "bold",
   textDecoration: "none",
 };
 
+const ensureProtocol = (href: string): string =>
+  /^https?:\/\//.test(href) ? href : "https://" + href;
+
 const safeUrlParse = (href: string): URL | null => {
   try {
-    let fullHref = href;
-    if (!/^https?:\/\//.test(href)) {
-      fullHref = "https://" + href;
-    }
-    const url = new URL(fullHref);
-    const protocol = url.protocol;
+    const url = new URL(ensureProtocol(href));
     /* istanbul ignore else */
-    if (protocol === "https:" || protocol === "http:") {
+    if (url.protocol === "https:" || url.protocol === "http:") {
       return url;
     }
-  } catch (e) {
-    // Ignore errors from URL parsing, it'll just return null
+  } catch {
+    // Not a URL.
   }
   return null;
 };
+
+/**
+ * A href the URL parser refused, shown as typed.
+ *
+ * @see [parseRichText.test.tsx](../tests/utils/parseRichText.test.tsx): pins the
+ * length past which it is truncated rather than shown whole.
+ */
+const showUnparseableUrl = (href: string): string =>
+  href.length > MAX_DISPLAY_URL_LENGTH ? href.slice(0, TRUNCATED_URL_LENGTH) + "…" : href;
 
 const toShortUrl = (href: string): string => {
   const url = safeUrlParse(href);
@@ -41,25 +51,16 @@ const toShortUrl = (href: string): string => {
 
     return host + path;
   }
-  // If safeUrlParse returns null (e.g. for an invalid or non-http/s URL),
-  // return the original href, or a shortened version if it's very long.
-  if (href.length > 80) {
-    return href.slice(0, 76) + "…";
-  }
-  return href;
+  return showUnparseableUrl(href);
 };
 
-const ensureProtocol = (href: string): string =>
-  /^https?:\/\//.test(href) ? href : "https://" + href;
-
 const renderTextWithAutolinks = (content: string, keyPrefix: string): React.ReactNode[] => {
-  // Regex to match domains/short links
-  const domainRegex = /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
+  const bareDomainRegex = /((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/g;
   const result: React.ReactNode[] = [];
   let lastIndex = 0;
   let match;
   let keyOffset = 0;
-  while ((match = domainRegex.exec(content)) !== null) {
+  while ((match = bareDomainRegex.exec(content)) !== null) {
     const matchText = match[0];
     const start = match.index;
 
@@ -67,7 +68,7 @@ const renderTextWithAutolinks = (content: string, keyPrefix: string): React.Reac
       result.push(content.slice(lastIndex, start));
     }
     let href = matchText;
-    // domainRegex's segments require a literal "." before the TLD, so it can never
+    // bareDomainRegex's segments require a literal "." before the TLD, so it can never
     // match starting at "http:" or "https:" (no dot before the colon) — matchText is
     // always the bare domain, so this guard's false arm is structurally unreachable.
     /* istanbul ignore else */
@@ -124,9 +125,8 @@ const renderToken = (token: Token, key: string): React.ReactNode => {
 
     case "link": {
       const href = ensureProtocol(token.url);
-      // A markdown link whose child text equals its url is a bare-url link, so
-      // shorten it the way a plain autolink would.
-      // @see ../tests/utils/parseRichText.test.tsx
+      // @see [parseRichText.test.tsx](../tests/utils/parseRichText.test.tsx): pins
+      // that a markdown link wrapping its own url shortens like a plain autolink.
       const isBareUrlLink = token.children.length === 1 && token.children[0].raw === token.url;
       const displayText = isBareUrlLink
         ? toShortUrl(token.url)

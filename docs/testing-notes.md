@@ -15,7 +15,7 @@ Entries below explain why each suppressed site is unreachable and what testing i
 
 ### Suppressions dropped in the Node-free migration
 
-These client sites carried `/* v8 ignore */` markers that istanbul does not need — it measures them as covered, so the markers were removed rather than translated: `parseRichText.tsx`'s `toShortUrl` long-URL truncation, its `safeUrlParse` `return null` tail, and its unknown-segment-type `default` arm; `Navigation.tsx`'s friends-ternary `null` tail; `AppHeader.tsx`'s `onLogout` catch; `profileService.ts`'s two localStorage catches; and `Home.tsx`'s share-sheet catch. Most were v8 source-map or JIT artifacts rather than genuinely unreachable code, which is why they disappear under source instrumentation. The four empty `catch {}` blocks kept a plain explanatory comment so the block still reads as deliberate.
+These client sites carried `/* v8 ignore */` markers that istanbul does not need — it measures them as covered, so the markers were removed rather than translated: `parseRichText.tsx`'s `toShortUrl` long-URL truncation, its `safeUrlParse` `return null` tail, and its unknown-segment-type `default` arm; `Navigation.tsx`'s friends-ternary `null` tail; `AppHeader.tsx`'s `onLogout` catch; the two `profileService.ts` localStorage catches (since consolidated into `lib/safeLocalStorage.ts`); and `Home.tsx`'s share-sheet catch. Most were v8 source-map or JIT artifacts rather than genuinely unreachable code, which is why they disappear under source instrumentation. The four empty `catch {}` blocks kept a plain explanatory comment so the block still reads as deliberate.
 
 ### `server/src/services/auth-service.ts` — `agent.getProfile()` block in `checkSession`
 
@@ -113,15 +113,15 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 
 **Line:** `if (!/^https?:\/\//.test(href)) { href = "https://" + href; }` inside the `text`-segment auto-linking loop in `parseRichText`.
 
-**Why ignored:** `matchText` comes from `domainRegex`, whose domain-segment pattern (`(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}`) requires a literal `.` immediately before the TLD. `http:` and `https:` contain no `.` before their `:`, so the regex engine can never start a match there — verified empirically (`domainRegex.exec("https://example.com/path")` returns `"example.com/path"`, never including the scheme). `matchText` is therefore always a bare domain, so the guard's "already has a protocol" false arm is structurally unreachable.
+**Why ignored:** `matchText` comes from `bareDomainRegex`, whose domain-segment pattern (`(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}`) requires a literal `.` immediately before the TLD. `http:` and `https:` contain no `.` before their `:`, so the regex engine can never start a match there — verified empirically (`bareDomainRegex.exec("https://example.com/path")` returns `"example.com/path"`, never including the scheme). `matchText` is therefore always a bare domain, so the guard's "already has a protocol" false arm is structurally unreachable.
 
 **What it would take to test:** Not possible through `parseRichText`'s public behavior — would require calling the auto-linking logic directly with a hand-crafted `matchText` that already includes a scheme, bypassing the regex that makes this guard necessary in the first place.
 
 ### `client/src/utils/parseRichText.tsx` — non-http protocol fall-through in `safeUrlParse`
 
-**Line:** the implicit else of `if (protocol === "https:" || protocol === "http:") { return url; }`.
+**Line:** the implicit else of `if (url.protocol === "https:" || url.protocol === "http:") { return url; }`.
 
-**Why ignored:** New under istanbul; v8 folded this branch away. `safeUrlParse` prepends `https://` to any href that does not already start with `http://` or `https://`, so by the time `new URL()` succeeds the parsed protocol is always one of the two the guard accepts. The else path, which falls through to `return null`, is unreachable for that reason rather than by caller discipline. Marked `/* istanbul ignore else */`.
+**Why ignored:** New under istanbul; v8 folded this branch away. `safeUrlParse` routes its input through `ensureProtocol`, which prepends `https://` to any href that does not already start with `http://` or `https://`, so by the time `new URL()` succeeds the parsed protocol is always one of the two the guard accepts. The else path, which falls through to `return null`, is unreachable for that reason rather than by caller discipline. Marked `/* istanbul ignore else */`.
 
 **What it would take to test:** Not reachable through the module's exports. It would need `safeUrlParse` called with a string that survives the protocol prepend and still parses to some third scheme, which the prepend makes impossible.
 

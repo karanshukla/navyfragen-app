@@ -31,17 +31,17 @@ describe("Auth (Hono)", () => {
     };
   }
 
-  function makeService(overrides: any = {}): AuthService {
-    return {
+  function makeService(overrides: any = {}) {
+    const mocks = {
       getOAuthRedirectUrl: mock(async () => "https://bsky.app/oauth"),
-      revokeSession: mock(async () => {}),
+      revokeSession: mock(async (_did: string) => {}),
       checkSession: mock(async () => null),
       createOrConfirmUserProfile: mock(async () => {}),
       encryptDid: mock(() => "enc-token"),
       decryptDid: mock(() => "did:foo"),
       findUserByDid: mock(async () => ({ did: "did:foo" })),
-      ...overrides,
-    } as unknown as AuthService;
+    };
+    return Object.assign(mocks, overrides) as unknown as typeof mocks & AuthService;
   }
 
   function makeNotificationService(overrides: any = {}): any {

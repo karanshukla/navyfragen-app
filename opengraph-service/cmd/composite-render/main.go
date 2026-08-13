@@ -54,7 +54,6 @@ func main() {
 	}
 	htmlSrc := shim.BuildOGTemplate(in)
 
-	// Echo the template size + which fallback is active so the report can quote it.
 	fmt.Printf("banner=%q avatar=%q glyph_fallback=%v\n", *banner, *avatar, *avatar == "")
 	fmt.Printf("html bytes=%d\n", len(htmlSrc))
 

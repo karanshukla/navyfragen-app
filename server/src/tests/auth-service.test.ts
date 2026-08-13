@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { test, describe, beforeAll, afterAll, beforeEach, afterEach, mock } from "bun:test";
+import type { Mock } from "bun:test";
 
 import { OAuthResolverError } from "@atproto/oauth-client-node";
 
@@ -15,7 +16,7 @@ import { deleteE2EAgent, setE2EAgent } from "../auth/e2e-agent-store";
 // is replaced with `mockAgent`, whose `getProfile` tests reassign to exercise
 // the previously untestable getProfile block in checkSession.
 let AuthService: typeof import("../services/auth-service").AuthService;
-let mockAgent: { getProfile: (...args: any[]) => Promise<any> };
+let mockAgent: { getProfile: Mock<(...args: any[]) => Promise<any>> };
 
 beforeAll(async () => {
   mockAgent = { getProfile: mock(async () => ({ data: undefined })) };
@@ -356,7 +357,7 @@ describe("AuthService", () => {
         }
         return this as any;
       });
-      const valuesMock = mock(function (this: any) {
+      const valuesMock = mock(function (this: any, _values: Record<string, unknown>) {
         (this as any).execute = executesMock;
         (this as any).onConflict = onConflictMock;
         return this as any;

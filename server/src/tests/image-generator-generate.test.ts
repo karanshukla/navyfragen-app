@@ -1,50 +1,43 @@
 import assert from "node:assert";
-import { test, describe, beforeAll, afterEach, mock, spyOn } from "bun:test";
+import { test, describe, beforeAll, afterEach, mock } from "bun:test";
 
 import sharp from "sharp";
 
 import { generateQuestionImage } from "../lib/image-generator";
 
+import { bodyBytes, mockFetch, mockLogger } from "./helpers/mocks";
+
+const smallestPngSharpAccepts = () =>
+  sharp({
+    create: { width: 1, height: 1, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .png()
+    .toBuffer();
+
 describe("generateQuestionImage", () => {
   let pngBuffer: Buffer;
 
   beforeAll(async () => {
-    // Create a minimal valid PNG that sharp can process
-    pngBuffer = await sharp({
-      create: { width: 1, height: 1, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
-    })
-      .png()
-      .toBuffer();
+    pngBuffer = await smallestPngSharpAccepts();
   });
 
   afterEach(() => {
     mock.restore();
   });
 
-  function makeLogger() {
-    return {
-      info: mock(),
-      error: mock(),
-      debug: mock(),
-      warn: mock(),
-    };
-  }
-
   test("returns empty object for empty message", async () => {
-    const result = await generateQuestionImage("", makeLogger());
+    const result = await generateQuestionImage("", mockLogger());
     assert.deepStrictEqual(result, {});
   });
 
   test("returns empty object for falsy message", async () => {
-    const result = await generateQuestionImage(null as any, makeLogger());
+    const result = await generateQuestionImage(null as any, mockLogger());
     assert.deepStrictEqual(result, {});
   });
 
   test("returns image on successful fetch - default theme", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response(pngBuffer, { status: 200 })
-    );
-    const result = await generateQuestionImage("What is your name?", makeLogger());
+    mockFetch(async () => new Response(bodyBytes(pngBuffer), { status: 200 }));
+    const result = await generateQuestionImage("What is your name?", mockLogger());
     assert.ok(result.imageBlob instanceof Buffer);
     assert.ok(typeof result.imageAltText === "string");
     assert.ok(typeof result.width === "number");
@@ -52,50 +45,38 @@ describe("generateQuestionImage", () => {
   });
 
   test("returns image with userBskyHandle", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response(pngBuffer, { status: 200 })
-    );
-    const result = await generateQuestionImage("Hello", makeLogger(), "alice.bsky.social");
+    mockFetch(async () => new Response(bodyBytes(pngBuffer), { status: 200 }));
+    const result = await generateQuestionImage("Hello", mockLogger(), "alice.bsky.social");
     assert.ok(result.imageBlob instanceof Buffer);
   });
 
   test("returns image for compressed theme", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response(pngBuffer, { status: 200 })
-    );
-    const result = await generateQuestionImage("Hello", makeLogger(), undefined, "compressed");
+    mockFetch(async () => new Response(bodyBytes(pngBuffer), { status: 200 }));
+    const result = await generateQuestionImage("Hello", mockLogger(), undefined, "compressed");
     assert.ok(result.imageBlob instanceof Buffer);
   });
 
   test("returns image for twitter theme", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response(pngBuffer, { status: 200 })
-    );
-    const result = await generateQuestionImage("Hello", makeLogger(), "alice", "twitter");
+    mockFetch(async () => new Response(bodyBytes(pngBuffer), { status: 200 }));
+    const result = await generateQuestionImage("Hello", mockLogger(), "alice", "twitter");
     assert.ok(result.imageBlob instanceof Buffer);
   });
 
   test("returns empty object on HTTP 4xx response", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response("bad request", { status: 400 })
-    );
-    const result = await generateQuestionImage("Hello", makeLogger());
+    mockFetch(async () => new Response("bad request", { status: 400 }));
+    const result = await generateQuestionImage("Hello", mockLogger());
     assert.deepStrictEqual(result, {});
   });
 
   test("returns empty object on HTTP 5xx response", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response("server error", { status: 500 })
-    );
-    const result = await generateQuestionImage("Hello", makeLogger());
+    mockFetch(async () => new Response("server error", { status: 500 }));
+    const result = await generateQuestionImage("Hello", mockLogger());
     assert.deepStrictEqual(result, {});
   });
 
   test("returns empty object when image processing throws", async () => {
-    spyOn(globalThis, "fetch").mockImplementation(
-      async () => new Response(Buffer.from("not a real png"), { status: 200 })
-    );
-    const logger = makeLogger();
+    mockFetch(async () => new Response(bodyBytes(Buffer.from("not a real png")), { status: 200 }));
+    const logger = mockLogger();
     const result = await generateQuestionImage("Hello", logger);
     assert.deepStrictEqual(result, {});
     assert.strictEqual(logger.error.mock.calls.length, 1);

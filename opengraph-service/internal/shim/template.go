@@ -3,6 +3,8 @@ package shim
 import (
 	"fmt"
 	"html"
+	"math"
+	"strconv"
 	"strings"
 )
 
@@ -64,10 +66,6 @@ const (
 	ogBannerScrim = "rgba(0,0,0,0.2)"
 )
 
-// ogFontMono mirrors --nf-font-mono, the face ProfileUrlBar sets the share
-// link in.
-const ogFontMono = `ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, monospace`
-
 // ogSurfaces / ogTextColors enumerate the palette for the contrast test: every
 // text colour must clear AA against every surface it can land on.
 var (
@@ -108,25 +106,52 @@ const (
 	avatarSize    = 124
 	contentPadBot = 44
 
-	nameFontSize   = 50
-	nameLineBox    = 55 // nameFontSize * 1.1
-	nameGap        = 14 // avatar bottom → display name
-	handleFontSize = 27
-	handleLineBox  = 37 // handleFontSize * 1.35
+	nameFontSize     = 50
+	nameLineHeight   = 110
+	avatarToNameGap  = 14
+	handleFontSize   = 27
+	handleLineHeight = 135
 
-	promptGap      = 28
-	promptFontSize = 56
-	promptLineBox  = 65 // promptFontSize * 1.15
+	promptGap        = 28
+	promptFontSize   = 56
+	promptLineHeight = 115
 	// A prompt longer than this is ellipsised by -webkit-line-clamp rather than
 	// allowed to push into the footer.
 	promptMaxLines = 2
 
-	footerPadTop  = 26
-	footerBorder  = 2
-	footerRowBox  = 52 // pill: 24px line + 14px padding top and bottom
-	markSize      = 44
-	chipRadiusPx  = 999
+	footerPadTop = 26
+	footerBorder = 2
+	markSize     = 44
+
+	chipFontSize   = 24
+	chipLineHeight = 100
+	chipPadY       = 12
+	chipPadX       = 22
+	chipBorder     = 2
+	chipRadiusPx   = 999
+
 	hairlineWidth = footerBorder
+)
+
+// A line height is a percentage of the font size, the way the CSS below states
+// it, so the band table and the stylesheet cannot drift apart.
+func lineBox(fontSize, lineHeightPct int) int {
+	return int(math.Ceil(float64(fontSize) * float64(lineHeightPct) / 100))
+}
+
+// cssLineHeight renders a line-height percentage as the unitless ratio CSS takes.
+func cssLineHeight(pct int) string {
+	return strconv.FormatFloat(float64(pct)/100, 'f', -1, 64)
+}
+
+var (
+	nameLineBox   = lineBox(nameFontSize, nameLineHeight)
+	handleLineBox = lineBox(handleFontSize, handleLineHeight)
+	promptLineBox = lineBox(promptFontSize, promptLineHeight)
+
+	// The chip's padding and border sit outside its line box, so the footer row
+	// is taller than the text in it.
+	footerRowBox = lineBox(chipFontSize, chipLineHeight) + 2*(chipPadY+chipBorder)
 )
 
 // The avatar overhangs the banner by half its height and the name sits *below*
@@ -146,7 +171,7 @@ const avatarRadius = avatarSize * 22 / 84
 var ogVerticalBands = []int{
 	bannerHeight,
 	avatarSize - avatarOverlap,
-	nameGap,
+	avatarToNameGap,
 	nameLineBox,
 	handleLineBox,
 	promptGap,
@@ -158,7 +183,7 @@ var ogVerticalBands = []int{
 // promptMaxHeight is the clamp's hard ceiling. -webkit-line-clamp alone counts
 // lines, not pixels, so a font that renders taller than promptLineBox would
 // still overrun; this bounds it either way.
-const promptMaxHeight = promptMaxLines * promptLineBox
+var promptMaxHeight = promptMaxLines * promptLineBox
 
 // shareDomain is the short domain the app hands out for a profile — the form
 // PublicProfile.tsx builds and ProfileUrlBar.tsx displays. The OG card shows
@@ -265,12 +290,12 @@ const ogTemplate = `<!DOCTYPE html>
     padding-top: {{NAME_GAP}}px;
   }
   .name {
-    font-size: {{NAME_FS}}px; font-weight: 800; line-height: 1.1;
+    font-size: {{NAME_FS}}px; font-weight: 800; line-height: {{NAME_LH}};
     letter-spacing: -0.02em;
     max-width: 900px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
   .handle {
-    font-size: {{HANDLE_FS}}px; font-weight: 400; line-height: 1.35;
+    font-size: {{HANDLE_FS}}px; font-weight: 400; line-height: {{HANDLE_LH}};
     color: {{TEXT_MUTED}};
     max-width: 900px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
@@ -287,7 +312,7 @@ const ogTemplate = `<!DOCTYPE html>
     padding-top: {{PROMPT_GAP}}px;
   }
   .prompt {
-    font-size: {{PROMPT_FS}}px; font-weight: 800; line-height: 1.15;
+    font-size: {{PROMPT_FS}}px; font-weight: 800; line-height: {{PROMPT_LH}};
     letter-spacing: -0.02em;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: {{PROMPT_LINES}};
     max-width: 1010px;
@@ -308,17 +333,16 @@ const ogTemplate = `<!DOCTYPE html>
   }
   .wordmark span { color: {{TEXT_ACCENT}}; }
   /* The share link, in the same "fragen.navy/<handle>" pill the profile page
-     uses (client/src/components/profile/ProfileUrlBar.tsx): monospace, bordered,
-     domain muted and the handle emphasised, because the handle is the part a
-     reader has to retype. */
+     uses (client/src/components/profile/ProfileUrlBar.tsx): bordered, domain
+     muted and the handle emphasised, because the handle is the part a reader
+     has to retype. */
   .chip {
     min-width: 0;
     background: {{CHIP_BG}};
-    border: 2px solid {{HAIRLINE}};
+    border: {{CHIP_BORDER}}px solid {{HAIRLINE}};
     color: {{TEXT_MUTED}};
-    font-family: {{FONT_MONO}};
-    font-size: 24px; font-weight: 400; line-height: 1;
-    padding: 12px 22px;
+    font-size: {{CHIP_FS}}px; font-weight: 400; line-height: {{CHIP_LH}};
+    padding: {{CHIP_PAD_Y}}px {{CHIP_PAD_X}}px;
     border-radius: {{CHIP_RADIUS}}px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
@@ -397,14 +421,21 @@ func BuildOGTemplate(in OGInput) string {
 		"{{AVATAR}}", fmt.Sprint(avatarSize),
 		"{{AVATAR_OVERLAP}}", fmt.Sprint(avatarOverlap),
 		"{{AVATAR_RADIUS}}", fmt.Sprint(avatarRadius),
-		"{{NAME_GAP}}", fmt.Sprint(nameGap),
+		"{{NAME_GAP}}", fmt.Sprint(avatarToNameGap),
 		"{{BANNER_SCRIM}}", ogBannerScrim,
-		"{{FONT_MONO}}", ogFontMono,
 		"{{PAD_BOT}}", fmt.Sprint(contentPadBot),
 		"{{NAME_FS}}", fmt.Sprint(nameFontSize),
+		"{{NAME_LH}}", cssLineHeight(nameLineHeight),
 		"{{HANDLE_FS}}", fmt.Sprint(handleFontSize),
+		"{{HANDLE_LH}}", cssLineHeight(handleLineHeight),
 		"{{PROMPT_GAP}}", fmt.Sprint(promptGap),
 		"{{PROMPT_FS}}", fmt.Sprint(promptFontSize),
+		"{{PROMPT_LH}}", cssLineHeight(promptLineHeight),
+		"{{CHIP_FS}}", fmt.Sprint(chipFontSize),
+		"{{CHIP_LH}}", cssLineHeight(chipLineHeight),
+		"{{CHIP_PAD_Y}}", fmt.Sprint(chipPadY),
+		"{{CHIP_PAD_X}}", fmt.Sprint(chipPadX),
+		"{{CHIP_BORDER}}", fmt.Sprint(chipBorder),
 		"{{PROMPT_LINES}}", fmt.Sprint(promptMaxLines),
 		"{{PROMPT_MAX_H}}", fmt.Sprint(promptMaxHeight),
 		"{{FOOTER_PAD}}", fmt.Sprint(footerPadTop),

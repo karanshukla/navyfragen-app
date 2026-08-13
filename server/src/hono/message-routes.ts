@@ -517,9 +517,10 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
       if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
       const body = c.req.valid("json");
       try {
-        // null and undefined are not interchangeable here: the service reads
-        // null as "clear this field" and undefined as "leave it alone", so
-        // collapsing them would make clearing a customisation a no-op.
+        // null and undefined must not be collapsed on the way through.
+        // @see [settings-service.test.ts](../tests/settings-service.test.ts):
+        // "should persist a null customPrompt to unset it" and "should update
+        // only the provided fields on an existing row" pin the two meanings.
         const updatedSettings = await settingsService.updateSettings(userSessionDid, {
           pdsSyncEnabled: body.pdsSyncEnabled,
           // imageTheme is not nullable in the service, so null means "leave it".

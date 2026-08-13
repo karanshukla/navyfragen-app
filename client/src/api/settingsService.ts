@@ -3,15 +3,23 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiClient, ApiError } from "./apiClient";
 import { queryClient } from "./queryClient";
 
-export interface UserSettings {
+/**
+ * What the owner has changed about their ask card, in the shape both the
+ * settings API and a public profile return it. `null` means "not customised":
+ * the app's own headline, its default gradient, and English touchpoints.
+ */
+export interface AskCardCustomisation {
+  customPrompt: string | null;
+  profileCardTheme: string | null;
+  touchpointLocale: string | null;
+}
+
+export interface UserSettings extends AskCardCustomisation {
   did: string;
   pdsSyncEnabled: number | boolean;
   imageTheme: string;
   inboxEnabled: number | boolean;
   profanityFilterEnabled: number | boolean;
-  customPrompt: string | null; // Optional ask-card headline override; null = default
-  profileCardTheme: string | null; // Optional ask-card colour preset; null = default
-  touchpointLocale: string | null; // Optional locale for ask-card/share touchpoints; null = English
   createdAt: string;
 }
 

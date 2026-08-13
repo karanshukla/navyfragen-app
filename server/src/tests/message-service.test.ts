@@ -6,6 +6,7 @@ import { type Logger } from "pino";
 
 import { type Database } from "../database/db";
 import { imageGenerator } from "../lib/image-generator";
+import type { ImageGenerationResult } from "../lib/image-generator";
 import { MessageService, type Message, type ProfileResolver } from "../services/message-service";
 
 describe("MessageService", () => {
@@ -75,7 +76,7 @@ describe("MessageService", () => {
     };
   }
 
-  const generateQuestionImageMock = mock(async () => ({
+  const generateQuestionImageMock = mock(async (): Promise<ImageGenerationResult> => ({
     imageBlob: Buffer.from("mock"),
     imageAltText: "alt",
   }));
@@ -700,7 +701,7 @@ describe("MessageService", () => {
   });
 
   test("respondToMessage throws when image generation returns no blob", async () => {
-    generateQuestionImageMock.mockImplementationOnce(async () => ({ imageBlob: null }));
+    generateQuestionImageMock.mockImplementationOnce(async () => ({}));
     await assert.rejects(
       () =>
         messageService.respondToMessage(

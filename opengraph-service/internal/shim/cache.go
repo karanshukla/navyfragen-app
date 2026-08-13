@@ -82,7 +82,8 @@ func (c *FileCache) Load(did string) (*CacheEntry, error) {
 		return nil, ErrCacheMiss
 	}
 	mime := c.readMeta(did)
-	// Update LRU recency without refreshing the TTL clock.
+	// [TestFileCache_LoadDoesNotRefreshTTL] pins that a hit bumps LRU recency
+	// and leaves the TTL clock alone.
 	c.touchLRU(did)
 	return &CacheEntry{Bytes: bytes, ModTime: mod, MimeType: mime}, nil
 }
@@ -334,7 +335,6 @@ func (c *FileCache) evictIfNeeded() {
 	if len(pngs) <= c.MaxEntries {
 		return
 	}
-	// Oldest first.
 	sort.Slice(pngs, func(i, j int) bool { return pngs[i].mod.Before(pngs[j].mod) })
 	excess := len(pngs) - c.MaxEntries
 	for i := 0; i < excess; i++ {

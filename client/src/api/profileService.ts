@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { readStoredJson, writeStoredJson, removeStored } from "../lib/safeLocalStorage";
+
 import { apiClient } from "./apiClient";
+import type { AskCardCustomisation } from "./settingsService";
 
 /** @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile} */
-export interface ProfileResponse {
+export interface ProfileResponse extends Partial<AskCardCustomisation> {
   profile: {
     did?: string;
     handle?: string;
@@ -14,9 +17,6 @@ export interface ProfileResponse {
   } | null;
   exists: boolean;
   inboxEnabled?: boolean; // true unless the owner explicitly closed their inbox
-  customPrompt?: string | null; // ask-card headline override; null = default
-  profileCardTheme?: string | null; // ask-card colour preset; null = default gradient
-  touchpointLocale?: string | null; // locale for the ask-card + share touchpoints
 }
 
 export interface UserExistsResponse {
@@ -92,7 +92,7 @@ export function useUserExists(did: string | null) {
       did
         ? profileService.userExists(did)
         : /* istanbul ignore next */ Promise.reject("No DID provided"),
-    enabled: !!did, // Only run if DID is provided
+    enabled: !!did,
   });
 }
 
@@ -103,21 +103,11 @@ function getFriendsCacheKey(did: string) {
 }
 
 export function clearFriendsCache(did: string) {
-  try {
-    localStorage.removeItem(getFriendsCacheKey(did));
-  } catch {
-    // localStorage unavailable (private browsing quota, etc.)
-  }
+  removeStored(getFriendsCacheKey(did));
 }
 
 function getCachedFriends(did: string): { data: FriendsResponse; timestamp: number } | null {
-  try {
-    const raw = localStorage.getItem(getFriendsCacheKey(did));
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+  return readStoredJson<{ data: FriendsResponse; timestamp: number }>(getFriendsCacheKey(did));
 }
 
 export function useFriends(did: string | null) {
@@ -125,14 +115,7 @@ export function useFriends(did: string | null) {
     queryKey: did ? profileKeys.friends(did) : profileKeys.all,
     queryFn: async () => {
       const data = await profileService.getFriends();
-      try {
-        localStorage.setItem(
-          getFriendsCacheKey(did!),
-          JSON.stringify({ data, timestamp: Date.now() })
-        );
-      } catch {
-        // localStorage unavailable (private browsing quota, etc.)
-      }
+      writeStoredJson(getFriendsCacheKey(did!), { data, timestamp: Date.now() });
       return data;
     },
     enabled: !!did,

@@ -52,7 +52,6 @@ func run(handle, host string) error {
 
 	client := &xrpc.Client{Host: host}
 
-	// Step 1: handle -> DID.
 	resolved, err := atproto.IdentityResolveHandle(ctx, client, handle)
 	if err != nil {
 		return fmt.Errorf("resolve handle %q (host %s): %w", handle, host, err)
@@ -62,7 +61,6 @@ func run(handle, host string) error {
 	fmt.Printf("handle=%s\n", handle)
 	fmt.Printf("did=%s\n", did)
 
-	// Step 2: profile by DID.
 	profile, err := bsky.ActorGetProfile(ctx, client, did)
 	if err != nil {
 		return fmt.Errorf("get profile for %s: %w", did, err)
@@ -82,7 +80,6 @@ func run(handle, host string) error {
 		fmt.Println("note: avatar is EMPTY (fallback glyph required)")
 	}
 
-	// Full JSON for the report (debugging the API shape).
 	raw, _ := json.MarshalIndent(profile, "", "  ")
 	fmt.Println("--- profile json ---")
 	fmt.Println(string(raw))

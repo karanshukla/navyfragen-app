@@ -175,7 +175,7 @@ export function useMessages(
       did
         ? messageService.getMessages(did)
         : /* istanbul ignore next */ Promise.reject("No DID provided"),
-    enabled: !!did, // Only run if DID is provided
+    enabled: !!did,
     ...(options || {}),
   });
 }

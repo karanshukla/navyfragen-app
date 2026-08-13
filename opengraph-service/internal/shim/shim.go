@@ -66,7 +66,7 @@ func handleAfterPrefix(path, prefix string) string {
 	if rest == "" {
 		return ""
 	}
-	// A path like /profile/a/b is not a single handle.
+	// [TestProfileHandle_NestedPath_Empty] pins that /profile/a/b carries no handle.
 	if strings.Contains(rest, "/") {
 		return ""
 	}
