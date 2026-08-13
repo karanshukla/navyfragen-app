@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { flipSettingsSwitch, settingsSwitch } from "../helpers/settings-switch";
+
 test.use({ storageState: "e2e/.auth/user.json" });
 
 // The PDS-sync toggle writes through to the server, so each test restores the
@@ -28,17 +30,16 @@ test("settings page renders key cards", async ({ page }) => {
 });
 
 test("PDS sync toggle flips and is restored afterwards", async ({ page }) => {
-  const sync = page.getByRole("switch", { name: "PDS Sync" });
+  const sync = settingsSwitch(page, "PDS Sync");
   await expect(sync).toBeVisible({ timeout: 10_000 });
-  await expect(sync).toBeEnabled({ timeout: 10_000 });
   const initiallyChecked = await sync.isChecked();
 
-  await sync.click();
+  await flipSettingsSwitch(sync);
   // The switch follows the settings query, so wait for the server value first.
   await expect.poll(async () => pdsSyncEnabled(page), { timeout: 10_000 }).toBe(!initiallyChecked);
   await expect(sync).toBeChecked({ checked: !initiallyChecked });
 
-  await sync.click();
+  await flipSettingsSwitch(sync);
   await expect.poll(async () => pdsSyncEnabled(page), { timeout: 10_000 }).toBe(initiallyChecked);
   await expect(sync).toBeChecked({ checked: initiallyChecked });
 });
