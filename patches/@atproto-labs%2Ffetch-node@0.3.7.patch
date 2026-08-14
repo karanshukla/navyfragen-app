@@ -1,28 +1,14 @@
 diff --git a/dist/unicast.js b/dist/unicast.js
-index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..4712e033e95d5695fde11e5fe05f1dd9102a4724 100644
+index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..8376dc165e25e22d856c952207c65341a409c8a8 100644
 --- a/dist/unicast.js
 +++ b/dist/unicast.js
-@@ -1,8 +1,9 @@
- import { lookup } from 'node:dns';
-+import { createRequire } from 'node:module';
-+const require = createRequire(import.meta.url);
- import ipaddr from 'ipaddr.js';
- import { Agent as Undici6Agent } from 'undici_v6'; // NodeJS 22
- import { Agent as Undici7Agent } from 'undici_v7'; // NodeJS 24
--import { Agent as Undici8Agent } from 'undici_v8'; // NodeJS 26
- import { FetchRequestError, asRequest, extractUrl, } from '@atproto-labs/fetch';
- import { compareVersions, isUnicastIpHostname, parseVersion } from './util.js';
- const { IPv4, IPv6 } = ipaddr;
-@@ -10,6 +11,63 @@ const { IPv4, IPv6 } = ipaddr;
+@@ -10,6 +10,60 @@ const { IPv4, IPv6 } = ipaddr;
   * @see {@link https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/}
   */
  export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
 +    // Bun implements fetch natively rather than via undici, so it exposes no
 +    // process.versions.undici (the version gate below would throw) and offers no
-+    // connect-time lookup hook to hang the dispatcher on. The undici_v8 import is
-+    // also fatal under Bun: its CacheStorage ctor throws "webidl.util
-+    // .markAsUncloneable is not a function" at module load, which is why the v8
-+    // Agent is required lazily further down.
++    // connect-time lookup hook to hang the dispatcher on.
 +    //
 +    // Bun therefore runs the same unicastLookup checks ahead of the request
 +    // instead of during connect. The guard is equivalent for a hostname that
@@ -77,20 +63,3 @@ index ce1ecf5a17cedab2f4c386bc238f295be200ddfe..4712e033e95d5695fde11e5fe05f1dd9
      // @NOTE we parse here instead of top-level to allow version mocking in tests.
      const nodeUndiciVersion = parseVersion(process.versions.undici);
      if (!nodeUndiciVersion ||
-@@ -20,13 +78,14 @@ export function unicastFetchWrap({ fetch = globalThis.fetch, } = {}) {
-     // @NOTE Since major versions of undici are not guaranteed to be backwards
-     // compatible, we need to check the major version and use the appropriate
-     // Agent class for that version, to ensure that the dispatcher interface is
--    // compatible with the version of undici being used.
-+    // compatible with the version of undici being used. undici_v8 is loaded
-+    // lazily (createRequire) so its CacheStorage ctor only runs on the v8 branch.
-     const dispatcher = nodeUndiciVersion[0] === 6
-         ? new Undici6Agent({ connect: { lookup: unicastLookup } })
-         : nodeUndiciVersion[0] === 7
-             ? new Undici7Agent({ connect: { lookup: unicastLookup } })
-             : nodeUndiciVersion[0] === 8
--                ? new Undici8Agent({ connect: { lookup: unicastLookup } })
-+                ? new (require('undici_v8').Agent)({ connect: { lookup: unicastLookup } })
-                 : null;
-     // @NOTE Because this is a security feature, we don't want to fallback to
-     // using Agent8 to "future proof" this package. Although future version of

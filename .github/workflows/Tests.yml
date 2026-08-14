@@ -28,7 +28,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: canary
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -112,7 +112,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: canary
 
       - name: Install dependencies
         # Native addons (sharp) need their build scripts; bun blocks dep
@@ -310,7 +310,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: canary
 
       # html-to-image is a bun workspace member (#314), so deps come from the
       # single root bun.lock — no standalone package-lock.json anymore.
@@ -386,7 +386,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: canary
 
       # The checker silently missed a wrapped @see once, so it is pinned by its
       # own boundary pairs before it is trusted to gate anything.
@@ -410,7 +410,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: canary
 
       - name: Check the policy allows what the client ships
         run: bun run test:bot-policy
