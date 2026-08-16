@@ -41,7 +41,7 @@
     "cryptr": "^6.4.0",
     "dotenv": "^17.4.2",
     "envalid": "^8.2.0",
-    "hono": "^4.13.1",
+    "hono": "^4.13.2",
     "hono-rate-limiter": "^0.5.3",
     "iron-session": "^8.0.4",
     "kysely": "^0.29.5",
