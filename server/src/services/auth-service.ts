@@ -6,6 +6,7 @@ import Cryptr from "cryptr";
 import { deleteE2EAgent, getE2EHandle, hasE2EAgent } from "../auth/e2e-agent-store";
 import { initializeAgentForDid } from "../auth/session-agent";
 import { env } from "../lib/env";
+import { withRetry } from "../lib/retry";
 
 import type { AppContext } from "../index";
 import type { AppBskyActorDefs } from "@atproto/api";
@@ -70,7 +71,10 @@ export class AuthService {
 
     const agent = await initializeAgentForDid(this.ctx, did);
     if (!agent) return null;
-    const response = await agent.getProfile({ actor: did });
+    const response = await withRetry(() => agent.getProfile({ actor: did }), this.ctx.logger, {
+      did,
+      op: "getProfile",
+    });
     const data = response?.data as AppBskyActorDefs.ProfileViewDetailed;
     if (!data) return null;
     return {

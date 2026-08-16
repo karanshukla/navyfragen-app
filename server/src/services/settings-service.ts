@@ -5,6 +5,7 @@ import { Logger } from "pino";
 import type { Database } from "../database/db";
 import type { IdResolver } from "@atproto/identity";
 import { toDbBoolean } from "../lib/db-boolean";
+import { withRetry } from "../lib/retry";
 
 export interface UserSettings {
   did: string;
@@ -153,12 +154,17 @@ export class SettingsService {
     try {
       let cursor: string | undefined;
       for (let page = 0; page < 10; page++) {
-        const res = await agent.com.atproto.repo.listRecords({
-          repo: userDid,
-          collection: "app.navyfragen.message",
-          limit: 100,
-          cursor,
-        });
+        const res = await withRetry(
+          () =>
+            agent.com.atproto.repo.listRecords({
+              repo: userDid,
+              collection: "app.navyfragen.message",
+              limit: 100,
+              cursor,
+            }),
+          this.logger,
+          { did: userDid, op: "listRecords" }
+        );
         if (!res.success) break;
         recordCount += res.data.records.length;
         cursor = res.data.cursor;

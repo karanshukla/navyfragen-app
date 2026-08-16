@@ -5,6 +5,7 @@ import { Logger } from "pino";
 import { type Database } from "../database/db";
 import { errorMessage } from "../lib/errors";
 import { containsProfanity } from "../lib/profanity";
+import { withRetry } from "../lib/retry";
 import { ids } from "../lexicon/lexicons";
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message";
 import { imageGenerator } from "../lib/image-generator";
@@ -205,7 +206,11 @@ export class MessageService {
     const uriParts = replyTo.uri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
     if (!uriParts) throw new Error("Invalid parent post URI");
     const [, repo, collection, rkey] = uriParts;
-    const parentRecord = await agent.com.atproto.repo.getRecord({ repo, collection, rkey });
+    const parentRecord = await withRetry(
+      () => agent.com.atproto.repo.getRecord({ repo, collection, rkey }),
+      this.logger,
+      { repo, collection, rkey, op: "getRecord" }
+    );
     if (!parentRecord.data.cid) throw new Error("Could not resolve CID for parent post");
     return {
       root: { uri: replyTo.uri, cid: parentRecord.data.cid },
@@ -380,12 +385,17 @@ export class MessageService {
     const pdsRecords: { rkey: string; value: MessageSchemaRecord }[] = [];
     let cursor: string | undefined;
     do {
-      const res = await agent.com.atproto.repo.listRecords({
-        repo: userDid,
-        collection: ids.AppNavyfragenMessage,
-        limit: 100,
-        cursor,
-      });
+      const res = await withRetry(
+        () =>
+          agent.com.atproto.repo.listRecords({
+            repo: userDid,
+            collection: ids.AppNavyfragenMessage,
+            limit: 100,
+            cursor,
+          }),
+        this.logger,
+        { did: userDid, op: "listRecords" }
+      );
       if (!res.success) break;
       for (const r of res.data.records) {
         const rkey = r.uri.split("/").pop()!;
