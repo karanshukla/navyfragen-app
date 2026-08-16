@@ -9,6 +9,10 @@ loadEnv({ path: resolve(__dirname, "docker/.env") });
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
+  // All specs drive one shared live Bluesky test account (see E2E.yml's
+  // concurrency group), so cross-file parallelism races specs against each
+  // other's inbox/message state. One worker serializes them.
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: [["html", { open: "never" }]],
   use: {
