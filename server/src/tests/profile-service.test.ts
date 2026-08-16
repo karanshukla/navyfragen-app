@@ -243,7 +243,7 @@ describe("ProfileService", () => {
       });
     });
 
-    it("should throw an error when the API call fails", async () => {
+    it("should throw an error when the API call fails on every retry attempt", async () => {
       // Arrange
       const testDid = "did:test:error";
       const tempMockGetProfile = mock(async () => {
@@ -255,7 +255,33 @@ describe("ProfileService", () => {
       await assert.rejects(async () => await profileService.getPublicProfile(testDid), {
         message: "Failed to fetch profile",
       });
+      assert.strictEqual(tempMockGetProfile.mock.calls.length, 3);
+      assert.strictEqual(mockLogger.warn.mock.calls.length, 2);
       assert.strictEqual(mockLogger.error.mock.calls.length, 1);
+    });
+
+    it("should succeed once getProfile recovers within the retry budget", async () => {
+      // Arrange — fails twice with a transient error, then succeeds.
+      const testDid = "did:test:recovered";
+      let callCount = 0;
+      const tempMockGetProfile = mock(async () => {
+        callCount++;
+        if (callCount < 3) throw new Error("socket connection was closed unexpectedly");
+        return {
+          success: true,
+          data: { did: testDid, handle: "recovered.bsky.app" },
+        };
+      });
+      (profileService as any).agent.getProfile = tempMockGetProfile;
+
+      // Act
+      const result = await profileService.getPublicProfile(testDid);
+
+      // Assert
+      assert.strictEqual(result.profile.handle, "recovered.bsky.app");
+      assert.strictEqual(tempMockGetProfile.mock.calls.length, 3);
+      assert.strictEqual(mockLogger.warn.mock.calls.length, 2);
+      assert.strictEqual(mockLogger.error.mock.calls.length, 0);
     });
   });
 

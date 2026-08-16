@@ -12,6 +12,8 @@ export interface ProfileResolver {
 
 const INBOX_OPEN_BY_DEFAULT = true;
 const MAX_SOCIAL_GRAPH_PAGES = 5;
+const GET_PROFILE_MAX_ATTEMPTS = 3;
+const GET_PROFILE_RETRY_DELAY_MS = 300;
 
 type FriendEntry = { did: string; handle: string; displayName?: string; avatar?: string };
 
@@ -79,6 +81,26 @@ export class ProfileService {
   }
   /* v8 ignore stop */
 
+  private async getProfileWithRetry(
+    did: string
+  ): Promise<Awaited<ReturnType<AtpAgent["getProfile"]>>> {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= GET_PROFILE_MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.agent.getProfile({ actor: did });
+      } catch (err) {
+        lastErr = err;
+        if (attempt < GET_PROFILE_MAX_ATTEMPTS) {
+          this.logger.warn({ err, did, attempt }, "getProfile failed, retrying");
+          await new Promise((r) => setTimeout(r, GET_PROFILE_RETRY_DELAY_MS));
+        }
+      }
+    }
+    throw new Error(`getProfile failed after ${GET_PROFILE_MAX_ATTEMPTS} attempts`, {
+      cause: lastErr,
+    });
+  }
+
   private readPubliclyVisibleSettings(did: string) {
     return this.db
       .selectFrom("user_settings")
@@ -101,7 +123,7 @@ export class ProfileService {
 
     try {
       [profileResponse, exists, publicSettings] = await Promise.all([
-        this.agent.getProfile({ actor: did }),
+        this.getProfileWithRetry(did),
         this.checkUserExists(did),
         this.readPubliclyVisibleSettings(did),
       ]);
