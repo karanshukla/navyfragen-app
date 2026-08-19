@@ -4,6 +4,7 @@ import { Logger } from "pino";
 
 import type { Database } from "../database/db";
 import { fromDbBoolean } from "../lib/db-boolean";
+import { withRetry } from "../lib/retry";
 
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
@@ -101,7 +102,10 @@ export class ProfileService {
 
     try {
       [profileResponse, exists, publicSettings] = await Promise.all([
-        this.agent.getProfile({ actor: did }),
+        withRetry(() => this.agent.getProfile({ actor: did }), this.logger, {
+          did,
+          op: "getProfile",
+        }),
         this.checkUserExists(did),
         this.readPubliclyVisibleSettings(did),
       ]);
@@ -158,10 +162,18 @@ export class ProfileService {
     const agent = this.agent;
     const [followingMap, followersMap] = await Promise.all([
       collectPagedActors((cursor) =>
-        agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor })
+        withRetry(
+          () => agent.app.bsky.graph.getFollows({ actor: userDid, limit: 100, cursor }),
+          this.logger,
+          { did: userDid, op: "getFollows" }
+        )
       ),
       collectPagedActors((cursor) =>
-        agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor })
+        withRetry(
+          () => agent.app.bsky.graph.getFollowers({ actor: userDid, limit: 100, cursor }),
+          this.logger,
+          { did: userDid, op: "getFollowers" }
+        )
       ),
     ]);
 
@@ -175,7 +187,10 @@ export class ProfileService {
 
   async checkFollowsBot(agent: Agent, botDid: string): Promise<boolean> {
     try {
-      const res = await agent.getProfile({ actor: botDid });
+      const res = await withRetry(() => agent.getProfile({ actor: botDid }), this.logger, {
+        botDid,
+        op: "getProfile",
+      });
       if (!res.success) return false;
       return !!res.data.viewer?.following;
     } catch (err) {
@@ -187,7 +202,14 @@ export class ProfileService {
   async searchActorsTypeahead(
     q: string
   ): Promise<{ did: string; handle: string; displayName?: string; avatar?: string }[]> {
-    const res = await this.agent.searchActorsTypeahead({ q, limit: 8 });
+    const res = await withRetry(
+      () => this.agent.searchActorsTypeahead({ q, limit: 8 }),
+      this.logger,
+      {
+        q,
+        op: "searchActorsTypeahead",
+      }
+    );
     return res.data.actors.map((a) => ({
       did: a.did,
       handle: a.handle,
