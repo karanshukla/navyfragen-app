@@ -31,10 +31,8 @@ import type { BidirectionalResolver } from "./lib/id-resolver";
 import { createClient } from "#/auth/client";
 import { env } from "#/lib/env";
 
-// Windows hangs on DNS TXT lookups via the system resolver. Strictly
-// Windows-only: Bun routes dns.lookup through this server list too, so applying
-// it everywhere makes the runtime forget every name the system resolver owns,
-// container DNS included (that is how the Postgres hostname stopped resolving).
+// Windows hangs on DNS TXT lookups via the system resolver, so name resolution
+// there goes to public servers instead. No other platform needs it.
 function redirectWindowsDnsToPublicResolvers(): void {
   if (process.platform !== "win32") return;
   dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
