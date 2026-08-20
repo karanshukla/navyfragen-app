@@ -67,15 +67,22 @@ outside the workspace. The repo root deliberately has no such setting, because
 
 - `bun run test` / `test:coverage` add `--no-env-file` (Bun otherwise auto-loads
   `server/.env`'s real VAPID keys, which the dummy-env test bootstrap can't override)
-  and `--isolate` (per-file module isolation). Bun **1.3.14+** is required (the floor
-  `@types/bun` is pinned to).
-- The `undici_v8` module-load crash (8.x `CacheStorage` ctor throws
-  `webidl.util.markAsUncloneable is not a function` under Bun) and the
-  `unicastFetchWrap` SSRF guard (which requires `process.versions.undici`, absent
-  under Bun) are resolved by a **patched `@atproto-labs/fetch-node`** — see
+  and `--isolate` (per-file module isolation). Bun **1.4+** is required, and the floor
+  is enforced by the runtime rather than by a version check: the patched
+  `@atproto-labs/fetch-node` imports `undici_v8` statically again, which throws
+  `webidl.util.markAsUncloneable is not a function` at module load on anything older.
+  It fails loudly on the first import, not silently. `@types/bun` still pins `1.3.14`
+  because `@types/bun` has published nothing for 1.4 yet (`latest` was still `1.3.14`
+  when 1.4.0 shipped); move it when they are.
+- The `unicastFetchWrap` SSRF guard requires `process.versions.undici`, which Bun does
+  not expose at all (still true on 1.4), so it is resolved by a **patched
+  `@atproto-labs/fetch-node`** — see
   `patches/@atproto-labs%2Ffetch-node@0.3.7.patch`, applied via `patchedDependencies`
-  in the root `package.json`. The patch lazy-imports `undici_v8` (so it never loads
-  under Bun) and gives `unicastFetchWrap` a Bun branch. **That branch still enforces
+  in the root `package.json`. The patch gives `unicastFetchWrap` a Bun branch.
+  It used to also lazy-import `undici_v8`, because 8.x's `CacheStorage` ctor threw
+  `webidl.util.markAsUncloneable is not a function` at module load under Bun. Bun 1.4
+  implements `node:worker_threads.markAsUncloneable`, so that half was dropped and the
+  static import is back. **The Bun branch still enforces
   the unicast rules**: it runs the package's own `unicastLookup` before the request,
   so a handle resolving to a loopback/private/link-local address is rejected exactly
   as on Node. Do not reduce it to the literal-IP check — `isUnicastIpHostname`
@@ -87,18 +94,25 @@ outside the workspace. The repo root deliberately has no such setting, because
   The one gap versus the old Node path: the check runs before the connection rather
   than on the socket, so DNS rebinding between check and connect is not caught.
 - **Never call `dns.setServers()` unconditionally.** Under Node it only rebinds the
-  `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; under Bun it steers
-  `dns.lookup` too, so the process forgets every name the system resolver owns —
-  container DNS included. `src/index.ts` keeps its Windows TXT-lookup workaround gated
-  behind `process.platform === "win32"` for that reason.
+  `dns.resolve*` family and leaves `dns.lookup` on getaddrinfo; Bun 1.3.x steered
+  `dns.lookup` too, so the process forgot every name the system resolver owned,
+  container DNS included. Bun 1.4 matches Node — resolving a sibling container's name
+  after `setServers(["8.8.8.8","1.1.1.1"])` returns its address on `oven/bun:1.4-alpine`
+  and `node:24-alpine` alike, and `ENOTFOUND` on `oven/bun:1.3-alpine` — so that
+  specific hazard is gone. The
+  `process.platform === "win32"` gate in `src/index.ts` stays regardless: it scopes a
+  Windows-only TXT-lookup workaround, and pointing `dns.resolve*` at public resolvers
+  on every platform was never wanted.
 - **The listen address is negotiated, not hardcoded** (`listenPreferringDualStack`
   in `src/index.ts`). A wildcard `HOST` (`"::"` or `"0.0.0.0"`) binds `"::"` so a
   single dual-stack listener serves both families — required in production, where
   Caddy reaches this service only over Railway's private network and that network is
   IPv6-only (`BACKEND_DOMAIN = ${{Backend.RAILWAY_PRIVATE_DOMAIN}}`). Where the
   network has no IPv6 at all — every Docker bridge network in CI and local compose —
-  the bind falls back to `"0.0.0.0"`; Bun surfaces that case as a spurious
-  `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does. A non-wildcard
+  the bind falls back to `"0.0.0.0"`. Bun 1.3.x was reported to surface that case as a
+  spurious `EADDRINUSE` (`errno: 0`) instead of degrading the way Node does; that did
+  not reproduce on 1.3.14 or 1.4 in a container with `/proc/net/if_inet6` empty (see
+  #292), so the fallback is kept as cheap insurance rather than a known-live fix. A non-wildcard
   `HOST` is bound verbatim, so `HOST=127.0.0.1` still means loopback. In production a
   non-wildcard `HOST` is refused at boot (`assertProductionBindHost` in
   `src/lib/assert-production-bind-host.ts`, called first in `Server.create()`) — see
@@ -121,17 +135,21 @@ module runner, which is why running the suite on Bun in CI is what guards it.
 
 ## Coverage provider: istanbul, not v8
 
-`@vitest/coverage-v8` drives `node:inspector`'s Profiler domain, which Bun does not
-implement — every worker throws `Error: Coverage APIs are not supported` and the run
-reports 0% while still exiting green on the test count. istanbul instruments the
+`@vitest/coverage-v8` drives `node:inspector`'s Profiler domain, which Bun 1.3.x did
+not implement — every worker threw `Error: Coverage APIs are not supported` and the run
+reported 0% while still exiting green on the test count. istanbul instruments the
 source at transform time and needs no V8 inspector, so it works on either runtime.
 `@vitest/coverage-v8` is no longer a dependency. A side benefit: istanbul's lcov
 carries real `BRDA` branch records, so unlike the server's Bun coverage the Coveralls
 branch metric is meaningful.
 
+Bun 1.4 does implement `Profiler.startPreciseCoverage` / `takePreciseCoverage`, so
+`@vitest/coverage-v8` is probably viable again. Staying on istanbul anyway: it already
+gives branch data and the client is at 100%, so a swap buys nothing.
+
 Bun's own coverage reporter (server) honors neither `/* v8 ignore */` nor
 `/* istanbul ignore */`, and its lcov carries line + function coverage only, with no
-branch data (verified on 1.3.14). Per-file exclusion is done via
+branch data (verified on 1.3.14 and unchanged on 1.4). Per-file exclusion is done via
 `coveragePathIgnorePatterns` globs in `server/bunfig.toml`. These are the accepted
 trade-off of moving coverage onto the production runtime (#287); the prior c8/Node
 path that did honor `v8 ignore` and report branches was retired with the Node test

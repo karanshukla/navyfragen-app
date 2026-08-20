@@ -1,6 +1,6 @@
-// Must stay the first import: it front-runs the @atproto/oauth-client-node
-// import graph so an unpatched @atproto-labs/fetch-node fails with the actual
-// cause rather than an undici stack trace.
+// Bun version floor + the unpatched-fetch-node diagnostic. Kept first by
+// convention; see the module for why import order does not actually decide
+// which error wins under Bun.
 import "#/lib/assert-fetch-node-patch";
 
 import dns from "node:dns";

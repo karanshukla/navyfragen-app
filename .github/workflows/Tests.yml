@@ -194,10 +194,17 @@ jobs:
             exit 1
           fi
 
+      # Gating. This step used to carry continue-on-error, because Bun's
+      # coverageThreshold exits 1 for any coverage below 100% whatever the
+      # threshold — which also swallowed genuine test failures (#380 merged a
+      # red suite green). server/bunfig.toml sets no threshold now, so the exit
+      # code tracks test results and this step can gate. Coverage is bar-checked
+      # by Coveralls below. `pipefail` keeps `tee` from masking the exit code.
       - name: Run server tests with coverage
-        id: server-tests
-        run: cd server && bun run test:coverage 2>&1 | tee /tmp/server-test-output.txt
-        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          cd server && bun run test:coverage 2>&1 | tee /tmp/server-test-output.txt
 
       - name: Report coverage on PR
         if: github.event_name == 'pull_request'
@@ -257,15 +264,11 @@ jobs:
           base-path: server
           parallel: true
           # Bun's lcov carries line + function coverage only (no branch records),
-          # so the server flag reports branch% as 0/N/A on Coveralls. The real
-          # gate is Bun's own `coverageThreshold = 0.97` in bunfig.toml (which
-          # fails the run below threshold); this Coveralls gate is a secondary
-          # line-of-coverage defense and tolerates the missing branch metric.
+          # so the server flag reports branch% as 0/N/A on Coveralls. Bun's own
+          # `coverageThreshold` is unusable (see server/bunfig.toml), so this is
+          # the coverage gate, not a secondary defense — it tolerates the
+          # missing branch metric. The test-pass gate is the step above.
           coverage-threshold-percent: 97
-
-      - name: Fail if tests failed
-        if: steps.server-tests.outcome == 'failure'
-        run: exit 1
 
 
   opengraph-tests:
