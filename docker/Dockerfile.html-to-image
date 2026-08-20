@@ -3,7 +3,7 @@
 # gating CI probe (probe-bun-puppeteer.mjs) confirmed Puppeteer's Chromium
 # spawn + CDP transport work under Bun on both the local Windows dev host and
 # the Ubuntu CI runner.
-FROM oven/bun:1.3-alpine AS builder
+FROM oven/bun:1.4-alpine AS builder
 WORKDIR /app
 
 # System Chromium — Puppeteer in production points at this via
@@ -39,7 +39,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN bun install --frozen-lockfile --omit dev
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
-FROM oven/bun:1.3-alpine
+FROM oven/bun:1.4-alpine
 WORKDIR /app
 
 # Chromium and tini belong in the runtime image too (the builder stage only

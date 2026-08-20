@@ -13,26 +13,24 @@ bun = true
 # longer used. `bun run test` / `test:watch` run without coverage; the
 # `--coverage` flag on `test:coverage` enables it here.
 #
-# Two accepted limitations of Bun's coverage (verified on 1.3.14, documented in
-# docs/testing-notes.md "Coverage under Bun"):
+# Three accepted limitations of Bun's coverage (verified on 1.3.14, re-checked on
+# 1.4 and unchanged; documented in docs/testing-notes.md "Coverage under Bun"):
 #   1. It does NOT honor `/* v8 ignore */` source annotations — per-file
 #      exclusion is done via `coveragePathIgnorePatterns` below.
-#   2. Its lcov carries line + function coverage only (no branch data). The
-#      `coverageThreshold` below is therefore a scalar applied to lines.
+#   2. Its lcov carries line + function coverage only (no branch data).
+#   3. `coverageThreshold` is unusable, which is why none is set here. Any value
+#      makes the run exit 1 for coverage below 100% regardless of the threshold
+#      (verified on 1.3.14 at threshold=0 with 98%, and on 1.4.0 at threshold
+#      =0.97 with 99.59%). Setting one forced `continue-on-error` on the CI step,
+#      which in turn swallowed *test* failures — #380 shipped a red server suite
+#      green that way. With no threshold, `bun test --coverage` exits on test
+#      results alone, so the CI step gates again. The coverage bar is Coveralls.
 [test]
 # Coverage is opt-in via `bun test --coverage` (the test:coverage script).
 # Leaving `coverage` unset here means a plain `bun test` does no instrumentation.
 coverageSkipTestFiles = true
 coverageReporter = ["text", "lcov"]
-coverageThreshold = 0.97
 coverageDir = "coverage"
-# Scalar form — the object form `{ lines = ..., functions = ... }` silently
-# no-ops on Bun 1.3.14 (verified); the scalar form reliably fails the run
-# below the threshold. Matches the prior c8/Coveralls 97% gate.
-# NOTE: on Bun 1.3.14 the threshold check has a bug — it exits 1 for any
-# coverage below 100% even when above the configured threshold (verified:
-# threshold=0 with 98% coverage still fails). The CI step uses
-# continue-on-error so this is non-blocking; the actual gate is Coveralls.
 # Mirrors the former `c8.exclude` list. Each entry is a glob relative to this
 # file. Files whose coverage previously depended on `/* v8 ignore */` markers
 # (which Bun does not honor) and can't meet 97% lines without them are listed

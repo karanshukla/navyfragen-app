@@ -281,7 +281,7 @@ describe("AuthService", () => {
       assert.strictEqual(result, null);
     });
 
-    test("rethrows when getProfile rejects", async () => {
+    test("gives up with the attempt count once every getProfile retry fails", async () => {
       ctx.db.selectFrom = mock(() => ({
         selectAll: mock(function (this: any) {
           return this as any;
@@ -292,10 +292,44 @@ describe("AuthService", () => {
         executeTakeFirst: mock(async () => ({ key: "did:foo" })),
       }));
       ctx.oauthClient.restore = mock(async () => ({ sub: "did:foo" }));
-      mockAgent.getProfile = mock(async () => {
+      const getProfile = mock(async () => {
         throw new Error("network down");
       });
-      await assert.rejects(() => service.checkSession("did:foo"), /network down/);
+      mockAgent.getProfile = getProfile;
+
+      const err = await service.checkSession("did:foo").then(
+        () => undefined,
+        (e: unknown) => e as Error
+      );
+
+      assert.match(err!.message, /Call failed after 3 attempts/);
+      assert.match((err!.cause as Error).message, /network down/);
+      assert.strictEqual(getProfile.mock.calls.length, 3);
+    });
+
+    test("returns the profile once getProfile recovers within the retry budget", async () => {
+      ctx.db.selectFrom = mock(() => ({
+        selectAll: mock(function (this: any) {
+          return this as any;
+        }),
+        where: mock(function (this: any) {
+          return this as any;
+        }),
+        executeTakeFirst: mock(async () => ({ key: "did:foo" })),
+      }));
+      ctx.oauthClient.restore = mock(async () => ({ sub: "did:foo" }));
+      let calls = 0;
+      const getProfile = mock(async () => {
+        calls++;
+        if (calls < 3) throw new Error("socket connection was closed unexpectedly");
+        return { data: { did: "did:foo", handle: "recovered.test" } };
+      });
+      mockAgent.getProfile = getProfile;
+
+      const result = await service.checkSession("did:foo");
+
+      assert.strictEqual(result?.handle, "recovered.test");
+      assert.strictEqual(getProfile.mock.calls.length, 3);
     });
 
     describe("with an E2E agent", () => {

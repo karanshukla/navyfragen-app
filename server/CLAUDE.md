@@ -76,11 +76,13 @@ errors across controllers and services carry structured `{ err, did }` fields.
 bun run test:coverage   # run from server/
 ```
 
-97% via Bun's built-in coverage (`coverageThreshold` in `bunfig.toml`), applied to
-**lines** — Bun's lcov has no branch data and honors no ignore markers, so per-file
-exclusion goes in `coveragePathIgnorePatterns` in `bunfig.toml`. Check that file for
-the current list and per-file rationale; it is the source of truth and can drift ahead
-of this note. Adding an exclusion requires an entry in `docs/testing-notes.md`
+97% lines, gated by Coveralls rather than by `bunfig.toml`: Bun's own
+`coverageThreshold` exits 1 below 100% whatever it is set to, so none is set (setting
+one previously forced a `continue-on-error` that swallowed test failures — see
+`docs/testing-notes.md`). Bun's lcov has no branch data and honors no ignore markers,
+so per-file exclusion goes in `coveragePathIgnorePatterns` in `bunfig.toml`. Check that
+file for the current list and per-file rationale; it is the source of truth and can
+drift ahead of this note. Adding an exclusion requires an entry in `docs/testing-notes.md`
 explaining why and what it would take to test.
 
 Mocking: dependency injection first (chainable DB builders passed into constructors),
