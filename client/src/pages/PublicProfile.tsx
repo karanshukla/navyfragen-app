@@ -11,6 +11,7 @@ import { ProfileCard } from "../components/profile/ProfileCard";
 import { ProfileNotice } from "../components/profile/ProfileNotice";
 import { ProfileSkeleton } from "../components/profile/ProfileSkeleton";
 import { ProfileUrlBar } from "../components/profile/ProfileUrlBar";
+import { APP_NAME } from "../lib/brand";
 import { profileCardGradient } from "../lib/themes";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import * as styles from "./PublicProfile.styles";
@@ -100,8 +101,8 @@ export default function PublicProfile() {
 
   if (did && profileData && !profileData.exists) {
     return (
-      <ProfileNotice tone="yellow" title="Not on Navyfragen">
-        <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up their Navyfragen
+      <ProfileNotice tone="yellow" title={`Not on ${APP_NAME}`}>
+        <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up their {APP_NAME}{" "}
         inbox yet.
       </ProfileNotice>
     );

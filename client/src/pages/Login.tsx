@@ -12,6 +12,7 @@ import * as panelStyles from "../components/AuthPanel.styles";
 import { E2ELoginPanel } from "../components/login/E2ELoginPanel";
 import { HandleSuggestions } from "../components/login/HandleSuggestions";
 import { WinkMark } from "../components/WinkMark";
+import { APP_DOMAIN, APP_NAME } from "../lib/brand";
 import { useHandleSearch } from "../lib/useHandleSearch";
 import { BRAND_GRADIENT } from "../styles/tokens";
 
@@ -71,7 +72,7 @@ function LoginForm() {
         </Center>
         <Box ta="center">
           <Title order={1} fw={800} fz={24}>
-            Log in to Navyfragen
+            Log in to {APP_NAME}
           </Title>
           <Text size="sm" c="dimmed" mt={4}>
             Enter your AT Protocol handle to continue
@@ -132,8 +133,8 @@ function LoginForm() {
       </AuthPanel>
 
       <Text size="xs" c="dimmed" ta="center" mt="md" style={{ lineHeight: 1.6 }}>
-        You will be directed to Bluesky to authenticate. Navyfragen does not have access to your
-        password. Verify you see <strong>navyfragen.app</strong> on the login page.
+        You will be directed to Bluesky to authenticate. {APP_NAME} does not have access to your
+        password. Verify you see <strong>{APP_DOMAIN}</strong> on the login page.
       </Text>
     </Box>
   );

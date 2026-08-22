@@ -30,7 +30,7 @@ func BuildOGResponse(in ResponseInput) string {
 		title = html.EscapeString(strings.TrimSpace(in.ProfileHandle))
 	}
 	if title == "" {
-		title = "Navyfragen"
+		title = AppName
 	}
 	ogURL := html.EscapeString(profileURL)
 	ogImage := html.EscapeString(imageURL)
@@ -39,9 +39,9 @@ func BuildOGResponse(in ResponseInput) string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>%s - Navyfragen</title>
+<title>%s - %s</title>
 <meta property="og:title" content="%s">
-<meta property="og:description" content="Ask me anything anonymously on Navyfragen">
+<meta property="og:description" content="Ask me anything anonymously on %s">
 <meta property="og:url" content="%s">
 <meta property="og:image" content="%s">
 <meta property="og:image:type" content="image/png">
@@ -51,7 +51,7 @@ func BuildOGResponse(in ResponseInput) string {
 <meta name="twitter:image" content="%s">
 </head>
 <body></body>
-</html>`, title, title, ogURL, ogImage, OGWidth, OGHeight, ogImage)
+</html>`, title, AppName, title, AppName, ogURL, ogImage, OGWidth, OGHeight, ogImage)
 }
 
 // AbsoluteImageURL resolves a possibly-relative image URL against the public

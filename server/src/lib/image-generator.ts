@@ -3,6 +3,7 @@ import sharp from "sharp";
 
 import type { Logger } from "pino";
 
+import { APP_DOMAIN, APP_NAME, SHARE_DOMAIN } from "#/lib/brand";
 import { env } from "#/lib/env";
 /* v8 ignore stop */
 
@@ -148,7 +149,7 @@ export async function generateQuestionImage(
     return {};
   }
 
-  const footerText = userBskyHandle ? `fragen.navy/${userBskyHandle}` : "navyfragen.app";
+  const footerText = userBskyHandle ? `${SHARE_DOMAIN}/${userBskyHandle}` : APP_DOMAIN;
 
   const escapedMessage = originalMessage
     .replace(/&/g, "&amp;")
@@ -191,7 +192,7 @@ export async function generateQuestionImage(
         .resize(width * 2, height * 2, { kernel: sharp.kernel.lanczos3 })
         .png({ compressionLevel: 9 })
         .toBuffer();
-      const imageAltText = `Image of the anonymous question: "${originalMessage}" - Answered on Navyfragen.app`;
+      const imageAltText = `Image of the anonymous question: "${originalMessage}" - Answered on ${APP_NAME}.app`;
       return { imageBlob, imageAltText, width: width * 2, height: height * 2 };
     } else {
       const errorBody = await response.text();
@@ -626,14 +627,14 @@ function generateTwitterHtml(
       <div class="top">
         <div class="avatar">${
           /* v8 ignore next */
-          LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="Navyfragen logo" />` : "NF"
+          LOGO_DATA_URL ? `<img src="${LOGO_DATA_URL}" alt="${APP_NAME} logo" />` : "NF"
         }</div>
         <div class="user-info">
           <div class="name-row">
-            <span class="user-name">Navyfragen - Anonymous QnA</span>
+            <span class="user-name">${APP_NAME} - Anonymous QnA</span>
             <span class="verified">🔷📩</span>
           </div>
-          <div class="user-handle">@navyfragen.app</div>
+          <div class="user-handle">@${APP_DOMAIN}</div>
         </div>
       </div>
       <div class="content">

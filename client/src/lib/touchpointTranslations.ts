@@ -9,6 +9,8 @@
  * `touchpointLocales`. No extraction tooling, no missing-key linting.
  */
 
+import { APP_NAME } from "./brand";
+
 export type TouchpointLocale = "en" | "es" | "pt" | "de" | "fr";
 
 /** Ordered list for the /customise language <Select>. `en` first = default. */
@@ -48,7 +50,7 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
       "Your message will be sent anonymously to the user. They may post it publicly on Bluesky, so please don't share any personal information or passwords. Be curious, but respectful and kind!",
     inboxClosed: "This inbox is closed and not accepting new messages right now.",
     shareTitle: (name) => `Send ${name} an anonymous message`,
-    inboxShareTitle: "Send me anonymous messages on Navyfragen!",
+    inboxShareTitle: `Send me anonymous messages on ${APP_NAME}!`,
     inboxShareText: (name) => `Send ${name} anonymous messages!`,
   },
   es: {
@@ -60,7 +62,7 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
     inboxClosed:
       "Esta bandeja de entrada está cerrada y no acepta mensajes nuevos en este momento.",
     shareTitle: (name) => `Envía a ${name} un mensaje anónimo`,
-    inboxShareTitle: "¡Envíame mensajes anónimos en Navyfragen!",
+    inboxShareTitle: `¡Envíame mensajes anónimos en ${APP_NAME}!`,
     inboxShareText: (name) => `¡Envía a ${name} mensajes anónimos!`,
   },
   pt: {
@@ -72,7 +74,7 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
     inboxClosed:
       "Esta caixa de entrada está fechada e não está aceitando novas mensagens no momento.",
     shareTitle: (name) => `Envie uma mensagem anônima para ${name}`,
-    inboxShareTitle: "Envie mensagens anônimas para mim no Navyfragen!",
+    inboxShareTitle: `Envie mensagens anônimas para mim no ${APP_NAME}!`,
     inboxShareText: (name) => `Envie mensagens anônimas para ${name}!`,
   },
   de: {
@@ -83,7 +85,7 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
       "Deine Nachricht wird anonym gesendet. Sie könnte öffentlich auf Bluesky gepostet werden, also teile bitte keine persönlichen Informationen oder Passwörter. Sei neugierig, aber respektvoll und freundlich!",
     inboxClosed: "Dieser Posteingang ist geschlossen und nimmt derzeit keine neuen Nachrichten an.",
     shareTitle: (name) => `Sende ${name} eine anonyme Nachricht`,
-    inboxShareTitle: "Sende mir anonyme Nachrichten auf Navyfragen!",
+    inboxShareTitle: `Sende mir anonyme Nachrichten auf ${APP_NAME}!`,
     inboxShareText: (name) => `Sende ${name} anonyme Nachrichten!`,
   },
   fr: {
@@ -95,7 +97,7 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
     inboxClosed:
       "Cette boîte de réception est fermée et n'accepte pas de nouveaux messages pour le moment.",
     shareTitle: (name) => `Envoie un message anonyme à ${name}`,
-    inboxShareTitle: "Envoie-moi des messages anonymes sur Navyfragen !",
+    inboxShareTitle: `Envoie-moi des messages anonymes sur ${APP_NAME} !`,
     inboxShareText: (name) => `Envoie des messages anonymes à ${name} !`,
   },
 };

@@ -1,3 +1,5 @@
+import { APP_NAME } from "../lib/brand";
+
 interface WinkMarkProps {
   size?: number;
   sparkle?: boolean;
@@ -20,7 +22,7 @@ export function WinkMark({
       height={size}
       viewBox="0 0 160 160"
       role={ariaHidden ? undefined : "img"}
-      aria-label={ariaHidden ? undefined : "Navyfragen"}
+      aria-label={ariaHidden ? undefined : APP_NAME}
       aria-hidden={ariaHidden}
       className={className}
       style={{ flexShrink: 0, ...style }}

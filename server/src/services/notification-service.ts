@@ -7,6 +7,8 @@ const { sendNotification, setVapidDetails } = webPush;
 
 import type { Database } from "../database/db";
 
+import { APP_NAME } from "../lib/brand";
+
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
 }
@@ -170,7 +172,7 @@ export class NotificationService {
 
     return JSON.stringify({
       title: handle ? `New question for @${handle}` : "New anonymous question",
-      body: "Someone sent you an anonymous question on Navyfragen!",
+      body: `Someone sent you an anonymous question on ${APP_NAME}!`,
       url: "/messages",
       did: recipientDid,
       handle,

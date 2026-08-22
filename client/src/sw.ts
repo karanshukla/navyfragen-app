@@ -4,6 +4,7 @@ import { addPlugins, precacheAndRoute } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
 import { NetworkFirst, CacheFirst } from "workbox-strategies";
 
+import { APP_NAME } from "./lib/brand";
 import { isWafInterstitial } from "./lib/wafInterstitial";
 import type { PushPayload } from "./pushPayload";
 
@@ -60,7 +61,7 @@ const APP_BADGE = "/favicon-32x32.png";
 
 self.addEventListener("push", (event) => {
   let data: PushPayload = {
-    title: "Navyfragen",
+    title: APP_NAME,
     body: "You have a new update",
     url: "/messages",
   };
@@ -73,7 +74,7 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title ?? "Navyfragen", {
+    self.registration.showNotification(data.title ?? APP_NAME, {
       body: data.body,
       icon: APP_ICON,
       badge: APP_BADGE,
