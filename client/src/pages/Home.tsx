@@ -22,6 +22,7 @@ import { useSession } from "../api/authService";
 import { useSyncMessages } from "../api/messageService";
 import { ShortcutList, type Shortcut } from "../components/ShortcutList";
 import { WinkMark } from "../components/WinkMark";
+import { APP_NAME } from "../lib/brand";
 import { BRAND_GRADIENT } from "../styles/tokens";
 
 import * as styles from "./Home.styles";
@@ -71,7 +72,7 @@ export default function Home() {
   return (
     <>
       <Title order={1} mb={6} style={{ letterSpacing: "-0.03em" }}>
-        Navyfragen - Anonymous questions and answers on Bluesky
+        {APP_NAME} - Anonymous questions and answers on Bluesky
       </Title>
       <Text mb="xl" fz={15} c="dimmed">
         Receive questions from the web and post the answers directly on Bluesky.
@@ -110,7 +111,7 @@ export default function Home() {
               href="https://github.com/karanshukla/navyfragen-app"
               icon={<IconBrandGithub size={18} />}
             >
-              GitHub - Navyfragen
+              GitHub - {APP_NAME}
             </ContactLink>
             <Divider />
             <Text fz={13}>
@@ -152,7 +153,7 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Send me anonymous messages on Navyfragen!", url });
+        await navigator.share({ title: `Send me anonymous messages on ${APP_NAME}!`, url });
       } catch {
         // share sheet dismissed or unavailable
       }

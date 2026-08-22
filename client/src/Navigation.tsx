@@ -15,14 +15,19 @@ import { useFriends } from "./api/profileService";
 import { useUserStats } from "./api/settingsService";
 import { FriendSection } from "./components/nav/FriendSection";
 import { MessageCountBadge } from "./components/nav/MessageCountBadge";
+import { APP_NAME } from "./lib/brand";
 import * as styles from "./Navigation.styles";
 import { useNavShortcuts } from "./lib/useNavShortcuts";
 
 /** The three ways a Navyfragen user can be related to you. */
 const FRIEND_GROUPS = [
-  { key: "moots", label: "Moots", emptyText: "No mutuals on Navyfragen yet." },
-  { key: "following", label: "Following", emptyText: "No one-sided follows on Navyfragen yet." },
-  { key: "oomfs", label: "Oomfs", emptyText: "None of your followers are on Navyfragen yet." },
+  { key: "moots", label: "Moots", emptyText: `No mutuals on ${APP_NAME} yet.` },
+  {
+    key: "following",
+    label: "Following",
+    emptyText: `No one-sided follows on ${APP_NAME} yet.`,
+  },
+  { key: "oomfs", label: "Oomfs", emptyText: `None of your followers are on ${APP_NAME} yet.` },
 ] as const;
 
 interface NavigationProps {

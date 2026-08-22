@@ -19,6 +19,7 @@ import { PushNotificationsCard } from "../components/PushNotificationsCard";
 import { AccountOverview, type Stat } from "../components/settings/AccountOverview";
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { APP_NAME } from "../lib/brand";
 
 const NOTIFICATION_BOT = "https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i";
 const CARD_SPAN = { base: 12, md: 6, lg: 4 };
@@ -127,7 +128,7 @@ export default function Settings() {
               disabled={!installPrompt}
               leftSection={<IconDownload size={16} />}
             >
-              Install Navyfragen
+              Install {APP_NAME}
             </Button>
           </SettingsCard>
         </Grid.Col>
@@ -135,7 +136,7 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="PDS Sync"
-            description="Navyfragen syncs your anonymous messages to your Bluesky PDS (Personal Data Server). Turn this off to keep them on Navyfragen's servers only. Posting to Bluesky is unaffected."
+            description={`${APP_NAME} syncs your anonymous messages to your Bluesky PDS (Personal Data Server). Turn this off to keep them on ${APP_NAME}'s servers only. Posting to Bluesky is unaffected.`}
             control={pdsSyncControl}
           >
             {settingsError ? settingsLoadError : null}
@@ -148,8 +149,8 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Navyfragen Feed"
-            description="Browse anonymous questions and answers posted by everyone on Navyfragen worldwide. This feed may contain content intended for adults. View at your own discretion."
+            title={`${APP_NAME} Feed`}
+            description={`Browse anonymous questions and answers posted by everyone on ${APP_NAME} worldwide. This feed may contain content intended for adults. View at your own discretion.`}
           >
             <Button
               component="a"
@@ -168,7 +169,7 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="Daily Notifications"
-            description="Follow the Navyfragen notification bot on Bluesky to receive a daily alert when you have new messages in your inbox."
+            description={`Follow the ${APP_NAME} notification bot on Bluesky to receive a daily alert when you have new messages in your inbox.`}
           >
             {sessionLoading || botFollowLoading ? (
               <Skeleton height={36} radius="sm" />
@@ -191,7 +192,7 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="Delete my Data"
-            description="Permanently remove all your data from the Navyfragen servers, and Bluesky PDS. This also disables your inbox so you will no longer receive messages. You can always log back in to reregister automatically."
+            description={`Permanently remove all your data from the ${APP_NAME} servers, and Bluesky PDS. This also disables your inbox so you will no longer receive messages. You can always log back in to reregister automatically.`}
           >
             <Button
               fullWidth

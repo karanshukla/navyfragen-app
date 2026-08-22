@@ -4,6 +4,7 @@ import { SessionStore, StateStore } from "./storage";
 
 import type { Database } from "#/database/db";
 
+import { APP_NAME } from "#/lib/brand";
 import { env } from "#/lib/env";
 import { withFetchNodePatchDiagnostic } from "#/lib/assert-fetch-node-patch";
 
@@ -24,7 +25,7 @@ export const createClient = async (db: Database) => {
         // Windows DNS often fails to resolve TXT records for custom handles.
         fallbackNameservers: ["8.8.8.8", "1.1.1.1"],
         clientMetadata: {
-          client_name: "Navyfragen App",
+          client_name: `${APP_NAME} App`,
           client_id: publicUrl
             ? `${url}/client-metadata.json`
             : `http://localhost?redirect_uri=${enc(`${urlWithAPI}/oauth/callback`)}&scope=${enc(OAUTH_SCOPE)}`,

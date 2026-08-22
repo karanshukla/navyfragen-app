@@ -363,7 +363,7 @@ const ogTemplate = `<!DOCTYPE html>
     <div class="footer">
       <div class="brand">
         {{MARK_SVG}}
-        <div class="wordmark">navy<span>fragen</span></div>
+        <div class="wordmark">{{WORDMARK}}</div>
       </div>
       <div class="chip">{{SHARE_LINK}}</div>
     </div>
@@ -409,6 +409,7 @@ func BuildOGTemplate(in OGInput) string {
 		"{{W}}", fmt.Sprint(OGWidth),
 		"{{H}}", fmt.Sprint(OGHeight),
 		"{{GRAD_MARK}}", ogGradMark,
+		"{{WORDMARK}}", AppNameWordmarkHTML,
 		"{{SURFACE_TOP}}", ogSurfaceTop,
 		"{{SURFACE_BOTTOM}}", ogSurfaceBottom,
 		"{{TEXT}}", ogText,
