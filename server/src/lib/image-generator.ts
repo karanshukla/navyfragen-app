@@ -1,6 +1,4 @@
 ﻿/* v8 ignore start */
-import sharp from "sharp";
-
 import type { Logger } from "pino";
 
 import { APP_DOMAIN, APP_NAME, SHARE_DOMAIN } from "#/lib/brand";
@@ -15,6 +13,22 @@ export interface ImageGenerationResult {
   imageAltText?: string;
   width?: number;
   height?: number;
+}
+
+/**
+ * sharp bundles libvips as a native addon (tens of MB, plus its own thread
+ * pool), so a static `import "sharp"` pulls that into every server process
+ * at boot even though it's only invoked here, on the reply-with-image path.
+ * Deferred to first use so an idle process — the common case — never pays
+ * for it; the dynamic import is cached after that.
+ */
+async function loadSharp() {
+  const sharp = (await import("sharp")).default;
+  // Every render is a distinct message, so sharp's operation cache (up to
+  // 50MB by default) never gets a hit here — only holds memory an idle
+  // process doesn't get back.
+  sharp.cache(false);
+  return sharp;
 }
 
 const PRECONNECT = `
@@ -188,6 +202,7 @@ export async function generateQuestionImage(
 
     if (response.ok) {
       const raw = Buffer.from(await response.arrayBuffer());
+      const sharp = await loadSharp();
       const imageBlob = await sharp(raw)
         .resize(width * 2, height * 2, { kernel: sharp.kernel.lanczos3 })
         .png({ compressionLevel: 9 })
