@@ -1,3 +1,4 @@
+import { STORAGE_PREFIX } from "./contracts";
 import { readStoredJson, writeStoredJson } from "./safeLocalStorage";
 
 /**
@@ -11,7 +12,7 @@ import { readStoredJson, writeStoredJson } from "./safeLocalStorage";
 
 type CollapsedSections = Record<string, boolean>;
 
-const key = (did: string) => `navyfragen_friends_sections_open_${did}`;
+const key = (did: string) => `${STORAGE_PREFIX}_friends_sections_open_${did}`;
 
 export function isSectionOpen(label: string, did: string): boolean {
   return readStoredJson<CollapsedSections>(key(did))?.[label] !== false;
