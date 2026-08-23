@@ -4,6 +4,7 @@ import { Logger } from "pino";
 
 import type { Database } from "../database/db";
 import type { IdResolver } from "@atproto/identity";
+import { LEXICON_NSID } from "../lib/contracts";
 import { toDbBoolean } from "../lib/db-boolean";
 import { withRetry } from "../lib/retry";
 
@@ -158,7 +159,7 @@ export class SettingsService {
           () =>
             agent.com.atproto.repo.listRecords({
               repo: userDid,
-              collection: "app.navyfragen.message",
+              collection: LEXICON_NSID,
               limit: 100,
               cursor,
             }),

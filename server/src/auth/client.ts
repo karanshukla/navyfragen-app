@@ -5,11 +5,9 @@ import { SessionStore, StateStore } from "./storage";
 import type { Database } from "#/database/db";
 
 import { APP_NAME } from "#/lib/brand";
+import { OAUTH_SCOPE } from "#/lib/contracts";
 import { env } from "#/lib/env";
 import { withFetchNodePatchDiagnostic } from "#/lib/assert-fetch-node-patch";
-
-const OAUTH_SCOPE =
-  "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*";
 
 export const createClient = async (db: Database) => {
   const publicUrl = env.PUBLIC_URL;

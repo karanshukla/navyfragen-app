@@ -5,6 +5,7 @@ import Cryptr from "cryptr";
 
 import { deleteE2EAgent, getE2EHandle, hasE2EAgent } from "../auth/e2e-agent-store";
 import { initializeAgentForDid } from "../auth/session-agent";
+import { OAUTH_SCOPE } from "../lib/contracts";
 import { env } from "../lib/env";
 import { withRetry } from "../lib/retry";
 
@@ -21,8 +22,7 @@ export class AuthService {
     }
     try {
       const url = await this.ctx.oauthClient.authorize(handle, {
-        scope:
-          "atproto repo:app.bsky.feed.post repo:app.navyfragen.message blob:image/* rpc:app.bsky.actor.getProfile?aud=* rpc:app.bsky.graph.getFollows?aud=*",
+        scope: OAUTH_SCOPE,
       });
       return url.toString();
     } catch (err: unknown) {

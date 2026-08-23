@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { STORAGE_PREFIX } from "../lib/contracts";
 import { readStoredJson, writeStoredJson, removeStored } from "../lib/safeLocalStorage";
 
 import { apiClient } from "./apiClient";
@@ -99,7 +100,7 @@ export function useUserExists(did: string | null) {
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
 function getFriendsCacheKey(did: string) {
-  return `navyfragen_friends_v3_cache_${did}`;
+  return `${STORAGE_PREFIX}_friends_v3_cache_${did}`;
 }
 
 export function clearFriendsCache(did: string) {
