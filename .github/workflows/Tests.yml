@@ -291,6 +291,13 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Verify generated brand.go is current
+        # internal/shim/brand.go is generated from the repo-root brand.json
+        # (issue #384) — regenerate and fail if the committed file drifted.
+        run: |
+          go generate ./internal/...
+          git diff --exit-code internal/shim/brand.go
+
       - name: Vet
         run: go vet ./...
 
