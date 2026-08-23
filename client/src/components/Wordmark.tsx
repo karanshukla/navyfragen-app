@@ -1,6 +1,9 @@
 import { Text } from "@mantine/core";
 
+import { APP_NAME_WORDMARK } from "../lib/brand";
 import { WinkMark } from "./WinkMark";
+
+const [wordmarkFirst, wordmarkSecond] = APP_NAME_WORDMARK;
 
 interface WordmarkProps {
   size?: number;
@@ -29,7 +32,7 @@ export function Wordmark({ size = 22, showMark = true }: WordmarkProps) {
           alignItems: "baseline",
         }}
       >
-        <span style={{ color: "var(--mantine-color-text)" }}>navy</span>
+        <span style={{ color: "var(--mantine-color-text)" }}>{wordmarkFirst}</span>
         <Text
           component="span"
           inherit
@@ -37,7 +40,7 @@ export function Wordmark({ size = 22, showMark = true }: WordmarkProps) {
           gradient={{ from: "royal", to: "purple", deg: 135 }}
           style={{ paddingBottom: "0.2em" }}
         >
-          fragen
+          {wordmarkSecond}
         </Text>
       </span>
     </span>

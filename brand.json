@@ -1,5 +1,6 @@
 {
   "appName": "Navyfragen",
   "appDomain": "navyfragen.app",
-  "shareDomain": "fragen.navy"
+  "shareDomain": "fragen.navy",
+  "wordmark": ["navy", "fragen"]
 }
