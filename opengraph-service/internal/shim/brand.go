@@ -5,3 +5,7 @@ package shim
 //go:generate go run ../../cmd/genbrand -in ../../../brand.json -out brand.go
 
 const AppName = "Navyfragen"
+
+// AppNameWordmarkHTML is the footer's two-tone lockup — first syllable in the
+// body colour, second in {{TEXT_ACCENT}}.
+const AppNameWordmarkHTML = "navy<span>fragen</span>"
