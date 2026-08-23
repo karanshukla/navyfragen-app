@@ -10,7 +10,7 @@ WORKDIR /app
 # Every workspace member's manifest must be copied — bun install reads the
 # root workspaces array (client, server, html-to-image) and fails if any
 # listed workspace dir is missing its package.json (#314 added html-to-image).
-COPY package.json bun.lock ./
+COPY package.json bun.lock brand.json ./
 COPY patches/ ./patches/
 COPY client/package.json ./client/
 COPY server/package.json ./server/

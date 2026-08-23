@@ -38,6 +38,7 @@ WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server/node_modules ./server/node_modules
+COPY brand.json ./
 COPY server/package.json server/tsconfig.json ./server/
 COPY server/src ./server/src
 COPY server/lexicons ./server/lexicons
