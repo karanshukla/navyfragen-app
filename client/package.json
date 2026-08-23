@@ -14,7 +14,8 @@
     "test": "bunx --bun vitest run",
     "test:watch": "bunx --bun vitest",
     "test:coverage": "bunx --bun vitest run --coverage",
-    "probe:bun": "bun --bun probe-bun-vite.mjs"
+    "probe:bun": "bun --bun probe-bun-vite.mjs",
+    "render:brand-assets": "bun scripts/render-brand-assets.ts"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [

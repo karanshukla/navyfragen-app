@@ -1,11 +1,27 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { configDefaults } from "vitest/config";
+
+import brand from "../brand.json" with { type: "json" };
+
+// index.html can't import brand.ts (it isn't a module), so its brand text
+// goes through %APP_NAME%/%APP_DOMAIN% placeholders substituted here instead
+// of via Vite's built-in %VITE_*% HTML replacement — that reads from env
+// vars, and brand.json is the source of truth, not the environment.
+function brandHtmlPlugin(): Plugin {
+  return {
+    name: "brand-html-vars",
+    transformIndexHtml(html) {
+      return html.replaceAll("%APP_NAME%", brand.appName).replaceAll("%APP_DOMAIN%", brand.appDomain);
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    brandHtmlPlugin(),
     VitePWA({
       strategies: "injectManifest",
       srcDir: "src",
