@@ -32,12 +32,23 @@ type OGInput struct {
 const DefaultPrompt = "Ask me anything, anonymously"
 
 // touchpointPrompts is the localized default headline, one entry per locale in
-// client/src/lib/touchpointTranslations.ts's touchpointLocales. It reuses that
-// file's `placeholder` wording verbatim rather than a fresh translation: unlike
-// `headline`, `placeholder` doesn't take a display name, matching DefaultPrompt's
-// own name-free shape (the name already renders in the identity block above the
-// prompt), and reusing hand-reviewed copy is what keeps the OG card and the
-// PublicProfile ask card from saying different things in the same language.
+// client/src/lib/touchpointTranslations.ts's touchpointLocales.
+//
+// Deliberately NOT reused from touchpointTranslations.ts: every field there
+// that plays this role (`headline`) takes a display-name argument, and this
+// key can't — it's a plain map[string]string, and the prompt line is
+// name-free by design (the name already renders in the identity block above
+// it, the same shape DefaultPrompt itself has). `placeholder` was tried as a
+// substitute in an earlier pass and rejected: it drops "anonymously" entirely
+// (e.g. es "Pregunta algo…" = "Ask something…"), and anonymity is the
+// product's entire value proposition — the OG card is the first thing a
+// stranger sees on Bluesky, so losing that word isn't a tone mismatch, it's
+// the pitch going missing. These four are therefore fresh headline
+// translations of DefaultPrompt itself, each keeping the "anonymously"
+// adverb, sized to stay legible at the card's ~2.4x downscale (DefaultPrompt's
+// own doc comment explains why), and free of `placeholder`'s trailing
+// ellipsis, which reads as truncation at headline size.
+//
 // "en" is DefaultPrompt itself, so resolvePrompt's locale lookup and its final
 // English fallback agree by construction.
 //
@@ -46,11 +57,11 @@ const DefaultPrompt = "Ask me anything, anonymously"
 // [TestTouchpointPrompts_CoversEveryTouchpointLocale] pins that this map never
 // drifts out of sync with the TS locale list.
 var touchpointPrompts = map[string]string{
-	"en": DefaultPrompt,
-	"es": "Pregunta algo…",
-	"pt": "Pergunte algo…",
-	"de": "Frag etwas…",
-	"fr": "Pose une question…",
+	"en": DefaultPrompt,                    // "Ask me anything, anonymously" (28 chars)
+	"es": "Pregúntame algo, anónimamente",  // "Ask me something, anonymously" (29 chars)
+	"pt": "Pergunte-me algo, anonimamente", // "Ask me something, anonymously" (30 chars)
+	"de": "Frag mich alles, anonym",        // "Ask me everything, anonymous(ly)" (23 chars)
+	"fr": "Demande-moi tout, anonymement",  // "Ask me everything, anonymously" (29 chars)
 }
 
 // resolvePrompt implements the precedence /customise already promises visitors
