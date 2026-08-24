@@ -198,7 +198,7 @@ export default function Customise() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title="Profanity filter"
-            description="When on, incoming messages are screened against a wordlist. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
+            description="When on, incoming messages are screened against an English-language wordlist - other languages pass through unfiltered. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
             control={headerToggle(
               <SettingsToggle
                 label="Profanity filter"

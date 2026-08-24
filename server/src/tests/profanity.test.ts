@@ -15,4 +15,8 @@ describe("containsProfanity", () => {
   test("returns true for text containing blacklisted profanity", () => {
     assert.strictEqual(containsProfanity("you are a fucking idiot"), true);
   });
+
+  test("returns false for profanity written in a non-English language", () => {
+    assert.strictEqual(containsProfanity("eres una mierda de persona"), false);
+  });
 });
