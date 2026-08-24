@@ -160,6 +160,8 @@ services:
       OG_CACHE_TTL: "720h"
       # AT Protocol AppView — matches the TS ProfileService exactly.
       ATPROTO_APPVIEW_HOST: "https://api.bsky.app"
+      # NF server, reached for the owner's customPrompt/touchpointLocale (#409).
+      NF_SERVER_URL: "http://server:3000"
       # Public site origin used to build absolute og:image URLs for crawlers.
       PUBLIC_URL: "${PUBLIC_URL:-https://navyfragen.app}"
       PORT: "8080"
@@ -168,6 +170,7 @@ services:
     depends_on:
       - client
       - html-to-image
+      - server
     restart: unless-stopped
 
   # ── Data ────────────────────────────────────────────────────────────────────

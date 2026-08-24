@@ -20,14 +20,58 @@ type OGInput struct {
 	Handle      string
 	Banner      string // empty → brand gradient fallback
 	Avatar      string // empty → glyph fallback
-	Prompt      string // empty → default prompt
+	Prompt      string // owner's customPrompt; empty → resolvePrompt's locale/English default
+	Locale      string // owner's touchpointLocale; empty → English default
 }
 
-// DefaultPrompt applies until per-user prompts are wired in (#199). It is
+// DefaultPrompt is the last-resort fallback: no customPrompt, no recognized
+// touchpointLocale, or the NF settings read failed outright. It is
 // deliberately short: Bluesky renders a link card at roughly 500px wide, so the
 // headline is downscaled ~2.4x and every extra word costs legibility. The
 // brand name is carried by the wordmark lockup rather than repeated here.
 const DefaultPrompt = "Ask me anything, anonymously"
+
+// touchpointPrompts is the localized default headline, one entry per locale in
+// client/src/lib/touchpointTranslations.ts's touchpointLocales. It reuses that
+// file's `placeholder` wording verbatim rather than a fresh translation: unlike
+// `headline`, `placeholder` doesn't take a display name, matching DefaultPrompt's
+// own name-free shape (the name already renders in the identity block above the
+// prompt), and reusing hand-reviewed copy is what keeps the OG card and the
+// PublicProfile ask card from saying different things in the same language.
+// "en" is DefaultPrompt itself, so resolvePrompt's locale lookup and its final
+// English fallback agree by construction.
+//
+// [TestResolvePrompt_LocalizedDefault_UsesCatalogWhenNoCustomPrompt] and
+// [TestResolvePrompt_UnrecognizedLocale_FallsBackToEnglish] pin the lookup;
+// [TestTouchpointPrompts_CoversEveryTouchpointLocale] pins that this map never
+// drifts out of sync with the TS locale list.
+var touchpointPrompts = map[string]string{
+	"en": DefaultPrompt,
+	"es": "Pregunta algo…",
+	"pt": "Pergunte algo…",
+	"de": "Frag etwas…",
+	"fr": "Pose une question…",
+}
+
+// resolvePrompt implements the precedence /customise already promises visitors
+// ("Your custom message prompt overrides this setting."):
+//
+//  1. customPrompt, if set and non-empty after trimming
+//  2. the localized default for touchpointLocale
+//  3. English (DefaultPrompt)
+//
+// [TestResolvePrompt_CustomPrompt_TakesPrecedenceOverLocale] and
+// [TestResolvePrompt_UnrecognizedLocale_FallsBackToEnglish] pin both ends of
+// the fallback chain.
+func resolvePrompt(customPrompt, locale string) string {
+	if p := strings.TrimSpace(customPrompt); p != "" {
+		return p
+	}
+	if p, ok := touchpointPrompts[locale]; ok {
+		return p
+	}
+	return DefaultPrompt
+}
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 //
@@ -380,10 +424,7 @@ const ogTemplate = `<!DOCTYPE html>
 // browser, so an unescaped payload would be a code-injection vector. Remote URLs
 // additionally go through safeImageURL.
 func BuildOGTemplate(in OGInput) string {
-	prompt := strings.TrimSpace(in.Prompt)
-	if prompt == "" {
-		prompt = DefaultPrompt
-	}
+	prompt := resolvePrompt(in.Prompt, in.Locale)
 
 	handle := strings.TrimPrefix(strings.TrimSpace(in.Handle), "@")
 

@@ -35,6 +35,8 @@ func main() {
 		frontendURL = flag.String("frontend", envOr("FRONTEND_URL", "http://client:3000"), "upstream client URL to proxy to")
 		exportURL   = flag.String("export-html-url", envOr("EXPORT_HTML_URL", "http://html-to-image:3033/"), "html-to-image service URL")
 		appViewHost = flag.String("appview-host", envOr("ATPROTO_APPVIEW_HOST", shim.DefaultAppViewHost), "AT Protocol AppView host")
+		nfServerURL = flag.String("nf-server-url", envOr("NF_SERVER_URL", shim.DefaultNFServerHost), "NF server base URL, for reading the owner's customPrompt/touchpointLocale")
+		settingsTO  = flag.String("settings-timeout", envOr("OG_SETTINGS_TIMEOUT", "6s"), "NF settings-read deadline (Go duration)")
 		cacheDir    = flag.String("cache-dir", envOr("OG_CACHE_DIR", "/data/og-cache"), "cache directory (Railway volume)")
 		cacheTTL    = flag.String("cache-ttl", envOr("OG_CACHE_TTL", "720h"), "cache TTL (Go duration; ~1 month)")
 		cacheMaxStr = flag.String("cache-max-entries", envOr("OG_CACHE_MAX_ENTRIES", "0"), "max cache entries; 0 = built-in default")
@@ -53,6 +55,7 @@ func main() {
 	}
 
 	fetcher := shim.NewIndigoFetcher(*appViewHost)
+	fetcher.Settings = shim.NewNFSettingsClient(*nfServerURL, parseDurationOr(*settingsTO, 6*time.Second))
 	renderer := shim.NewHTMLToImageRenderer(*exportURL, parseDurationOr(*renderTO, 30*time.Second))
 	generator := shim.NewGenerator(cache, fetcher, renderer)
 
