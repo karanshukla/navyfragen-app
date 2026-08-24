@@ -11,6 +11,7 @@ import { queryClient } from "./api/queryClient";
 import { AppLayout } from "./AppLayout";
 import { BounceLogosProvider } from "./components/BounceLogosContext";
 import { InstallPromptProvider } from "./components/InstallPromptContext";
+import { I18nProvider } from "./lib/i18n";
 import { markUpdateReady, setUpdateApplier } from "./lib/swUpdate";
 import navyfragenTheme from "./Theme";
 
@@ -24,12 +25,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <Notifications position="bottom-right" autoClose={5000} limit={3} />
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <InstallPromptProvider>
-            <BounceLogosProvider>
-              <AppLayout />
-              <ReactQueryDevtools initialIsOpen={false} />
-            </BounceLogosProvider>
-          </InstallPromptProvider>
+          <I18nProvider>
+            <InstallPromptProvider>
+              <BounceLogosProvider>
+                <AppLayout />
+                <ReactQueryDevtools initialIsOpen={false} />
+              </BounceLogosProvider>
+            </InstallPromptProvider>
+          </I18nProvider>
         </QueryClientProvider>
       </BrowserRouter>
     </MantineProvider>

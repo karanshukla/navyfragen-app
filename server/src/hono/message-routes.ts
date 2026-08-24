@@ -505,6 +505,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     customPrompt: z.string().max(100).nullable().optional(),
     profileCardTheme: z.string().nullable().optional(),
     touchpointLocale: z.string().nullable().optional(),
+    uiLocale: z.string().nullable().optional(),
   });
 
   app.post(
@@ -530,6 +531,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
           customPrompt: body.customPrompt,
           profileCardTheme: body.profileCardTheme,
           touchpointLocale: body.touchpointLocale,
+          uiLocale: body.uiLocale,
         });
         ctx.logger.info(
           { did: userSessionDid, updatedFields: Object.keys(body ?? {}) },

@@ -91,6 +91,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       mockSelectBuilder.executeTakeFirst = async () => mockUserSettings;
@@ -183,6 +184,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -203,6 +205,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
@@ -230,6 +233,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -258,6 +262,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       executeTakeFirstQueue.push({
@@ -269,6 +274,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockUpdateBuilder.execute as any) = async () => ({});
@@ -299,6 +305,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -328,6 +335,34 @@ describe("SettingsService", () => {
       });
     });
 
+    it("should persist uiLocale independently of touchpointLocale", async () => {
+      // Arrange
+      const baseRow = {
+        did: "user123",
+        pdsSyncEnabled: 1,
+        imageTheme: "default",
+        inboxEnabled: 1,
+        profanityFilterEnabled: 0,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+        uiLocale: null,
+        createdAt: "2025-06-07T12:00:00.000Z",
+      };
+      executeTakeFirstQueue.push({ ...baseRow });
+      executeTakeFirstQueue.push({ ...baseRow, uiLocale: "de" });
+      (mockUpdateBuilder.execute as any) = async () => ({});
+
+      // Act
+      const result = await settingsService.updateSettings("user123", { uiLocale: "de" });
+
+      // Assert
+      assert.deepStrictEqual(Object.keys(lastSetArg), ["uiLocale"]);
+      assert.strictEqual(lastSetArg.uiLocale, "de");
+      assert.strictEqual(result!.uiLocale, "de");
+      assert.strictEqual(result!.touchpointLocale, null);
+    });
+
     it("should coerce truthy pdsSyncEnabled/inboxEnabled and falsy profanityFilterEnabled on update", async () => {
       // Arrange — the other update tests only exercise the opposite boolean
       // outcome for these three fields; this covers the remaining branches.
@@ -340,6 +375,7 @@ describe("SettingsService", () => {
         customPrompt: null,
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -372,6 +408,7 @@ describe("SettingsService", () => {
         customPrompt: "previously set",
         profileCardTheme: null,
         touchpointLocale: null,
+        uiLocale: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });

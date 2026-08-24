@@ -20,6 +20,8 @@ export interface UserSettings extends AskCardCustomisation {
   imageTheme: string;
   inboxEnabled: number | boolean;
   profanityFilterEnabled: number | boolean;
+  /** The logged-in user's own app language. Private — never returned on a public profile. */
+  uiLocale: string | null;
   createdAt: string;
 }
 
