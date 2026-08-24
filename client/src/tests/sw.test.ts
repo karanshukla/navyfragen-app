@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { APP_NAME } from "../lib/brand";
+
 const precacheAndRouteMock = vi.fn();
 const addPluginsMock = vi.fn();
 const registerRouteMock = vi.fn();
@@ -219,11 +221,11 @@ describe("sw.ts", () => {
 
     it("shows a notification with defaults when there is no payload", async () => {
       await dispatchPush({ data: undefined });
-      expect(selfMock.registration.showNotification).toHaveBeenCalledWith("Navyfragen", {
+      expect(selfMock.registration.showNotification).toHaveBeenCalledWith(APP_NAME, {
         body: "You have a new update",
         icon: "/android-chrome-192x192.png",
         badge: "/favicon-32x32.png",
-        data: { title: "Navyfragen", body: "You have a new update", url: "/messages" },
+        data: { title: APP_NAME, body: "You have a new update", url: "/messages" },
       });
     });
 
@@ -244,10 +246,10 @@ describe("sw.ts", () => {
       );
     });
 
-    it("falls back to the Navyfragen title when the payload explicitly clears it", async () => {
+    it("falls back to the app name when the payload explicitly clears the title", async () => {
       await dispatchPush({ data: { json: () => ({ title: undefined, body: "Someone asked" }) } });
       expect(selfMock.registration.showNotification).toHaveBeenCalledWith(
-        "Navyfragen",
+        APP_NAME,
         expect.objectContaining({ body: "Someone asked" })
       );
     });
@@ -261,7 +263,7 @@ describe("sw.ts", () => {
         },
       });
       expect(selfMock.registration.showNotification).toHaveBeenCalledWith(
-        "Navyfragen",
+        APP_NAME,
         expect.objectContaining({ body: "You have a new update" })
       );
     });

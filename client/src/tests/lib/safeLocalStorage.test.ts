@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { readStoredJson, writeStoredJson, removeStored } from "../../lib/safeLocalStorage";
 
-const KEY = "navyfragen_test_key";
+const KEY = "test_key";
 
 describe("safeLocalStorage", () => {
   beforeEach(() => {

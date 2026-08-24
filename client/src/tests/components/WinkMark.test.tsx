@@ -3,6 +3,7 @@ import React from "react";
 import { describe, it, expect } from "vitest";
 
 import { WinkMark } from "../../components/WinkMark";
+import { APP_NAME } from "../../lib/brand";
 
 describe("WinkMark", () => {
   it("renders without crashing with default props", () => {
@@ -37,7 +38,7 @@ describe("WinkMark", () => {
     const { container } = render(<WinkMark />);
     const svg = container.querySelector("svg");
     expect(svg!.getAttribute("role")).toBe("img");
-    expect(svg!.getAttribute("aria-label")).toBe("Navyfragen");
+    expect(svg!.getAttribute("aria-label")).toBe(APP_NAME);
   });
 
   it("omits role and aria-label when aria-hidden is true", () => {

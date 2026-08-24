@@ -6,6 +6,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
 import * as settingsService from "../../api/settingsService";
+import { APP_NAME } from "../../lib/brand";
 import { themes } from "../../lib/themes";
 import Messages from "../../pages/Messages";
 import { renderWithProviders } from "../testUtils";
@@ -1804,7 +1805,7 @@ describe("Messages page", () => {
 
       const payload = shareSpy.mock.calls[0][0];
       // Spanish acquisition copy, parameterized with the owner's display name.
-      expect(payload.title).toBe("¡Envíame mensajes anónimos en Navyfragen!");
+      expect(payload.title).toBe(`¡Envíame mensajes anónimos en ${APP_NAME}!`);
       expect(payload.text).toBe("¡Envía a Karan mensajes anónimos!");
     } finally {
       Object.defineProperty(navigator, "share", {
