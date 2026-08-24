@@ -79,6 +79,8 @@ describe("Auth (Hono)", () => {
         body: JSON.stringify({ handle: "" }),
       });
       assert.strictEqual(res.status, 400);
+      const body = await res.json();
+      assert.strictEqual(body.errors[0].message, "INVALID_HANDLE");
     });
 
     test("returns 400 for missing handle", async () => {
@@ -103,7 +105,8 @@ describe("Auth (Hono)", () => {
       });
       assert.strictEqual(res.status, 400);
       const body = await res.json();
-      assert.strictEqual(body.error, "invalid handle");
+      assert.strictEqual(body.error, "INVALID_HANDLE");
+      assert.strictEqual(body.message, "invalid handle");
     });
 
     test("returns redirectUrl on success", async () => {
@@ -306,6 +309,18 @@ describe("Auth (Hono)", () => {
       assert.strictEqual(res.status, 400);
     });
 
+    test("returns 400 with the DID_REQUIRED code when did is empty", async () => {
+      const { app, headers } = makeApp();
+      const res = await app.request("/accounts/switch", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ did: "" }),
+      });
+      assert.strictEqual(res.status, 400);
+      const body = await res.json();
+      assert.strictEqual(body.errors[0].message, "DID_REQUIRED");
+    });
+
     test("returns 403 and logs when DID is not in the session (probing attempt)", async () => {
       const { app, ctx, headers } = makeApp({
         session: {
@@ -334,6 +349,8 @@ describe("Auth (Hono)", () => {
         body: JSON.stringify({ did: "not-a-did" }),
       });
       assert.strictEqual(res.status, 400);
+      const body = await res.json();
+      assert.strictEqual(body.error, "INVALID_DID");
       // The DID-format check runs before the session lookup, so no warn log.
       assert.strictEqual((ctx.logger.warn as any).mock.calls.length, 0);
     });

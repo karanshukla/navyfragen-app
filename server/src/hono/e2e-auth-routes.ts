@@ -8,6 +8,7 @@ import { Hono } from "hono";
 
 import { setE2EAgent } from "#/auth/e2e-agent-store";
 import { env } from "#/lib/env";
+import { errorBody } from "#/lib/errors";
 import { AuthService } from "#/services/auth-service";
 import { getSession, setSession } from "./session-middleware";
 
@@ -33,14 +34,17 @@ export function createE2EAuthHono(ctx: AppContext, service: AuthService): Hono {
       // Defense in depth: refuse even if the route was somehow mounted in production.
       if (env.NODE_ENV === "production") {
         ctx.logger.error("E2E login attempted in production — request blocked");
-        return c.json({ error: "E2E login is not available in production" }, 403);
+        return c.json(
+          errorBody("E2E_LOGIN_UNAVAILABLE", "E2E login is not available in production"),
+          403
+        );
       }
       const { identifier, password } = c.req.valid("json");
       const agent = new AtpAgent({ service: env.E2E_PDS_URL });
       await agent.login({ identifier, password });
       const did = agent.session?.did;
       if (!did) {
-        return c.json({ error: "Login failed: no session DID returned" }, 401);
+        return c.json(errorBody("E2E_LOGIN_NO_DID", "Login failed: no session DID returned"), 401);
       }
       await ctx.db
         .insertInto("auth_session")
