@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -351,5 +352,44 @@ func TestNFSettingsClient_UnreachableHost_ReturnsErrorNotPanic(t *testing.T) {
 	_, err := c.FetchSettings(context.Background(), "did:plc:test")
 	if err == nil {
 		t.Fatal("expected an error against an unreachable host")
+	}
+}
+
+// dnsNotFoundTransport simulates a hostname that fails DNS resolution — the
+// expected state of NF_SERVER_URL in production until the Railway variable is
+// set (DefaultNFServerHost's docker-compose-local default does not resolve on
+// Railway's private network).
+type dnsNotFoundTransport struct {
+	calls *int32
+}
+
+func (t dnsNotFoundTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	atomic.AddInt32(t.calls, 1)
+	return nil, &net.DNSError{Err: "no such host", Name: req.URL.Hostname(), IsNotFound: true}
+}
+
+// TestNFSettingsClient_DNSResolutionFailure_IsNotRetried pins the fix for a
+// production incident risk: a DNS name that does not resolve is a permanent
+// misconfiguration, not a wake-shaped failure like 502/503 or
+// connection-refused. Retrying it burns the full retry budget as dead latency
+// on a cold render — the same render that may also be waiting on
+// html-to-image waking Chromium — so it must fail after exactly one attempt,
+// well under the configured deadline.
+func TestNFSettingsClient_DNSResolutionFailure_IsNotRetried(t *testing.T) {
+	var calls int32
+	c := NewNFSettingsClient("http://nf-settings.invalid/", 6*time.Second)
+	c.AttemptTimeout = 6 * time.Second
+	c.Client = &http.Client{Transport: dnsNotFoundTransport{calls: &calls}}
+
+	start := time.Now()
+	_, err := c.FetchSettings(context.Background(), "did:plc:test")
+	if err == nil {
+		t.Fatal("expected an error for a DNS resolution failure")
+	}
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("a DNS resolution failure must not be retried, took %v (budget was 6s)", elapsed)
+	}
+	if n := atomic.LoadInt32(&calls); n != 1 {
+		t.Fatalf("expected exactly 1 attempt for a DNS resolution failure, got %d", n)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -166,10 +167,12 @@ func isNotFound(err error) bool {
 // It is NOT production-correct — Railway has no "server" DNS name on its
 // private network — so it must be overridden via NF_SERVER_URL in every
 // deployed environment, the same way FRONTEND_URL and EXPORT_HTML_URL are
-// (see opengraph-service/RAILWAY.md). Left unset in production, every settings
-// read fails fast (DNS lookup error) and FetchProfile's caller-side fallback
-// keeps the card rendering in English — never a broken card, just an
-// unlocalized one.
+// (see opengraph-service/RAILWAY.md). Left unset in production, this name
+// does not resolve; FetchSettings treats an unresolved-host error as
+// terminal rather than retryable (see the DNS check in its retry loop), so
+// the failure surfaces after a single attempt, not after the retry budget —
+// FetchProfile's caller-side fallback keeps the card rendering in English
+// with no added latency, never a broken or a slow card.
 const DefaultNFServerHost = "http://server:3000"
 
 // NFSettings is the subset of an owner's NF user_settings row the OG card
@@ -265,6 +268,19 @@ func (s *NFSettingsClient) FetchSettings(ctx context.Context, did string) (NFSet
 		respBytes, status, err := s.attempt(ctx, url, minDuration(s.attemptTimeout(), remaining))
 		switch {
 		case err != nil:
+			// A DNS name that does not resolve is a permanent misconfiguration,
+			// not a wake-shaped failure — no amount of retrying fixes it, and
+			// every retry is dead latency stacked ahead of a cold render (the
+			// same render that may also be waiting on html-to-image waking
+			// Chromium). Everything else transport-level (connection refused,
+			// connection reset, a timeout) still means "the service is
+			// booting" and stays retryable below.
+			// [TestNFSettingsClient_DNSResolutionFailure_IsNotRetried] pins this
+			// alongside the wake-shaped-status and no-retry-on-4xx/429 cases.
+			var dnsErr *net.DNSError
+			if errors.As(err, &dnsErr) && dnsErr.IsNotFound {
+				return NFSettings{}, fmt.Errorf("nf-settings: %w", err)
+			}
 			lastErr = err
 		case settingsWakeRetryableStatuses[status]:
 			lastErr = fmt.Errorf("nf-settings %d: %s", status, strings.TrimSpace(string(respBytes)))
