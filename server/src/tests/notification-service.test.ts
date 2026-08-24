@@ -17,6 +17,9 @@ import { NotificationService, createConcurrencyLimiter } from "../services/notif
 // Chainable DB builder mocks — match the pattern used across the server tests.
 function makeSelectBuilder(existing: any, rows: any[]) {
   return {
+    select: mock(function (this: any) {
+      return this;
+    }),
     selectAll: mock(function (this: any) {
       return this;
     }),
@@ -414,6 +417,41 @@ describe("NotificationService", () => {
         await service.sendNewMessageNotification("did:recipient");
 
         assert.strictEqual(mockLogger.error.mock.calls.length, 0);
+      });
+
+      /**
+       * A notification in the wrong language beats no notification (#405).
+       */
+      test("still delivers the notification when the uiLocale read fails, falling back to en", async () => {
+        const subKeys = makeSubscriptionKeys();
+        mockDb.selectFrom = mock((table: string) => {
+          if (table === "user_settings") {
+            return {
+              select: mock(function (this: any) {
+                return this;
+              }),
+              where: mock(function (this: any) {
+                return this;
+              }),
+              executeTakeFirst: mock(async () => {
+                throw new Error("settings read failed");
+              }),
+            };
+          }
+          return makeSelectBuilder(undefined, [
+            {
+              did: "did:recipient",
+              endpoint: `https://127.0.0.1:${port}/sub`,
+              p256dh: subKeys.p256dh,
+              auth: subKeys.auth,
+            },
+          ]);
+        });
+
+        await service.sendNewMessageNotification("did:recipient");
+
+        assert.strictEqual(mockLogger.error.mock.calls.length, 0);
+        assert.strictEqual(mockLogger.warn.mock.calls.length, 1);
       });
 
       test("deletes the subscription when the push service reports 410 Gone", async () => {

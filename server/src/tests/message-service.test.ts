@@ -7,6 +7,7 @@ import { type Logger } from "pino";
 import { type Database } from "../database/db";
 import { imageGenerator } from "../lib/image-generator";
 import type { ImageGenerationResult } from "../lib/image-generator";
+import { getServerMessages } from "../lib/i18n";
 import { MessageService, type Message, type ProfileResolver } from "../services/message-service";
 
 describe("MessageService", () => {
@@ -206,6 +207,61 @@ describe("MessageService", () => {
     // ...and that one statement carries all 8 rows.
     assert.strictEqual(Array.isArray(lastInsertValues), true);
     assert.strictEqual((lastInsertValues as any[]).length, 8);
+  });
+
+  test("addExampleMessages seeds using the requesting user's uiLocale (#405)", async () => {
+    mockInsertBuilder.execute.mockImplementation(async () => ({}));
+    mockSelectBuilder.executeTakeFirst.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    mockSelectBuilder.execute.mockImplementationOnce(async () => []);
+
+    await messageService.addExampleMessages("did:foo", "en");
+
+    const insertedText = (lastInsertValues as any[]).map((row) => row.message);
+    assert.deepStrictEqual(insertedText, [...getServerMessages("en").exampleQuestions]);
+  });
+
+  test("addExampleMessages falls back to the en catalog for an unrecognized uiLocale", async () => {
+    mockInsertBuilder.execute.mockImplementation(async () => ({}));
+    mockSelectBuilder.executeTakeFirst.mockImplementationOnce(async () => ({
+      did: "did:foo",
+    }));
+    mockSelectBuilder.execute.mockImplementationOnce(async () => []);
+
+    await messageService.addExampleMessages("did:foo", "xx");
+
+    const insertedText = (lastInsertValues as any[]).map((row) => row.message);
+    assert.deepStrictEqual(insertedText, [...getServerMessages("en").exampleQuestions]);
+  });
+
+  /**
+   * Example questions are content, not chrome: whatever language they were
+   * seeded in is what the owner keeps. `getMessages` (the read path) never
+   * touches the i18n catalog, so a later `uiLocale` change cannot retranslate
+   * or replace rows already in the DB.
+   */
+  test("keeps a seeded example message in its original locale after the owner changes uiLocale (#405)", async () => {
+    mockInsertBuilder.execute.mockImplementation(async () => ({}));
+    mockSelectBuilder.executeTakeFirst.mockImplementation(async () => ({
+      did: "did:foo",
+    }));
+    const seeded: Message[] = getServerMessages("en").exampleQuestions.map((message, i) => ({
+      tid: `example-${i + 1}-1`,
+      message,
+      createdAt: "now",
+      recipient: "did:foo",
+    }));
+    mockSelectBuilder.execute.mockImplementationOnce(async () => seeded);
+
+    const seededResult = await messageService.addExampleMessages("did:foo", "en");
+    assert.deepStrictEqual(seededResult, seeded);
+
+    // The owner changes their App language after seeding. Re-reading the
+    // inbox must return the exact rows already stored, unchanged.
+    mockSelectBuilder.execute.mockImplementationOnce(async () => seeded);
+    const reread = await messageService.getMessages("did:foo");
+    assert.deepStrictEqual(reread, seeded);
   });
 
   test("sendMessage inserts and returns success", async () => {

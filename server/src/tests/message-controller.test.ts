@@ -162,6 +162,29 @@ describe("Messages (Hono)", () => {
       });
       assert.strictEqual(res.status, 500);
     });
+
+    test("passes the requester's uiLocale from user_settings through to the service (#405)", async () => {
+      const { app, service, headers } = makeApp({ dbResult: { uiLocale: "en" } });
+      const res = await app.request("/messages/example", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ recipient: "did:foo" }),
+      });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(service.addExampleMessages.mock.calls.length, 1);
+      assert.deepStrictEqual(service.addExampleMessages.mock.calls[0], ["did:foo", "en"]);
+    });
+
+    test("passes undefined uiLocale through when the user has no settings row", async () => {
+      const { app, service, headers } = makeApp({ dbResult: null });
+      const res = await app.request("/messages/example", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ recipient: "did:foo" }),
+      });
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(service.addExampleMessages.mock.calls[0], ["did:foo", undefined]);
+    });
   });
 
   describe("POST /messages/respond", () => {

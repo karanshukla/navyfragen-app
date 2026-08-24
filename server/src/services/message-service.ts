@@ -4,6 +4,7 @@ import { Logger } from "pino";
 
 import { type Database } from "../database/db";
 import { errorMessage } from "../lib/errors";
+import { getServerMessages } from "../lib/i18n";
 import { containsProfanity } from "../lib/profanity";
 import { withRetry } from "../lib/retry";
 import { ids } from "../lexicon/lexicons";
@@ -27,17 +28,6 @@ interface SyncOutcome {
   count: number;
   errors: { tid: string; error: string }[];
 }
-
-const EXAMPLE_QUESTIONS = [
-  "Do you like cats?",
-  "Do you like dogs?",
-  "What's your favorite movie?",
-  "If you could travel anywhere, where would you go?",
-  "What's something most people don't know about you?",
-  "What's the best piece of advice you've ever received?",
-  "What are you currently obsessed with?",
-  "What's your hot take on something totally mundane?",
-];
 
 export class MessageService {
   constructor(
@@ -93,10 +83,18 @@ export class MessageService {
     }
   }
 
-  async addExampleMessages(recipient: string): Promise<Message[]> {
+  /**
+   * Seeded once, in the requesting user's `uiLocale` at that moment. These are
+   * content, not chrome: never retranslated on a later read, never re-seeded
+   * on a later locale change.
+   * @see [message-service.test.ts](../tests/message-service.test.ts) — "keeps
+   * a message seeded under one locale after the owner switches uiLocale".
+   */
+  async addExampleMessages(recipient: string, uiLocale?: string | null): Promise<Message[]> {
     try {
       const now = new Date();
-      const examples = EXAMPLE_QUESTIONS.map((message, i) => ({
+      const exampleQuestions = getServerMessages(uiLocale).exampleQuestions;
+      const examples = exampleQuestions.map((message, i) => ({
         tid: `example-${i + 1}-${Date.now()}`,
         message,
         createdAt: new Date(now.getTime() + i * 1000).toISOString(),
