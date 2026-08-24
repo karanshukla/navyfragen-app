@@ -13,6 +13,8 @@ import { E2ELoginPanel } from "../components/login/E2ELoginPanel";
 import { HandleSuggestions } from "../components/login/HandleSuggestions";
 import { WinkMark } from "../components/WinkMark";
 import { APP_DOMAIN, APP_NAME } from "../lib/brand";
+import { useTranslations } from "../lib/i18n";
+import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useHandleSearch } from "../lib/useHandleSearch";
 import { BRAND_GRADIENT } from "../styles/tokens";
 
@@ -23,6 +25,7 @@ const handleSchema = z
 
 function LoginForm() {
   const location = useLocation();
+  const messages = useTranslations();
   const search = useHandleSearch();
   const [error, setError] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("error") === "oauth_failed"
@@ -58,7 +61,7 @@ function LoginForm() {
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (err: any) => {
-          setError(err.error || "Login failed. Please try again.");
+          setError(resolveApiErrorMessage(err, messages));
         },
       }
     );

@@ -2,6 +2,8 @@ const API_URL = import.meta.env.VITE_API_URL || "";
 
 export interface ApiError {
   error: string;
+  /** The server's untranslated English fallback for `error`, when it sent one. */
+  message?: string;
   status?: number;
 }
 

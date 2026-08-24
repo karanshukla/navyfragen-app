@@ -18,6 +18,8 @@ import { ImageThemePicker } from "../components/messages/ImageThemePicker";
 import { InboxLinkCard } from "../components/messages/InboxLinkCard";
 import { PostingPreferences } from "../components/messages/PostingPreferences";
 import { QuestionGrid } from "../components/messages/QuestionGrid";
+import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
+import { useTranslations } from "../lib/i18n";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import { useMessagePreferences } from "../lib/useMessagePreferences";
 import { useQuestionRender } from "../lib/useQuestionRender";
@@ -42,6 +44,7 @@ interface QueuedSend {
 
 export default function Messages() {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
   const { data: session, isLoading: sessionLoading } = useSession();
   const prefs = useMessagePreferences();
   const { appendProfileLink, useGradients, includeQuestionAsImage, confirmBeforeDelete } =
@@ -68,7 +71,7 @@ export default function Messages() {
     onError: (error: ApiError) => {
       notifications.show({
         title: "Error updating theme",
-        message: error.error || "Failed to update image theme.",
+        message: resolveApiErrorMessage(error, messages),
         color: "red",
       });
     },
@@ -111,7 +114,7 @@ export default function Messages() {
       onError: (err: any) => {
         notifications.show({
           title: "Error Adding Examples",
-          message: err.error || "Failed to add example messages.",
+          message: resolveApiErrorMessage(err, messages),
           color: "red",
         });
       },
@@ -135,7 +138,7 @@ export default function Messages() {
       onError: (err: any) => {
         notifications.show({
           title: "Error Deleting Message",
-          message: err.error || "Failed to delete message.",
+          message: resolveApiErrorMessage(err, messages),
           color: "red",
         });
         closeModal();
@@ -215,7 +218,7 @@ export default function Messages() {
           }
           notifications.show({
             title: "Response Error",
-            message: err.error || "Failed to send response.",
+            message: resolveApiErrorMessage(err, messages),
             color: "red",
           });
         },
