@@ -3,6 +3,7 @@ import React from "react";
 import { describe, it, expect } from "vitest";
 
 import { Wordmark } from "../../components/Wordmark";
+import { APP_NAME_WORDMARK } from "../../lib/brand";
 import { renderWithProviders } from "../testUtils";
 
 describe("Wordmark", () => {
@@ -21,9 +22,14 @@ describe("Wordmark", () => {
     expect(container.querySelector("svg")).toBeNull();
   });
 
-  it("renders the text 'navyfragen'", () => {
+  it("renders each wordmark syllable in its own element, in order", () => {
     const { container } = renderWithProviders(<Wordmark />);
-    expect(container.textContent).toContain("navy");
-    expect(container.textContent).toContain("fragen");
+    const [first, second] = APP_NAME_WORDMARK;
+    const lockup = container.querySelector("span")!;
+    const syllables = Array.from(lockup.querySelectorAll("span"))
+      .map((el) => el.textContent)
+      .filter((text) => text === first || text === second);
+    expect(syllables).toEqual([first, second]);
+    expect(lockup.textContent).toBe(APP_NAME_WORDMARK.join(""));
   });
 });

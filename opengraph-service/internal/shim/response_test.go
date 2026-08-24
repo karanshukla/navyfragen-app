@@ -113,11 +113,11 @@ func TestAbsoluteImageURL_ProtocolRelative_DefaultsToHTTPSWhenOriginHasNoScheme(
 	}
 }
 
-func TestBuildOGResponse_TitleFallsBackToNavyfragenWhenNothingIdentifying(t *testing.T) {
+func TestBuildOGResponse_TitleFallsBackToAppNameWhenNothingIdentifying(t *testing.T) {
 	got := BuildOGResponse(ResponseInput{
 		ImageURL: "https://x/y.png",
 		Origin:   "https://navyfragen.app",
 	})
-	mustContain(t, got, "<title>Navyfragen - Navyfragen</title>")
-	mustContain(t, got, `content="Navyfragen"`)
+	mustContain(t, got, "<title>"+AppName+" - "+AppName+"</title>")
+	mustContain(t, got, `content="`+AppName+`"`)
 }

@@ -240,7 +240,7 @@ describe("PublicProfile page", () => {
     });
   });
 
-  it("shows 'Not on Navyfragen' when user exists on Bluesky but has no inbox", () => {
+  it("shows the not-on-the-app notice when the user is on Bluesky but has no inbox", () => {
     mockUseResolveHandle.mockReturnValue({
       data: { did: TEST_DID },
       isLoading: false,
@@ -256,7 +256,7 @@ describe("PublicProfile page", () => {
       isPending: false,
     } as any);
     renderWithProviders(<PublicProfile />);
-    expect(screen.getByText(/not on navyfragen/i)).toBeInTheDocument();
+    expect(screen.getByText(/^not on /i)).toBeInTheDocument();
   });
 
   it("shows generic error when handleError has non-404 status", () => {

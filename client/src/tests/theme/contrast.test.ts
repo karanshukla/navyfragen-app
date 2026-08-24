@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "vitest";
 
-import navyfragenTheme, { ALERT_TONES } from "../../Theme";
+import appTheme, { ALERT_TONES } from "../../Theme";
 
 import { contrast, flatten, parseColor, worstOnGradient, type Rgb } from "./colorMath";
 import { declaredTokens, referencedTokens, token, type Scheme } from "./readTokens";
@@ -30,8 +30,8 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
  * index.css, so it is read from the same place the browser reads it.
  */
 const BODY: Record<Scheme, Rgb> = {
-  light: parseColor(navyfragenTheme.white!),
-  dark: parseColor(navyfragenTheme.colors!.dark![7]),
+  light: parseColor(appTheme.white!),
+  dark: parseColor(appTheme.colors!.dark![7]),
 };
 
 function surface(scheme: Scheme): Rgb {
@@ -109,16 +109,14 @@ describe("controls", () => {
   });
 
   it.each(SCHEMES)("filled primary buttons carry white labels at AA (%s)", (scheme) => {
-    const fill = navyfragenTheme.colors!.royal![navyfragenTheme.primaryShade as number];
-    expect(contrast(parseColor(navyfragenTheme.white!), parseColor(fill))).toBeGreaterThanOrEqual(
-      AA
-    );
+    const fill = appTheme.colors!.royal![appTheme.primaryShade as number];
+    expect(contrast(parseColor(appTheme.white!), parseColor(fill))).toBeGreaterThanOrEqual(AA);
     expect(scheme).toBeTruthy();
   });
 
   it("destructive buttons carry white labels at AA", () => {
     expect(
-      contrast(parseColor(navyfragenTheme.white!), parseColor(navyfragenTheme.colors!.crimson![6]))
+      contrast(parseColor(appTheme.white!), parseColor(appTheme.colors!.crimson![6]))
     ).toBeGreaterThanOrEqual(AA);
   });
 

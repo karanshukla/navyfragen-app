@@ -192,9 +192,9 @@ describe("Navigation", () => {
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation />);
-      expect(screen.getByText(/no mutuals on navyfragen yet/i)).toBeInTheDocument();
-      expect(screen.getByText(/no one-sided follows on navyfragen yet/i)).toBeInTheDocument();
-      expect(screen.getByText(/none of your followers are on navyfragen yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/no mutuals on/i)).toBeInTheDocument();
+      expect(screen.getByText(/no one-sided follows on/i)).toBeInTheDocument();
+      expect(screen.getByText(/none of your followers are on/i)).toBeInTheDocument();
     });
   });
 

@@ -471,7 +471,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     const installBtn = screen.getByRole("button", {
-      name: /install navyfragen/i,
+      name: /^install\b/i,
     });
     fireEvent.click(installBtn);
     await waitFor(() => {
@@ -557,7 +557,7 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
 
     // fireEvent.click dispatches even on disabled buttons in JSDOM
-    fireEvent.click(screen.getByRole("button", { name: /install navyfragen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^install\b/i }));
 
     // noopInstall.installPrompt is null → handleInstallClick returns early
     expect(noopInstall.setInstallPrompt).not.toHaveBeenCalled();
@@ -590,7 +590,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    fireEvent.click(screen.getByRole("button", { name: /install navyfragen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^install\b/i }));
 
     await waitFor(() => {
       expect(installPromptMock.prompt).toHaveBeenCalled();

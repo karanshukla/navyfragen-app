@@ -7,8 +7,13 @@
  * Renaming the app does not rename these — derive nothing here from
  * `brand.ts`.
  *
+ * Tests spell these out as literals rather than importing these constants, so
+ * that renaming one fails them instead of silently following it.
+ *
  * @see [contracts.test.ts](../tests/contracts.test.ts): pins `OAUTH_SCOPE`
  * against the published client metadata.
+ * @see [message-service.test.ts](../tests/message-service.test.ts): pins the
+ * `at://` URIs built from `LEXICON_NSID`.
  */
 
 export const LEXICON_NSID = "app.navyfragen.message";
