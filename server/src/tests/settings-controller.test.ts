@@ -196,6 +196,25 @@ describe("Settings (Hono)", () => {
       assert.strictEqual(passed.touchpointLocale, "es");
     });
 
+    test("uiLocale: null unsets it, omitted leaves it alone", async () => {
+      const { app, service, headers } = makeApp();
+      await app.request("/settings", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ uiLocale: null }),
+      });
+      const passed = service.updateSettings.mock.calls[0][1];
+      assert.strictEqual(passed.uiLocale, null);
+
+      await app.request("/settings", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ inboxEnabled: false }),
+      });
+      const secondPass = service.updateSettings.mock.calls[1][1];
+      assert.strictEqual(secondPass.uiLocale, undefined);
+    });
+
     test("coerces profanityFilterEnabled to a strict boolean when provided", async () => {
       const { app, service, headers } = makeApp();
       await app.request("/settings", {

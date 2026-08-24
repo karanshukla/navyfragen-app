@@ -62,6 +62,7 @@ export type UserSettings = {
   customPrompt: string | null;
   profileCardTheme: string | null;
   touchpointLocale: string | null;
+  uiLocale: string | null;
   createdAt: string;
 };
 
@@ -314,6 +315,15 @@ migrations["010"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.dropIndex("message_recipient_idx").execute();
+  },
+};
+
+migrations["011"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").addColumn("uiLocale", "varchar").execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").dropColumn("uiLocale").execute();
   },
 };
 
