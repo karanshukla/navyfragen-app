@@ -10,7 +10,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
-    "puppeteer": "^25.6.0",
+    "puppeteer": "^25.8.0",
     "tmp": "^0.2.7"
   }
 }
