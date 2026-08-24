@@ -8,6 +8,11 @@ const matcher = new RegExpMatcher({
   ...englishRecommendedTransformers,
 });
 
+/**
+ * Matches English profanity only; non-English profanity passes through unfiltered.
+ *
+ * @see [profanity.test.ts](../tests/profanity.test.ts) — pins the English-only scope.
+ */
 export function containsProfanity(text: string): boolean {
   if (!text) return false;
   return matcher.hasMatch(text);
