@@ -1,5 +1,7 @@
 import { Modal, Button, Text, Group } from "@mantine/core";
 
+import { useTranslations } from "../lib/i18n";
+
 interface ConfirmationModalProps {
   opened: boolean;
   onClose: () => void;
@@ -19,20 +21,22 @@ export function ConfirmationModal({
   onConfirm,
   title,
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   loading = false,
 }: ConfirmationModalProps) {
+  const messages = useTranslations();
+
   return (
     <Modal opened={opened} onClose={onClose} title={title} centered>
       <Text mb="md">{message}</Text>
       <Group justify="flex-end">
         <Button variant="default" onClick={onClose} disabled={loading}>
-          {cancelLabel}
+          {cancelLabel ?? messages.common.cancel}
         </Button>
         <Button color={destructive ? "crimson" : "royal"} onClick={onConfirm} loading={loading}>
-          {confirmLabel}
+          {confirmLabel ?? messages.common.confirm}
         </Button>
       </Group>
     </Modal>

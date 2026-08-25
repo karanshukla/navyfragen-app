@@ -16,11 +16,6 @@ vi.mock("../../lib/accountSwitchToast", async (importOriginal) => {
   return { ...actual, buildAccountSwitchUrl: vi.fn() };
 });
 
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
-});
-
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
   return {

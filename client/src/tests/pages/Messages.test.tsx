@@ -17,11 +17,6 @@ vi.mock("../../api/authService", async (importOriginal) => {
   return { ...actual, useSession: vi.fn() };
 });
 
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
-});
-
 vi.mock("../../api/messageService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/messageService")>();
   return {

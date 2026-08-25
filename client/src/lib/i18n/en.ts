@@ -1,7 +1,27 @@
 import type { Messages } from "./types";
 
 export const en = {
-  // filled by #402
+  common: {
+    cancel: "Cancel",
+    confirm: "Confirm",
+    delete: "Delete",
+    retry: "Retry",
+    copy: "Copy",
+    copied: "Copied!",
+    copyLink: "Copy link",
+    share: "Share",
+    userAltFallback: "User",
+    shortcuts: {
+      title: "Keyboard Shortcuts",
+      home: "Home",
+      login: "Login",
+      messages: "Messages",
+      settings: "Settings",
+      focusCycleCards: "Focus / cycle cards",
+      navigateCards: "Navigate cards",
+      closeExpandedCard: "Close expanded card",
+    },
+  },
   errors: {
     codes: {
       NOT_AUTHENTICATED: "You're not signed in. Please log in and try again.",

@@ -101,7 +101,7 @@ interface I18nContextValue {
   messages: Messages;
 }
 
-const I18nContext = createContext<I18nContextValue | undefined>(undefined);
+export const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();

@@ -17,11 +17,6 @@ vi.mock("../../api/notificationService", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
-});
-
 const mockGetPushPermission = vi.mocked(notificationService.getPushPermission);
 const mockUsePushAvailable = vi.mocked(notificationService.usePushAvailable);
 const mockUseEnablePushNotifications = vi.mocked(notificationService.useEnablePushNotifications);

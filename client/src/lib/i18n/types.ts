@@ -25,6 +25,28 @@ export interface ErrorMessages {
   generic: string;
 }
 
+export interface CommonMessages {
+  cancel: string;
+  confirm: string;
+  delete: string;
+  retry: string;
+  copy: string;
+  copied: string;
+  copyLink: string;
+  share: string;
+  userAltFallback: string;
+  shortcuts: {
+    title: string;
+    home: string;
+    login: string;
+    messages: string;
+    settings: string;
+    focusCycleCards: string;
+    navigateCards: string;
+    closeExpandedCard: string;
+  };
+}
+
 /**
  * Scoped to `errors` on purpose: this ships ahead of #402's ~210-string
  * extraction, so keeping the error-code strings in their own sub-object lets
@@ -32,4 +54,5 @@ export interface ErrorMessages {
  */
 export interface Messages {
   errors: ErrorMessages;
+  common: CommonMessages;
 }
