@@ -82,11 +82,6 @@ if (!transformed.includes("jsxDEV")) {
   fail(`Login.tsx came back untransformed (no jsxDEV):\n${transformed.slice(0, 400)}`);
 }
 
-await step("close", async () => {
-  server.httpServer?.closeAllConnections?.();
-  await server.close();
-});
-
 clearTimeout(watchdog);
 
 // Bun buffers stdout when it is not a TTY, which it never is under Actions,
@@ -98,7 +93,13 @@ await Bun.write(
     `dev-transform=${transformed.length}B ${timings.join(" ")}\n`
 );
 
-// Vite's watcher and socket teardown are the suspected cause of the CI stalls
-// this probe hit; every assertion above has passed by here, so nothing is
-// gained by waiting for the event loop to drain on its own.
+// The probe deliberately never calls server.close(). Under Bun on the CI
+// runner that call does not resolve — #423's watchdog caught it as
+// `stalled in phase 'close'` after every assertion had already passed, on a
+// run whose only change was unrelated — and closeAllConnections() plus
+// `Connection: close` on both fetches did not change that. Closing is not part
+// of what this probe asserts either: it exists to prove the runtime is Bun and
+// that the dev server transforms TSX, and `bun run dev` is likewise never
+// closed, only interrupted. So the process exits once there is nothing left to
+// check, and the OS reclaims the socket.
 process.exit(0);
