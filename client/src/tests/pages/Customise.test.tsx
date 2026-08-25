@@ -123,46 +123,52 @@ describe("Customise page", () => {
     expect(mutate).toHaveBeenCalledWith({ profanityFilterEnabled: true });
   });
 
-  it("picking a locale fires updateSettings with touchpointLocale", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings());
-    const mutate = mockMutation();
-    renderWithProviders(<Customise />);
+  it.each(touchpointLocales.filter((l) => l.value !== "en"))(
+    "picking $value fires updateSettings with touchpointLocale",
+    ({ value, label }) => {
+      mockUseUserSettings.mockReturnValue(mockSettings());
+      const mutate = mockMutation();
+      renderWithProviders(<Customise />);
 
-    // Mantine Select renders a combobox. Query by role to avoid matching the
-    // card title text, then open it and pick Español.
-    const combobox = screen.getByRole("combobox", { name: en.customisePage.messageLanguage });
-    fireEvent.click(combobox);
-    const spanish = touchpointLocales.find((l) => l.value === "es")!;
-    const option = screen.getByRole("option", { name: spanish.label });
-    fireEvent.click(option);
+      // Mantine Select renders a combobox. Query by role to avoid matching
+      // the card title text, then open it and pick the target language.
+      const combobox = screen.getByRole("combobox", { name: en.customisePage.messageLanguage });
+      fireEvent.click(combobox);
+      const option = screen.getByRole("option", { name: label });
+      fireEvent.click(option);
 
-    expect(mutate).toHaveBeenCalledWith({ touchpointLocale: "es" });
-  });
+      expect(mutate).toHaveBeenCalledWith({ touchpointLocale: value });
+    }
+  );
 
-  it("picking a locale fires updateSettings with uiLocale", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings());
-    const mutate = mockMutation();
-    renderWithProviders(<Customise />);
+  it.each(uiLocaleOptions.filter((l) => l.value !== "en"))(
+    "picking $value fires updateSettings with uiLocale",
+    ({ value, label }) => {
+      mockUseUserSettings.mockReturnValue(mockSettings());
+      const mutate = mockMutation();
+      renderWithProviders(<Customise />);
 
-    const combobox = screen.getByRole("combobox", { name: en.customisePage.appLanguage });
-    fireEvent.click(combobox);
-    const spanish = uiLocaleOptions.find((l) => l.value === "es")!;
-    const option = screen.getByRole("option", { name: spanish.label });
-    fireEvent.click(option);
+      const combobox = screen.getByRole("combobox", { name: en.customisePage.appLanguage });
+      fireEvent.click(combobox);
+      const option = screen.getByRole("option", { name: label });
+      fireEvent.click(option);
 
-    expect(mutate).toHaveBeenCalledWith({ uiLocale: "es" });
-  });
+      expect(mutate).toHaveBeenCalledWith({ uiLocale: value });
+    }
+  );
 
-  it("shows the matching label when touchpointLocale is already set to a known locale", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings({ touchpointLocale: "es" }));
-    mockMutation();
-    renderWithProviders(<Customise />);
+  it.each(touchpointLocales.filter((l) => l.value !== "en"))(
+    "shows the matching label when touchpointLocale is already set to $value",
+    ({ value, label }) => {
+      mockUseUserSettings.mockReturnValue(mockSettings({ touchpointLocale: value }));
+      mockMutation();
+      renderWithProviders(<Customise />);
 
-    const spanish = touchpointLocales.find((l) => l.value === "es")!;
-    expect(screen.getByRole("combobox", { name: en.customisePage.messageLanguage })).toHaveValue(
-      spanish.label
-    );
-  });
+      expect(screen.getByRole("combobox", { name: en.customisePage.messageLanguage })).toHaveValue(
+        label
+      );
+    }
+  );
 
   it("shows English as the App language selector's default value", () => {
     mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: null }));
@@ -185,7 +191,7 @@ describe("Customise page", () => {
   });
 
   it("shows English for the App language selector when uiLocale is an unsupported value", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: "de" }));
+    mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: "it" }));
     mockMutation();
     renderWithProviders(<Customise />);
 
@@ -193,6 +199,19 @@ describe("Customise page", () => {
       "English"
     );
   });
+
+  it.each(uiLocaleOptions.filter((l) => l.value !== "en"))(
+    "shows the matching label when uiLocale is set to $value",
+    ({ value, label }) => {
+      mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: value }));
+      mockMutation();
+      renderWithProviders(<Customise />);
+
+      expect(screen.getByRole("combobox", { name: en.customisePage.appLanguage })).toHaveValue(
+        label
+      );
+    }
+  );
 
   it("disables the App language selector while an update is in flight", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());

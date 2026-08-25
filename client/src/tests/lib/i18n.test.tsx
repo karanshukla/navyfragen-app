@@ -12,8 +12,11 @@ import {
   resolveUiLocale,
   loadCatalog,
 } from "../../lib/i18n";
+import { de } from "../../lib/i18n/de";
 import { en } from "../../lib/i18n/en";
 import { es } from "../../lib/i18n/es";
+import { fr } from "../../lib/i18n/fr";
+import { pt } from "../../lib/i18n/pt";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
@@ -107,9 +110,21 @@ describe("resolveUiLocale", () => {
         settingsLoaded: true,
         isLoggedIn: false,
         storedLocale: null,
-        navigatorLanguages: ["fr-FR", "en-US"],
+        navigatorLanguages: ["it-IT", "en-US"],
       })
     ).toBe("en");
+  });
+
+  it("rung 3 finds a #410 locale further down the navigator language list", () => {
+    expect(
+      resolveUiLocale({
+        settingsUiLocale: null,
+        settingsLoaded: true,
+        isLoggedIn: false,
+        storedLocale: null,
+        navigatorLanguages: ["it-IT", "fr-FR", "en-US"],
+      })
+    ).toBe("fr");
   });
 
   it("rung 3 matches on the primary subtag, ignoring region", () => {
@@ -131,7 +146,7 @@ describe("resolveUiLocale", () => {
         settingsLoaded: true,
         isLoggedIn: false,
         storedLocale: null,
-        navigatorLanguages: ["fr-FR", "de-DE"],
+        navigatorLanguages: ["it-IT", "ja-JP"],
       })
     ).toBe("en");
   });
@@ -163,6 +178,49 @@ describe("counts reach the catalog as numbers", () => {
     expect(es.nav.unreadCount(1234)).toBe("1234 no leídos");
     expect(es.messagesPage.newMessagesCount(2)).toBe("2 nuevos");
   });
+
+  // Portuguese and French both classify 0 with the singular ("one") category
+  // per CLDR, unlike Spanish — the opposite of the naive assumption, and
+  // exactly the kind of thing #410 warned is a common bug to get backwards.
+  it("uses the singular Portuguese form for both zero and one", () => {
+    expect(pt.nav.unreadCount(0)).toBe("0 não lida");
+    expect(pt.nav.unreadCount(1)).toBe("1 não lida");
+    expect(pt.messagesPage.newMessagesCount(0)).toBe("0 nova");
+    expect(pt.messagesPage.newMessagesCount(1)).toBe("1 nova");
+  });
+
+  it("uses the plural Portuguese form for more than one", () => {
+    expect(pt.nav.unreadCount(2)).toBe("2 não lidas");
+    expect(pt.messagesPage.newMessagesCount(2)).toBe("2 novas");
+  });
+
+  it("uses the singular French form for both zero and one", () => {
+    expect(fr.nav.unreadCount(0)).toBe("0 non lu");
+    expect(fr.nav.unreadCount(1)).toBe("1 non lu");
+    expect(fr.messagesPage.newMessagesCount(0)).toBe("0 nouveau");
+    expect(fr.messagesPage.newMessagesCount(1)).toBe("1 nouveau");
+  });
+
+  it("uses the plural French form for more than one", () => {
+    expect(fr.nav.unreadCount(2)).toBe("2 non lus");
+    expect(fr.messagesPage.newMessagesCount(2)).toBe("2 nouveaux");
+  });
+
+  // German count labels are bare predicate adjectives that don't inflect for
+  // number ("1 ungelesen" / "2 ungelesen"), unlike the other three locales.
+  it("uses the same uninflected German form regardless of count", () => {
+    expect(de.nav.unreadCount(0)).toBe("0 ungelesen");
+    expect(de.nav.unreadCount(1)).toBe("1 ungelesen");
+    expect(de.nav.unreadCount(2)).toBe("2 ungelesen");
+    expect(de.messagesPage.newMessagesCount(1)).toBe("1 neu");
+    expect(de.messagesPage.newMessagesCount(2)).toBe("2 neu");
+  });
+
+  it("formats grouped counts per locale in the preferences summary", () => {
+    expect(pt.postingPreferences.summary(3, 5)).toBe("3 de 5 ativas");
+    expect(de.postingPreferences.summary(1000, 2000)).toBe("1.000 von 2.000 aktiv");
+    expect(fr.postingPreferences.summary(3, 5)).toBe("3 sur 5 actives");
+  });
 });
 
 describe("es catalog interpolations", () => {
@@ -192,6 +250,85 @@ describe("es catalog interpolations", () => {
   });
 });
 
+describe("pt/de/fr catalog interpolations", () => {
+  // Same rationale as the es block above: each of these is lazy-loaded and
+  // never the active catalog elsewhere in this suite, so every
+  // function-valued entry needs a direct call here for coverage.
+  it("interpolates every function-valued entry in pt", () => {
+    expect(pt.common.switchedToAccount("alice.bsky.social")).toBe(
+      "Você mudou para @alice.bsky.social"
+    );
+    expect(pt.postingPreferences.summary(3, 5)).toBe("3 de 5 ativas");
+    expect(pt.nav.friendGroups.moots.emptyText("Navyfragen")).toBe(
+      "Você ainda não tem amigos mútuos no Navyfragen."
+    );
+    expect(pt.nav.friendGroups.following.emptyText("Navyfragen")).toBe(
+      "Você ainda não tem seguidos unilaterais no Navyfragen."
+    );
+    expect(pt.nav.friendGroups.oomfs.emptyText("Navyfragen")).toBe(
+      "Nenhum dos seus seguidores está no Navyfragen ainda."
+    );
+    expect(pt.publicProfilePage.notOnAppTitle("Navyfragen")).toBe("Não está no Navyfragen");
+    expect(pt.userMenu.logOut("alice.bsky.social")).toBe("Sair @alice.bsky.social");
+    expect(pt.home.shareTitle("Navyfragen")).toBe(
+      "Envie mensagens anônimas para mim no Navyfragen!"
+    );
+    expect(pt.settingsPage.pdsSyncDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.settingsPage.feedTitle("Navyfragen")).toBe("Feed do Navyfragen");
+    expect(pt.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+  });
+
+  it("interpolates every function-valued entry in de", () => {
+    expect(de.common.switchedToAccount("alice.bsky.social")).toBe(
+      "Zu @alice.bsky.social gewechselt"
+    );
+    expect(de.postingPreferences.summary(3, 5)).toBe("3 von 5 aktiv");
+    expect(de.nav.friendGroups.moots.emptyText("Navyfragen")).toBe(
+      "Noch keine gegenseitigen Follows auf Navyfragen."
+    );
+    expect(de.nav.friendGroups.following.emptyText("Navyfragen")).toBe(
+      "Noch keine einseitigen Follows auf Navyfragen."
+    );
+    expect(de.nav.friendGroups.oomfs.emptyText("Navyfragen")).toBe(
+      "Noch keiner deiner Follower ist auf Navyfragen."
+    );
+    expect(de.publicProfilePage.notOnAppTitle("Navyfragen")).toBe("Nicht auf Navyfragen");
+    expect(de.userMenu.logOut("alice.bsky.social")).toBe("@alice.bsky.social abmelden");
+    expect(de.home.shareTitle("Navyfragen")).toBe("Sende mir anonyme Nachrichten auf Navyfragen!");
+    expect(de.settingsPage.pdsSyncDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.settingsPage.feedTitle("Navyfragen")).toBe("Navyfragen-Feed");
+    expect(de.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+  });
+
+  it("interpolates every function-valued entry in fr", () => {
+    expect(fr.common.switchedToAccount("alice.bsky.social")).toBe("Passé à @alice.bsky.social");
+    expect(fr.postingPreferences.summary(3, 5)).toBe("3 sur 5 actives");
+    expect(fr.nav.friendGroups.moots.emptyText("Navyfragen")).toBe(
+      "Aucun mutuel sur Navyfragen pour l'instant."
+    );
+    expect(fr.nav.friendGroups.following.emptyText("Navyfragen")).toBe(
+      "Aucun abonnement à sens unique sur Navyfragen pour l'instant."
+    );
+    expect(fr.nav.friendGroups.oomfs.emptyText("Navyfragen")).toBe(
+      "Aucun de tes abonnés n'est encore sur Navyfragen."
+    );
+    expect(fr.publicProfilePage.notOnAppTitle("Navyfragen")).toBe("Pas sur Navyfragen");
+    expect(fr.userMenu.logOut("alice.bsky.social")).toBe("Se déconnecter @alice.bsky.social");
+    expect(fr.home.shareTitle("Navyfragen")).toBe(
+      "Envoie-moi des messages anonymes sur Navyfragen !"
+    );
+    expect(fr.settingsPage.pdsSyncDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.settingsPage.feedTitle("Navyfragen")).toBe("Flux Navyfragen");
+    expect(fr.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+  });
+});
+
 describe("loadCatalog", () => {
   it("returns the en catalog for locale 'en'", async () => {
     expect(await loadCatalog("en")).toEqual({ locale: "en", messages: en });
@@ -202,10 +339,10 @@ describe("loadCatalog", () => {
   });
 
   it("reports en, not the request, for a locale this bundle does not (yet) register", async () => {
-    // The locale it reports is the one being rendered. Echoing "de" back here
-    // would label an English page German for a screen reader and format its
+    // The locale it reports is the one being rendered. Echoing "it" back here
+    // would label an English page Italian for a screen reader and format its
     // dates in a language nothing on screen is written in.
-    expect(await loadCatalog("de")).toEqual({ locale: "en", messages: en });
+    expect(await loadCatalog("it")).toEqual({ locale: "en", messages: en });
   });
 
   it("resolves the real es catalog for locale 'es'", async () => {
@@ -214,6 +351,18 @@ describe("loadCatalog", () => {
 
   it("keeps a regional Spanish tag, so dates and numbers stay regional", async () => {
     expect(await loadCatalog("es-MX")).toEqual({ locale: "es-MX", messages: es });
+  });
+
+  it("resolves the real pt catalog for locale 'pt'", async () => {
+    expect(await loadCatalog("pt")).toEqual({ locale: "pt", messages: pt });
+  });
+
+  it("resolves the real de catalog for locale 'de'", async () => {
+    expect(await loadCatalog("de")).toEqual({ locale: "de", messages: de });
+  });
+
+  it("resolves the real fr catalog for locale 'fr'", async () => {
+    expect(await loadCatalog("fr")).toEqual({ locale: "fr", messages: fr });
   });
 
   it("falls back to en when a registered loader rejects", async () => {
@@ -276,7 +425,7 @@ describe("I18nProvider / useTranslations / useLocale", () => {
   it("labels the page en when the requested locale has no catalog to render", async () => {
     mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
     mockUseUserSettings.mockReturnValue({
-      data: { uiLocale: "de" },
+      data: { uiLocale: "it" },
       isLoading: false,
       isSuccess: true,
     } as any);
@@ -300,6 +449,25 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     });
     expect(document.documentElement.lang).toBe("es");
     expect(screen.getByTestId("probe")).toHaveTextContent(JSON.stringify(es));
+  });
+
+  it.each([
+    ["pt", pt],
+    ["de", de],
+    ["fr", fr],
+  ])("renders the %s catalog end to end when uiLocale is '%s'", async (locale, catalog) => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { uiLocale: locale },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    renderProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", locale);
+    });
+    expect(document.documentElement.lang).toBe(locale);
+    expect(screen.getByTestId("probe")).toHaveTextContent(JSON.stringify(catalog));
   });
 
   it("updates document.documentElement.lang when the locale changes with no reload", async () => {
