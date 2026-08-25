@@ -40,7 +40,7 @@ export default function Settings() {
   const updateSettings = useUpdateUserSettings({
     onError: (error: ApiError) => {
       notifications.show({
-        title: "Update Failed",
+        title: messages.settingsPage.updateFailedTitle,
         message: resolveApiErrorMessage(error, messages),
         color: "red",
       });
@@ -67,9 +67,9 @@ export default function Settings() {
   };
 
   const settingsLoadError = (
-    <Alert color="red" title="Failed to load settings" withCloseButton={false}>
+    <Alert color="red" title={messages.common.settingsLoadErrorTitle} withCloseButton={false}>
       <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
-        Retry
+        {messages.common.retry}
       </Button>
     </Alert>
   );
@@ -78,7 +78,7 @@ export default function Settings() {
     <Skeleton height={22} width={38} radius="xl" />
   ) : settingsError ? null : (
     <SettingsToggle
-      label="PDS Sync"
+      label={messages.settingsPage.pdsSync}
       checked={Boolean(userSettings?.pdsSyncEnabled)}
       saving={updateSettings.isPending}
       onChange={(checked) => {
@@ -91,12 +91,24 @@ export default function Settings() {
   );
 
   const stats: Stat[] = [
-    { value: userStats?.messageCount ?? "—", label: "Messages in inbox", size: "large" },
-    { value: pdsInfo?.recordCount ?? "—", label: "Answers on PDS", size: "large" },
-    { value: formatMemberSince(userStats?.memberSince), label: "Active since", size: "medium" },
+    {
+      value: userStats?.messageCount ?? "—",
+      label: messages.settingsPage.messagesInInbox,
+      size: "large",
+    },
+    {
+      value: pdsInfo?.recordCount ?? "—",
+      label: messages.settingsPage.answersOnPds,
+      size: "large",
+    },
+    {
+      value: formatMemberSince(userStats?.memberSince),
+      label: messages.settingsPage.activeSince,
+      size: "medium",
+    },
     {
       value: pdsInfo?.pdsUrl ? pdsInfo.pdsUrl.replace(/^https?:\/\//, "") : "—",
-      label: "PDS",
+      label: messages.settingsPage.pdsLabel,
       size: "small",
       truncate: true,
     },
@@ -104,8 +116,8 @@ export default function Settings() {
 
   if (!session?.isLoggedIn && !sessionLoading) {
     return (
-      <Alert title="Error" color="red">
-        You cannot access this page without logging in.
+      <Alert title={messages.common.errorTitle} color="red">
+        {messages.common.accessDeniedMessage}
       </Alert>
     );
   }
@@ -113,7 +125,7 @@ export default function Settings() {
   return (
     <>
       <Title order={1} mb="xl" style={{ letterSpacing: "-0.03em" }}>
-        Settings
+        {messages.settingsPage.heading}
       </Title>
 
       <Grid style={{ gap: "var(--mantine-spacing-md)" }}>
@@ -123,8 +135,8 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Install Application"
-            description="Install the app for faster access on any device: phone, tablet or laptop. It runs in the same browser, and you can uninstall it any time."
+            title={messages.settingsPage.installApplication}
+            description={messages.settingsPage.installApplicationDescription}
           >
             <Button
               onClick={handleInstallClick}
@@ -132,14 +144,15 @@ export default function Settings() {
               disabled={!installPrompt}
               leftSection={<IconDownload size={16} />}
             >
-              Install {APP_NAME}
+              {messages.settingsPage.install}
+              {APP_NAME}
             </Button>
           </SettingsCard>
         </Grid.Col>
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="PDS Sync"
+            title={messages.settingsPage.pdsSync}
             description={`${APP_NAME} syncs your anonymous messages to your Bluesky PDS (Personal Data Server). Turn this off to keep them on ${APP_NAME}'s servers only. Posting to Bluesky is unaffected.`}
             control={pdsSyncControl}
           >
@@ -149,8 +162,8 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="App language"
-            description="The language you read the app in — nav, buttons, and toasts. Separate from Message language on Customise, which is what visitors and your audience see."
+            title={messages.settingsPage.appLanguage}
+            description={messages.settingsPage.appLanguageDescription}
           >
             {settingsLoading ? (
               <Skeleton height={36} radius="sm" />
@@ -175,7 +188,7 @@ export default function Settings() {
                 }
                 disabled={busy}
                 allowDeselect={false}
-                aria-label="App language"
+                aria-label={messages.settingsPage.appLanguage}
               />
             )}
           </SettingsCard>
@@ -199,14 +212,14 @@ export default function Settings() {
               variant="outline"
               rightSection={<IconExternalLink size={14} />}
             >
-              Open Feed on Bluesky
+              {messages.settingsPage.openFeedOnBluesky}
             </Button>
           </SettingsCard>
         </Grid.Col>
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Daily Notifications"
+            title={messages.settingsPage.dailyNotifications}
             description={`Follow the ${APP_NAME} notification bot on Bluesky to receive a daily alert when you have new messages in your inbox.`}
           >
             {sessionLoading || botFollowLoading ? (
@@ -221,7 +234,9 @@ export default function Settings() {
                 variant="outline"
                 rightSection={<IconExternalLink size={14} />}
               >
-                {isFollowingBot ? "View bot on Bluesky" : "Follow the bot on Bluesky"}
+                {isFollowingBot
+                  ? messages.settingsPage.viewBotOnBluesky
+                  : messages.settingsPage.followTheBotOnBluesky}
               </Button>
             )}
           </SettingsCard>
@@ -229,7 +244,7 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Delete my Data"
+            title={messages.settingsPage.deleteMyData}
             description={`Permanently remove all your data from the ${APP_NAME} servers, and Bluesky PDS. This also disables your inbox so you will no longer receive messages. You can always log back in to reregister automatically.`}
           >
             <Button
@@ -244,7 +259,7 @@ export default function Settings() {
                 setDeleteModalOpened(true);
               }}
             >
-              Delete my Data
+              {messages.settingsPage.deleteMyData}
             </Button>
           </SettingsCard>
         </Grid.Col>
@@ -265,9 +280,9 @@ export default function Settings() {
           }
           setDeleteModalOpened(false);
         }}
-        title="Delete Account"
-        message="Are you sure you want to delete your account and all data? This cannot be undone."
-        confirmLabel="Delete"
+        title={messages.settingsPage.deleteAccountTitle}
+        message={messages.settingsPage.deleteAccountMessage}
+        confirmLabel={messages.common.delete}
         destructive
       />
     </>

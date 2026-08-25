@@ -36,6 +36,9 @@ export interface CommonMessages {
   share: string;
   userAltFallback: string;
   respondToThreadRootFirst: string;
+  errorTitle: string;
+  accessDeniedMessage: string;
+  settingsLoadErrorTitle: string;
   shortcuts: {
     title: string;
     home: string;
@@ -162,6 +165,28 @@ export interface HomeMessages {
   getStarted: string;
 }
 
+export interface SettingsPageMessages {
+  heading: string;
+  updateFailedTitle: string;
+  pdsSync: string;
+  messagesInInbox: string;
+  answersOnPds: string;
+  activeSince: string;
+  pdsLabel: string;
+  installApplication: string;
+  installApplicationDescription: string;
+  install: string;
+  appLanguage: string;
+  appLanguageDescription: string;
+  openFeedOnBluesky: string;
+  dailyNotifications: string;
+  viewBotOnBluesky: string;
+  followTheBotOnBluesky: string;
+  deleteMyData: string;
+  deleteAccountTitle: string;
+  deleteAccountMessage: string;
+}
+
 export interface UserMenuMessages {
   switchAccountErrorTitle: string;
   userAvatarAltFallback: string;
@@ -184,4 +209,5 @@ export interface Messages {
   appHeader: AppHeaderMessages;
   userMenu: UserMenuMessages;
   home: HomeMessages;
+  settingsPage: SettingsPageMessages;
 }

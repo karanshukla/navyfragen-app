@@ -12,6 +12,9 @@ export const en = {
     share: "Share",
     userAltFallback: "User",
     respondToThreadRootFirst: "Respond to the thread root first",
+    errorTitle: "Error",
+    accessDeniedMessage: "You cannot access this page without logging in.",
+    settingsLoadErrorTitle: "Failed to load settings",
     shortcuts: {
       title: "Keyboard Shortcuts",
       home: "Home",
@@ -168,6 +171,30 @@ export const en = {
     copyProfileLink: "Copy profile link",
     copyLinkButton: "Copy Link",
     getStarted: "Get Started",
+  },
+  settingsPage: {
+    heading: "Settings",
+    updateFailedTitle: "Update Failed",
+    pdsSync: "PDS Sync",
+    messagesInInbox: "Messages in inbox",
+    answersOnPds: "Answers on PDS",
+    activeSince: "Active since",
+    pdsLabel: "PDS",
+    installApplication: "Install Application",
+    installApplicationDescription:
+      "Install the app for faster access on any device: phone, tablet or laptop. It runs in the same browser, and you can uninstall it any time.",
+    install: "Install ",
+    appLanguage: "App language",
+    appLanguageDescription:
+      "The language you read the app in — nav, buttons, and toasts. Separate from Message language on Customise, which is what visitors and your audience see.",
+    openFeedOnBluesky: "Open Feed on Bluesky",
+    dailyNotifications: "Daily Notifications",
+    viewBotOnBluesky: "View bot on Bluesky",
+    followTheBotOnBluesky: "Follow the bot on Bluesky",
+    deleteMyData: "Delete my Data",
+    deleteAccountTitle: "Delete Account",
+    deleteAccountMessage:
+      "Are you sure you want to delete your account and all data? This cannot be undone.",
   },
   errors: {
     codes: {
