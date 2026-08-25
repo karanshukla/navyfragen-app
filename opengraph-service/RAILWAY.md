@@ -27,13 +27,14 @@ same-origin in production (the shim fronts the SPA), so it needs no CORS.
 
 ## What to set (the short version)
 
-You only need to configure **two variables** and **one volume**. Everything else
+You only need to configure **three variables** and **one volume**. Everything else
 has a production-correct default.
 
 | Setting | Value | Why |
 |---|---|---|
 | `FRONTEND_URL` | `http://<client-service>:${PORT}` — your client service's **private** Railway URL, e.g. `http://client.railway.internal:3000` | The shim proxies all non-crawler `/*` traffic here. This is the upstream that previously sat behind Caddy directly. |
 | `EXPORT_HTML_URL` | `http://<html-to-image-service>:3033/` — your html-to-image service's **private** Railway URL | The generate path calls this to render the composited PNG. Must end with `/`. |
+| `NF_SERVER_URL` | `http://<server-service>:${PORT}` — your NF server's **private** Railway URL, e.g. `http://server.railway.internal:3000` | Read for the profile owner's `customPrompt`/`touchpointLocale` (#409), so the OG card can show a custom or localized prompt instead of always the English default. Left unset, `DefaultNFServerHost` (`http://server:3000`) resolves to nothing on Railway's private network — every read then fails fast and falls back to `DefaultPrompt`, so a missing value degrades to an always-English card rather than a broken one, but it is not production-correct on its own. |
 | Volume mount | `/data` | Railway mounts the volume here (root-owned). The shim runs as root and creates `/data/og-cache` itself. **Mount at `/data`, not `/data/og-cache`** — the shim makes the subdir. |
 
 That's it for a working deploy. `PORT` is auto-injected by Railway; all `OG_*`,
@@ -47,10 +48,20 @@ That's it for a working deploy. `PORT` is auto-injected by Railway; all `OG_*`,
 | `ATPROTO_APPVIEW_HOST` | `https://api.bsky.app` | AT Protocol AppView host for handle→DID resolution and `getProfile`. Matches `server/src/services/profile-service.ts` exactly — only change if you run a private AppView. |
 | `PUBLIC_URL` | `https://navyfragen.app` | Public site origin. Used to build absolute `og:image` URLs (the cached PNG is served at `$PUBLIC_URL/og-cache/<did>.png`). Set this to your production domain. |
 | `OG_CACHE_DIR` | `/data/og-cache` | Cache directory on disk. **Must be inside the mounted Railway volume** (see Volumes below). |
-| `OG_CACHE_TTL` | `720h` (~30 days) | How long a cached image is served before a fresh indigo+render round-trip. Go duration string (`720h`, `168h`, etc.). Accepted staleness tradeoff — see issue #227. |
+| `OG_CACHE_TTL` | `720h` (~30 days) | How long a cached image is served before a fresh indigo+render round-trip (and, since #409, a fresh NF settings read) — see Caching below. Go duration string (`720h`, `168h`, etc.). Accepted staleness tradeoff — see issue #227. |
 | `OG_CACHE_MAX_ENTRIES` | `10000` | Max entries before LRU eviction. `0` = built-in default. One entry = one user (keyed by DID). |
 | `OG_RENDER_TIMEOUT` | `30s` | Deadline for a single `html-to-image` render. Go duration string. |
 | `OG_PENDING_RENDER_WAIT` | `3s` | How long a `/og-cache/` request holds the crawler's connection waiting on a render already in flight before serving the fallback. Go duration string; the ceiling that matters is Cardyb's own (unpublished) timeout, so shorten this if cards start failing outright rather than falling back. |
+| `OG_SETTINGS_TIMEOUT` | `6s` | Overall deadline (including retries) for the `NF_SERVER_URL` settings read. Go duration string. Retries 408/502/503/504 with capped backoff, same discipline as `OG_RENDER_TIMEOUT`; never retries a 4xx or 429. Any failure or timeout falls back to `DefaultPrompt` rather than delaying or breaking the render. |
+
+## Caching
+
+The NF settings read (customPrompt/touchpointLocale) is not cached
+independently — it piggybacks on the existing per-DID image cache. It only runs
+from inside the profile fetch that a stale-cache render triggers, so it is
+naturally gated by the same `OG_CACHE_TTL`: a prompt edit lands on the card the
+next time the image itself is due for a re-render, the same window a
+display-name edit would, and a warm cache costs zero settings reads.
 
 ## Volume
 

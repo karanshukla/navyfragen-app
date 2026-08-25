@@ -325,17 +325,31 @@ func TestProfile_NormalizeHandle_NoAt(t *testing.T) {
 	}
 }
 
-func TestProfile_ToOGInput_PopulatesDefaults(t *testing.T) {
+// ToOGInput passes Prompt/Locale through unresolved — it is resolvePrompt
+// (called from BuildOGTemplate), not this conversion, that turns an unset
+// Prompt into DefaultPrompt or the locale's default.
+func TestProfile_ToOGInput_PassesPromptAndLocaleThroughUnresolved(t *testing.T) {
 	p := Profile{
 		DID: "did:plc:abc", Handle: "foo.bsky.social",
 		DisplayName: "Foo", Banner: "b", Avatar: "a",
+		Prompt: "Pregúntame algo", Locale: "es",
 	}
 	in := p.ToOGInput()
 	if in.DisplayName != "Foo" || in.Handle != "foo.bsky.social" || in.Banner != "b" || in.Avatar != "a" {
 		t.Fatalf("ToOGInput mismatch: %+v", in)
 	}
-	if strings.TrimSpace(in.Prompt) == "" {
-		t.Fatal("Prompt should default to non-empty (DefaultPrompt)")
+	if in.Prompt != "Pregúntame algo" || in.Locale != "es" {
+		t.Fatalf("ToOGInput must pass Prompt/Locale through unchanged, got %+v", in)
+	}
+}
+
+// The other side: an unset Prompt/Locale passes through as empty, not
+// DefaultPrompt — BuildOGTemplate resolves the default, ToOGInput does not.
+func TestProfile_ToOGInput_UnsetPromptAndLocale_StayEmpty(t *testing.T) {
+	p := Profile{DID: "did:plc:abc", Handle: "foo.bsky.social", DisplayName: "Foo"}
+	in := p.ToOGInput()
+	if in.Prompt != "" || in.Locale != "" {
+		t.Fatalf("expected empty Prompt/Locale to pass through as empty, got %+v", in)
 	}
 }
 

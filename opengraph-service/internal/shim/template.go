@@ -20,14 +20,69 @@ type OGInput struct {
 	Handle      string
 	Banner      string // empty → brand gradient fallback
 	Avatar      string // empty → glyph fallback
-	Prompt      string // empty → default prompt
+	Prompt      string // owner's customPrompt; empty → resolvePrompt's locale/English default
+	Locale      string // owner's touchpointLocale; empty → English default
 }
 
-// DefaultPrompt applies until per-user prompts are wired in (#199). It is
+// DefaultPrompt is the last-resort fallback: no customPrompt, no recognized
+// touchpointLocale, or the NF settings read failed outright. It is
 // deliberately short: Bluesky renders a link card at roughly 500px wide, so the
 // headline is downscaled ~2.4x and every extra word costs legibility. The
 // brand name is carried by the wordmark lockup rather than repeated here.
 const DefaultPrompt = "Ask me anything, anonymously"
+
+// touchpointPrompts is the localized default headline, one entry per locale in
+// client/src/lib/touchpointTranslations.ts's touchpointLocales.
+//
+// Deliberately NOT reused from touchpointTranslations.ts: every field there
+// that plays this role (`headline`) takes a display-name argument, and this
+// key can't — it's a plain map[string]string, and the prompt line is
+// name-free by design (the name already renders in the identity block above
+// it, the same shape DefaultPrompt itself has). `placeholder` was tried as a
+// substitute in an earlier pass and rejected: it drops "anonymously" entirely
+// (e.g. es "Pregunta algo…" = "Ask something…"), and anonymity is the
+// product's entire value proposition — the OG card is the first thing a
+// stranger sees on Bluesky, so losing that word isn't a tone mismatch, it's
+// the pitch going missing. These four are therefore fresh headline
+// translations of DefaultPrompt itself, each keeping the "anonymously"
+// adverb, sized to stay legible at the card's ~2.4x downscale (DefaultPrompt's
+// own doc comment explains why), and free of `placeholder`'s trailing
+// ellipsis, which reads as truncation at headline size.
+//
+// "en" is DefaultPrompt itself, so resolvePrompt's locale lookup and its final
+// English fallback agree by construction.
+//
+// [TestResolvePrompt_LocalizedDefault_UsesCatalogWhenNoCustomPrompt] and
+// [TestResolvePrompt_UnrecognizedLocale_FallsBackToEnglish] pin the lookup;
+// [TestTouchpointPrompts_CoversEveryTouchpointLocale] pins that this map never
+// drifts out of sync with the TS locale list.
+var touchpointPrompts = map[string]string{
+	"en": DefaultPrompt,                    // "Ask me anything, anonymously" (28 chars)
+	"es": "Pregúntame algo, anónimamente",  // "Ask me something, anonymously" (29 chars)
+	"pt": "Pergunte-me algo, anonimamente", // "Ask me something, anonymously" (30 chars)
+	"de": "Frag mich alles, anonym",        // "Ask me everything, anonymous(ly)" (23 chars)
+	"fr": "Demande-moi tout, anonymement",  // "Ask me everything, anonymously" (29 chars)
+}
+
+// resolvePrompt implements the precedence /customise already promises visitors
+// ("Your custom message prompt overrides this setting."):
+//
+//  1. customPrompt, if set and non-empty after trimming
+//  2. the localized default for touchpointLocale
+//  3. English (DefaultPrompt)
+//
+// [TestResolvePrompt_CustomPrompt_TakesPrecedenceOverLocale] and
+// [TestResolvePrompt_UnrecognizedLocale_FallsBackToEnglish] pin both ends of
+// the fallback chain.
+func resolvePrompt(customPrompt, locale string) string {
+	if p := strings.TrimSpace(customPrompt); p != "" {
+		return p
+	}
+	if p, ok := touchpointPrompts[locale]; ok {
+		return p
+	}
+	return DefaultPrompt
+}
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 //
@@ -380,10 +435,7 @@ const ogTemplate = `<!DOCTYPE html>
 // browser, so an unescaped payload would be a code-injection vector. Remote URLs
 // additionally go through safeImageURL.
 func BuildOGTemplate(in OGInput) string {
-	prompt := strings.TrimSpace(in.Prompt)
-	if prompt == "" {
-		prompt = DefaultPrompt
-	}
+	prompt := resolvePrompt(in.Prompt, in.Locale)
 
 	handle := strings.TrimPrefix(strings.TrimSpace(in.Handle), "@")
 
