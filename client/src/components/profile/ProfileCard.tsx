@@ -1,6 +1,7 @@
 import { Avatar, Box, Button, Group, Paper, Text } from "@mantine/core";
 import { IconExternalLink } from "@tabler/icons-react";
 
+import { useTranslations } from "../../lib/i18n";
 import { parseRichText } from "../../utils/parseRichText";
 import { WinkMark } from "../WinkMark";
 
@@ -16,6 +17,7 @@ export interface ProfileSummary {
 
 /** Bluesky-style banner + avatar + bio header for the profile being viewed. */
 export function ProfileCard({ profile }: { profile: ProfileSummary }) {
+  const messages = useTranslations();
   return (
     <Paper mb="lg" withBorder style={styles.card}>
       <Box style={styles.banner(profile.banner)}>
@@ -25,7 +27,7 @@ export function ProfileCard({ profile }: { profile: ProfileSummary }) {
       <Box style={styles.body}>
         <Avatar
           src={profile.avatar}
-          alt={profile.displayName || profile.handle || "User"}
+          alt={profile.displayName || profile.handle || messages.common.userAltFallback}
           size={84}
           radius="xl"
           style={styles.avatar}
@@ -53,7 +55,7 @@ export function ProfileCard({ profile }: { profile: ProfileSummary }) {
             style={styles.blueskyLink}
             leftSection={<IconExternalLink size={12} />}
           >
-            View on Bluesky
+            {messages.profileCard.viewOnBluesky}
           </Button>
         </Group>
 

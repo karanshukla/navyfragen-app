@@ -207,6 +207,40 @@ export interface CustomisePageMessages {
   profanityFilterDescription: string;
 }
 
+export interface PublicProfilePageMessages {
+  messageEmptyError: string;
+  recipientNotFoundTitle: string;
+  recipientNotFoundMessage: string;
+  messageSentTitle: string;
+  messageSentBody: string;
+  sendFailedTitle: string;
+  noBlueskyAccountTitle: string;
+  noBlueskyAccountBody: string;
+  notOnAppBodyPrefix: string;
+  notOnAppBodySuffix: string;
+  profileLoadFailed: string;
+  confirmSendTitle: string;
+  confirmSendMessage: string;
+  sendMessage: string;
+  handleResolveFailed: string;
+  sendMessageFailed: string;
+}
+
+export interface AskCardMessages {
+  clearMessage: string;
+}
+
+export interface ProfileCardMessages {
+  viewOnBluesky: string;
+}
+
+export interface ProfileUrlBarMessages {
+  shareFailedTitle: string;
+  shareFailedMessage: string;
+  copyProfileLinkAriaLabel: string;
+  shareProfileLinkAriaLabel: string;
+}
+
 export interface UserMenuMessages {
   switchAccountErrorTitle: string;
   userAvatarAltFallback: string;
@@ -231,4 +265,8 @@ export interface Messages {
   home: HomeMessages;
   settingsPage: SettingsPageMessages;
   customisePage: CustomisePageMessages;
+  publicProfilePage: PublicProfilePageMessages;
+  askCard: AskCardMessages;
+  profileCard: ProfileCardMessages;
+  profileUrlBar: ProfileUrlBarMessages;
 }

@@ -160,6 +160,37 @@ export const en = {
     profanityFilterDescription:
       "When on, incoming messages are screened against an English-language wordlist - other languages pass through unfiltered. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
   },
+  publicProfilePage: {
+    messageEmptyError: "Message cannot be empty.",
+    recipientNotFoundTitle: "Error",
+    recipientNotFoundMessage: "Cannot send message: User DID not found.",
+    messageSentTitle: "Message sent!",
+    messageSentBody: "Your anonymous message is on its way.",
+    sendFailedTitle: "Failed to send",
+    noBlueskyAccountTitle: "No Bluesky account found",
+    noBlueskyAccountBody: "doesn't exist on Bluesky. Check the handle and try again.",
+    notOnAppBodyPrefix: "has a Bluesky account but hasn't set up their ",
+    notOnAppBodySuffix: " inbox yet.",
+    profileLoadFailed: "Failed to load profile information.",
+    confirmSendTitle: "Confirm Anonymous Message",
+    confirmSendMessage:
+      "Are you sure you want to send this anonymous message? This action cannot be undone.",
+    sendMessage: "Send Message",
+    handleResolveFailed: "Failed to resolve handle. The handle may not exist.",
+    sendMessageFailed: "Failed to send message. Please try again.",
+  },
+  askCard: {
+    clearMessage: "Clear message",
+  },
+  profileCard: {
+    viewOnBluesky: "View on Bluesky",
+  },
+  profileUrlBar: {
+    shareFailedTitle: "Share failed",
+    shareFailedMessage: "Could not share link.",
+    copyProfileLinkAriaLabel: "Copy profile link",
+    shareProfileLinkAriaLabel: "Share profile link",
+  },
   userMenu: {
     switchAccountErrorTitle: "Couldn't switch account",
     userAvatarAltFallback: "User Avatar",
