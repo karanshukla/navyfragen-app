@@ -23,7 +23,7 @@ export function PostingPreferences({ state }: PostingPreferencesProps) {
   return (
     <CollapsibleCard
       title={messages.postingPreferences.title}
-      summary={`${enabledCount} of ${PREFERENCE_KEYS.length} on`}
+      summary={messages.postingPreferences.summary(enabledCount, PREFERENCE_KEYS.length)}
     >
       {PREFERENCE_KEYS.map((key) => (
         <Box key={key} py="xs" style={styles.row}>

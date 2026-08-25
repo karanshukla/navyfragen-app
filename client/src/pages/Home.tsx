@@ -44,7 +44,7 @@ function signedInShortcuts(messages: Messages): Shortcut[] {
     { label: messages.common.shortcuts.messages, hint: "Alt+M" /* i18n-allow */ },
     { label: messages.common.shortcuts.settings, hint: "Alt+S" /* i18n-allow */ },
     { label: messages.common.shortcuts.focusCycleCards, hint: "Alt+R" /* i18n-allow */ },
-    { label: messages.common.shortcuts.navigateCards, hint: "↑ / ↓" },
+    { label: messages.common.shortcuts.navigateCards, hint: "↑ / ↓" /* i18n-allow */ },
   ];
 }
 
@@ -153,7 +153,7 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Send me anonymous messages on ${APP_NAME}!`, url });
+        await navigator.share({ title: messages.home.shareTitle(APP_NAME), url });
       } catch {
         // share sheet dismissed or unavailable
       }

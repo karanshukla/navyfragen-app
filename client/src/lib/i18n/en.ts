@@ -80,6 +80,7 @@ export const en = {
       label: "Auto-scroll to messages",
       description: "Scrolls new messages into view when they load.",
     },
+    summary: (enabled: number, total: number) => `${enabled} of ${total} on`,
   },
   questionCard: {
     cannotDeleteThreadRootTooltip: "Unpin thread first",
@@ -124,9 +125,18 @@ export const en = {
   },
   nav: {
     friendGroups: {
-      moots: "Moots",
-      following: "Following",
-      oomfs: "Oomfs",
+      moots: {
+        label: "Moots",
+        emptyText: (appName: string) => `No mutuals on ${appName} yet.`,
+      },
+      following: {
+        label: "Following",
+        emptyText: (appName: string) => `No one-sided follows on ${appName} yet.`,
+      },
+      oomfs: {
+        label: "Oomfs",
+        emptyText: (appName: string) => `None of your followers are on ${appName} yet.`,
+      },
     },
     viewingProfile: "Viewing profile",
     unreadCount: (count: number) => `${count} unread`,
@@ -169,6 +179,7 @@ export const en = {
     sendFailedTitle: "Failed to send",
     noBlueskyAccountTitle: "No Bluesky account found",
     noBlueskyAccountBody: "doesn't exist on Bluesky. Check the handle and try again.",
+    notOnAppTitle: (appName: string) => `Not on ${appName}`,
     notOnAppBodyPrefix: "has a Bluesky account but hasn't set up their ",
     notOnAppBodySuffix: " inbox yet.",
     profileLoadFailed: "Failed to load profile information.",
@@ -264,6 +275,7 @@ export const en = {
     accountsLabel: "Accounts",
     addAccount: "Add account",
     viewProfile: "View Profile",
+    logOut: (handle: string | undefined) => `Log out @${handle}`,
   },
   home: {
     titleSuffix: " - Anonymous questions and answers on Bluesky",
@@ -293,6 +305,7 @@ export const en = {
     copyProfileLink: "Copy profile link",
     copyLinkButton: "Copy Link",
     getStarted: "Get Started",
+    shareTitle: (appName: string) => `Send me anonymous messages on ${appName}!`,
   },
   settingsPage: {
     heading: "Settings",
@@ -317,6 +330,15 @@ export const en = {
     deleteAccountTitle: "Delete Account",
     deleteAccountMessage:
       "Are you sure you want to delete your account and all data? This cannot be undone.",
+    pdsSyncDescription: (appName: string) =>
+      `${appName} syncs your anonymous messages to your Bluesky PDS (Personal Data Server). Turn this off to keep them on ${appName}'s servers only. Posting to Bluesky is unaffected.`,
+    feedTitle: (appName: string) => `${appName} Feed`,
+    feedDescription: (appName: string) =>
+      `Browse anonymous questions and answers posted by everyone on ${appName} worldwide. This feed may contain content intended for adults. View at your own discretion.`,
+    dailyNotificationsDescription: (appName: string) =>
+      `Follow the ${appName} notification bot on Bluesky to receive a daily alert when you have new messages in your inbox.`,
+    deleteMyDataDescription: (appName: string) =>
+      `Permanently remove all your data from the ${appName} servers, and Bluesky PDS. This also disables your inbox so you will no longer receive messages. You can always log back in to reregister automatically.`,
   },
   errors: {
     codes: {

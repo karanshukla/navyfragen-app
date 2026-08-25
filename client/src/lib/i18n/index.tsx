@@ -148,7 +148,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 export function useTranslations(): Messages {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error("useTranslations must be used within an I18nProvider");
+    throw new Error("useTranslations must be used within an I18nProvider" /* i18n-allow */);
   }
   return context.messages;
 }

@@ -36,7 +36,9 @@ export const InstallPromptProvider: React.FC<{ children: React.ReactNode }> = ({
 export function useInstallPrompt() {
   const context = useContext(InstallPromptContext);
   if (!context) {
-    throw new Error("useInstallPrompt must be used within an InstallPromptProvider");
+    throw new Error(
+      "useInstallPrompt must be used within an InstallPromptProvider" /* i18n-allow */
+    );
   }
   return context;
 }

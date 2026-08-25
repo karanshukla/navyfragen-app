@@ -153,7 +153,7 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.settingsPage.pdsSync}
-            description={`${APP_NAME} syncs your anonymous messages to your Bluesky PDS (Personal Data Server). Turn this off to keep them on ${APP_NAME}'s servers only. Posting to Bluesky is unaffected.`}
+            description={messages.settingsPage.pdsSyncDescription(APP_NAME)}
             control={pdsSyncControl}
           >
             {settingsError ? settingsLoadError : null}
@@ -200,8 +200,8 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title={`${APP_NAME} Feed`}
-            description={`Browse anonymous questions and answers posted by everyone on ${APP_NAME} worldwide. This feed may contain content intended for adults. View at your own discretion.`}
+            title={messages.settingsPage.feedTitle(APP_NAME)}
+            description={messages.settingsPage.feedDescription(APP_NAME)}
           >
             <Button
               component="a"
@@ -220,7 +220,7 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.settingsPage.dailyNotifications}
-            description={`Follow the ${APP_NAME} notification bot on Bluesky to receive a daily alert when you have new messages in your inbox.`}
+            description={messages.settingsPage.dailyNotificationsDescription(APP_NAME)}
           >
             {sessionLoading || botFollowLoading ? (
               <Skeleton height={36} radius="sm" />
@@ -245,7 +245,7 @@ export default function Settings() {
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.settingsPage.deleteMyData}
-            description={`Permanently remove all your data from the ${APP_NAME} servers, and Bluesky PDS. This also disables your inbox so you will no longer receive messages. You can always log back in to reregister automatically.`}
+            description={messages.settingsPage.deleteMyDataDescription(APP_NAME)}
           >
             <Button
               fullWidth

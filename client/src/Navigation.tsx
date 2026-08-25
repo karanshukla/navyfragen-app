@@ -31,18 +31,18 @@ export function Navigation({ onLinkClick }: NavigationProps) {
   const friendGroups = [
     {
       key: "moots",
-      label: messages.nav.friendGroups.moots,
-      emptyText: `No mutuals on ${APP_NAME} yet.`,
+      label: messages.nav.friendGroups.moots.label,
+      emptyText: messages.nav.friendGroups.moots.emptyText(APP_NAME),
     },
     {
       key: "following",
-      label: messages.nav.friendGroups.following,
-      emptyText: `No one-sided follows on ${APP_NAME} yet.`,
+      label: messages.nav.friendGroups.following.label,
+      emptyText: messages.nav.friendGroups.following.emptyText(APP_NAME),
     },
     {
       key: "oomfs",
-      label: messages.nav.friendGroups.oomfs,
-      emptyText: `None of your followers are on ${APP_NAME} yet.`,
+      label: messages.nav.friendGroups.oomfs.label,
+      emptyText: messages.nav.friendGroups.oomfs.emptyText(APP_NAME),
     },
   ] as const;
   const { data: sessionData, isLoading: isSessionLoading } = useSession();

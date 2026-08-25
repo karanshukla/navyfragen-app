@@ -32,7 +32,7 @@ export const BounceLogosProvider: React.FC<{ children: React.ReactNode }> = ({ c
 export function useBounceLogos() {
   const context = useContext(BounceLogosContext);
   if (!context) {
-    throw new Error("useBounceLogos must be used within a BounceLogosProvider");
+    throw new Error("useBounceLogos must be used within a BounceLogosProvider" /* i18n-allow */);
   }
   return context;
 }
