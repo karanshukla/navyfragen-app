@@ -52,7 +52,12 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       if (!recipient)
         return c.json(errorBody("RECIPIENT_DID_REQUIRED", "Recipient DID required"), 403);
       try {
-        const messages = await messageService.addExampleMessages(recipient);
+        const settings = await ctx.db
+          .selectFrom("user_settings")
+          .selectAll()
+          .where("did", "=", recipient)
+          .executeTakeFirst();
+        const messages = await messageService.addExampleMessages(recipient, settings?.uiLocale);
         return c.json({ messages });
       } catch (err) {
         ctx.logger.error({ err, recipient }, "Failed to add example messages");

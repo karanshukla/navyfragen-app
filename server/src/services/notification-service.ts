@@ -7,7 +7,7 @@ const { sendNotification, setVapidDetails } = webPush;
 
 import type { Database } from "../database/db";
 
-import { APP_NAME } from "../lib/brand";
+import { getServerMessages } from "../lib/i18n";
 
 export interface ProfileResolver {
   resolveDidToHandle(did: string): Promise<string | undefined>;
@@ -162,17 +162,44 @@ export class NotificationService {
   }
 
   /**
+   * A failed or missing settings read must not cost the recipient the
+   * notification itself, only its language — so this never rejects.
+   * @see [notification-service.test.ts](../tests/notification-service.test.ts)
+   * — "still delivers the notification when the locale read fails".
+   */
+  private async readNotificationLocale(recipientDid: string): Promise<string> {
+    try {
+      const row = await this.db
+        .selectFrom("user_settings")
+        .select("uiLocale")
+        .where("did", "=", recipientDid)
+        .executeTakeFirst();
+      return row?.uiLocale ?? "en";
+    } catch (err) {
+      this.logger.warn(
+        { err, did: recipientDid },
+        "Failed to read uiLocale for push notification; falling back to en"
+      );
+      return "en";
+    }
+  }
+
+  /**
    * Names the recipient account in the payload because one device can hold
    * subscriptions for several accounts at once — the client uses `did`/`handle`
    * to tell them apart and switch to the right account on click, rather than
    * opening whichever account happens to be active in the browser.
    */
   private async buildNewMessagePayload(recipientDid: string): Promise<string> {
-    const handle = await this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined);
+    const [handle, locale] = await Promise.all([
+      this.resolver.resolveDidToHandle(recipientDid).catch(() => undefined),
+      this.readNotificationLocale(recipientDid),
+    ]);
+    const messages = getServerMessages(locale);
 
     return JSON.stringify({
-      title: handle ? `New question for @${handle}` : "New anonymous question",
-      body: `Someone sent you an anonymous question on ${APP_NAME}!`,
+      title: handle ? messages.push.titleForHandle(handle) : messages.push.titleAnonymous,
+      body: messages.push.body,
       url: "/messages",
       did: recipientDid,
       handle,
