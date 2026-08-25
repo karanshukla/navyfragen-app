@@ -39,7 +39,7 @@ test("expand a message card to reveal the reply composer and back out", async ({
 
   await card.click();
 
-  const replyBox = page.getByLabel("Your response");
+  const replyBox = page.getByLabel(en.replyComposer.responseAriaLabel);
   await expect(replyBox).toBeVisible({ timeout: 5_000 });
   await replyBox.fill("an e2e draft reply");
 

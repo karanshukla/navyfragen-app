@@ -101,7 +101,7 @@ test("profanity filter toggle flips and is restored afterwards", async ({ page }
 });
 
 test("custom prompt persists on blur and is cleared afterwards", async ({ page }) => {
-  const input = page.getByLabel("Profile prompt");
+  const input = page.getByLabel(en.customisePage.profilePrompt);
   await expect(input).toBeVisible({ timeout: 10_000 });
   await expect(input).toBeEnabled({ timeout: 10_000 });
 
