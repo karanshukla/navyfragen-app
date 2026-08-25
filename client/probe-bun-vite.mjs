@@ -16,44 +16,89 @@
 // solely for the CI probe. Run it with `bun run probe:bun`.
 import { createServer } from "vite";
 
+// Below the 120s the CI step allows, so a stall is reported by the phase that
+// stalled rather than as an unattributed step timeout.
+const DEADLINE_MS = 60_000;
+
+let phase = "startup";
+const timings = [];
+
 function fail(message) {
   console.error(`FAIL ${message}`);
   process.exit(1);
+}
+
+// Unref'd on purpose: it must never be the reason the process stays alive,
+// only the thing that reports one. A hung phase keeps the loop alive, so this
+// still fires; a clean run exits before it does.
+const watchdog = setTimeout(() => {
+  console.error(`FAIL probe stalled in phase '${phase}' after ${DEADLINE_MS}ms`);
+  process.exit(1);
+}, DEADLINE_MS);
+watchdog.unref?.();
+
+async function step(name, run) {
+  phase = name;
+  const started = performance.now();
+  const result = await run();
+  timings.push(`${name}=${Math.round(performance.now() - started)}ms`);
+  return result;
 }
 
 if (!process.versions.bun) {
   fail(`probe ran under Node ${process.version} — invoke it as \`bun --bun probe-bun-vite.mjs\``);
 }
 
-const server = await createServer({
-  server: { host: "127.0.0.1", port: 5199, strictPort: false },
-  logLevel: "warn",
-});
+const server = await step("create", () =>
+  createServer({
+    server: { host: "127.0.0.1", port: 5199, strictPort: false },
+    logLevel: "warn",
+  })
+);
 
-let transformed;
-try {
-  await server.listen();
-  const base = `http://127.0.0.1:${server.config.server.port}`;
+await step("listen", () => server.listen());
 
-  const html = await (await fetch(`${base}/`)).text();
-  if (!html.includes('<script type="module"')) {
-    fail(`dev server served no module script for /:\n${html.slice(0, 400)}`);
-  }
+const base = `http://127.0.0.1:${server.config.server.port}`;
 
-  const res = await fetch(`${base}/src/pages/Login.tsx`);
-  if (!res.ok) fail(`dev server returned ${res.status} for /src/pages/Login.tsx`);
-  transformed = await res.text();
+// `Connection: close` so neither request leaves a pooled keep-alive socket
+// behind: Vite's close waits for open connections to drain.
+const get = (path) => fetch(`${base}${path}`, { headers: { Connection: "close" } });
 
-  // jsxDEV is what @vitejs/plugin-react's dev transform emits for JSX, so
-  // finding it means the plugin pipeline ran — not merely that a file was
-  // served back.
-  if (!transformed.includes("jsxDEV")) {
-    fail(`Login.tsx came back untransformed (no jsxDEV):\n${transformed.slice(0, 400)}`);
-  }
-} finally {
-  await server.close();
+const html = await step("fetch-index", async () => (await get("/")).text());
+if (!html.includes('<script type="module"')) {
+  fail(`dev server served no module script for /:\n${html.slice(0, 400)}`);
 }
 
-console.log(
-  `OK bun=${process.versions.bun} vite=${server.config.command} dev-transform=${transformed.length}B`
+const transformed = await step("fetch-tsx", async () => {
+  const res = await get("/src/pages/Login.tsx");
+  if (!res.ok) fail(`dev server returned ${res.status} for /src/pages/Login.tsx`);
+  return res.text();
+});
+
+// jsxDEV is what @vitejs/plugin-react's dev transform emits for JSX, so
+// finding it means the plugin pipeline ran — not merely that a file was
+// served back.
+if (!transformed.includes("jsxDEV")) {
+  fail(`Login.tsx came back untransformed (no jsxDEV):\n${transformed.slice(0, 400)}`);
+}
+
+await step("close", async () => {
+  server.httpServer?.closeAllConnections?.();
+  await server.close();
+});
+
+clearTimeout(watchdog);
+
+// Bun buffers stdout when it is not a TTY, which it never is under Actions,
+// and the CI step greps this line. Awaiting the write rather than trusting
+// console.log to flush is what makes the process.exit below safe.
+await Bun.write(
+  Bun.stdout,
+  `OK bun=${process.versions.bun} vite=${server.config.command} ` +
+    `dev-transform=${transformed.length}B ${timings.join(" ")}\n`
 );
+
+// Vite's watcher and socket teardown are the suspected cause of the CI stalls
+// this probe hit; every assertion above has passed by here, so nothing is
+// gained by waiting for the event loop to drain on its own.
+process.exit(0);
