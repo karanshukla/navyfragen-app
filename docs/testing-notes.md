@@ -49,18 +49,20 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 
 ### `client/src/lib/i18n/index.tsx` — unreachable `loadCatalog` loader lookup and `try`/`catch`
 
-**Lines:** `if (!loader) return en;` and the `try { return await loader(); } catch
-{ return en; }` block that follows it, in `loadCatalog`.
+**Lines:** `if (!loader) return { locale: "en", messages: en };` and the `try {
+return { locale, messages: await loader() }; } catch { … }` block that follows it,
+in `loadCatalog`.
 
 **Why ignored:** `LOCALE_LOADERS` has no entries until #406 registers the first
-non-English catalog, so `loader` is always `undefined` — the `if (!loader)` branch
-that proceeds to call it, and the `try`/`catch` below, are both dead code today.
-The early-return arm of the `if` does run (a test calls `loadCatalog` with an
-unregistered locale), but marking the whole statement is the only way istanbul
-will drop the other arm from the branch denominator — matching the `Customise.tsx`
-locale `onChange` entry above. The `try`/`catch` gets its own marker on the `try`
-statement, same shape as the `AppHeader.tsx` `handleSwitch` catch entry (istanbul
-has no catch-only hint, so the whole block comes out of the denominator).
+non-English catalog, so `loader` is always `undefined`. The guard's own arm does
+run — a test calls `loadCatalog("de")` and pins that it reports `en` rather than
+echoing the request back — so only the implicit `else`, which would go on to call
+the loader, is dead. That is `ignore else` exactly, and it is narrower than the
+`ignore next` this entry used to describe: the early return stays in the
+denominator and keeps being counted. The `try`/`catch` gets its own marker on the
+`try` statement, same shape as the `AppHeader.tsx` `handleSwitch` catch entry
+(istanbul has no catch-only hint, so the whole block comes out of the
+denominator).
 
 **What it would take to test:** Nothing to mock — once #406 adds a real entry to
 `LOCALE_LOADERS`, remove both markers and add two tests: one where the loader

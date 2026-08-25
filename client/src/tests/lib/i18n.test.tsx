@@ -136,13 +136,34 @@ describe("resolveUiLocale", () => {
   });
 });
 
-describe("loadCatalog", () => {
-  it("returns the en catalog for locale 'en'", async () => {
-    expect(await loadCatalog("en")).toBe(en);
+describe("counts reach the catalog as numbers", () => {
+  // The signature is the point: Intl.PluralRules.select() takes a number, so
+  // an entry that only ever saw a formatted string could not choose a plural
+  // form. #406 depends on this staying a number.
+  it("formats a grouped count rather than interpolating it raw", () => {
+    expect(en.nav.unreadCount(1234)).toBe("1,234 unread");
+    expect(en.messagesPage.newMessagesCount(1234)).toBe("1,234 new");
   });
 
-  it("falls back to en for a locale this bundle does not (yet) register", async () => {
-    expect(await loadCatalog("de")).toBe(en);
+  it("formats both counts in the preferences summary", () => {
+    expect(en.postingPreferences.summary(1000, 2000)).toBe("1,000 of 2,000 on");
+  });
+});
+
+describe("loadCatalog", () => {
+  it("returns the en catalog for locale 'en'", async () => {
+    expect(await loadCatalog("en")).toEqual({ locale: "en", messages: en });
+  });
+
+  it("keeps a regional English tag, so dates and numbers stay regional", async () => {
+    expect(await loadCatalog("en-GB")).toEqual({ locale: "en-GB", messages: en });
+  });
+
+  it("reports en, not the request, for a locale this bundle does not (yet) register", async () => {
+    // The locale it reports is the one being rendered. Echoing "de" back here
+    // would label an English page German for a screen reader and format its
+    // dates in a language nothing on screen is written in.
+    expect(await loadCatalog("de")).toEqual({ locale: "en", messages: en });
   });
 });
 
@@ -178,7 +199,20 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     });
   });
 
-  it("sets document.documentElement.lang to the resolved locale", async () => {
+  it("sets document.documentElement.lang to the locale being rendered", async () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { uiLocale: "en-GB" },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    renderProvider();
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe("en-GB");
+    });
+  });
+
+  it("labels the page en when the requested locale has no catalog to render", async () => {
     mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
     mockUseUserSettings.mockReturnValue({
       data: { uiLocale: "es" },
@@ -187,8 +221,9 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     } as any);
     renderProvider();
     await waitFor(() => {
-      expect(document.documentElement.lang).toBe("es");
+      expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", "en");
     });
+    expect(document.documentElement.lang).toBe("en");
   });
 
   it("updates document.documentElement.lang when the locale changes with no reload", async () => {
@@ -204,7 +239,7 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     });
 
     mockUseUserSettings.mockReturnValue({
-      data: { uiLocale: "es" },
+      data: { uiLocale: "en-GB" },
       isLoading: false,
       isSuccess: true,
     } as any);
@@ -217,7 +252,7 @@ describe("I18nProvider / useTranslations / useLocale", () => {
       </QueryClientProvider>
     );
     await waitFor(() => {
-      expect(document.documentElement.lang).toBe("es");
+      expect(document.documentElement.lang).toBe("en-GB");
     });
   });
 

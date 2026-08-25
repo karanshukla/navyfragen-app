@@ -1,5 +1,14 @@
 import type { Messages } from "./types";
 
+/**
+ * Counts are formatted inside the catalog rather than by the caller, because
+ * a plural form has to branch on the number — so the number is what an entry
+ * receives. #406 adds an `Intl.PluralRules` beside this in each locale file;
+ * English needs none, which is exactly why the shape has to be settled here
+ * and not discovered by the first locale that does.
+ */
+const numberFormat = new Intl.NumberFormat("en");
+
 export const en = {
   common: {
     cancel: "Cancel",
@@ -43,7 +52,7 @@ export const en = {
     notLoggedInMessage: "Please log in to see your messages.",
     heading: "Messages",
     noMessagesCount: "no messages",
-    newMessagesCount: (count: string) => `${count} new`,
+    newMessagesCount: (count: number) => `${numberFormat.format(count)} new`,
     noMessagesTitle: "No messages",
     noMessagesBody:
       "You don't have any messages yet. Share your profile link to receive anonymous questions.",
@@ -81,7 +90,8 @@ export const en = {
       label: "Auto-scroll to messages",
       description: "Scrolls new messages into view when they load.",
     },
-    summary: (enabled: string, total: string) => `${enabled} of ${total} on`,
+    summary: (enabled: number, total: number) =>
+      `${numberFormat.format(enabled)} of ${numberFormat.format(total)} on`,
   },
   questionCard: {
     cannotDeleteThreadRootTooltip: "Unpin thread first",
@@ -140,7 +150,7 @@ export const en = {
       },
     },
     viewingProfile: "Viewing profile",
-    unreadCount: (count: string) => `${count} unread`,
+    unreadCount: (count: number) => `${numberFormat.format(count)} unread`,
   },
   appHeader: {
     disableAnimations: "Disable animations",

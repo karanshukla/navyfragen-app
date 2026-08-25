@@ -68,8 +68,7 @@ export interface MessagesPageMessages {
   notLoggedInMessage: string;
   heading: string;
   noMessagesCount: string;
-  /** `count` is pre-formatted via `useNumberFormat` — this only builds the sentence. */
-  newMessagesCount: (count: string) => string;
+  newMessagesCount: (count: number) => string;
   noMessagesTitle: string;
   noMessagesBody: string;
   addExampleMessages: string;
@@ -92,8 +91,7 @@ export interface PostingPreferencesMessages {
   includeQuestionAsImage: { label: string; description: string };
   confirmBeforeDelete: { label: string; description: string };
   autoScrollToMessages: { label: string; description: string };
-  /** Both counts are pre-formatted via `useNumberFormat`. */
-  summary: (enabled: string, total: string) => string;
+  summary: (enabled: number, total: number) => string;
 }
 
 export interface QuestionCardMessages {
@@ -139,8 +137,7 @@ export interface NavMessages {
     oomfs: { label: string; emptyText: (appName: string) => string };
   };
   viewingProfile: string;
-  /** `count` is pre-formatted via `useNumberFormat` — this only builds the sentence. */
-  unreadCount: (count: string) => string;
+  unreadCount: (count: number) => string;
 }
 
 export interface AppHeaderMessages {
