@@ -6,7 +6,6 @@ import {
   type MessagePreferencesState,
   type PreferenceKey,
 } from "../../lib/useMessagePreferences";
-import { useNumberFormat } from "../../lib/useNumberFormat";
 
 import { CollapsibleCard } from "./CollapsibleCard";
 import * as styles from "./PostingPreferences.styles";
@@ -18,17 +17,13 @@ interface PostingPreferencesProps {
 export function PostingPreferences({ state }: PostingPreferencesProps) {
   const { preferences, setPreference, enabledCount } = state;
   const messages = useTranslations();
-  const formatNumber = useNumberFormat();
   const copy: Record<PreferenceKey, { label: string; description: string }> =
     messages.postingPreferences;
 
   return (
     <CollapsibleCard
       title={messages.postingPreferences.title}
-      summary={messages.postingPreferences.summary(
-        formatNumber(enabledCount),
-        formatNumber(PREFERENCE_KEYS.length)
-      )}
+      summary={messages.postingPreferences.summary(enabledCount, PREFERENCE_KEYS.length)}
     >
       {PREFERENCE_KEYS.map((key) => (
         <Box key={key} py="xs" style={styles.row}>

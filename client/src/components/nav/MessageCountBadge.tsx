@@ -9,7 +9,7 @@ export function MessageCountBadge({ count }: { count: number }) {
   const formatNumber = useNumberFormat();
   const formatted = formatNumber(count);
   return (
-    <span style={styles.badge} aria-label={messages.nav.unreadCount(formatted)}>
+    <span style={styles.badge} aria-label={messages.nav.unreadCount(count)}>
       {formatted}
     </span>
   );

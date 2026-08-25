@@ -55,7 +55,8 @@ export interface ResolveUiLocaleInput {
  *
  * `settingsUiLocale`/`storedLocale` can be any string a past or future client
  * wrote — not narrowed to `Locale` — so an unsupported value here is not a
- * bug, `loadCatalog` is what falls back to `en` for those.
+ * bug, `loadCatalog` is what falls back to `en` for those and reports that it
+ * did.
  *
  * @see [i18n.test.tsx](../../tests/lib/i18n.test.tsx) — one test per rung.
  */
@@ -75,33 +76,44 @@ export function resolveUiLocale({
   return "en";
 }
 
-/**
- * @see [i18n.test.tsx](../../tests/lib/i18n.test.tsx) — pins the `en` and
- * unregistered-locale cases; the throwing-loader path gets its own coverage
- * once #406 registers the first real entry in `LOCALE_LOADERS`.
- */
-export async function loadCatalog(locale: string): Promise<Messages> {
-  if (locale === "en") return en;
-  const loader = LOCALE_LOADERS[locale];
-  // LOCALE_LOADERS has no entries until #406 registers the first one, so the
-  // loader-truthy branch here, and the try/catch below, are unreachable today
-  // — see docs/testing-notes.md.
-  /* istanbul ignore next */
-  if (!loader) return en;
-  /* istanbul ignore next */
-  try {
-    return await loader();
-  } catch {
-    return en;
-  }
-}
-
-interface I18nContextValue {
+export interface ActiveCatalog {
+  /**
+   * The locale actually being rendered, which is `en` whenever the requested
+   * one has no catalog. Anything that follows the UI — `documentElement.lang`,
+   * date and number formatting — has to read this rather than the request, or
+   * it describes a page that isn't on screen.
+   */
   locale: string;
   messages: Messages;
 }
 
-export const I18nContext = createContext<I18nContextValue | undefined>(undefined);
+/**
+ * Matched on the primary subtag, so `en-GB` renders the English catalog while
+ * keeping its own tag — the catalog picks the words, the full tag still picks
+ * the date order and the digit grouping.
+ *
+ * @see [i18n.test.tsx](../../tests/lib/i18n.test.tsx) — pins the `en`,
+ * regional-variant, and unregistered-locale cases; the throwing-loader path
+ * gets its own coverage once #406 registers the first real entry in
+ * `LOCALE_LOADERS`.
+ */
+export async function loadCatalog(locale: string): Promise<ActiveCatalog> {
+  const primary = primarySubtag(locale);
+  if (primary === "en") return { locale, messages: en };
+  const loader = LOCALE_LOADERS[primary];
+  // LOCALE_LOADERS has no entries until #406 registers the first one, so this
+  // guard always passes and nothing below it runs — see docs/testing-notes.md.
+  /* istanbul ignore else */
+  if (!loader) return { locale: "en", messages: en };
+  /* istanbul ignore next */
+  try {
+    return { locale, messages: await loader() };
+  } catch {
+    return { locale: "en", messages: en };
+  }
+}
+
+export const I18nContext = createContext<ActiveCatalog | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
@@ -129,13 +141,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoggedIn, settingsLoaded, uiLocale]);
 
-  const [active, setActive] = useState<I18nContextValue>({ locale: "en", messages: en });
+  const [active, setActive] = useState<ActiveCatalog>({ locale: "en", messages: en });
 
   useEffect(() => {
     let cancelled = false;
-    loadCatalog(resolvedLocale).then((messages) => {
+    loadCatalog(resolvedLocale).then((next) => {
       if (cancelled) return;
-      setActive({ locale: resolvedLocale, messages });
+      setActive(next);
     });
     return () => {
       cancelled = true;
