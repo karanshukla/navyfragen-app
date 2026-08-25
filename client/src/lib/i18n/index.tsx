@@ -3,7 +3,8 @@
  * `touchpointLocale` (`../touchpointTranslations.ts`), which is the profile
  * owner's audience's language. See #400 for the two-axis split.
  *
- * Ships English and Spanish (`es`, #406) — `es` is lazy-loaded through
+ * Ships English, Spanish (`es`, #406), and Portuguese/German/French
+ * (`pt`/`de`/`fr`, #410) — every non-English locale is lazy-loaded through
  * `LOCALE_LOADERS` so the default bundle still carries only `en`.
  */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
@@ -21,22 +22,28 @@ export type { Locale, Messages };
 
 const STORAGE_KEY = `${STORAGE_PREFIX}_ui_locale`;
 
-/** Locales this bundle can render as a full catalog. Extend as #410 ships more. */
-const SUPPORTED_LOCALES: readonly Locale[] = ["en", "es"];
+/** Locales this bundle can render as a full catalog. */
+const SUPPORTED_LOCALES: readonly Locale[] = ["en", "es", "pt", "de", "fr"];
 
 /** Ordered list for the `/customise` "App language" `<Select>`. `en` first = default. */
 export const uiLocaleOptions: { value: Locale; label: string }[] = [
   { value: "en", label: "English" /* i18n-allow */ },
   { value: "es", label: "Español" /* i18n-allow */ },
+  { value: "pt", label: "Português" /* i18n-allow */ },
+  { value: "de", label: "Deutsch" /* i18n-allow */ },
+  { value: "fr", label: "Français" /* i18n-allow */ },
 ];
 
 /**
  * One lazy loader per non-English locale, `await import("./es")` style so the
- * default bundle carries only `en` — `es` ships as its own chunk, fetched only
- * when a user actually selects it.
+ * default bundle carries only `en` — each non-English locale ships as its own
+ * chunk, fetched only when a user actually selects it.
  */
 const LOCALE_LOADERS: Partial<Record<string, () => Promise<Messages>>> = {
   es: () => import("./es").then((m) => m.es),
+  pt: () => import("./pt").then((m) => m.pt),
+  de: () => import("./de").then((m) => m.de),
+  fr: () => import("./fr").then((m) => m.fr),
 };
 
 function primarySubtag(tag: string): string {

@@ -8,7 +8,7 @@ import type { ErrorCode } from "../contracts";
  * value here can be ahead of what this bundle supports; resolution treats
  * anything outside this union as "fall back to `en`" rather than widening it.
  */
-export type Locale = "en" | "es";
+export type Locale = "en" | "es" | "pt" | "de" | "fr";
 
 /**
  * Maps every server `ErrorCode` (`../contracts.ts`) to a localized string, plus

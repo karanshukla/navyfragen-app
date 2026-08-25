@@ -7,8 +7,9 @@
  * never `touchpointLocale` (the owner's audience) — both push and the seeded
  * questions are read by the owner, not their audience.
  *
- * Ships `en` and `es`. Adding a locale is one object below plus one entry in
- * `CATALOGS`; nothing else in this module (or its callers) changes.
+ * Ships `en`, `es`, `pt`, `de`, and `fr`. Adding a locale is one object below
+ * plus one entry in `CATALOGS`; nothing else in this module (or its callers)
+ * changes.
  */
 import { APP_NAME } from "./brand";
 
@@ -21,7 +22,7 @@ export interface ServerMessages {
   exampleQuestions: readonly string[];
 }
 
-export type ServerLocale = "en" | "es";
+export type ServerLocale = "en" | "es" | "pt" | "de" | "fr";
 
 const en = {
   push: {
@@ -59,7 +60,61 @@ const es = {
   ],
 } satisfies ServerMessages;
 
-const CATALOGS: Record<ServerLocale, ServerMessages> = { en, es };
+const pt = {
+  push: {
+    titleForHandle: (handle: string) => `Nova pergunta para @${handle}`,
+    titleAnonymous: "Nova pergunta anônima",
+    body: `Alguém te enviou uma pergunta anônima no ${APP_NAME}!`,
+  },
+  exampleQuestions: [
+    "Você gosta de gatos?",
+    "Você gosta de cachorros?",
+    "Qual é o seu filme favorito?",
+    "Se você pudesse viajar para qualquer lugar, para onde iria?",
+    "O que a maioria das pessoas não sabe sobre você?",
+    "Qual é o melhor conselho que você já recebeu?",
+    "Com o que você está obcecado(a) atualmente?",
+    "Qual é a sua opinião impopular sobre algo totalmente banal?",
+  ],
+} satisfies ServerMessages;
+
+const de = {
+  push: {
+    titleForHandle: (handle: string) => `Neue Frage für @${handle}`,
+    titleAnonymous: "Neue anonyme Frage",
+    body: `Jemand hat dir eine anonyme Frage auf ${APP_NAME} geschickt!`,
+  },
+  exampleQuestions: [
+    "Magst du Katzen?",
+    "Magst du Hunde?",
+    "Was ist dein Lieblingsfilm?",
+    "Wenn du überallhin reisen könntest, wohin würdest du gehen?",
+    "Was weiß die meisten Leute nicht über dich?",
+    "Was ist der beste Rat, den du je bekommen hast?",
+    "Wovon bist du gerade besessen?",
+    "Was ist deine unpopuläre Meinung zu etwas völlig Alltäglichem?",
+  ],
+} satisfies ServerMessages;
+
+const fr = {
+  push: {
+    titleForHandle: (handle: string) => `Nouvelle question pour @${handle}`,
+    titleAnonymous: "Nouvelle question anonyme",
+    body: `Quelqu'un t'a envoyé une question anonyme sur ${APP_NAME} !`,
+  },
+  exampleQuestions: [
+    "Tu aimes les chats ?",
+    "Tu aimes les chiens ?",
+    "Quel est ton film préféré ?",
+    "Si tu pouvais voyager n'importe où, où irais-tu ?",
+    "Qu'est-ce que la plupart des gens ne savent pas sur toi ?",
+    "Quel est le meilleur conseil qu'on t'ait jamais donné ?",
+    "Par quoi es-tu obsédé(e) en ce moment ?",
+    "Quel est ton avis impopulaire sur un sujet totalement banal ?",
+  ],
+} satisfies ServerMessages;
+
+const CATALOGS: Record<ServerLocale, ServerMessages> = { en, es, pt, de, fr };
 
 /**
  * Falls back to `en` for an unset, unrecognized, or not-yet-shipped locale —
