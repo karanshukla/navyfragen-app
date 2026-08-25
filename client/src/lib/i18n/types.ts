@@ -52,11 +52,6 @@ export interface CommonMessages {
   };
 }
 
-/**
- * Scoped to `errors` on purpose: this ships ahead of #402's ~210-string
- * extraction, so keeping the error-code strings in their own sub-object lets
- * #402 fill in the rest of `Messages` around this without touching it.
- */
 export interface MessagesPageMessages {
   themeUpdateErrorTitle: string;
   addExamplesErrorTitle: string;

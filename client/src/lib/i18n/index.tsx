@@ -26,7 +26,7 @@ const SUPPORTED_LOCALES: readonly Locale[] = ["en"];
 
 /** Ordered list for the `/settings` "App language" `<Select>`. `en` first = default. */
 export const uiLocaleOptions: { value: Locale; label: string }[] = [
-  { value: "en", label: "English" },
+  { value: "en", label: "English" /* i18n-allow */ },
 ];
 
 /**
