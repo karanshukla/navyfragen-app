@@ -142,6 +142,26 @@ export interface AppHeaderMessages {
   toggleColorScheme: string;
 }
 
+export interface HomeMessages {
+  titleSuffix: string;
+  subtitle: string;
+  sellingPoints: {
+    fastAndFree: { title: string; body: string };
+    spamProtection: { title: string; body: string };
+    openSource: { title: string; body: string };
+  };
+  questionsFeedback: string;
+  reachOutOnBluesky: string;
+  submitAnIssueOnGitHub: string;
+  githubContactLabel: string;
+  disclaimer: string;
+  welcomeBackGreetingPrefix: string;
+  viewYourMessages: string;
+  copyProfileLink: string;
+  copyLinkButton: string;
+  getStarted: string;
+}
+
 export interface UserMenuMessages {
   switchAccountErrorTitle: string;
   userAvatarAltFallback: string;
@@ -163,4 +183,5 @@ export interface Messages {
   nav: NavMessages;
   appHeader: AppHeaderMessages;
   userMenu: UserMenuMessages;
+  home: HomeMessages;
 }

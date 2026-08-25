@@ -140,6 +140,35 @@ export const en = {
     addAccount: "Add account",
     viewProfile: "View Profile",
   },
+  home: {
+    titleSuffix: " - Anonymous questions and answers on Bluesky",
+    subtitle: "Receive questions from the web and post the answers directly on Bluesky.",
+    sellingPoints: {
+      fastAndFree: {
+        title: "Fast and free",
+        body: "No downloads required, just log in with your Bluesky credentials and share your inbox link",
+      },
+      spamProtection: {
+        title: "Spam protection, without captchas",
+        body: "Protected by Anubis, a powerful bot detection service",
+      },
+      openSource: {
+        title: "Open source",
+        body: "Contribute directly to the project, or host your own version if you want!",
+      },
+    },
+    questionsFeedback: "Questions? Feedback?",
+    reachOutOnBluesky: "Reach out on Bluesky",
+    submitAnIssueOnGitHub: "Submit an issue on GitHub",
+    githubContactLabel: "GitHub - ",
+    disclaimer:
+      "Disclaimer: Please follow Bluesky's ToS. Cookies are used to keep you logged in. This app does not include any moderation.",
+    welcomeBackGreetingPrefix: "Good to see you again,",
+    viewYourMessages: "View Your Messages",
+    copyProfileLink: "Copy profile link",
+    copyLinkButton: "Copy Link",
+    getStarted: "Get Started",
+  },
   errors: {
     codes: {
       NOT_AUTHENTICATED: "You're not signed in. Please log in and try again.",
