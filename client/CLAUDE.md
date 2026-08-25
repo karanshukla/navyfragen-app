@@ -46,6 +46,18 @@ Rules; reasoning in `docs/design-tokens.md`.
 - `src/tests/theme/contrast.test.ts` fails on any documented pair below WCAG AA, and
   on any `--nf-*` token that is declared-but-unused or used-but-undeclared.
 
+## Two tsconfigs, and why
+
+`tsconfig.json` is the app: it excludes `src/tests` so application code cannot
+reach a Node global. `tsconfig.test.json` is the tests, with `types: ["node"]`
+for the `node:fs` imports the theme-token tests need. `bun run typecheck` runs
+both, and CI runs it in the `Client Tests` job.
+
+Tests need their own pass because nothing else checks them: `vite build` uses
+the app config, and vitest strips types rather than checking them. Before this
+split a test could call a catalog entry with the wrong argument type and stay
+green — one did, and it reached `main`.
+
 ## Testing & coverage
 
 ```bash

@@ -49,6 +49,12 @@ describe("settingsService", () => {
     did: mockDid,
     pdsSyncEnabled: 1,
     imageTheme: "default",
+    inboxEnabled: 1,
+    profanityFilterEnabled: 1,
+    uiLocale: null,
+    customPrompt: null,
+    profileCardTheme: null,
+    touchpointLocale: null,
     createdAt: "2025-06-07T12:00:00.000Z",
   };
 
@@ -165,6 +171,12 @@ describe("settings hooks", () => {
     did: "did:example:123",
     pdsSyncEnabled: 1,
     imageTheme: "default",
+    inboxEnabled: 1,
+    profanityFilterEnabled: 1,
+    uiLocale: null,
+    customPrompt: null,
+    profileCardTheme: null,
+    touchpointLocale: null,
     createdAt: "2025-01-01T00:00:00.000Z",
   };
 

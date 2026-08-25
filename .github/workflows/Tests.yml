@@ -91,9 +91,17 @@ jobs:
           fi
 
       # tsc + vite build, the same pair docker/Dockerfile.client runs on the
-      # oven/bun image.
+      # oven/bun image. Covers src/ only — client/tsconfig.json excludes the
+      # tests, so the step below is what type-checks those.
       - name: Build under Bun
         run: cd client && bun run build
+
+      # `typecheck` runs both configs: the app one the build already covered,
+      # and tsconfig.test.json for src/tests. Without this the suite compiles
+      # nothing — vitest strips types rather than checking them — so a test
+      # could call a catalog entry with the wrong argument type and stay green.
+      - name: Typecheck client, tests included
+        run: cd client && bun run typecheck
 
       - name: Run client tests with coverage
         run: cd client && bun run test:coverage
