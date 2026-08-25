@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	neturl "net/url"
 	"strings"
 	"time"
 
@@ -194,10 +195,17 @@ type nfPublicProfileResponse struct {
 }
 
 // settingsWakeRetryableStatuses mirrors wakeRetryableStatuses (renderer.go):
-// retry a not-awake-yet response, never a 4xx or 429. Declared separately
-// rather than shared so the two callers' retry policies can diverge later
-// without coupling; today they agree on purpose.
-var settingsWakeRetryableStatuses = wakeRetryableStatuses
+// retry a not-awake-yet response, never a 4xx or 429. It is its own map rather
+// than an alias of that one, so the two callers' retry policies can diverge
+// later without a change to either silently moving the other. They agree
+// today on purpose, and [TestSettingsWakeRetryableStatuses_MatchRenderer] is
+// what fails the day one moves without the other.
+var settingsWakeRetryableStatuses = map[int]bool{
+	http.StatusRequestTimeout:     true,
+	http.StatusBadGateway:         true,
+	http.StatusServiceUnavailable: true,
+	http.StatusGatewayTimeout:     true,
+}
 
 // defaultSettingsTimeout/defaultSettingsAttemptTimeout are shorter than the
 // renderer's: this is a same-service JSON GET, not a cross-process headless
@@ -250,7 +258,11 @@ func NewNFSettingsClient(host string, timeout time.Duration) *NFSettingsClient {
 // immediately. Every error is the caller's cue to fall back to DefaultPrompt —
 // FetchSettings itself never panics or blocks past its Timeout.
 func (s *NFSettingsClient) FetchSettings(ctx context.Context, did string) (NFSettings, error) {
-	url := fmt.Sprintf("%s/public-profile/%s", s.Host, did)
+	// PathEscape, not raw interpolation: did reaches here from a handle the
+	// caller chose, so a value carrying "/" or ".." would otherwise rewrite the
+	// path and point this GET at a different endpoint on the NF server.
+	// [TestNFSettingsClient_EscapesDIDInPath] pins it.
+	endpoint := fmt.Sprintf("%s/public-profile/%s", s.Host, neturl.PathEscape(did))
 
 	deadline := time.Now().Add(s.Timeout)
 	delay := 250 * time.Millisecond
@@ -265,7 +277,7 @@ func (s *NFSettingsClient) FetchSettings(ctx context.Context, did string) (NFSet
 			break
 		}
 
-		respBytes, status, err := s.attempt(ctx, url, minDuration(s.attemptTimeout(), remaining))
+		respBytes, status, err := s.attempt(ctx, endpoint, minDuration(s.attemptTimeout(), remaining))
 		switch {
 		case err != nil:
 			// A DNS name that does not resolve is a permanent misconfiguration,
@@ -316,11 +328,11 @@ func (s *NFSettingsClient) FetchSettings(ctx context.Context, did string) (NFSet
 // attempt performs one GET under its own deadline and returns the body and
 // status. A transport error yields a zero status, which the caller treats as
 // retryable — the same contract as HTMLToImageRenderer.attempt.
-func (s *NFSettingsClient) attempt(ctx context.Context, url string, timeout time.Duration) ([]byte, int, error) {
+func (s *NFSettingsClient) attempt(ctx context.Context, endpoint string, timeout time.Duration) ([]byte, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, bytes.NewReader(nil))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, bytes.NewReader(nil))
 	if err != nil {
 		return nil, 0, err
 	}

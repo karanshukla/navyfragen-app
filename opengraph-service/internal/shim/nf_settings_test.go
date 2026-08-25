@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -391,5 +392,43 @@ func TestNFSettingsClient_DNSResolutionFailure_IsNotRetried(t *testing.T) {
 	}
 	if n := atomic.LoadInt32(&calls); n != 1 {
 		t.Fatalf("expected exactly 1 attempt for a DNS resolution failure, got %d", n)
+	}
+}
+
+// A did reaches FetchSettings from a caller-chosen handle, so path metacharacters
+// in it must stay inside one path segment instead of rewriting the URL. Pins the
+// PathEscape in FetchSettings.
+func TestNFSettingsClient_EscapesDIDInPath(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{})
+	}))
+	defer srv.Close()
+
+	c := newTestSettingsClient(srv.URL, 2*time.Second)
+	if _, err := c.FetchSettings(context.Background(), "did:plc:abc/../../internal"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	const want = "/public-profile/did:plc:abc%2F..%2F..%2Finternal"
+	if gotPath != want {
+		t.Fatalf("path = %q, want %q — a raw did would escape its path segment", gotPath, want)
+	}
+}
+
+// The two retry policies agree today on purpose. This fails the day one moves
+// without the other, and separately asserts they are independent maps rather
+// than one alias, which is what makes deliberate divergence possible at all.
+func TestSettingsWakeRetryableStatuses_MatchRenderer(t *testing.T) {
+	if !maps.Equal(settingsWakeRetryableStatuses, wakeRetryableStatuses) {
+		t.Fatalf("settings policy %v diverged from renderer policy %v; move both or document why they differ",
+			settingsWakeRetryableStatuses, wakeRetryableStatuses)
+	}
+
+	settingsWakeRetryableStatuses[http.StatusTeapot] = true
+	defer delete(settingsWakeRetryableStatuses, http.StatusTeapot)
+	if wakeRetryableStatuses[http.StatusTeapot] {
+		t.Fatal("settingsWakeRetryableStatuses aliases wakeRetryableStatuses; they must be separate maps")
 	}
 }
