@@ -4,6 +4,12 @@
 // catalog (client/src/lib/i18n/en.ts), so a new one belongs there too, not
 // scattered back through JSX attributes and object properties.
 //
+// Two shapes are checked. A string literal — a JSX attribute value or an
+// object property — and a JSX text child, which carries no quotes at all and
+// is therefore invisible to any search for one. Three strings shipped that way
+// (`Account Overview`, and the 404 page's title and body) precisely because
+// nothing could see them.
+//
 // Heuristic, not a parser: a string literal counts as prose if it starts
 // uppercase or contains a space, the same reproduction grep #402's own issue
 // used to find the ~210 strings this replaced. Template literals count too —
@@ -95,6 +101,12 @@ const ALLOWED_EXACT_VALUES = new Set([
   "ArrowRight",
   "AbortError",
 ]);
+
+// A JSX text child written inline between an open and a close tag:
+// `<Text>Account Overview</Text>`. Requiring the closing `</` is what keeps a
+// generic — `Promise<Messages>`, `Record<string, () => Promise<T>>` — from
+// reading as one: a type argument is followed by an identifier, never a slash.
+const INLINE_JSX_TEXT = /> *([^<>{}"'`\n]*[A-Za-z][^<>{}"'`\n]*?) *<\//;
 
 const ESCAPE_MARKER = "i18n-allow";
 
@@ -220,6 +232,23 @@ export function isLocaleCatalog(source) {
   return /\bsatisfies\s+Messages\b/.test(source);
 }
 
+/**
+ * A JSX text child on its own line, which is how Prettier formats any child
+ * long enough to matter:
+ *
+ *     <Text c="dimmed" mt="md">
+ *       The requested resource was not found.
+ *     </Text>
+ *
+ * Identified structurally — the line before it opens a tag, the line after it
+ * closes one — rather than by shape, because the text itself is
+ * indistinguishable from a fragment of ordinary code.
+ */
+export function isOwnLineJsxText(previousLine, line, nextLine) {
+  if (/[<>{}();=]/.test(line)) return false;
+  return previousLine.trimEnd().endsWith(">") && nextLine.trimStart().startsWith("</");
+}
+
 export function checkFile(file, root = REPO_ROOT) {
   const failures = [];
   const source = readFileSync(file, "utf8");
@@ -244,6 +273,22 @@ export function checkFile(file, root = REPO_ROOT) {
       if (!looksLikeProse(staticText)) continue;
       if (name && ALLOWED_POSITION_NAMES.has(name)) continue;
       failures.push(`${relative(root, file)}:${index + 1}: \`${content}\``);
+    }
+
+    const inline = line.match(INLINE_JSX_TEXT);
+    const inlineText = inline?.[1].trim();
+    if (inlineText && looksLikeProse(inlineText) && !ALLOWED_EXACT_VALUES.has(inlineText)) {
+      failures.push(`${relative(root, file)}:${index + 1}: <>${inlineText}</>`);
+      return;
+    }
+
+    const ownLine = line.trim();
+    if (
+      isOwnLineJsxText(codeLines[index - 1] ?? "", line, codeLines[index + 1] ?? "") &&
+      looksLikeProse(ownLine) &&
+      !ALLOWED_EXACT_VALUES.has(ownLine)
+    ) {
+      failures.push(`${relative(root, file)}:${index + 1}: <>${ownLine}</>`);
     }
   });
 

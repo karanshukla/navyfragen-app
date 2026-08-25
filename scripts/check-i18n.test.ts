@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, test } from "bun:test";
 
-import { checkFile, isLocaleCatalog, staticTextOf, stripComments, walk } from "./check-i18n.mjs";
+import {
+  checkFile,
+  isLocaleCatalog,
+  isOwnLineJsxText,
+  staticTextOf,
+  stripComments,
+  walk,
+} from "./check-i18n.mjs";
 
 let root: string;
 let srcDir: string;
@@ -265,6 +272,73 @@ if ("PushManager" in window) {}
 `
     );
     assert.strictEqual(failures.length, 1);
+  });
+});
+
+describe("JSX text children", () => {
+  test("flags a text child on its own line", () => {
+    const failures = failuresFor(
+      "NotFound.tsx",
+      `<Text c="dimmed" mt="md">\n  The requested resource was not found.\n</Text>\n`
+    );
+    assert.strictEqual(failures.length, 1);
+    assert.match(failures[0], /NotFound\.tsx:2/);
+  });
+
+  test("flags a digit-leading title, which the literal rules would miss", () => {
+    const failures = failuresFor(
+      "NotFound.tsx",
+      `<Title order={2}>\n  404 - Not Found\n</Title>\n`
+    );
+    assert.strictEqual(failures.length, 1);
+  });
+
+  test("flags an inline text child", () => {
+    const failures = failuresFor("Overview.tsx", `<Text fw={700}>Account Overview</Text>\n`);
+    assert.strictEqual(failures.length, 1);
+  });
+
+  test("accepts an interpolated child, which is already catalogued", () => {
+    const failures = failuresFor("Overview.tsx", `<Text>{messages.notFoundPage.title}</Text>\n`);
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("a generic type argument is not a text child", () => {
+    const failures = failuresFor(
+      "loaders.tsx",
+      `const LOADERS: Record<string, () => Promise<Messages>> = {};\n`
+    );
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("a comparison operator is not a text child", () => {
+    const failures = failuresFor("scroll.tsx", `if (rect.bottom <= window.innerHeight) {}\n`);
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("a handle on its own line has no space and is left alone", () => {
+    const failures = failuresFor("Home.tsx", `<Text>\n  @navyfragen.app\n</Text>\n`);
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("the i18n-allow escape hatch covers a text child too", () => {
+    const failures = failuresFor(
+      "Overview.tsx",
+      `<Text>Account Overview</Text> {/* i18n-allow */}\n`
+    );
+    assert.deepStrictEqual(failures, []);
+  });
+});
+
+describe("isOwnLineJsxText", () => {
+  test("needs an opening tag above and a closing tag below", () => {
+    assert.ok(isOwnLineJsxText("<Text>", "  Some words here", "</Text>"));
+    assert.ok(!isOwnLineJsxText("const x = 1;", "  Some words here", "</Text>"));
+    assert.ok(!isOwnLineJsxText("<Text>", "  Some words here", "more code"));
+  });
+
+  test("rejects a line carrying code punctuation", () => {
+    assert.ok(!isOwnLineJsxText("<Text>", "  doThing();", "</Text>"));
   });
 });
 

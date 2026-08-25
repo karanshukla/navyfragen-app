@@ -169,6 +169,7 @@ export interface HomeMessages {
 
 export interface SettingsPageMessages {
   heading: string;
+  accountOverview: string;
   updateFailedTitle: string;
   pdsSync: string;
   messagesInInbox: string;
@@ -361,4 +362,10 @@ export interface Messages {
   questionRender: QuestionRenderMessages;
   notificationService: NotificationServiceMessages;
   updateAvailableButton: UpdateAvailableButtonMessages;
+  notFoundPage: NotFoundPageMessages;
+}
+
+export interface NotFoundPageMessages {
+  title: string;
+  message: string;
 }
