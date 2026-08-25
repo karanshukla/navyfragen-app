@@ -5,17 +5,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // eslint-disable-next-line import/order
 import * as authService from "../api/authService";
-// eslint-disable-next-line import/order
-import { en } from "../lib/i18n/en";
 
 vi.mock("../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/authService")>();
   return { ...actual, useSession: vi.fn(), useSwitchAccount: vi.fn() };
-});
-
-vi.mock("../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
 });
 
 vi.mock("../api/messageService", () => ({

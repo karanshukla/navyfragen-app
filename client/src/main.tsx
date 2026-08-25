@@ -22,10 +22,16 @@ import "./index.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="auto" theme={navyfragenTheme}>
-      <Notifications position="bottom-right" autoClose={5000} limit={3} />
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <I18nProvider>
+            {/* A notification's message can be a component that reads the
+                catalog (e.g. Messages.tsx's PostedNotice), and Notifications
+                renders that content through its own portal — which resolves
+                context from its position in the tree, not from where the
+                content was created — so it has to sit inside I18nProvider,
+                not beside it. */}
+            <Notifications position="bottom-right" autoClose={5000} limit={3} />
             <InstallPromptProvider>
               <BounceLogosProvider>
                 <AppLayout />

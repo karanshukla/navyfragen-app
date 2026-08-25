@@ -14,6 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "check:doc-links": "bun scripts/check-doc-links.mjs",
     "test:doc-links": "bun test scripts/check-doc-links.test.ts",
+    "check:i18n": "bun scripts/check-i18n.mjs",
+    "test:i18n": "bun test scripts/check-i18n.test.ts",
     "test:bot-policy": "bun test scripts/bot-policy.test.ts"
   },
   "devDependencies": {

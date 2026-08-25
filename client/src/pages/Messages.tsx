@@ -70,7 +70,7 @@ export default function Messages() {
   const updateSettings = useUpdateUserSettings({
     onError: (error: ApiError) => {
       notifications.show({
-        title: "Error updating theme",
+        title: messages.messagesPage.themeUpdateErrorTitle,
         message: resolveApiErrorMessage(error, messages),
         color: "red",
       });
@@ -113,7 +113,7 @@ export default function Messages() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onError: (err: any) => {
         notifications.show({
-          title: "Error Adding Examples",
+          title: messages.messagesPage.addExamplesErrorTitle,
           message: resolveApiErrorMessage(err, messages),
           color: "red",
         });
@@ -137,7 +137,7 @@ export default function Messages() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onError: (err: any) => {
         notifications.show({
-          title: "Error Deleting Message",
+          title: messages.messagesPage.deleteErrorTitle,
           message: resolveApiErrorMessage(err, messages),
           color: "red",
         });
@@ -200,7 +200,9 @@ export default function Messages() {
           closeComposer();
           setResponseText("");
           notifications.show({
-            title: replyTo ? "Added to thread!" : "Response Sent!",
+            title: replyTo
+              ? messages.messagesPage.threadReplyTitle
+              : messages.messagesPage.responseSentTitle,
             message: <PostedNotice link={data.link} inThread={!!replyTo} />,
             color: "green",
             autoClose: 8000,
@@ -217,7 +219,7 @@ export default function Messages() {
             return;
           }
           notifications.show({
-            title: "Response Error",
+            title: messages.messagesPage.responseErrorTitle,
             message: resolveApiErrorMessage(err, messages),
             color: "red",
           });
@@ -239,8 +241,8 @@ export default function Messages() {
 
     if (!response.trim()) {
       notifications.show({
-        title: "Empty Response",
-        message: "Response cannot be empty.",
+        title: messages.messagesPage.emptyResponseTitle,
+        message: messages.messagesPage.emptyResponseMessage,
         color: "yellow",
       });
       return;
@@ -271,8 +273,8 @@ export default function Messages() {
     if (render.status === "failed") {
       setQueuedSend(null);
       notifications.show({
-        title: "Image Render Failed",
-        message: render.error || "Failed to render the question image.",
+        title: messages.messagesPage.imageRenderFailedTitle,
+        message: render.error || messages.messagesPage.imageRenderFailedMessage,
         color: "red",
       });
       return;
@@ -295,8 +297,8 @@ export default function Messages() {
 
   if (!session?.isLoggedIn) {
     return (
-      <Alert color="red" title="Not logged in">
-        Please log in to see your messages.
+      <Alert color="red" title={messages.messagesPage.notLoggedInTitle}>
+        {messages.messagesPage.notLoggedInMessage}
       </Alert>
     );
   }
@@ -311,7 +313,7 @@ export default function Messages() {
       <Group justify="space-between" align="flex-end" mb="lg" wrap="wrap" gap="sm">
         <Box>
           <Title order={1} style={{ letterSpacing: "-0.03em" }}>
-            Messages
+            {messages.messagesPage.heading}
           </Title>
           {!messagesLoading && <MessageCount count={msgCount} />}
         </Box>
@@ -376,10 +378,9 @@ export default function Messages() {
           />
         </>
       ) : (
-        <Alert color="royal" title="No messages">
+        <Alert color="royal" title={messages.messagesPage.noMessagesTitle}>
           <Text fz="sm" mb="sm">
-            You don&apos;t have any messages yet. Share your profile link to receive anonymous
-            questions.
+            {messages.messagesPage.noMessagesBody}
           </Text>
           <Button
             onClick={() => {
@@ -393,7 +394,7 @@ export default function Messages() {
             variant="filled"
             style={sunshineButton}
           >
-            Add example messages
+            {messages.messagesPage.addExampleMessages}
           </Button>
         </Alert>
       )}
@@ -407,10 +408,10 @@ export default function Messages() {
           }
         }}
         onConfirm={() => performDelete(messageIdToDelete!, true)}
-        title="Confirm Deletion"
-        message="Are you sure you want to delete this message? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={messages.messagesPage.deleteConfirmTitle}
+        message={messages.messagesPage.deleteConfirmMessage}
+        confirmLabel={messages.common.delete}
+        cancelLabel={messages.common.cancel}
         destructive
         loading={deletingTid !== null && deletingTid === messageIdToDelete}
       />
@@ -419,6 +420,7 @@ export default function Messages() {
 }
 
 function MessageCount({ count }: { count: number }) {
+  const messages = useTranslations();
   return (
     <Text fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
       {count > 0 ? (
@@ -426,17 +428,20 @@ function MessageCount({ count }: { count: number }) {
           <span style={{ color: "var(--nf-sunshine)" }} aria-hidden>
             ●
           </span>{" "}
-          {count} new
+          {messages.messagesPage.newMessagesCount(count)}
         </>
       ) : (
-        "no messages"
+        messages.messagesPage.noMessagesCount
       )}
     </Text>
   );
 }
 
 function PostedNotice({ link, inThread }: { link?: string; inThread: boolean }) {
-  const summary = inThread ? "Added to thread." : "Your response has been posted.";
+  const messages = useTranslations();
+  const summary = inThread
+    ? messages.messagesPage.threadReplyPosted
+    : messages.messagesPage.responsePosted;
   if (!link) return <>{summary}</>;
   return (
     <>
@@ -455,14 +460,16 @@ function PostedNotice({ link, inThread }: { link?: string; inThread: boolean }) 
 
 /** One-shot greeting after the OAuth round trip lands back on this page. */
 function useWelcomeBackToast() {
+  const messages = useTranslations();
   useEffect(() => {
     if (sessionStorage.getItem("newLogin") !== "true") return;
     notifications.show({
-      title: "Welcome back!",
-      message: "You have successfully logged in.",
+      title: messages.messagesPage.welcomeBackTitle,
+      message: messages.messagesPage.welcomeBackMessage,
       color: "green",
     });
     sessionStorage.removeItem("newLogin");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
 

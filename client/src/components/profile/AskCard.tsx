@@ -2,6 +2,7 @@ import { ActionIcon, Alert, Button, Group, Paper, Stack, Text, Textarea } from "
 import { IconSend, IconX } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import { useTranslations } from "../../lib/i18n";
 import type { TouchpointTranslations } from "../../lib/touchpointTranslations";
 import { sunshineButton } from "../../styles/tokens";
 
@@ -41,6 +42,7 @@ export function AskCard({
   textareaRef,
 }: AskCardProps) {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
 
   return (
     <Paper ref={cardRef} onClick={() => textareaRef.current?.focus()} style={styles.card(gradient)}>
@@ -93,7 +95,7 @@ export function AskCard({
                 color="white"
                 size="lg"
                 radius="md"
-                aria-label="Clear message"
+                aria-label={messages.askCard.clearMessage}
               >
                 <IconX size={18} />
               </ActionIcon>

@@ -25,11 +25,326 @@ export interface ErrorMessages {
   generic: string;
 }
 
-/**
- * Scoped to `errors` on purpose: this ships ahead of #402's ~210-string
- * extraction, so keeping the error-code strings in their own sub-object lets
- * #402 fill in the rest of `Messages` around this without touching it.
- */
+export interface CommonMessages {
+  cancel: string;
+  confirm: string;
+  delete: string;
+  retry: string;
+  copy: string;
+  copied: string;
+  copyLink: string;
+  share: string;
+  userAltFallback: string;
+  respondToThreadRootFirst: string;
+  errorTitle: string;
+  accessDeniedMessage: string;
+  settingsLoadErrorTitle: string;
+  shortcuts: {
+    title: string;
+    home: string;
+    login: string;
+    messages: string;
+    settings: string;
+    customise: string;
+    focusCycleCards: string;
+    navigateCards: string;
+    closeExpandedCard: string;
+  };
+}
+
+export interface MessagesPageMessages {
+  themeUpdateErrorTitle: string;
+  addExamplesErrorTitle: string;
+  deleteErrorTitle: string;
+  threadReplyTitle: string;
+  responseSentTitle: string;
+  responseErrorTitle: string;
+  emptyResponseTitle: string;
+  emptyResponseMessage: string;
+  imageRenderFailedTitle: string;
+  imageRenderFailedMessage: string;
+  notLoggedInTitle: string;
+  notLoggedInMessage: string;
+  heading: string;
+  noMessagesCount: string;
+  newMessagesCount: (count: number) => string;
+  noMessagesTitle: string;
+  noMessagesBody: string;
+  addExampleMessages: string;
+  deleteConfirmTitle: string;
+  deleteConfirmMessage: string;
+  threadReplyPosted: string;
+  responsePosted: string;
+  welcomeBackTitle: string;
+  welcomeBackMessage: string;
+}
+
+export interface InboxLinkCardMessages {
+  eyebrow: string;
+}
+
+export interface PostingPreferencesMessages {
+  title: string;
+  appendProfileLink: { label: string; description: string };
+  useGradients: { label: string; description: string };
+  includeQuestionAsImage: { label: string; description: string };
+  confirmBeforeDelete: { label: string; description: string };
+  autoScrollToMessages: { label: string; description: string };
+}
+
+export interface QuestionCardMessages {
+  cannotDeleteThreadRootTooltip: string;
+  cannotDeleteThreadRootLabel: string;
+  cannotDeleteWhilePostingTooltip: string;
+  cannotDeleteWhilePostingLabel: string;
+  unpinThreadTooltip: string;
+  pinAsThreadRootTooltip: string;
+  unpinThreadRootLabel: string;
+  setAsThreadRootLabel: string;
+  deleteMessageTooltip: string;
+  deleteMessageLabel: string;
+  replyToThread: string;
+  reply: string;
+}
+
+export interface ReplyComposerMessages {
+  stillRenderingImage: string;
+  renderingImage: string;
+  posting: string;
+  stillGoingWakingRenderer: string;
+  stillGoing: string;
+  responseAriaLabel: string;
+  placeholder: string;
+  replyToThread: string;
+  reply: string;
+}
+
+export interface ImageThemePickerMessages {
+  title: string;
+}
+
+export interface ThemesMessages {
+  image: { default: string; compressed: string; twitter: string };
+  profileCard: { royal: string; aurora: string; ember: string; verdant: string };
+}
+
+export interface NavMessages {
+  friendGroups: { moots: string; following: string; oomfs: string };
+  viewingProfile: string;
+  unreadCount: (count: number) => string;
+}
+
+export interface AppHeaderMessages {
+  disableAnimations: string;
+  enableAnimations: string;
+  toggleColorScheme: string;
+}
+
+export interface HomeMessages {
+  titleSuffix: string;
+  subtitle: string;
+  sellingPoints: {
+    fastAndFree: { title: string; body: string };
+    spamProtection: { title: string; body: string };
+    openSource: { title: string; body: string };
+  };
+  questionsFeedback: string;
+  reachOutOnBluesky: string;
+  submitAnIssueOnGitHub: string;
+  githubContactLabel: string;
+  disclaimer: string;
+  welcomeBackGreetingPrefix: string;
+  viewYourMessages: string;
+  copyProfileLink: string;
+  copyLinkButton: string;
+  getStarted: string;
+}
+
+export interface SettingsPageMessages {
+  heading: string;
+  updateFailedTitle: string;
+  pdsSync: string;
+  messagesInInbox: string;
+  answersOnPds: string;
+  activeSince: string;
+  pdsLabel: string;
+  installApplication: string;
+  installApplicationDescription: string;
+  install: string;
+  appLanguage: string;
+  appLanguageDescription: string;
+  openFeedOnBluesky: string;
+  dailyNotifications: string;
+  viewBotOnBluesky: string;
+  followTheBotOnBluesky: string;
+  deleteMyData: string;
+  deleteAccountTitle: string;
+  deleteAccountMessage: string;
+}
+
+export interface CustomisePageMessages {
+  heading: string;
+  beta: string;
+  yourPublicProfile: string;
+  yourPublicProfileHelp: string;
+  profilePrompt: string;
+  profilePromptDescription: string;
+  profilePromptPlaceholder: string;
+  messageLanguage: string;
+  messageLanguageDescription: string;
+  profileCardColour: string;
+  profileCardColourDescription: string;
+  messageIntake: string;
+  messageIntakeHelp: string;
+  inbox: string;
+  inboxDescription: string;
+  profanityFilter: string;
+  profanityFilterDescription: string;
+}
+
+export interface PublicProfilePageMessages {
+  messageEmptyError: string;
+  recipientNotFoundTitle: string;
+  recipientNotFoundMessage: string;
+  messageSentTitle: string;
+  messageSentBody: string;
+  sendFailedTitle: string;
+  noBlueskyAccountTitle: string;
+  noBlueskyAccountBody: string;
+  notOnAppBodyPrefix: string;
+  notOnAppBodySuffix: string;
+  profileLoadFailed: string;
+  confirmSendTitle: string;
+  confirmSendMessage: string;
+  sendMessage: string;
+  handleResolveFailed: string;
+  sendMessageFailed: string;
+}
+
+export interface AskCardMessages {
+  clearMessage: string;
+}
+
+export interface ProfileCardMessages {
+  viewOnBluesky: string;
+}
+
+export interface ProfileUrlBarMessages {
+  shareFailedTitle: string;
+  shareFailedMessage: string;
+  copyProfileLinkAriaLabel: string;
+  shareProfileLinkAriaLabel: string;
+}
+
+export interface LoginPageMessages {
+  handleRequired: string;
+  handleTooLong: string;
+  oauthFailedMessage: string;
+  logInToPrefix: string;
+  subtitle: string;
+  atmosphereHandle: string;
+  handlePlaceholder: string;
+  continueButton: string;
+  disclaimerPrefix: string;
+  disclaimerMiddle: string;
+  disclaimerSuffix: string;
+}
+
+export interface HandleSuggestionsMessages {
+  ariaLabel: string;
+  noHandlesFound: string;
+  startTyping: string;
+}
+
+export interface E2ELoginPanelMessages {
+  modeNotice: string;
+  identifier: string;
+  identifierPlaceholder: string;
+  appPassword: string;
+  appPasswordPlaceholder: string;
+  signIn: string;
+}
+
+export interface OAuthCallbackMessages {
+  missingToken: string;
+  loggingIn: string;
+  completingAuth: string;
+  loginFailed: string;
+  tryAgain: string;
+  redirectNotice: string;
+}
+
+export interface PushNotificationsCardMessages {
+  description: string;
+  serverUnavailable: string;
+  browserUnsupported: string;
+  browserBlocked: string;
+  toastTitle: string;
+  title: string;
+}
+
+export interface ShareButtonMessages {
+  linkCopiedTitle: string;
+  linkCopiedMessage: string;
+  copyFailedTitle: string;
+  copyFailedMessage: string;
+  sharingUnavailableTitle: string;
+  sharingUnavailableMessage: string;
+  button: string;
+}
+
+export interface QuestionRenderMessages {
+  renderLost: string;
+  renderUnreachable: string;
+}
+
+export interface NotificationServiceMessages {
+  serverUnavailable: string;
+  browserUnsupported: string;
+  permissionDenied: string;
+  subscriptionMissingEndpoint: string;
+}
+
+export interface UpdateAvailableButtonMessages {
+  ariaLabel: string;
+  buttonLabel: string;
+}
+
+export interface UserMenuMessages {
+  switchAccountErrorTitle: string;
+  userAvatarAltFallback: string;
+  accountsLabel: string;
+  addAccount: string;
+  viewProfile: string;
+}
+
 export interface Messages {
   errors: ErrorMessages;
+  common: CommonMessages;
+  messagesPage: MessagesPageMessages;
+  inboxLinkCard: InboxLinkCardMessages;
+  postingPreferences: PostingPreferencesMessages;
+  questionCard: QuestionCardMessages;
+  replyComposer: ReplyComposerMessages;
+  imageThemePicker: ImageThemePickerMessages;
+  themes: ThemesMessages;
+  nav: NavMessages;
+  appHeader: AppHeaderMessages;
+  userMenu: UserMenuMessages;
+  home: HomeMessages;
+  settingsPage: SettingsPageMessages;
+  customisePage: CustomisePageMessages;
+  publicProfilePage: PublicProfilePageMessages;
+  askCard: AskCardMessages;
+  profileCard: ProfileCardMessages;
+  profileUrlBar: ProfileUrlBarMessages;
+  loginPage: LoginPageMessages;
+  handleSuggestions: HandleSuggestionsMessages;
+  e2eLoginPanel: E2ELoginPanelMessages;
+  oauthCallback: OAuthCallbackMessages;
+  pushNotificationsCard: PushNotificationsCardMessages;
+  shareButton: ShareButtonMessages;
+  questionRender: QuestionRenderMessages;
+  notificationService: NotificationServiceMessages;
+  updateAvailableButton: UpdateAvailableButtonMessages;
 }

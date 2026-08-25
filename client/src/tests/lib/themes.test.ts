@@ -1,28 +1,41 @@
 import { describe, it, expect } from "vitest";
 
-import { themes, profileCardThemes, profileCardGradient } from "../../lib/themes";
+import { en } from "../../lib/i18n/en";
+import {
+  imageThemeIds,
+  imageThemeLabels,
+  profileCardThemes,
+  profileCardGradient,
+} from "../../lib/themes";
 
-describe("themes", () => {
+describe("imageThemeLabels", () => {
   it("has all three theme keys", () => {
+    const themes = imageThemeLabels(en);
     expect(themes).toHaveProperty("default");
     expect(themes).toHaveProperty("compressed");
     expect(themes).toHaveProperty("twitter");
   });
 
-  it("maps theme keys to display strings", () => {
-    expect(themes.default).toBe("Default");
-    expect(themes.compressed).toBe("Compressed");
-    expect(themes.twitter).toBe("Twitter Style");
+  it("maps theme ids to the catalog's display strings", () => {
+    const themes = imageThemeLabels(en);
+    for (const id of imageThemeIds) {
+      expect(themes[id]).toBe(en.themes.image[id]);
+    }
   });
 });
 
 describe("profileCardThemes (#275)", () => {
   it("includes the curated preset set", () => {
-    expect(Object.keys(profileCardThemes).sort()).toEqual(["aurora", "ember", "royal", "verdant"]);
+    expect(Object.keys(profileCardThemes(en)).sort()).toEqual([
+      "aurora",
+      "ember",
+      "royal",
+      "verdant",
+    ]);
   });
 
   it("each preset has a label and a gradient token (no raw hex)", () => {
-    for (const theme of Object.values(profileCardThemes)) {
+    for (const theme of Object.values(profileCardThemes(en))) {
       expect(typeof theme.label).toBe("string");
       expect(theme.label.length).toBeGreaterThan(0);
       // Gradients reference --nf-grad-* tokens, never inline colours.
@@ -31,7 +44,7 @@ describe("profileCardThemes (#275)", () => {
   });
 
   it("royal reuses the default --nf-grad-mark gradient", () => {
-    expect(profileCardThemes.royal.gradient).toBe("var(--nf-grad-mark)");
+    expect(profileCardThemes(en).royal.gradient).toBe("var(--nf-grad-mark)");
   });
 });
 

@@ -1,6 +1,7 @@
 import { Avatar, Box, Center, Group, Paper, Skeleton, Text, UnstyledButton } from "@mantine/core";
 import { useState, type RefObject } from "react";
 
+import { useTranslations } from "../../lib/i18n";
 import type { BlueskyActor, HandleSearch } from "../../lib/useHandleSearch";
 
 import * as styles from "./HandleSuggestions.styles";
@@ -92,6 +93,7 @@ interface HandleSuggestionsProps {
  * jumps while the user types.
  */
 export function HandleSuggestions({ search, suggestionRef, onEscape }: HandleSuggestionsProps) {
+  const messages = useTranslations();
   const { selectedActor, isSearching, suggestions, noResults, isHandleReady, cleanHandle } = search;
   const isListbox = !selectedActor && (suggestions.length > 0 || (noResults && isHandleReady));
 
@@ -101,7 +103,7 @@ export function HandleSuggestions({ search, suggestionRef, onEscape }: HandleSug
       withBorder
       mt="xs"
       role={isListbox ? "listbox" : undefined}
-      aria-label={isListbox ? "Handle suggestions" : undefined}
+      aria-label={isListbox ? messages.handleSuggestions.ariaLabel : undefined}
       style={styles.box}
     >
       {selectedActor ? (
@@ -127,9 +129,9 @@ export function HandleSuggestions({ search, suggestionRef, onEscape }: HandleSug
           onEscape={onEscape}
         />
       ) : noResults ? (
-        <Hint>No handles found</Hint>
+        <Hint>{messages.handleSuggestions.noHandlesFound}</Hint>
       ) : (
-        <Hint>Start typing to get handle suggestions</Hint>
+        <Hint>{messages.handleSuggestions.startTyping}</Hint>
       )}
     </Paper>
   );

@@ -11,11 +11,6 @@ vi.mock("../../api/authService", async (importOriginal) => {
   return { ...actual, useLogin: vi.fn(), useE2ELogin: vi.fn() };
 });
 
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
-});
-
 const mockUseLogin = vi.mocked(authService.useLogin);
 const mockUseE2ELogin = vi.mocked(authService.useE2ELogin);
 

@@ -26,7 +26,7 @@ const SUPPORTED_LOCALES: readonly Locale[] = ["en"];
 
 /** Ordered list for the `/settings` "App language" `<Select>`. `en` first = default. */
 export const uiLocaleOptions: { value: Locale; label: string }[] = [
-  { value: "en", label: "English" },
+  { value: "en", label: "English" /* i18n-allow */ },
 ];
 
 /**
@@ -101,7 +101,7 @@ interface I18nContextValue {
   messages: Messages;
 }
 
-const I18nContext = createContext<I18nContextValue | undefined>(undefined);
+export const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();

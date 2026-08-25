@@ -23,41 +23,41 @@ import { useSyncMessages } from "../api/messageService";
 import { ShortcutList, type Shortcut } from "../components/ShortcutList";
 import { WinkMark } from "../components/WinkMark";
 import { APP_NAME } from "../lib/brand";
+import { useTranslations } from "../lib/i18n";
+import type { Messages } from "../lib/i18n/types";
 import { BRAND_GRADIENT } from "../styles/tokens";
 
 import * as styles from "./Home.styles";
 
 const shortlinkurl = import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
-const SIGNED_OUT_SHORTCUTS: Shortcut[] = [
-  { label: "Home", hint: "Alt+H" },
-  { label: "Login", hint: "Alt+L" },
-];
+function signedOutShortcuts(messages: Messages): Shortcut[] {
+  return [
+    { label: messages.common.shortcuts.home, hint: "Alt+H" /* i18n-allow */ },
+    { label: messages.common.shortcuts.login, hint: "Alt+L" /* i18n-allow */ },
+  ];
+}
 
-const SIGNED_IN_SHORTCUTS: Shortcut[] = [
-  { label: "Home", hint: "Alt+H" },
-  { label: "Messages", hint: "Alt+M" },
-  { label: "Settings", hint: "Alt+S" },
-  { label: "Focus / cycle cards", hint: "Alt+R" },
-  { label: "Navigate cards", hint: "↑ / ↓" },
-];
+function signedInShortcuts(messages: Messages): Shortcut[] {
+  return [
+    { label: messages.common.shortcuts.home, hint: "Alt+H" /* i18n-allow */ },
+    { label: messages.common.shortcuts.messages, hint: "Alt+M" /* i18n-allow */ },
+    { label: messages.common.shortcuts.settings, hint: "Alt+S" /* i18n-allow */ },
+    { label: messages.common.shortcuts.focusCycleCards, hint: "Alt+R" /* i18n-allow */ },
+    { label: messages.common.shortcuts.navigateCards, hint: "↑ / ↓" },
+  ];
+}
 
-const SELLING_POINTS = [
-  {
-    title: "Fast and free",
-    body: "No downloads required, just log in with your Bluesky credentials and share your inbox link",
-  },
-  {
-    title: "Spam protection, without captchas",
-    body: "Protected by Anubis, a powerful bot detection service",
-  },
-  {
-    title: "Open source",
-    body: "Contribute directly to the project, or host your own version if you want!",
-  },
-];
+function sellingPoints(messages: Messages) {
+  return [
+    messages.home.sellingPoints.fastAndFree,
+    messages.home.sellingPoints.spamProtection,
+    messages.home.sellingPoints.openSource,
+  ];
+}
 
 export default function Home() {
+  const messages = useTranslations();
   const { data: sessionData, isLoading } = useSession();
   const syncMessagesMutation = useSyncMessages();
   const isLoggedIn = !!sessionData?.isLoggedIn;
@@ -72,10 +72,11 @@ export default function Home() {
   return (
     <>
       <Title order={1} mb={6} style={{ letterSpacing: "-0.03em" }}>
-        {APP_NAME} - Anonymous questions and answers on Bluesky
+        {APP_NAME}
+        {messages.home.titleSuffix}
       </Title>
       <Text mb="xl" fz={15} c="dimmed">
-        Receive questions from the web and post the answers directly on Bluesky.
+        {messages.home.subtitle}
       </Text>
 
       {isLoading ? (
@@ -89,35 +90,33 @@ export default function Home() {
       <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
         <Paper p="lg" radius="md" withBorder style={styles.infoCard}>
           <ShortcutList
-            title="Keyboard Shortcuts"
-            shortcuts={isLoggedIn ? SIGNED_IN_SHORTCUTS : SIGNED_OUT_SHORTCUTS}
+            title={messages.common.shortcuts.title}
+            shortcuts={isLoggedIn ? signedInShortcuts(messages) : signedOutShortcuts(messages)}
           />
         </Paper>
 
         <Paper p="lg" radius="md" withBorder style={styles.infoCard}>
           <Title order={2} style={styles.infoHeading}>
-            Questions? Feedback?
+            {messages.home.questionsFeedback}
           </Title>
           <Stack gap="sm">
             <ContactLink
-              caption="Reach out on Bluesky"
+              caption={messages.home.reachOutOnBluesky}
               href="https://bsky.app/profile/navyfragen.app"
               icon={<IconButterfly size={18} />}
             >
               @navyfragen.app
             </ContactLink>
             <ContactLink
-              caption="Submit an issue on GitHub"
+              caption={messages.home.submitAnIssueOnGitHub}
               href="https://github.com/karanshukla/navyfragen-app"
               icon={<IconBrandGithub size={18} />}
             >
-              GitHub - {APP_NAME}
+              {messages.home.githubContactLabel}
+              {APP_NAME}
             </ContactLink>
             <Divider />
-            <Text fz={13}>
-              Disclaimer: Please follow Bluesky&apos;s ToS. Cookies are used to keep you logged in.
-              This app does not include any moderation.
-            </Text>
+            <Text fz={13}>{messages.home.disclaimer}</Text>
           </Stack>
         </Paper>
       </SimpleGrid>
@@ -147,6 +146,7 @@ interface SessionProfile {
 }
 
 function WelcomeBack({ profile }: { profile: SessionProfile }) {
+  const messages = useTranslations();
   const name = profile.displayName || profile.handle;
   const url = `https://${shortlinkurl}/${profile.handle}`;
 
@@ -178,7 +178,7 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
         </Center>
         <Center>
           <Text fw={800} fz={26} style={styles.greeting}>
-            Good to see you again,{" "}
+            {messages.home.welcomeBackGreetingPrefix}{" "}
             <Text component="span" fw={800} inherit style={styles.greetingName}>
               {name}
             </Text>
@@ -196,11 +196,14 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
             variant="gradient"
             gradient={BRAND_GRADIENT}
           >
-            View Your Messages
+            {messages.home.viewYourMessages}
           </Button>
           <CopyButton value={url}>
             {({ copied, copy }) => (
-              <Tooltip label={copied ? "Copied!" : "Copy profile link"} withArrow>
+              <Tooltip
+                label={copied ? messages.common.copied : messages.home.copyProfileLink}
+                withArrow
+              >
                 <Button
                   onClick={copy}
                   size="sm"
@@ -208,7 +211,7 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
                   variant="default"
                   leftSection={<IconClipboard size={14} />}
                 >
-                  {copied ? "Copied!" : "Copy Link"}
+                  {copied ? messages.common.copied : messages.home.copyLinkButton}
                 </Button>
               </Tooltip>
             )}
@@ -220,7 +223,7 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
             leftSection={<IconShare size={14} />}
             onClick={share}
           >
-            Share
+            {messages.common.share}
           </Button>
         </Group>
       </Center>
@@ -229,10 +232,11 @@ function WelcomeBack({ profile }: { profile: SessionProfile }) {
 }
 
 function SignedOutHero() {
+  const messages = useTranslations();
   return (
     <Paper p="xl" radius="lg" withBorder style={styles.infoCard}>
       <List spacing="md" size="md">
-        {SELLING_POINTS.map(({ title, body }) => (
+        {sellingPoints(messages).map(({ title, body }) => (
           <List.Item key={title}>
             <Text fw={500}>{title}</Text>
             <Text c="dimmed">{body}</Text>
@@ -248,7 +252,7 @@ function SignedOutHero() {
           variant="gradient"
           gradient={BRAND_GRADIENT}
         >
-          Get Started
+          {messages.home.getStarted}
         </Button>
       </Center>
     </Paper>

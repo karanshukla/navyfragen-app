@@ -2,6 +2,8 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as messageServiceModule from "../../api/messageService";
+import { I18nContext } from "../../lib/i18n";
+import { en } from "../../lib/i18n/en";
 import {
   RENDER_LOST_MESSAGE,
   RENDER_UNREACHABLE_MESSAGE,
@@ -61,6 +63,9 @@ const TARGET = { tid: "msg-1", original: "Hello?" };
 function renderQuestionRender(props: Partial<Parameters<typeof useQuestionRender>[0]> = {}) {
   return renderHook((args: Parameters<typeof useQuestionRender>[0]) => useQuestionRender(args), {
     initialProps: { target: TARGET, theme: "default", enabled: true, ...props },
+    wrapper: ({ children }) => (
+      <I18nContext.Provider value={{ locale: "en", messages: en }}>{children}</I18nContext.Provider>
+    ),
   });
 }
 

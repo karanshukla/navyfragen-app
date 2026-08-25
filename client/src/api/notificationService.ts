@@ -1,5 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
+import { en } from "../lib/i18n/en";
+
 import { apiClient, ApiError } from "./apiClient";
 
 export type PushPermission = "default" | "granted" | "denied" | "unsupported";
@@ -41,15 +43,15 @@ function base64UrlToApplicationServerKey(base64url: string): Uint8Array<ArrayBuf
 async function createPushSubscription(): Promise<string> {
   const vapidPublicKey = await fetchVapidPublicKey();
   if (!vapidPublicKey) {
-    throw pushError("Push notifications are not available on this server", 501);
+    throw pushError(en.notificationService.serverUnavailable, 501);
   }
 
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    throw pushError("Push notifications are not supported by this browser", 501);
+    throw pushError(en.notificationService.browserUnsupported, 501);
   }
 
   if ((await Notification.requestPermission()) !== "granted") {
-    throw pushError("Notification permission was not granted", 403);
+    throw pushError(en.notificationService.permissionDenied, 403);
   }
 
   const registration = await navigator.serviceWorker.ready;
@@ -60,7 +62,7 @@ async function createPushSubscription(): Promise<string> {
 
   const { endpoint, keys } = subscription.toJSON();
   if (!endpoint) {
-    throw pushError("Push subscription returned no endpoint", 502);
+    throw pushError(en.notificationService.subscriptionMissingEndpoint, 502);
   }
 
   await apiClient.post("/notifications/subscribe", {

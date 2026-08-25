@@ -15,11 +15,6 @@ vi.mock("../../api/authService", async (importOriginal) => {
   return { ...actual, useSession: vi.fn() };
 });
 
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
-});
-
 // Settings renders <PushNotificationsCard>, whose usePushAvailable() hook
 // otherwise makes a real apiClient.get() fetch call that races with (and can
 // consume) the delete-account fetch mocks used by several tests below.

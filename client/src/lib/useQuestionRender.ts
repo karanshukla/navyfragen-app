@@ -7,6 +7,9 @@ import {
   type RenderStatus,
 } from "../api/messageService";
 
+import { en } from "./i18n/en";
+import { useTranslations } from "./i18n";
+
 /**
  * `idle` while nothing needs rendering, `unavailable` when the render could not
  * even be queued — which is the caller's cue to take the server's permanent
@@ -15,11 +18,10 @@ import {
 export type QuestionRenderStatus = RenderStatus | "idle" | "unavailable";
 
 /** What a second loss of the same render key leaves the composer to say. */
-export const RENDER_LOST_MESSAGE = "The question image could not be rendered. Try sending again.";
+export const RENDER_LOST_MESSAGE = en.questionRender.renderLost;
 
 /** What a poll the server will not answer leaves the composer to say. */
-export const RENDER_UNREACHABLE_MESSAGE =
-  "Could not check on the question image. Try sending again.";
+export const RENDER_UNREACHABLE_MESSAGE = en.questionRender.renderUnreachable;
 
 export interface QuestionRenderArgs {
   /** The question whose composer is open, or null when none is. */
@@ -59,6 +61,7 @@ export interface QuestionRender {
  * not answer fails rather than waiting on `pending` forever.
  */
 export function useQuestionRender({ target, theme, enabled }: QuestionRenderArgs): QuestionRender {
+  const messages = useTranslations();
   const tid = target?.tid ?? null;
   const original = target?.original ?? null;
 
@@ -140,8 +143,8 @@ export function useQuestionRender({ target, theme, enabled }: QuestionRenderArgs
   else if (polled !== undefined) status = polled;
 
   let error = poll.data?.error;
-  if (lost) error = RENDER_LOST_MESSAGE;
-  else if (unreachable) error = poll.error?.error || RENDER_UNREACHABLE_MESSAGE;
+  if (lost) error = messages.questionRender.renderLost;
+  else if (unreachable) error = poll.error?.error || messages.questionRender.renderUnreachable;
 
   return {
     status,

@@ -18,18 +18,17 @@ import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useHandleSearch } from "../lib/useHandleSearch";
 import { BRAND_GRADIENT } from "../styles/tokens";
 
-const handleSchema = z
-  .string()
-  .min(1, { error: "Handle is required" })
-  .max(64, { error: "Handle too long" });
-
 function LoginForm() {
   const location = useLocation();
   const messages = useTranslations();
+  const handleSchema = z
+    .string()
+    .min(1, { error: messages.loginPage.handleRequired })
+    .max(64, { error: messages.loginPage.handleTooLong });
   const search = useHandleSearch();
   const [error, setError] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("error") === "oauth_failed"
-      ? "Login failed. Please try again."
+      ? messages.loginPage.oauthFailedMessage
       : null
   );
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -75,10 +74,11 @@ function LoginForm() {
         </Center>
         <Box ta="center">
           <Title order={1} fw={800} fz={24}>
-            Log in to {APP_NAME}
+            {messages.loginPage.logInToPrefix}
+            {APP_NAME}
           </Title>
           <Text size="sm" c="dimmed" mt={4}>
-            Enter your AT Protocol handle to continue
+            {messages.loginPage.subtitle}
           </Text>
         </Box>
 
@@ -91,8 +91,8 @@ function LoginForm() {
         <form onSubmit={onSubmit}>
           <TextInput
             ref={inputRef}
-            label="Atmosphere Handle"
-            placeholder="e.g. yourname.bsky.social"
+            label={messages.loginPage.atmosphereHandle}
+            placeholder={messages.loginPage.handlePlaceholder}
             value={search.input}
             onChange={(e) => search.setInput(e.target.value)}
             autoCorrect="off"
@@ -130,14 +130,17 @@ function LoginForm() {
               cursor: search.isHandleReady ? undefined : "not-allowed",
             }}
           >
-            Continue
+            {messages.loginPage.continueButton}
           </Button>
         </form>
       </AuthPanel>
 
       <Text size="xs" c="dimmed" ta="center" mt="md" style={{ lineHeight: 1.6 }}>
-        You will be directed to Bluesky to authenticate. {APP_NAME} does not have access to your
-        password. Verify you see <strong>{APP_DOMAIN}</strong> on the login page.
+        {messages.loginPage.disclaimerPrefix}
+        {APP_NAME}
+        {messages.loginPage.disclaimerMiddle}
+        <strong>{APP_DOMAIN}</strong>
+        {messages.loginPage.disclaimerSuffix}
       </Text>
     </Box>
   );

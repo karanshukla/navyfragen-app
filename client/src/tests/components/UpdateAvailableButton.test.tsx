@@ -3,25 +3,30 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { renderWithProviders } from "../testUtils";
-
 const triggerHaptic = vi.fn();
 vi.mock("use-haptic", () => ({
   useHaptic: () => ({ triggerHaptic }),
 }));
 
 type SwUpdateModule = typeof import("../../lib/swUpdate");
+type TestUtilsModule = typeof import("../testUtils");
 
 let swUpdate: SwUpdateModule;
 let UpdateAvailableButton: typeof import("../../components/UpdateAvailableButton").UpdateAvailableButton;
+let renderWithProviders: TestUtilsModule["renderWithProviders"];
 
 // swUpdate is module-level singleton state and the component reads it via
 // useSyncExternalStore, so both are re-imported together for each test.
+// testUtils comes along too — it re-exports the same lib/i18n module graph
+// UpdateAvailableButton resolves useTranslations() through, and a stale
+// pre-reset I18nContext object fails useContext's identity check against a
+// post-reset one, throwing "must be used within an I18nProvider".
 beforeEach(async () => {
   vi.resetModules();
   triggerHaptic.mockClear();
   swUpdate = await import("../../lib/swUpdate");
   ({ UpdateAvailableButton } = await import("../../components/UpdateAvailableButton"));
+  ({ renderWithProviders } = await import("../testUtils"));
 });
 
 describe("UpdateAvailableButton", () => {

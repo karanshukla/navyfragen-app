@@ -1,3 +1,4 @@
+import { useTranslations } from "../../lib/i18n";
 import { profileCardThemes } from "../../lib/themes";
 import { SwatchButton } from "../SwatchButton";
 
@@ -17,9 +18,10 @@ interface ProfileThemeSwatchesProps {
  * affects the card's background.
  */
 export function ProfileThemeSwatches({ value, disabled, onPick }: ProfileThemeSwatchesProps) {
+  const messages = useTranslations();
   return (
     <div style={styles.grid}>
-      {Object.entries(profileCardThemes).map(([themeValue, theme]) => (
+      {Object.entries(profileCardThemes(messages)).map(([themeValue, theme]) => (
         <SwatchButton
           key={themeValue}
           label={theme.label}

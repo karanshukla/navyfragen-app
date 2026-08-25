@@ -12,6 +12,8 @@ import { ProfileNotice } from "../components/profile/ProfileNotice";
 import { ProfileSkeleton } from "../components/profile/ProfileSkeleton";
 import { ProfileUrlBar } from "../components/profile/ProfileUrlBar";
 import { APP_NAME } from "../lib/brand";
+import { useTranslations } from "../lib/i18n";
+import type { Messages } from "../lib/i18n/types";
 import { profileCardGradient } from "../lib/themes";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import * as styles from "./PublicProfile.styles";
@@ -19,6 +21,7 @@ import * as styles from "./PublicProfile.styles";
 const MAX_MESSAGE_LENGTH = 150;
 
 export default function PublicProfile() {
+  const messages = useTranslations();
   const { handle } = useParams<{ handle: string }>();
   const [message, setMessage] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
@@ -44,7 +47,7 @@ export default function PublicProfile() {
   const handleSend = () => {
     setFormError(null);
     if (!message.trim()) {
-      setFormError("Message cannot be empty.");
+      setFormError(messages.publicProfilePage.messageEmptyError);
       return;
     }
     setModalOpened(true);
@@ -53,8 +56,8 @@ export default function PublicProfile() {
   const handleConfirmSend = () => {
     if (!profileData?.profile?.did) {
       notifications.show({
-        title: "Error",
-        message: "Cannot send message: User DID not found.",
+        title: messages.publicProfilePage.recipientNotFoundTitle,
+        message: messages.publicProfilePage.recipientNotFoundMessage,
         color: "red",
       });
       setModalOpened(false);
@@ -65,8 +68,8 @@ export default function PublicProfile() {
       {
         onSuccess: () => {
           notifications.show({
-            title: "Message sent!",
-            message: "Your anonymous message is on its way.",
+            title: messages.publicProfilePage.messageSentTitle,
+            message: messages.publicProfilePage.messageSentBody,
             color: "green",
           });
           setMessage("");
@@ -74,8 +77,8 @@ export default function PublicProfile() {
         },
         onError: (err: unknown) => {
           notifications.show({
-            title: "Failed to send",
-            message: sendFailureMessage(err),
+            title: messages.publicProfilePage.sendFailedTitle,
+            message: sendFailureMessage(messages, err),
             color: "red",
           });
           setModalOpened(false);
@@ -85,13 +88,13 @@ export default function PublicProfile() {
   };
 
   if (handleError) {
-    const { is404, message: errMessage } = describeHandleError(handleError);
+    const { is404, message: errMessage } = describeHandleError(messages, handleError);
     return is404 ? (
-      <ProfileNotice tone="yellow" title="No Bluesky account found">
-        <strong>@{handle}</strong> doesn&apos;t exist on Bluesky. Check the handle and try again.
+      <ProfileNotice tone="yellow" title={messages.publicProfilePage.noBlueskyAccountTitle}>
+        <strong>@{handle}</strong> {messages.publicProfilePage.noBlueskyAccountBody}
       </ProfileNotice>
     ) : (
-      <ProfileNotice tone="red" title="Error">
+      <ProfileNotice tone="red" title={messages.common.errorTitle}>
         {errMessage}
       </ProfileNotice>
     );
@@ -102,16 +105,17 @@ export default function PublicProfile() {
   if (did && profileData && !profileData.exists) {
     return (
       <ProfileNotice tone="yellow" title={`Not on ${APP_NAME}`}>
-        <strong>@{handle}</strong> has a Bluesky account but hasn&apos;t set up their {APP_NAME}{" "}
-        inbox yet.
+        <strong>@{handle}</strong> {messages.publicProfilePage.notOnAppBodyPrefix}
+        {APP_NAME}
+        {messages.publicProfilePage.notOnAppBodySuffix}
       </ProfileNotice>
     );
   }
 
   if (!profile) {
     return (
-      <ProfileNotice tone="red" title="Error">
-        Failed to load profile information.
+      <ProfileNotice tone="red" title={messages.common.errorTitle}>
+        {messages.publicProfilePage.profileLoadFailed}
       </ProfileNotice>
     );
   }
@@ -157,16 +161,19 @@ export default function PublicProfile() {
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
         onConfirm={handleConfirmSend}
-        title="Confirm Anonymous Message"
-        message="Are you sure you want to send this anonymous message? This action cannot be undone."
-        confirmLabel="Send Message"
-        cancelLabel="Cancel"
+        title={messages.publicProfilePage.confirmSendTitle}
+        message={messages.publicProfilePage.confirmSendMessage}
+        confirmLabel={messages.publicProfilePage.sendMessage}
+        cancelLabel={messages.common.cancel}
       />
     </Container>
   );
 }
 
-function describeHandleError(error: unknown): { is404: boolean; message: string } {
+function describeHandleError(
+  messages: Messages,
+  error: unknown
+): { is404: boolean; message: string } {
   const fields = (typeof error === "object" && error !== null ? error : {}) as Record<
     string,
     unknown
@@ -176,15 +183,15 @@ function describeHandleError(error: unknown): { is404: boolean; message: string 
     message:
       typeof fields.error === "string"
         ? fields.error
-        : "Failed to resolve handle. The handle may not exist.",
+        : messages.publicProfilePage.handleResolveFailed,
   };
 }
 
-function sendFailureMessage(err: unknown): string {
+function sendFailureMessage(messages: Messages, err: unknown): string {
   const fields = err as Record<string, unknown>;
   if (typeof fields?.message === "string") return fields.message;
   if (typeof fields?.error === "string") return fields.error;
-  return "Failed to send message. Please try again.";
+  return messages.publicProfilePage.sendMessageFailed;
 }
 
 /** Keeps the composer in view when a soft keyboard opens under it. */

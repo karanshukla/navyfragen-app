@@ -3,6 +3,8 @@ import { notifications } from "@mantine/notifications";
 import { IconClipboard, IconShare, IconWorld } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import { useTranslations } from "../../lib/i18n";
+
 import * as styles from "./ProfileUrlBar.styles";
 
 interface ProfileUrlBarProps {
@@ -14,6 +16,7 @@ interface ProfileUrlBarProps {
 /** The "fragen.navy/<handle>" pill, with copy and native-share affordances. */
 export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
 
   const share = async () => {
     triggerHaptic();
@@ -23,8 +26,8 @@ export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
       if (e instanceof DOMException && e.name === "AbortError") return;
       notifications.show({
         color: "red",
-        title: "Share failed",
-        message: "Could not share link.",
+        title: messages.profileUrlBar.shareFailedTitle,
+        message: messages.profileUrlBar.shareFailedMessage,
       });
     }
   };
@@ -42,7 +45,7 @@ export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
       <Group gap="xs">
         <CopyButton value={url}>
           {({ copied, copy }) => (
-            <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
+            <Tooltip label={copied ? messages.common.copied : messages.common.copyLink} withArrow>
               <ActionIcon
                 onClick={() => {
                   triggerHaptic();
@@ -51,7 +54,7 @@ export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
                 variant="subtle"
                 radius="xl"
                 size="md"
-                aria-label="Copy profile link"
+                aria-label={messages.profileUrlBar.copyProfileLinkAriaLabel}
                 style={styles.action}
               >
                 <IconClipboard size={14} />
@@ -66,7 +69,7 @@ export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
             variant="subtle"
             radius="xl"
             size="md"
-            aria-label="Share profile link"
+            aria-label={messages.profileUrlBar.shareProfileLinkAriaLabel}
             style={styles.action}
           >
             <IconShare size={14} />

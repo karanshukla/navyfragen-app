@@ -8,18 +8,13 @@ import * as messageService from "../../api/messageService";
 import * as settingsService from "../../api/settingsService";
 import { APP_NAME } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
-import { themes } from "../../lib/themes";
+import { imageThemeLabels } from "../../lib/themes";
 import Messages from "../../pages/Messages";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
   return { ...actual, useSession: vi.fn() };
-});
-
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
 });
 
 vi.mock("../../api/messageService", async (importOriginal) => {
@@ -1564,7 +1559,7 @@ describe("Messages page", () => {
     setupMocks();
     mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: true } as any);
     renderWithProviders(<Messages />);
-    expect(screen.getAllByText(themes.default).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(imageThemeLabels(en).default).length).toBeGreaterThan(0);
   });
 
   it("falls back to the 'Default' theme label when userSettings.imageTheme is undefined", () => {
@@ -1574,7 +1569,7 @@ describe("Messages page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Messages />);
-    expect(screen.getAllByText(themes.default).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(imageThemeLabels(en).default).length).toBeGreaterThan(0);
   });
 
   it("clicking a ThemeCard while settings are loading does not call updateSettings.mutate", () => {

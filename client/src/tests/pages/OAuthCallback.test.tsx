@@ -18,11 +18,6 @@ vi.mock("../../api/apiClient", async (importOriginal) => {
   return { ...actual, apiClient: { ...actual.apiClient, post: vi.fn() } };
 });
 
-vi.mock("../../lib/i18n", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/i18n")>();
-  return { ...actual, useTranslations: () => en };
-});
-
 const mockPost = vi.mocked(apiClientModule.apiClient.post);
 
 describe("OAuthCallback page", () => {

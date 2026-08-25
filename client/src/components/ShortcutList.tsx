@@ -29,7 +29,7 @@ export function ShortcutList({ title, shortcuts }: ShortcutListProps) {
           <Box key={label} style={styles.row}>
             <Text fz={13}>{label}</Text>
             <Text fz={12} c="dimmed">
-              {hint.replace("Alt", "Alt/⌘")}
+              {hint.replace("Alt", "Alt/⌘") /* i18n-allow */}
             </Text>
           </Box>
         ))}
