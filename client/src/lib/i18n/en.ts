@@ -18,6 +18,7 @@ export const en = {
       login: "Login",
       messages: "Messages",
       settings: "Settings",
+      customise: "Customise",
       focusCycleCards: "Focus / cycle cards",
       navigateCards: "Navigate cards",
       closeExpandedCard: "Close expanded card",
@@ -117,6 +118,27 @@ export const en = {
       ember: "Ember",
       verdant: "Verdant",
     },
+  },
+  nav: {
+    friendGroups: {
+      moots: "Moots",
+      following: "Following",
+      oomfs: "Oomfs",
+    },
+    viewingProfile: "Viewing profile",
+    unreadCount: (count: number) => `${count} unread`,
+  },
+  appHeader: {
+    disableAnimations: "Disable animations",
+    enableAnimations: "Enable animations",
+    toggleColorScheme: "Toggle color scheme",
+  },
+  userMenu: {
+    switchAccountErrorTitle: "Couldn't switch account",
+    userAvatarAltFallback: "User Avatar",
+    accountsLabel: "Accounts",
+    addAccount: "Add account",
+    viewProfile: "View Profile",
   },
   errors: {
     codes: {

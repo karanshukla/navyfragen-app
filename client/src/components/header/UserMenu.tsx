@@ -59,7 +59,7 @@ export function UserMenu({
         },
         onError: (err: ApiError) => {
           showNotification({
-            title: "Couldn't switch account",
+            title: messages.userMenu.switchAccountErrorTitle,
             message: resolveApiErrorMessage(err, messages),
             color: "red",
           });
@@ -88,7 +88,7 @@ export function UserMenu({
             <Avatar
               size={28}
               src={userProfile.avatar || undefined}
-              alt={userProfile.displayName || "User Avatar"}
+              alt={userProfile.displayName || messages.userMenu.userAvatarAltFallback}
               radius="xl"
             >
               <WinkMark size={22} sparkle={false} aria-hidden />
@@ -107,7 +107,7 @@ export function UserMenu({
             one account signed in. */}
         {accounts.length > 0 && (
           <>
-            {showsAccountsLabel && <Menu.Label>Accounts</Menu.Label>}
+            {showsAccountsLabel && <Menu.Label>{messages.userMenu.accountsLabel}</Menu.Label>}
             {accounts.map((acct) => {
               const isActive = acct.did === activeDid;
               return (
@@ -148,7 +148,7 @@ export function UserMenu({
           }}
           leftSection={<IconPlus size="1.2rem" stroke={1.5} />}
         >
-          Add account
+          {messages.userMenu.addAccount}
         </Menu.Item>
 
         <Menu.Divider />
@@ -162,7 +162,7 @@ export function UserMenu({
           }}
           leftSection={<IconUser size="1.2rem" stroke={1.5} />}
         >
-          View Profile
+          {messages.userMenu.viewProfile}
         </Menu.Item>
 
         <Menu.Item

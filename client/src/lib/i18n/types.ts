@@ -42,6 +42,7 @@ export interface CommonMessages {
     login: string;
     messages: string;
     settings: string;
+    customise: string;
     focusCycleCards: string;
     navigateCards: string;
     closeExpandedCard: string;
@@ -129,6 +130,26 @@ export interface ThemesMessages {
   profileCard: { royal: string; aurora: string; ember: string; verdant: string };
 }
 
+export interface NavMessages {
+  friendGroups: { moots: string; following: string; oomfs: string };
+  viewingProfile: string;
+  unreadCount: (count: number) => string;
+}
+
+export interface AppHeaderMessages {
+  disableAnimations: string;
+  enableAnimations: string;
+  toggleColorScheme: string;
+}
+
+export interface UserMenuMessages {
+  switchAccountErrorTitle: string;
+  userAvatarAltFallback: string;
+  accountsLabel: string;
+  addAccount: string;
+  viewProfile: string;
+}
+
 export interface Messages {
   errors: ErrorMessages;
   common: CommonMessages;
@@ -139,4 +160,7 @@ export interface Messages {
   replyComposer: ReplyComposerMessages;
   imageThemePicker: ImageThemePickerMessages;
   themes: ThemesMessages;
+  nav: NavMessages;
+  appHeader: AppHeaderMessages;
+  userMenu: UserMenuMessages;
 }

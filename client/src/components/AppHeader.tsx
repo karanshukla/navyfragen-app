@@ -15,6 +15,7 @@ import { Link } from "react-router";
 import { useHaptic } from "use-haptic";
 
 import { useLogout, useSession } from "../api/authService";
+import { useTranslations } from "../lib/i18n";
 import { useHasBounceGap } from "../lib/useHasBounceGap";
 import { BRAND_GRADIENT, surface, textDefault } from "../styles/tokens";
 
@@ -33,6 +34,7 @@ interface AppHeaderProps {
 const chipStyle = { background: surface, color: textDefault, border: "none" };
 
 export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: AppHeaderProps) {
+  const messages = useTranslations();
   const { data: sessionData, isLoading } = useSession();
   const { mutate: logout } = useLogout();
   const { enabled: bounceLogosEnabled, setEnabled: setBounceLogosEnabled } = useBounceLogos();
@@ -88,7 +90,9 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
             radius="xl"
             style={chipStyle}
           >
-            {bounceLogosEnabled ? "Disable animations" : "Enable animations"}
+            {bounceLogosEnabled
+              ? messages.appHeader.disableAnimations
+              : messages.appHeader.enableAnimations}
           </Button>
         )}
 
@@ -116,7 +120,7 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
               onNavClose();
             }}
           >
-            Login
+            {messages.common.shortcuts.login}
           </Button>
         )}
       </Flex>
@@ -127,6 +131,7 @@ export function AppHeader({ opened, onBurgerToggle, burgerRef, onNavClose }: App
 function ColorSchemeToggle() {
   const { toggleColorScheme } = useMantineColorScheme();
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
   const isDark = useComputedColorScheme("light", { getInitialValueInEffect: true }) === "dark";
 
   return (
@@ -135,7 +140,7 @@ function ColorSchemeToggle() {
         triggerHaptic();
         toggleColorScheme();
       }}
-      aria-label="Toggle color scheme"
+      aria-label={messages.appHeader.toggleColorScheme}
       size={36}
       radius="xl"
       variant="transparent"
