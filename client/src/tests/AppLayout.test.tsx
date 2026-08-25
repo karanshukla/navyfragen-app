@@ -39,6 +39,7 @@ vi.mock("@mantine/notifications", async (importOriginal) => {
 });
 
 import { AppLayout } from "../AppLayout";
+import { en } from "../lib/i18n/en";
 
 import { renderWithProviders } from "./testUtils";
 
@@ -232,7 +233,7 @@ describe("AppLayout", () => {
     renderWithProviders(<AppLayout />);
 
     expect(vi.mocked(showNotification)).toHaveBeenCalledWith({
-      message: "Switched to @tester.bsky.social",
+      message: en.common.switchedToAccount("tester.bsky.social"),
       color: "green",
     });
     // The marker is stripped so it can't re-fire on refresh.
