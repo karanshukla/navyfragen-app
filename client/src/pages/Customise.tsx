@@ -25,8 +25,6 @@ import * as styles from "./Customise.styles";
 
 const MAX_PROMPT_LENGTH = 100;
 const CARD_SPAN = { base: 12, md: 6 };
-/** The swatch picker and the prompt both want the width; mobile is full width anyway. */
-const FULL_ROW_SPAN = 12;
 
 /**
  * SQLite sends 0/1 and Postgres sends false/true for the same column.
@@ -107,7 +105,7 @@ export default function Customise() {
         eyebrow={messages.customisePage.yourPublicProfile}
         help={messages.customisePage.yourPublicProfileHelp}
       >
-        <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.customisePage.profilePrompt}
             description={messages.customisePage.profilePromptDescription}
@@ -132,7 +130,7 @@ export default function Customise() {
           </SettingsCard>
         </Grid.Col>
 
-        <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.customisePage.profileCardColour}
             description={messages.customisePage.profileCardColourDescription}
