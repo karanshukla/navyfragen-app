@@ -17,6 +17,7 @@ export function E2ELoginPanel() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const messages = useTranslations();
+  const e2e = messages.e2eLoginPanel;
   const { mutate: e2eLogin, isPending } = useE2ELogin();
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -47,7 +48,7 @@ export function E2ELoginPanel() {
       >
         <Stack gap="md">
           <Text fw={700} c="orange" size="sm">
-            E2E Test Mode - not for production use
+            {e2e.modeNotice}
           </Text>
           {error && (
             <Alert color="red" withCloseButton onClose={() => setError(null)}>
@@ -57,8 +58,8 @@ export function E2ELoginPanel() {
           <form onSubmit={onSubmit}>
             <Stack gap="sm">
               <TextInput
-                label="Identifier"
-                placeholder="handle.pds.example"
+                label={e2e.identifier}
+                placeholder={e2e.identifierPlaceholder}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
@@ -68,8 +69,8 @@ export function E2ELoginPanel() {
                 data-testid="e2e-identifier"
               />
               <PasswordInput
-                label="App Password"
-                placeholder="xxxx-xxxx-xxxx-xxxx"
+                label={e2e.appPassword}
+                placeholder={e2e.appPasswordPlaceholder}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -83,7 +84,7 @@ export function E2ELoginPanel() {
                 mt="xs"
                 data-testid="e2e-submit"
               >
-                Sign In (E2E)
+                {e2e.signIn}
               </Button>
             </Stack>
           </form>

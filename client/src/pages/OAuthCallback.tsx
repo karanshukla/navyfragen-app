@@ -19,7 +19,7 @@ export default function OAuthCallback() {
   const messages = useTranslations();
   const token = new URLSearchParams(location.search).get("oauth_token");
   const [error, setError] = useState<string | null>(
-    !token ? "Missing OAuth token in callback URL." : null
+    !token ? messages.oauthCallback.missingToken : null
   );
   const [loading, setLoading] = useState(!!token);
 
@@ -49,10 +49,10 @@ export default function OAuthCallback() {
         {loading ? (
           <>
             <Title order={2} fw={800} fz={24} ta="center">
-              Logging you in…
+              {messages.oauthCallback.loggingIn}
             </Title>
             <Text size="sm" c="dimmed" ta="center">
-              Completing your Bluesky authentication
+              {messages.oauthCallback.completingAuth}
             </Text>
             <Box ta="center">
               <Loader size="sm" />
@@ -61,7 +61,7 @@ export default function OAuthCallback() {
         ) : (
           <>
             <Title order={2} fw={800} fz={24} ta="center" style={{ color: dangerText }}>
-              Login failed
+              {messages.oauthCallback.loginFailed}
             </Title>
             <Text size="sm" c="dimmed" ta="center">
               {error}
@@ -74,14 +74,14 @@ export default function OAuthCallback() {
               fullWidth
               radius="md"
             >
-              Try again
+              {messages.oauthCallback.tryAgain}
             </Button>
           </>
         )}
       </AuthPanel>
 
       <Text size="xs" c="dimmed" ta="center" mt="md" style={{ lineHeight: 1.6 }}>
-        You will be redirected automatically once login is complete.
+        {messages.oauthCallback.redirectNotice}
       </Text>
     </Box>
   );

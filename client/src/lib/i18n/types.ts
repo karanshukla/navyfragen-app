@@ -241,6 +241,44 @@ export interface ProfileUrlBarMessages {
   shareProfileLinkAriaLabel: string;
 }
 
+export interface LoginPageMessages {
+  handleRequired: string;
+  handleTooLong: string;
+  oauthFailedMessage: string;
+  logInToPrefix: string;
+  subtitle: string;
+  atmosphereHandle: string;
+  handlePlaceholder: string;
+  continueButton: string;
+  disclaimerPrefix: string;
+  disclaimerMiddle: string;
+  disclaimerSuffix: string;
+}
+
+export interface HandleSuggestionsMessages {
+  ariaLabel: string;
+  noHandlesFound: string;
+  startTyping: string;
+}
+
+export interface E2ELoginPanelMessages {
+  modeNotice: string;
+  identifier: string;
+  identifierPlaceholder: string;
+  appPassword: string;
+  appPasswordPlaceholder: string;
+  signIn: string;
+}
+
+export interface OAuthCallbackMessages {
+  missingToken: string;
+  loggingIn: string;
+  completingAuth: string;
+  loginFailed: string;
+  tryAgain: string;
+  redirectNotice: string;
+}
+
 export interface UserMenuMessages {
   switchAccountErrorTitle: string;
   userAvatarAltFallback: string;
@@ -269,4 +307,8 @@ export interface Messages {
   askCard: AskCardMessages;
   profileCard: ProfileCardMessages;
   profileUrlBar: ProfileUrlBarMessages;
+  loginPage: LoginPageMessages;
+  handleSuggestions: HandleSuggestionsMessages;
+  e2eLoginPanel: E2ELoginPanelMessages;
+  oauthCallback: OAuthCallbackMessages;
 }
