@@ -187,6 +187,26 @@ export interface SettingsPageMessages {
   deleteAccountMessage: string;
 }
 
+export interface CustomisePageMessages {
+  heading: string;
+  beta: string;
+  yourPublicProfile: string;
+  yourPublicProfileHelp: string;
+  profilePrompt: string;
+  profilePromptDescription: string;
+  profilePromptPlaceholder: string;
+  messageLanguage: string;
+  messageLanguageDescription: string;
+  profileCardColour: string;
+  profileCardColourDescription: string;
+  messageIntake: string;
+  messageIntakeHelp: string;
+  inbox: string;
+  inboxDescription: string;
+  profanityFilter: string;
+  profanityFilterDescription: string;
+}
+
 export interface UserMenuMessages {
   switchAccountErrorTitle: string;
   userAvatarAltFallback: string;
@@ -210,4 +230,5 @@ export interface Messages {
   userMenu: UserMenuMessages;
   home: HomeMessages;
   settingsPage: SettingsPageMessages;
+  customisePage: CustomisePageMessages;
 }

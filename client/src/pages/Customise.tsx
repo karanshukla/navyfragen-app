@@ -17,6 +17,7 @@ import { ProfileThemeSwatches } from "../components/customise/ProfileThemeSwatch
 import { SettingsSection } from "../components/customise/SettingsSection";
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
+import { useTranslations } from "../lib/i18n";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 
 import * as styles from "./Customise.styles";
@@ -36,6 +37,7 @@ function on(value: number | boolean | null | undefined): boolean {
 }
 
 export default function Customise() {
+  const messages = useTranslations();
   const { data: session, isLoading: sessionLoading } = useSession();
   const {
     data: userSettings,
@@ -59,9 +61,9 @@ export default function Customise() {
   const saving = (field: keyof UserSettings) => busy && field in (updateSettings.variables ?? {});
 
   const loadError = (
-    <Alert color="red" title="Failed to load settings" withCloseButton={false}>
+    <Alert color="red" title={messages.common.settingsLoadErrorTitle} withCloseButton={false}>
       <Button size="xs" onClick={() => refetchSettings()} variant="light" mt="xs">
-        Retry
+        {messages.common.retry}
       </Button>
     </Alert>
   );
@@ -82,8 +84,8 @@ export default function Customise() {
 
   if (!session?.isLoggedIn && !sessionLoading) {
     return (
-      <Alert title="Error" color="red">
-        You cannot access this page without logging in.
+      <Alert title={messages.common.errorTitle} color="red">
+        {messages.common.accessDeniedMessage}
       </Alert>
     );
   }
@@ -92,21 +94,21 @@ export default function Customise() {
     <>
       <Group gap="sm" align="center" mb="xs">
         <Title order={1} style={{ letterSpacing: "-0.03em" }}>
-          Customise
+          {messages.customisePage.heading}
         </Title>
         <Badge color="purple" variant="light" radius="sm">
-          Beta
+          {messages.customisePage.beta}
         </Badge>
       </Group>
 
       <SettingsSection
-        eyebrow="Your public profile"
-        help="What visitors see before they send you an anonymous message."
+        eyebrow={messages.customisePage.yourPublicProfile}
+        help={messages.customisePage.yourPublicProfileHelp}
       >
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Profile prompt"
-            description="The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”."
+            title={messages.customisePage.profilePrompt}
+            description={messages.customisePage.profilePromptDescription}
           >
             {field(
               36,
@@ -117,10 +119,10 @@ export default function Customise() {
                   if (promptInSync) return;
                   updateSettings.mutate({ customPrompt: promptDraft.trim() || null });
                 }}
-                placeholder="Ask me anything…"
+                placeholder={messages.customisePage.profilePromptPlaceholder}
                 maxLength={MAX_PROMPT_LENGTH}
                 disabled={busy}
-                aria-label="Profile prompt"
+                aria-label={messages.customisePage.profilePrompt}
                 description={`${promptDraft.length}/${MAX_PROMPT_LENGTH}`}
                 styles={styles.promptCounter}
               />
@@ -130,8 +132,8 @@ export default function Customise() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Message language"
-            description="Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting."
+            title={messages.customisePage.messageLanguage}
+            description={messages.customisePage.messageLanguageDescription}
           >
             {field(
               36,
@@ -149,7 +151,7 @@ export default function Customise() {
                 }}
                 disabled={busy}
                 allowDeselect={false}
-                aria-label="Message language"
+                aria-label={messages.customisePage.messageLanguage}
               />
             )}
           </SettingsCard>
@@ -157,8 +159,8 @@ export default function Customise() {
 
         <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Profile card colour"
-            description="The colour treatment of your ask card. Curated presets keep the text and button legible on every option."
+            title={messages.customisePage.profileCardColour}
+            description={messages.customisePage.profileCardColourDescription}
           >
             {field(
               56,
@@ -173,17 +175,17 @@ export default function Customise() {
       </SettingsSection>
 
       <SettingsSection
-        eyebrow="Message intake"
-        help="Who can reach your inbox, and what gets through."
+        eyebrow={messages.customisePage.messageIntake}
+        help={messages.customisePage.messageIntakeHelp}
         last
       >
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Inbox"
-            description="Turn off to stop receiving new messages while keeping your account, history, and settings intact. Visitors see a “not accepting messages” state."
+            title={messages.customisePage.inbox}
+            description={messages.customisePage.inboxDescription}
             control={headerToggle(
               <SettingsToggle
-                label="Inbox"
+                label={messages.customisePage.inbox}
                 checked={on(userSettings?.inboxEnabled)}
                 onChange={(checked) => updateSettings.mutate({ inboxEnabled: checked })}
                 disabled={busy}
@@ -197,11 +199,11 @@ export default function Customise() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title="Profanity filter"
-            description="When on, incoming messages are screened against an English-language wordlist - other languages pass through unfiltered. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox."
+            title={messages.customisePage.profanityFilter}
+            description={messages.customisePage.profanityFilterDescription}
             control={headerToggle(
               <SettingsToggle
-                label="Profanity filter"
+                label={messages.customisePage.profanityFilter}
                 checked={on(userSettings?.profanityFilterEnabled)}
                 onChange={(checked) => updateSettings.mutate({ profanityFilterEnabled: checked })}
                 disabled={busy}

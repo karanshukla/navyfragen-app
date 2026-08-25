@@ -136,6 +136,30 @@ export const en = {
     enableAnimations: "Enable animations",
     toggleColorScheme: "Toggle color scheme",
   },
+  customisePage: {
+    heading: "Customise",
+    beta: "Beta",
+    yourPublicProfile: "Your public profile",
+    yourPublicProfileHelp: "What visitors see before they send you an anonymous message.",
+    profilePrompt: "Profile prompt",
+    profilePromptDescription:
+      "The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”.",
+    profilePromptPlaceholder: "Ask me anything…",
+    messageLanguage: "Message language",
+    messageLanguageDescription:
+      "Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting.",
+    profileCardColour: "Profile card colour",
+    profileCardColourDescription:
+      "The colour treatment of your ask card. Curated presets keep the text and button legible on every option.",
+    messageIntake: "Message intake",
+    messageIntakeHelp: "Who can reach your inbox, and what gets through.",
+    inbox: "Inbox",
+    inboxDescription:
+      "Turn off to stop receiving new messages while keeping your account, history, and settings intact. Visitors see a “not accepting messages” state.",
+    profanityFilter: "Profanity filter",
+    profanityFilterDescription:
+      "When on, incoming messages are screened against an English-language wordlist - other languages pass through unfiltered. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
+  },
   userMenu: {
     switchAccountErrorTitle: "Couldn't switch account",
     userAvatarAltFallback: "User Avatar",
