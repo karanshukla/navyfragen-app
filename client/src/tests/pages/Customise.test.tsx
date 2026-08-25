@@ -129,7 +129,7 @@ describe("Customise page", () => {
     const combobox = screen.getByRole("combobox", { name: en.customisePage.messageLanguage });
     fireEvent.click(combobox);
     const spanish = touchpointLocales.find((l) => l.value === "es")!;
-    const option = screen.getByRole("option", { name: spanish.label, exact: true });
+    const option = screen.getByRole("option", { name: spanish.label });
     fireEvent.click(option);
 
     expect(mutate).toHaveBeenCalledWith({ touchpointLocale: "es" });
