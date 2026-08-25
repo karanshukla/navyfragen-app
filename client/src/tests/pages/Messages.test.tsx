@@ -7,6 +7,7 @@ import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
 import * as settingsService from "../../api/settingsService";
 import { APP_NAME } from "../../lib/brand";
+import { en } from "../../lib/i18n/en";
 import { themes } from "../../lib/themes";
 import Messages from "../../pages/Messages";
 import { renderWithProviders } from "../testUtils";
@@ -14,6 +15,11 @@ import { renderWithProviders } from "../testUtils";
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
   return { ...actual, useSession: vi.fn() };
+});
+
+vi.mock("../../lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/i18n")>();
+  return { ...actual, useTranslations: () => en };
 });
 
 vi.mock("../../api/messageService", async (importOriginal) => {
@@ -306,12 +312,44 @@ describe("Messages page", () => {
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
     act(() => {
+      capturedCallbacks.onError({ error: "MESSAGE_TID_REQUIRED", message: "Message TID required" });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.codes.MESSAGE_TID_REQUIRED)).toBeInTheDocument();
+    });
+  });
+
+  it("falls back to the server's message when the delete error isn't a known code", async () => {
+    let capturedCallbacks: any;
+    setupMocks();
+    const mockDeleteMutate = vi.fn((_tid: string, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseDeleteMessage.mockReturnValue({
+      mutate: mockDeleteMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /delete message/i,
+    });
+    fireEvent.click(deleteButtons[0]);
+    await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
+
+    act(() => {
+      // The delete route still passes an internal thrown message through the
+      // bare `error` field rather than a code. An unrecognized `error` value
+      // must never render verbatim, and there's no `message` field either, so
+      // this exercises the generic fallback.
       capturedCallbacks.onError({ error: "Network error" });
     });
 
     await waitFor(() => {
       expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
-      expect(screen.getByText(/network error/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
 
@@ -1239,7 +1277,7 @@ describe("Messages page", () => {
       capturedOnError({});
     });
     await waitFor(() => {
-      expect(screen.getByText(/failed to update image theme/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
 
@@ -1274,7 +1312,7 @@ describe("Messages page", () => {
       capturedCallbacks.onError({});
     });
     await waitFor(() => {
-      expect(screen.getByText(/failed to add example messages/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
 
@@ -1301,7 +1339,7 @@ describe("Messages page", () => {
       capturedCallbacks.onError({});
     });
     await waitFor(() => {
-      expect(screen.getByText(/failed to delete message/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
       expect(screen.queryByText(/confirm deletion/i)).toBeNull();
     });
   });
@@ -1738,7 +1776,7 @@ describe("Messages page", () => {
       capturedRespondCallbacks.onError({});
     });
     await waitFor(() => {
-      expect(screen.getByText(/failed to send response/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
 

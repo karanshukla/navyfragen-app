@@ -8,12 +8,15 @@ import { authKeys } from "../api/authService";
 import { AuthPanel } from "../components/AuthPanel";
 import * as panelStyles from "../components/AuthPanel.styles";
 import { WinkMark } from "../components/WinkMark";
+import { useTranslations } from "../lib/i18n";
+import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { BRAND_GRADIENT, dangerText } from "../styles/tokens";
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const messages = useTranslations();
   const token = new URLSearchParams(location.search).get("oauth_token");
   const [error, setError] = useState<string | null>(
     !token ? "Missing OAuth token in callback URL." : null
@@ -31,7 +34,7 @@ export default function OAuthCallback() {
         navigate("/messages");
       })
       .catch((err) => {
-        setError(err.error || err.message || "Failed to complete OAuth login.");
+        setError(resolveApiErrorMessage(err, messages));
         setLoading(false);
       });
   }, [token, navigate, queryClient]);

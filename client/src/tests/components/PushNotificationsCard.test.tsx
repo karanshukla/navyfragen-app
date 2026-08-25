@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as notificationService from "../../api/notificationService";
 import { PushNotificationsCard } from "../../components/PushNotificationsCard";
+import { en } from "../../lib/i18n/en";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/notificationService", async (importOriginal) => {
@@ -14,6 +15,11 @@ vi.mock("../../api/notificationService", async (importOriginal) => {
     useEnablePushNotifications: vi.fn(),
     useDisablePushNotifications: vi.fn(),
   };
+});
+
+vi.mock("../../lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/i18n")>();
+  return { ...actual, useTranslations: () => en };
 });
 
 const mockGetPushPermission = vi.mocked(notificationService.getPushPermission);
@@ -115,12 +121,17 @@ describe("PushNotificationsCard", () => {
   });
 
   it("shows an error notification when enabling push fails", async () => {
-    const mutateAsync = vi.fn().mockRejectedValue({ error: "Boom" });
+    const mutateAsync = vi.fn().mockRejectedValue({
+      error: "PUSH_SUBSCRIBE_FAILED",
+      message: "Failed to save subscription",
+    });
     mockUseEnablePushNotifications.mockReturnValue({ mutateAsync, isPending: false } as any);
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsCard />);
     fireEvent.click(pushSwitch());
-    await waitFor(() => expect(screen.getByText("Boom")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(en.errors.codes.PUSH_SUBSCRIBE_FAILED)).toBeInTheDocument()
+    );
   });
 
   it("shows a fallback error message when the rejection has no error string", async () => {

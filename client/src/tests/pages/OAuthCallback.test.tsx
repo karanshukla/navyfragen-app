@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as apiClientModule from "../../api/apiClient";
+import { en } from "../../lib/i18n/en";
 import OAuthCallback from "../../pages/OAuthCallback";
 import { renderWithProviders } from "../testUtils";
 
@@ -15,6 +16,11 @@ vi.mock("react-router", async (importOriginal) => {
 vi.mock("../../api/apiClient", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/apiClient")>();
   return { ...actual, apiClient: { ...actual.apiClient, post: vi.fn() } };
+});
+
+vi.mock("../../lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/i18n")>();
+  return { ...actual, useTranslations: () => en };
 });
 
 const mockPost = vi.mocked(apiClientModule.apiClient.post);
@@ -50,12 +56,15 @@ describe("OAuthCallback page", () => {
   });
 
   it("shows API error when token consume fails", async () => {
-    mockPost.mockRejectedValue({ error: "Token expired or invalid" });
+    mockPost.mockRejectedValue({
+      error: "INVALID_OAUTH_TOKEN",
+      message: "Invalid or expired token",
+    });
     renderWithProviders(<OAuthCallback />, {
       route: "/oauth_callback?oauth_token=badtoken",
     });
     await waitFor(() => {
-      expect(screen.getByText(/token expired or invalid/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.codes.INVALID_OAUTH_TOKEN)).toBeInTheDocument();
     });
   });
 
@@ -75,7 +84,7 @@ describe("OAuthCallback page", () => {
       route: "/oauth_callback?oauth_token=badtoken",
     });
     await waitFor(() => {
-      expect(screen.getByText(/failed to complete oauth login/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
 

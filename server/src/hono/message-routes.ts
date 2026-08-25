@@ -2,7 +2,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
-import { errorMessage } from "#/lib/errors";
+import { errorBody, errorMessage } from "#/lib/errors";
 import { MessageService } from "#/services/message-service";
 import { NotificationService } from "#/services/notification-service";
 import { ProfileService } from "#/services/profile-service";
@@ -49,13 +49,14 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }),
     async (c) => {
       const recipient = getSession(c)?.did;
-      if (!recipient) return c.json({ error: "Recipient DID required" }, 403);
+      if (!recipient)
+        return c.json(errorBody("RECIPIENT_DID_REQUIRED", "Recipient DID required"), 403);
       try {
         const messages = await messageService.addExampleMessages(recipient);
         return c.json({ messages });
       } catch (err) {
         ctx.logger.error({ err, recipient }, "Failed to add example messages");
-        return c.json({ error: "Failed to add example messages" }, 500);
+        return c.json(errorBody("EXAMPLE_MESSAGES_FAILED", "Failed to add example messages"), 500);
       }
     }
   );
@@ -67,7 +68,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
    */
   app.post("/messages/warm-image", async (c) => {
     const did = getSession(c)?.did;
-    if (!did) return c.json({ error: "Not authenticated" }, 403);
+    if (!did) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     messageService
       .warmImageService()
       .catch((err) => ctx.logger.error({ err, did }, "Failed to warm image service"));
@@ -104,7 +105,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     ),
     async (c) => {
       const did = getSession(c)?.did;
-      if (!did) return c.json({ error: "Not authenticated" }, 403);
+      if (!did) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
       const { tid, original, theme } = c.req.valid("json");
       try {
         const enqueued = await renderService.enqueue({ did, tid, original, theme });
@@ -123,7 +124,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
 
   app.get("/messages/render/:renderId", async (c) => {
     const did = getSession(c)?.did;
-    if (!did) return c.json({ error: "Not authenticated" }, 403);
+    if (!did) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     return c.json(renderService.readStatus(c.req.param("renderId"), did));
   });
 
@@ -151,7 +152,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       const did = getSession(c)?.did;
       if (!did) {
         ctx.logger.warn("No authenticated user session found");
-        return c.json({ error: "Not authenticated" }, 403);
+        return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
       }
       const agent = await initializeAgentFromHonoSession(c, ctx);
       if (!agent) {
@@ -228,24 +229,27 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
 
   app.get("/messages/:recipient", async (c) => {
     const recipient = getSession(c)?.did;
-    if (!recipient) return c.json({ error: "Not authenticated" }, 403);
+    if (!recipient) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     try {
       const messages = await messageService.getMessages(recipient);
       return c.json({ messages });
     } catch (err: unknown) {
       if (errorMessage(err).includes("not exist")) {
-        return c.json({ error: "User not found (user profile does not exist)" }, 404);
+        return c.json(
+          errorBody("USER_NOT_FOUND", "User not found (user profile does not exist)"),
+          404
+        );
       }
       ctx.logger.error({ err, recipient }, "Failed to fetch messages");
-      return c.json({ error: "Failed to fetch messages" }, 500);
+      return c.json(errorBody("MESSAGES_FETCH_FAILED", "Failed to fetch messages"), 500);
     }
   });
 
   app.delete("/messages/:tid", async (c) => {
     const tid = c.req.param("tid");
-    if (!tid) return c.json({ error: "Message TID required" }, 400);
+    if (!tid) return c.json(errorBody("MESSAGE_TID_REQUIRED", "Message TID required"), 400);
     const userSessionDid = getSession(c)?.did;
-    if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userSessionDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     const agent = await initializeAgentFromHonoSession(c, ctx);
     if (!agent) {
       ctx.logger.warn({ userSessionDid }, "No agent could be initialized from session");
@@ -263,13 +267,14 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
 
   app.delete("/delete-account", async (c) => {
     const userSessionDid = getSession(c)?.did;
-    if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userSessionDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     const agent = await initializeAgentFromHonoSession(c, ctx);
     if (!agent) {
       return c.json(
-        {
-          error: "Authentication failed - could not initialize agent or retrieve user DID",
-        },
+        errorBody(
+          "AGENT_INIT_FAILED",
+          "Authentication failed - could not initialize agent or retrieve user DID"
+        ),
         401
       );
     }
@@ -291,7 +296,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
 
   app.post("/messages/sync", async (c) => {
     const userSessionDid = getSession(c)?.did;
-    if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userSessionDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     const userSettings = await ctx.db
       .selectFrom("user_settings")
       .selectAll()
@@ -302,14 +307,23 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
     }
     const agent = await initializeAgentFromHonoSession(c, ctx);
     if (!agent) {
-      return c.json({ error: "Authentication failed - could not initialize agent" }, 401);
+      return c.json(
+        errorBody("AGENT_INIT_FAILED", "Authentication failed - could not initialize agent"),
+        401
+      );
     }
     try {
       const syncResult = await messageService.syncMessages(userSessionDid, agent);
       return c.json(syncResult);
     } catch (err: unknown) {
       ctx.logger.error({ err, did: userSessionDid }, "Failed to sync messages to PDS");
-      return c.json({ error: "Failed to sync messages to PDS", details: errorMessage(err) }, 500);
+      return c.json(
+        {
+          ...errorBody("PDS_SYNC_FAILED", "Failed to sync messages to PDS"),
+          details: errorMessage(err),
+        },
+        500
+      );
     }
   });
 
@@ -337,10 +351,10 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
         return c.json(profileData);
       } catch (err: unknown) {
         if (errorMessage(err) === "Profile not found") {
-          return c.json({ error: "Profile not found" }, 404);
+          return c.json(errorBody("PROFILE_NOT_FOUND", "Profile not found"), 404);
         }
         ctx.logger.error({ err, did }, "Failed to fetch public profile");
-        return c.json({ error: "Failed to fetch profile" }, 500);
+        return c.json(errorBody("PROFILE_FETCH_FAILED", "Failed to fetch profile"), 500);
       }
     }
   );
@@ -357,34 +371,37 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
         return c.json({ exists, did });
       } catch (err) {
         ctx.logger.error({ err, did }, "Failed to check user existence");
-        return c.json({ error: "Failed to check user existence" }, 500);
+        return c.json(
+          errorBody("USER_EXISTENCE_CHECK_FAILED", "Failed to check user existence"),
+          500
+        );
       }
     }
   );
 
   app.get("/friends", async (c) => {
     const userDid = getSession(c)?.did;
-    if (!userDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     try {
       const result = await profileService.getFriendsOnApp(userDid);
       return c.json(result);
     } catch (err) {
       ctx.logger.error({ err, did: userDid }, "Failed to fetch friends on app");
-      return c.json({ error: "Failed to fetch friends" }, 500);
+      return c.json(errorBody("FRIENDS_FETCH_FAILED", "Failed to fetch friends"), 500);
     }
   });
 
   app.get("/check-bot-follow", async (c) => {
     const userDid = getSession(c)?.did;
-    if (!userDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     const agent = await initializeAgentFromHonoSession(c, ctx);
-    if (!agent) return c.json({ error: "Session expired" }, 401);
+    if (!agent) return c.json(errorBody("SESSION_EXPIRED", "Session expired"), 401);
     try {
       const following = await profileService.checkFollowsBot(agent, BOT_DID);
       return c.json({ following });
     } catch (err) {
       ctx.logger.error({ err, did: userDid }, "Failed to check bot follow status");
-      return c.json({ error: "Failed to check bot follow status" }, 500);
+      return c.json(errorBody("BOT_FOLLOW_CHECK_FAILED", "Failed to check bot follow status"), 500);
     }
   });
 
@@ -397,13 +414,13 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
       const { handle } = c.req.valid("param");
       try {
         const did = await ctx.resolver.resolveHandleToDid(handle);
-        if (!did) return c.json({ error: "Handle not found" }, 404);
+        if (!did) return c.json(errorBody("HANDLE_NOT_FOUND", "Handle not found"), 404);
         const atprotoData = await ctx.idResolver.did.resolveAtprotoData(did);
         const pdsUrl = new URL(atprotoData.pds);
         return c.json({ pds: pdsUrl.hostname });
       } catch (err) {
         ctx.logger.error({ err, handle }, "Failed to resolve PDS for handle");
-        return c.json({ error: "Failed to resolve PDS" }, 500);
+        return c.json(errorBody("PDS_RESOLVE_FAILED", "Failed to resolve PDS"), 500);
       }
     }
   );
@@ -420,7 +437,7 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
         return c.json({ actors });
       } catch (err) {
         ctx.logger.error({ err }, "Failed to search handles");
-        return c.json({ error: "Failed to search handles" }, 500);
+        return c.json(errorBody("HANDLE_SEARCH_FAILED", "Failed to search handles"), 500);
       }
     }
   );
@@ -437,10 +454,10 @@ export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono
         return c.json({ did });
       } catch (err: unknown) {
         if (errorMessage(err) === "Handle not found") {
-          return c.json({ error: "Handle not found" }, 404);
+          return c.json(errorBody("HANDLE_NOT_FOUND", "Handle not found"), 404);
         }
         ctx.logger.error({ err, handle }, "Failed to resolve handle");
-        return c.json({ error: "Failed to resolve handle" }, 500);
+        return c.json(errorBody("HANDLE_RESOLVE_FAILED", "Failed to resolve handle"), 500);
       }
     }
   );
@@ -458,7 +475,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
 
   app.get("/settings", async (c) => {
     const userSessionDid = getSession(c)?.did;
-    if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userSessionDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     try {
       let userSettings = await settingsService.getUserSettings(userSessionDid);
       if (!userSettings) {
@@ -467,33 +484,33 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
       return c.json(userSettings);
     } catch (err) {
       ctx.logger.error({ err, did: userSessionDid }, "Failed to fetch user settings");
-      return c.json({ error: "Failed to fetch user settings" }, 500);
+      return c.json(errorBody("SETTINGS_FETCH_FAILED", "Failed to fetch user settings"), 500);
     }
   });
 
   app.get("/stats", async (c) => {
     const userSessionDid = getSession(c)?.did;
-    if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userSessionDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     try {
       const stats = await settingsService.getStats(userSessionDid);
       return c.json(stats);
     } catch (err) {
       ctx.logger.error({ err, did: userSessionDid }, "Failed to fetch user stats");
-      return c.json({ error: "Failed to fetch user stats" }, 500);
+      return c.json(errorBody("STATS_FETCH_FAILED", "Failed to fetch user stats"), 500);
     }
   });
 
   app.get("/pds-info", async (c) => {
     const userDid = getSession(c)?.did;
-    if (!userDid) return c.json({ error: "Not authenticated" }, 403);
+    if (!userDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
     const agent = await initializeAgentFromHonoSession(c, ctx);
-    if (!agent) return c.json({ error: "Session expired" }, 401);
+    if (!agent) return c.json(errorBody("SESSION_EXPIRED", "Session expired"), 401);
     try {
       const info = await settingsService.getPdsInfo(userDid, agent, ctx.idResolver);
       return c.json(info);
     } catch (err) {
       ctx.logger.error({ err, did: userDid }, "Failed to fetch PDS info");
-      return c.json({ error: "Failed to fetch PDS info" }, 500);
+      return c.json(errorBody("PDS_INFO_FETCH_FAILED", "Failed to fetch PDS info"), 500);
     }
   });
 
@@ -515,7 +532,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     }),
     async (c) => {
       const userSessionDid = getSession(c)?.did;
-      if (!userSessionDid) return c.json({ error: "Not authenticated" }, 403);
+      if (!userSessionDid) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
       const body = c.req.valid("json");
       try {
         // null and undefined must not be collapsed on the way through.
@@ -540,7 +557,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
         return c.json(updatedSettings);
       } catch (err) {
         ctx.logger.error({ err, did: userSessionDid }, "Failed to update user settings");
-        return c.json({ error: "Failed to update user settings" }, 500);
+        return c.json(errorBody("SETTINGS_UPDATE_FAILED", "Failed to update user settings"), 500);
       }
     }
   );
@@ -559,7 +576,8 @@ export function createNotificationHono(ctx: AppContext, deps: NotificationDeps =
 
   app.get("/notifications/vapid-public-key", async (c) => {
     const vapidPublicKey = notificationService.getVapidPublicKey();
-    if (!vapidPublicKey) return c.json({ error: "Web push not configured" }, 501);
+    if (!vapidPublicKey)
+      return c.json(errorBody("PUSH_NOT_CONFIGURED", "Web push not configured"), 501);
     return c.json({ vapidPublicKey });
   });
 
@@ -580,9 +598,9 @@ export function createNotificationHono(ctx: AppContext, deps: NotificationDeps =
     ),
     async (c) => {
       const did = getSession(c)?.did;
-      if (!did) return c.json({ error: "Not authenticated" }, 403);
+      if (!did) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
       if (!notificationService.getVapidPublicKey()) {
-        return c.json({ error: "Web push not configured" }, 501);
+        return c.json(errorBody("PUSH_NOT_CONFIGURED", "Web push not configured"), 501);
       }
       const { endpoint, keys } = c.req.valid("json");
       try {
@@ -594,7 +612,7 @@ export function createNotificationHono(ctx: AppContext, deps: NotificationDeps =
         return c.json({ ok: true }, 201);
       } catch (err) {
         ctx.logger.error({ err, did }, "Failed to save push subscription");
-        return c.json({ error: "Failed to save subscription" }, 500);
+        return c.json(errorBody("PUSH_SUBSCRIBE_FAILED", "Failed to save subscription"), 500);
       }
     }
   );
@@ -606,7 +624,7 @@ export function createNotificationHono(ctx: AppContext, deps: NotificationDeps =
     }),
     async (c) => {
       const did = getSession(c)?.did;
-      if (!did) return c.json({ error: "Not authenticated" }, 403);
+      if (!did) return c.json(errorBody("NOT_AUTHENTICATED", "Not authenticated"), 403);
       const { endpoint } = c.req.valid("json");
       try {
         await notificationService.deleteSubscription(did, endpoint);
@@ -614,7 +632,7 @@ export function createNotificationHono(ctx: AppContext, deps: NotificationDeps =
         return c.json({ ok: true });
       } catch (err) {
         ctx.logger.error({ err, did }, "Failed to delete push subscription");
-        return c.json({ error: "Failed to delete subscription" }, 500);
+        return c.json(errorBody("PUSH_UNSUBSCRIBE_FAILED", "Failed to delete subscription"), 500);
       }
     }
   );

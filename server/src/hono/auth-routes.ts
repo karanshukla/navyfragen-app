@@ -11,7 +11,7 @@ import {
   toAccountEntry,
   upsertAccount,
 } from "#/auth/session";
-import { errorMessage } from "#/lib/errors";
+import { errorBody, errorMessage } from "#/lib/errors";
 import { env } from "#/lib/env";
 import { pdsRegion } from "#/lib/pds-region";
 import { AuthService } from "#/services/auth-service";
@@ -34,7 +34,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     deps.notificationService ?? new NotificationService(ctx.db, ctx.resolver, ctx.logger);
 
   const loginSchema = z.object({
-    handle: z.string().min(1, { error: "Invalid handle" }).max(64),
+    handle: z.string().min(1, { error: "INVALID_HANDLE" }).max(64),
   });
 
   app.post(
@@ -47,7 +47,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     async (c) => {
       const { handle } = c.req.valid("json");
       if (!isValidHandle(handle)) {
-        return c.json({ error: "invalid handle" }, 400);
+        return c.json(errorBody("INVALID_HANDLE", "invalid handle"), 400);
       }
       try {
         ctx.logger.info({ handle }, "Starting OAuth authorize");
@@ -123,7 +123,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   app.post("/logout", async (c) => {
     const session = getSession(c);
     if (!session?.did) {
-      return c.json({ error: "Not logged in" }, 400);
+      return c.json(errorBody("NOT_AUTHENTICATED", "Not logged in"), 400);
     }
     const did = session.did;
     try {
@@ -131,7 +131,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       ctx.logger.info({ did }, "OAuth session revoked");
     } catch (err) {
       ctx.logger.error({ err, did }, "Failed to revoke OAuth session");
-      return c.json({ error: "Failed to log out" }, 500);
+      return c.json(errorBody("LOGOUT_FAILED", "Failed to log out"), 500);
     }
     const next = mutateSession(session, (s) => removeAccount(s, did));
     const remaining = getAccounts(next);
@@ -149,7 +149,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
   });
 
   const switchSchema = z.object({
-    did: z.string().min(1, { error: "did is required" }).max(512),
+    did: z.string().min(1, { error: "DID_REQUIRED" }).max(512),
   });
 
   app.post(
@@ -162,7 +162,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     async (c) => {
       const { did } = c.req.valid("json");
       if (!isValidDid(did)) {
-        return c.json({ error: "Invalid DID format" }, 400);
+        return c.json(errorBody("INVALID_DID", "Invalid DID format"), 400);
       }
       const session = getSession(c);
       if (!session || !findAccount(session, did)) {
@@ -170,7 +170,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
           { requestedDid: did, activeDid: session?.did },
           "Account switch denied: DID not in session"
         );
-        return c.json({ error: "Account not found in session" }, 403);
+        return c.json(errorBody("NOT_AUTHENTICATED", "Account not found in session"), 403);
       }
       try {
         const profile = await service.checkSession(did);
@@ -180,7 +180,10 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
             mutateSession(session, (s) => removeAccount(s, did))
           );
           ctx.logger.info({ did }, "Switch failed, account session expired");
-          return c.json({ error: "That account's session has expired" }, 401);
+          return c.json(
+            errorBody("ACCOUNT_SESSION_EXPIRED", "That account's session has expired"),
+            401
+          );
         }
         const updated = { ...session, did };
         await setSession(
@@ -197,7 +200,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
         return c.json({ success: true, did });
       } catch (err) {
         ctx.logger.error({ err, did }, "Failed to switch account");
-        return c.json({ error: "Failed to switch account" }, 500);
+        return c.json(errorBody("ACCOUNT_SWITCH_FAILED", "Failed to switch account"), 500);
       }
     }
   );
@@ -242,19 +245,19 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
     const body = await c.req.json().catch(() => ({}));
     const oauthToken = body?.oauth_token;
     if (!oauthToken) {
-      return c.json({ error: "Missing oauth_token" }, 400);
+      return c.json(errorBody("MISSING_OAUTH_TOKEN", "Missing oauth_token"), 400);
     }
     let did: string;
     try {
       did = service.decryptDid(oauthToken);
     } catch {
       ctx.logger.error("OAUTH_TOKEN_SECRET is not set");
-      return c.json({ error: "Server misconfiguration" }, 500);
+      return c.json(errorBody("SERVER_MISCONFIGURED", "Server misconfiguration"), 500);
     }
     try {
       const user = await service.findUserByDid(did);
       if (!user) {
-        return c.json({ error: "User not found" }, 404);
+        return c.json(errorBody("USER_NOT_FOUND", "User not found"), 404);
       }
       const existing = getSession(c) ?? ({} as AppSessionData);
       await setSession(c, { ...existing, did });
@@ -280,7 +283,7 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
       return c.json({ success: true });
     } catch (err) {
       ctx.logger.error({ err }, "Failed to consume oauth_token");
-      return c.json({ error: "Invalid or expired token" }, 400);
+      return c.json(errorBody("INVALID_OAUTH_TOKEN", "Invalid or expired token"), 400);
     }
   });
 

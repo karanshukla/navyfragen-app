@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 
 import { authKeys, useE2ELogin } from "../../api/authService";
 import { queryClient } from "../../api/queryClient";
+import { useTranslations } from "../../lib/i18n";
+import { resolveApiErrorMessage } from "../../lib/i18n/apiErrors";
 
 /**
  * Bypasses the OAuth redirect with an app password so Playwright can drive a
@@ -14,6 +16,7 @@ export function E2ELoginPanel() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const messages = useTranslations();
   const { mutate: e2eLogin, isPending } = useE2ELogin();
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -28,7 +31,7 @@ export function E2ELoginPanel() {
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (err: any) => {
-          setError(err.error || "E2E login failed");
+          setError(resolveApiErrorMessage(err, messages));
         },
       }
     );

@@ -7,6 +7,8 @@ import { useHaptic } from "use-haptic";
 import { ApiError } from "../../api/apiClient";
 import { type AccountEntry, useSwitchAccount } from "../../api/authService";
 import { buildAccountSwitchUrl } from "../../lib/accountSwitchToast";
+import { useTranslations } from "../../lib/i18n";
+import { resolveApiErrorMessage } from "../../lib/i18n/apiErrors";
 import { WinkMark } from "../WinkMark";
 
 import * as styles from "./UserMenu.styles";
@@ -31,6 +33,7 @@ export function UserMenu({
   onNavigate,
 }: UserMenuProps) {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
   const { mutate: switchAccount, isPending: isSwitching } = useSwitchAccount();
   const showsAccountsLabel = accounts.length > 1;
 
@@ -57,7 +60,7 @@ export function UserMenu({
         onError: (err: ApiError) => {
           showNotification({
             title: "Couldn't switch account",
-            message: err.error || "Please try again.",
+            message: resolveApiErrorMessage(err, messages),
             color: "red",
           });
         },

@@ -20,13 +20,15 @@ import { AccountOverview, type Stat } from "../components/settings/AccountOvervi
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
 import { APP_NAME } from "../lib/brand";
-import { uiLocaleOptions } from "../lib/i18n";
+import { uiLocaleOptions, useTranslations } from "../lib/i18n";
+import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 
 const NOTIFICATION_BOT = "https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i";
 const CARD_SPAN = { base: 12, md: 6, lg: 4 };
 
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const messages = useTranslations();
 
   const { data: session, isLoading: sessionLoading } = useSession();
   const {
@@ -39,7 +41,7 @@ export default function Settings() {
     onError: (error: ApiError) => {
       notifications.show({
         title: "Update Failed",
-        message: error.error || "Failed to update settings. Please try again.",
+        message: resolveApiErrorMessage(error, messages),
         color: "red",
       });
     },

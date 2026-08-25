@@ -9,6 +9,8 @@ import {
   usePushAvailable,
   type PushPermission,
 } from "../api/notificationService";
+import { useTranslations } from "../lib/i18n";
+import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 
 import { SettingsCard } from "./SettingsCard";
 import { SettingsToggle } from "./SettingsToggle";
@@ -35,6 +37,7 @@ function blockedReason(
  * that reason disables are rendered in two different card slots.
  */
 export function PushNotificationsCard() {
+  const messages = useTranslations();
   const { data: isServerPushAvailable, isLoading: isCheckingAvailability } = usePushAvailable();
   const enablePush = useEnablePushNotifications();
   const disablePush = useDisablePushNotifications();
@@ -64,7 +67,7 @@ export function PushNotificationsCard() {
     } catch (err) {
       notifications.show({
         title: "Push notifications",
-        message: (err as { error?: string })?.error || "Something went wrong. Please try again.",
+        message: resolveApiErrorMessage(err as { error?: string; message?: string }, messages),
         color: "red",
       });
     }

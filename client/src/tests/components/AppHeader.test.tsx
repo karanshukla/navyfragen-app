@@ -7,12 +7,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import * as accountSwitchToast from "../../lib/accountSwitchToast";
+import { en } from "../../lib/i18n/en";
 // eslint-disable-next-line import/order
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../lib/accountSwitchToast", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/accountSwitchToast")>();
   return { ...actual, buildAccountSwitchUrl: vi.fn() };
+});
+
+vi.mock("../../lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/i18n")>();
+  return { ...actual, useTranslations: () => en };
 });
 
 vi.mock("../../api/authService", async (importOriginal) => {
@@ -351,11 +357,17 @@ describe("AppHeader", () => {
       await waitFor(() => expect(mockSwitch).toHaveBeenCalled());
 
       act(() => {
-        capturedCallbacks.onError({ error: "Switch failed" });
+        capturedCallbacks.onError({
+          error: "ACCOUNT_SWITCH_FAILED",
+          message: "Failed to switch account",
+        });
       });
 
       expect(vi.mocked(showNotification)).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Couldn't switch account", message: "Switch failed" })
+        expect.objectContaining({
+          title: "Couldn't switch account",
+          message: en.errors.codes.ACCOUNT_SWITCH_FAILED,
+        })
       );
     });
 
@@ -377,7 +389,7 @@ describe("AppHeader", () => {
       });
 
       expect(vi.mocked(showNotification)).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Couldn't switch account", message: "Please try again." })
+        expect.objectContaining({ title: "Couldn't switch account", message: en.errors.generic })
       );
     });
 

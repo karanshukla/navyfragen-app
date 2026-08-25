@@ -6,12 +6,18 @@ import * as notificationService from "../../api/notificationService";
 import * as profileService from "../../api/profileService";
 import * as settingsService from "../../api/settingsService";
 import * as installPromptContext from "../../components/InstallPromptContext";
+import { en } from "../../lib/i18n/en";
 import Settings from "../../pages/Settings";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
   return { ...actual, useSession: vi.fn() };
+});
+
+vi.mock("../../lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/i18n")>();
+  return { ...actual, useTranslations: () => en };
 });
 
 // Settings renders <PushNotificationsCard>, whose usePushAvailable() hook
@@ -257,12 +263,15 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
 
     act(() => {
-      capturedOnError?.({ error: "Server unavailable" });
+      capturedOnError?.({
+        error: "SETTINGS_UPDATE_FAILED",
+        message: "Failed to update user settings",
+      });
     });
 
     await waitFor(() => {
       expect(screen.getByText(/update failed/i)).toBeInTheDocument();
-      expect(screen.getByText(/server unavailable/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.codes.SETTINGS_UPDATE_FAILED)).toBeInTheDocument();
     });
   });
 
@@ -532,10 +541,8 @@ describe("Settings page", () => {
     });
 
     await waitFor(() => {
-      // The fallback message (unique to this test — no error.error property)
-      expect(
-        screen.getByText(/failed to update settings\. please try again\./i)
-      ).toBeInTheDocument();
+      // The generic fallback (unique to this test — no error.error property)
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
 

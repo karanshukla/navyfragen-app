@@ -2,12 +2,18 @@ import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as authService from "../../api/authService";
+import { en } from "../../lib/i18n/en";
 import Login from "../../pages/Login";
 import { renderWithProviders } from "../testUtils";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
   return { ...actual, useLogin: vi.fn(), useE2ELogin: vi.fn() };
+});
+
+vi.mock("../../lib/i18n", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/i18n")>();
+  return { ...actual, useTranslations: () => en };
 });
 
 const mockUseLogin = vi.mocked(authService.useLogin);
@@ -82,10 +88,10 @@ describe("Login page", () => {
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
     act(() => {
-      capturedCallbacks.onError({ error: "Handle not found on Bluesky" });
+      capturedCallbacks.onError({ error: "INVALID_HANDLE", message: "invalid handle" });
     });
 
-    expect(screen.getByText(/handle not found on bluesky/i)).toBeInTheDocument();
+    expect(screen.getByText(en.errors.codes.INVALID_HANDLE)).toBeInTheDocument();
   });
 
   it("shows loading state on the button while mutation is pending", () => {
@@ -184,7 +190,7 @@ describe("Login page", () => {
       capturedCallbacks.onError({});
     });
 
-    expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+    expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
   });
 
   it("renders correctly in dark mode (covers dark-style branches)", () => {
@@ -623,10 +629,13 @@ describe("Login page", () => {
       await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
       act(() => {
-        capturedCallbacks.onError({ error: "Invalid credentials" });
+        capturedCallbacks.onError({
+          error: "E2E_LOGIN_NO_DID",
+          message: "Login failed: no session DID returned",
+        });
       });
 
-      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.codes.E2E_LOGIN_NO_DID)).toBeInTheDocument();
     });
 
     it("shows fallback error when e2eLogin err.error is absent", async () => {
@@ -644,7 +653,7 @@ describe("Login page", () => {
         capturedCallbacks.onError({});
       });
 
-      expect(screen.getByText(/e2e login failed/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
 
     it("clears error alert when close button is clicked", async () => {
