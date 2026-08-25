@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import * as settingsService from "../../api/settingsService";
+import { en } from "../../lib/i18n/en";
+import { touchpointLocales } from "../../lib/touchpointTranslations";
 import Customise from "../../pages/Customise";
 import { renderWithProviders } from "../testUtils";
 
@@ -70,7 +72,7 @@ describe("Customise page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Customise />);
-    expect(screen.getByText(/cannot access this page without logging in/i)).toBeInTheDocument();
+    expect(screen.getByText(en.common.accessDeniedMessage)).toBeInTheDocument();
   });
 
   it("renders the grouped sections and wired controls for a logged-in user", () => {
@@ -78,16 +80,16 @@ describe("Customise page", () => {
     mockMutation();
     renderWithProviders(<Customise />);
 
-    expect(screen.getByRole("heading", { name: /customise/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: en.customisePage.heading })).toBeInTheDocument();
     // Section eyebrows
-    expect(screen.getByText(/your public profile/i)).toBeInTheDocument();
-    expect(screen.getByText(/message intake/i)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.yourPublicProfile)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.messageIntake)).toBeInTheDocument();
     // Wired cards
-    expect(screen.getByText(/profile prompt/i)).toBeInTheDocument();
-    expect(screen.getByText(/message language/i)).toBeInTheDocument();
-    expect(screen.getByText(/profile card colour/i)).toBeInTheDocument();
-    expect(screen.getByText(/^inbox$/i)).toBeInTheDocument();
-    expect(screen.getByText(/profanity filter/i)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.profilePrompt)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.messageLanguage)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.profileCardColour)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.inbox)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.profanityFilter)).toBeInTheDocument();
     // Notifications section was removed.
     expect(screen.queryByText(/^notifications$/i)).toBeNull();
     expect(screen.queryByText(/what sends a push/i)).toBeNull();
@@ -98,7 +100,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const toggle = screen.getByRole("switch", { name: /^inbox$/i });
+    const toggle = screen.getByRole("switch", { name: en.customisePage.inbox });
     fireEvent.click(toggle);
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -110,7 +112,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const toggle = screen.getByRole("switch", { name: /profanity filter/i });
+    const toggle = screen.getByRole("switch", { name: en.customisePage.profanityFilter });
     fireEvent.click(toggle);
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -124,9 +126,10 @@ describe("Customise page", () => {
 
     // Mantine Select renders a combobox. Query by role to avoid matching the
     // card title text, then open it and pick Español.
-    const combobox = screen.getByRole("combobox", { name: /message language/i });
+    const combobox = screen.getByRole("combobox", { name: en.customisePage.messageLanguage });
     fireEvent.click(combobox);
-    const option = screen.getByRole("option", { name: /español/i });
+    const spanish = touchpointLocales.find((l) => l.value === "es")!;
+    const option = screen.getByRole("option", { name: spanish.label, exact: true });
     fireEvent.click(option);
 
     expect(mutate).toHaveBeenCalledWith({ touchpointLocale: "es" });
@@ -137,7 +140,10 @@ describe("Customise page", () => {
     mockMutation();
     renderWithProviders(<Customise />);
 
-    expect(screen.getByRole("combobox", { name: /message language/i })).toHaveValue("Español");
+    const spanish = touchpointLocales.find((l) => l.value === "es")!;
+    expect(screen.getByRole("combobox", { name: en.customisePage.messageLanguage })).toHaveValue(
+      spanish.label
+    );
   });
 
   it("picking a profile card theme swatch fires updateSettings with profileCardTheme", () => {
@@ -145,7 +151,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    fireEvent.click(screen.getByRole("button", { name: /ember/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.themes.profileCard.ember }));
     expect(mutate).toHaveBeenCalledWith({ profileCardTheme: "ember" });
   });
 
@@ -154,7 +160,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const input = screen.getByLabelText(/profile prompt/i) as HTMLInputElement;
+    const input = screen.getByLabelText(en.customisePage.profilePrompt) as HTMLInputElement;
     fireEvent.change(input, { target: { value: "Ask me anything" } });
     fireEvent.blur(input);
 
@@ -166,7 +172,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const input = screen.getByLabelText(/profile prompt/i) as HTMLInputElement;
+    const input = screen.getByLabelText(en.customisePage.profilePrompt) as HTMLInputElement;
     fireEvent.blur(input); // no change
 
     expect(mutate).not.toHaveBeenCalled();
@@ -177,7 +183,7 @@ describe("Customise page", () => {
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    const input = screen.getByLabelText(/profile prompt/i) as HTMLInputElement;
+    const input = screen.getByLabelText(en.customisePage.profilePrompt) as HTMLInputElement;
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.blur(input);
 
@@ -192,9 +198,9 @@ describe("Customise page", () => {
     mockMutation();
     renderWithProviders(<Customise />);
 
-    expect(screen.getByText(/customise/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/profile prompt/i)).toBeNull();
-    expect(screen.queryByLabelText(/message language/i)).toBeNull();
+    expect(screen.getByRole("heading", { name: en.customisePage.heading })).toBeInTheDocument();
+    expect(screen.queryByLabelText(en.customisePage.profilePrompt)).toBeNull();
+    expect(screen.queryByLabelText(en.customisePage.messageLanguage)).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
   });
 
@@ -206,8 +212,8 @@ describe("Customise page", () => {
     } as any);
     renderWithProviders(<Customise />);
 
-    expect(screen.getByRole("button", { name: /ember/i })).toBeDisabled();
-    expect(screen.getByRole("switch", { name: /^inbox$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: en.themes.profileCard.ember })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: en.customisePage.inbox })).toBeDisabled();
   });
 
   it("spins only the switch whose field is in the in-flight payload", () => {
@@ -227,7 +233,7 @@ describe("Customise page", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());
     mockMutation();
     renderWithProviders(<Customise />, { colorScheme: "dark" });
-    expect(screen.getByRole("heading", { name: /customise/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: en.customisePage.heading })).toBeInTheDocument();
   });
 
   it("shows a retry control when settings fail to load", () => {
@@ -243,7 +249,7 @@ describe("Customise page", () => {
 
     // The settings-error fallback renders inside each card, so there's a
     // retry button per card. Clicking any of them calls refetchSettings.
-    const retry = screen.getAllByRole("button", { name: /^retry$/i })[0];
+    const retry = screen.getAllByRole("button", { name: en.common.retry })[0];
     fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

@@ -15,7 +15,11 @@ const mockUseLogin = vi.mocked(authService.useLogin);
 const mockUseE2ELogin = vi.mocked(authService.useE2ELogin);
 
 function getHandleInput() {
-  return screen.getByRole("textbox", { name: /atmosphere handle/i });
+  return screen.getByRole("textbox", { name: en.loginPage.atmosphereHandle });
+}
+
+function getContinueButton() {
+  return screen.getByRole("button", { name: en.loginPage.continueButton });
 }
 
 describe("Login page", () => {
@@ -27,13 +31,13 @@ describe("Login page", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />);
     expect(getHandleInput()).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument();
+    expect(getContinueButton()).toBeInTheDocument();
   });
 
   it("shows error notification when URL contains ?error=oauth_failed", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />, { route: "/login?error=oauth_failed" });
-    expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+    expect(screen.getByText(en.loginPage.oauthFailedMessage)).toBeInTheDocument();
   });
 
   it("does not call login mutation when handle is empty", async () => {
@@ -58,7 +62,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith({ handle: "karan.bsky.social" }, expect.any(Object));
@@ -79,7 +83,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
     act(() => {
@@ -92,21 +96,19 @@ describe("Login page", () => {
   it("shows loading state on the button while mutation is pending", () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: true } as any);
     renderWithProviders(<Login />);
-    const button = screen.getByRole("button", {
-      name: /continue/i,
-    });
+    const button = getContinueButton();
     expect(button).toBeDisabled();
   });
 
   it("closing the error alert clears the error", async () => {
     mockUseLogin.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<Login />, { route: "/login?error=oauth_failed" });
-    expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+    expect(screen.getByText(en.loginPage.oauthFailedMessage)).toBeInTheDocument();
     const alertEl = screen.getByRole("alert");
     const closeBtn = alertEl.querySelector("button");
     if (closeBtn) fireEvent.click(closeBtn);
     await waitFor(() => {
-      expect(screen.queryByText(/login failed. please try again/i)).toBeNull();
+      expect(screen.queryByText(en.loginPage.oauthFailedMessage)).toBeNull();
     });
   });
 
@@ -124,7 +126,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
@@ -152,7 +154,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
@@ -177,7 +179,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
@@ -202,7 +204,7 @@ describe("Login page", () => {
     fireEvent.change(getHandleInput(), {
       target: { value: "@karan.bsky.social" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith({ handle: "karan.bsky.social" }, expect.any(Object));
@@ -458,7 +460,7 @@ describe("Login page", () => {
       fireEvent.change(getHandleInput(), { target: { value: "ab" } });
 
       expect(
-        await screen.findByText(/no handles found/i, {}, { timeout: 2000 })
+        await screen.findByText(en.handleSuggestions.noHandlesFound, {}, { timeout: 2000 })
       ).toBeInTheDocument();
     });
 
@@ -537,10 +539,10 @@ describe("Login page", () => {
 
     const longHandle = `${"a".repeat(70)}.bsky.social`;
     fireEvent.change(getHandleInput(), { target: { value: longHandle } });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(getContinueButton());
 
     await waitFor(() => {
-      expect(screen.getByText(/handle too long/i)).toBeInTheDocument();
+      expect(screen.getByText(en.loginPage.handleTooLong)).toBeInTheDocument();
     });
     expect(mockMutate).not.toHaveBeenCalled();
   });
@@ -666,13 +668,13 @@ describe("Login page", () => {
         capturedCallbacks.onError({ error: "Something went wrong" });
       });
 
-      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
 
       const closeBtn = screen.getByRole("alert").querySelector("button");
       if (closeBtn) fireEvent.click(closeBtn);
 
       await waitFor(() => {
-        expect(screen.queryByText(/something went wrong/i)).toBeNull();
+        expect(screen.queryByText(en.errors.generic)).toBeNull();
       });
     });
 

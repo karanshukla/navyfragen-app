@@ -1,6 +1,13 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { en } from "../../client/src/lib/i18n/en";
+import { escapeRegex } from "../helpers/i18n";
+
 test.use({ storageState: "e2e/.auth/user.json" });
+
+// Reply buttons render either "Reply" or "Reply to thread"; anchored on the
+// shorter catalog string so the match tracks either rendered form.
+const replyButtonName = new RegExp(`^${escapeRegex(en.replyComposer.reply)}`);
 
 // Inbox happy paths against real server endpoints. Replying would post a
 // permanent Bluesky post with no cleanup path, so that test drives the compose
@@ -13,13 +20,15 @@ test.use({ storageState: "e2e/.auth/user.json" });
 test.beforeEach(async ({ page }) => {
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/messages/);
-  await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.messagesPage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
 });
 
 test("inbox renders the header and inbox-link hero card", async ({ page }) => {
-  await expect(page.getByText(/Your inbox link/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(en.inboxLinkCard.eyebrow)).toBeVisible({ timeout: 10_000 });
 });
 
 test("expand a message card to reveal the reply composer and back out", async ({ page }) => {
@@ -30,11 +39,11 @@ test("expand a message card to reveal the reply composer and back out", async ({
 
   await card.click();
 
-  const replyBox = page.getByLabel("Your response");
+  const replyBox = page.getByLabel(en.replyComposer.responseAriaLabel);
   await expect(replyBox).toBeVisible({ timeout: 5_000 });
   await replyBox.fill("an e2e draft reply");
 
-  const replyBtn = page.getByRole("button", { name: /^Reply/ }).last();
+  const replyBtn = page.getByRole("button", { name: replyButtonName }).last();
   await expect(replyBtn).toBeEnabled({ timeout: 5_000 });
 
   // Escape collapses the composer without posting to Bluesky.
@@ -50,13 +59,17 @@ test("pin and unpin a thread root is local state only", async ({ page }) => {
   const card = page.locator('[id^="message-card-"]').first();
   await expect(card).toBeVisible({ timeout: 10_000 });
 
-  await card.getByRole("button", { name: "Set as thread root" }).click();
-  await expect(card.getByRole("button", { name: "Unpin thread root" })).toBeVisible({
+  await card.getByRole("button", { name: en.questionCard.setAsThreadRootLabel }).click();
+  await expect(
+    card.getByRole("button", { name: en.questionCard.unpinThreadRootLabel })
+  ).toBeVisible({
     timeout: 5_000,
   });
 
-  await card.getByRole("button", { name: "Unpin thread root" }).click();
-  await expect(card.getByRole("button", { name: "Set as thread root" })).toBeVisible({
+  await card.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }).click();
+  await expect(
+    card.getByRole("button", { name: en.questionCard.setAsThreadRootLabel })
+  ).toBeVisible({
     timeout: 5_000,
   });
 
@@ -66,8 +79,10 @@ test("pin and unpin a thread root is local state only", async ({ page }) => {
 test("posting-preferences switch toggles state", async ({ page }) => {
   const seeded = await ensureExampleMessages(page);
 
-  const header = page.getByText("Posting preferences");
-  const autoScroll = page.getByRole("switch", { name: "Auto-scroll to messages" });
+  const header = page.getByText(en.postingPreferences.title);
+  const autoScroll = page.getByRole("switch", {
+    name: en.postingPreferences.autoScrollToMessages.label,
+  });
   if (!(await autoScroll.isVisible().catch(() => false))) {
     await header.click();
   }
@@ -97,7 +112,7 @@ test("delete a message removes it from the inbox (no-confirm default)", async ({
     const card = page.locator('[id^="message-card-"]').filter({ hasText: marker });
     await expect(card).toBeVisible({ timeout: 15_000 });
 
-    await card.getByRole("button", { name: "Delete message" }).click();
+    await card.getByRole("button", { name: en.questionCard.deleteMessageLabel }).click();
 
     // Asserting on our own card, not a count delta, which races the other spec.
     await expect(card).toHaveCount(0, { timeout: 15_000 });
@@ -117,7 +132,7 @@ async function ensureExampleMessages(page: Page): Promise<boolean> {
 
   // Neither is present while loading, so this waits for the query to settle.
   const cards = page.locator('[id^="message-card-"]');
-  const emptyAlert = page.getByRole("alert").filter({ hasText: "No messages" });
+  const emptyAlert = page.getByRole("alert").filter({ hasText: en.messagesPage.noMessagesTitle });
   await expect(async () => {
     const hasCards = (await cards.count()) > 0;
     const hasEmpty = await emptyAlert.isVisible().catch(() => false);
@@ -126,7 +141,7 @@ async function ensureExampleMessages(page: Page): Promise<boolean> {
 
   if ((await cards.count()) > 0) return false; // already populated — don't touch it
 
-  await page.getByRole("button", { name: "Add example messages" }).click();
+  await page.getByRole("button", { name: en.messagesPage.addExampleMessages }).click();
   await expect(cards.first()).toBeVisible({ timeout: 15_000 });
   return true;
 }
@@ -141,9 +156,7 @@ async function cleanupAllMessages(page: Page) {
     if (!res.ok()) return;
     const { messages }: { messages: { tid: string }[] } = await res.json();
     await Promise.all(
-      messages.map((m) =>
-        page.request.delete(`/api/messages/${encodeURIComponent(m.tid)}`)
-      )
+      messages.map((m) => page.request.delete(`/api/messages/${encodeURIComponent(m.tid)}`))
     );
   } catch {
     // best-effort

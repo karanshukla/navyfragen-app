@@ -24,7 +24,7 @@ const mockUseDisablePushNotifications = vi.mocked(notificationService.useDisable
 
 const SUBSCRIBED_FLAG = "nf-push-subscribed";
 
-const pushSwitch = () => screen.getByRole("switch", { name: /push notifications/i });
+const pushSwitch = () => screen.getByRole("switch", { name: en.pushNotificationsCard.title });
 
 describe("PushNotificationsCard", () => {
   beforeEach(() => {
@@ -53,21 +53,21 @@ describe("PushNotificationsCard", () => {
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsCard />);
     expect(pushSwitch()).toBeDisabled();
-    expect(screen.getByText(/not configured on this server/i)).toBeInTheDocument();
+    expect(screen.getByText(en.pushNotificationsCard.serverUnavailable)).toBeInTheDocument();
   });
 
   it("disables the switch and says why when the browser is unsupported", () => {
     mockGetPushPermission.mockReturnValue("unsupported");
     renderWithProviders(<PushNotificationsCard />);
     expect(pushSwitch()).toBeDisabled();
-    expect(screen.getByText(/browser cannot receive push/i)).toBeInTheDocument();
+    expect(screen.getByText(en.pushNotificationsCard.browserUnsupported)).toBeInTheDocument();
   });
 
   it("disables the switch and says why when permission was denied", () => {
     mockGetPushPermission.mockReturnValue("denied");
     renderWithProviders(<PushNotificationsCard />);
     expect(pushSwitch()).toBeDisabled();
-    expect(screen.getByText(/blocked in your browser settings/i)).toBeInTheDocument();
+    expect(screen.getByText(en.pushNotificationsCard.browserBlocked)).toBeInTheDocument();
   });
 
   it("renders an enabled, unchecked switch when not subscribed", () => {
@@ -135,8 +135,6 @@ describe("PushNotificationsCard", () => {
     mockGetPushPermission.mockReturnValue("default");
     renderWithProviders(<PushNotificationsCard />);
     fireEvent.click(pushSwitch());
-    await waitFor(() =>
-      expect(screen.getByText(/something went wrong. please try again/i)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(en.errors.generic)).toBeInTheDocument());
   });
 });

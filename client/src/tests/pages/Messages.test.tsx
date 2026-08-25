@@ -53,6 +53,14 @@ const mockUseRenderStatus = vi.mocked(messageService.useRenderStatus);
 const RENDER_ID = "render-abc";
 
 /**
+ * getAllByRole name matcher for a QuestionCard's own reply-trigger button --
+ * matches both catalog labels ("reply" vs "reply to thread", pinned vs not)
+ * rather than English text, so it survives a locale switch.
+ */
+const isReplyTriggerName = (name: string) =>
+  name === en.questionCard.reply || name === en.questionCard.replyToThread;
+
+/**
  * The render pipeline stands in for a server that answers instantly: the start
  * mutation hands back a key synchronously and the poll reports it ready, so a
  * send that queues on the render still lands in the same act() flush. Tests that
@@ -154,7 +162,7 @@ describe("Messages page", () => {
     } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
-    expect(screen.queryByText(/posting preferences/i)).toBeNull();
+    expect(screen.queryByText(en.postingPreferences.title)).toBeNull();
   });
 
   it("shows 'not logged in' alert when session is absent", () => {
@@ -176,14 +184,14 @@ describe("Messages page", () => {
     } as any);
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
-    expect(screen.getByText(/not logged in/i)).toBeInTheDocument();
+    expect(screen.getByText(en.messagesPage.notLoggedInTitle)).toBeInTheDocument();
   });
 
   it("renders Posting preferences and Image theme panel headers when messages exist", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(screen.getByText(/posting preferences/i)).toBeInTheDocument();
-    expect(screen.getByText(/image theme/i)).toBeInTheDocument();
+    expect(screen.getByText(en.postingPreferences.title)).toBeInTheDocument();
+    expect(screen.getByText(en.imageThemePicker.title)).toBeInTheDocument();
   });
 
   it("renders message card content", () => {
@@ -203,25 +211,27 @@ describe("Messages page", () => {
   it("clicking 'Posting preferences' header does not throw", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(() => fireEvent.click(screen.getByText(/posting preferences/i))).not.toThrow();
+    expect(() => fireEvent.click(screen.getByText(en.postingPreferences.title))).not.toThrow();
   });
 
   it("clicking 'Image theme' header does not throw", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(() => fireEvent.click(screen.getByText(/image theme/i))).not.toThrow();
+    expect(() => fireEvent.click(screen.getByText(en.imageThemePicker.title))).not.toThrow();
   });
 
   it("renders Auto-scroll to messages switch in the preferences panel", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(screen.getByText(/auto-scroll to messages/i)).toBeInTheDocument();
+    expect(screen.getByText(en.postingPreferences.autoScrollToMessages.label)).toBeInTheDocument();
   });
 
   it("preferences counter reflects 5 total toggles", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    expect(screen.getByText(/of 5 on/i)).toBeInTheDocument();
+    // Cleared localStorage falls back to the preference defaults: useGradients,
+    // includeQuestionAsImage, and autoScrollToMessages start enabled (3 of 5).
+    expect(screen.getByText(en.postingPreferences.summary(3, 5))).toBeInTheDocument();
   });
 
   it("calls scrollIntoView with block:nearest when messages first load", async () => {
@@ -274,8 +284,8 @@ describe("Messages page", () => {
   it("does not render panel headers when there are no messages", () => {
     setupMocks([]);
     renderWithProviders(<Messages />);
-    expect(screen.queryByText(/posting preferences/i)).toBeNull();
-    expect(screen.queryByText(/image theme/i)).toBeNull();
+    expect(screen.queryByText(en.postingPreferences.title)).toBeNull();
+    expect(screen.queryByText(en.imageThemePicker.title)).toBeNull();
   });
 
   it("shows a welcome-back toast notification after a new login", async () => {
@@ -283,7 +293,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
     await waitFor(() => {
-      expect(screen.getByText(/welcome back/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.welcomeBackTitle)).toBeInTheDocument();
     });
     expect(sessionStorage.getItem("newLogin")).toBeNull();
   });
@@ -301,7 +311,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -311,7 +321,7 @@ describe("Messages page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.deleteErrorTitle)).toBeInTheDocument();
       expect(screen.getByText(en.errors.codes.MESSAGE_TID_REQUIRED)).toBeInTheDocument();
     });
   });
@@ -329,7 +339,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -343,7 +353,7 @@ describe("Messages page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.deleteErrorTitle)).toBeInTheDocument();
       expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
     });
   });
@@ -352,17 +362,19 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.keyDown(screen.getByRole("textbox", { name: /your response/i }), {
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       key: "Escape",
     });
 
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+      expect(
+        screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeNull();
     });
   });
 
@@ -375,12 +387,12 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    const textarea = screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel });
     fireEvent.change(textarea, { target: { value: "My answer!" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
 
@@ -398,11 +410,11 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
 
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    const textarea = screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel });
     fireEvent.change(textarea, { target: { value: "My answer!" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
@@ -427,15 +439,15 @@ describe("Messages page", () => {
     renderPoll = () => ({ status: "rendering" });
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
-    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    const textarea = screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel });
     fireEvent.change(textarea, { target: { value: "My answer!" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
 
-    await screen.findByText(/rendering your question image/i);
+    await screen.findByText(en.replyComposer.renderingImage);
     expect(respondMutate).not.toHaveBeenCalled();
     return textarea;
   }
@@ -446,7 +458,7 @@ describe("Messages page", () => {
 
     fireEvent.click(screen.getByText("What is your favorite color?"));
 
-    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    const textarea = screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel });
     expect(document.getElementById("message-card-msg-1")!.contains(textarea)).toBe(true);
   });
 
@@ -474,7 +486,9 @@ describe("Messages page", () => {
     await queueSendOnAStuckRender(vi.fn(), mockDeleteMutate);
 
     const card = document.getElementById("message-card-msg-1")!;
-    fireEvent.click(within(card).getByRole("button", { name: /cannot delete while posting/i }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: en.questionCard.cannotDeleteWhilePostingLabel })
+    );
 
     expect(mockDeleteMutate).not.toHaveBeenCalled();
   });
@@ -484,7 +498,9 @@ describe("Messages page", () => {
     await queueSendOnAStuckRender(vi.fn(), mockDeleteMutate);
 
     const other = document.getElementById("message-card-msg-2")!;
-    fireEvent.click(within(other).getByRole("button", { name: /^delete message$/i }));
+    fireEvent.click(
+      within(other).getByRole("button", { name: en.questionCard.deleteMessageLabel })
+    );
 
     expect(mockDeleteMutate).toHaveBeenCalledWith("msg-2", expect.any(Object));
   });
@@ -509,10 +525,10 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
 
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
     expect(messageService.messageService.warmImageService).toHaveBeenCalledTimes(1);
   });
 
@@ -522,10 +538,10 @@ describe("Messages page", () => {
 
     fireEvent.click(screen.getByLabelText(/question as image/i));
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
 
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
     expect(messageService.messageService.warmImageService).not.toHaveBeenCalled();
   });
 
@@ -554,7 +570,7 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.messagesPage.addExampleMessages }));
     await waitFor(() =>
       expect(mockAddMutate).toHaveBeenCalledWith(SESSION.did, expect.any(Object))
     );
@@ -589,14 +605,14 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.messagesPage.addExampleMessages }));
     await waitFor(() => expect(mockAddMutate).toHaveBeenCalled());
 
     act(() => {
       capturedCallbacks.onError({ error: "Server error" });
     });
     await waitFor(() => {
-      expect(screen.getByText(/error adding examples/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.addExamplesErrorTitle)).toBeInTheDocument();
     });
   });
 
@@ -607,11 +623,11 @@ describe("Messages page", () => {
     await act(async () => {});
 
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => {
-      expect(screen.getByText(/confirm deletion/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.deleteConfirmTitle)).toBeInTheDocument();
     });
   });
 
@@ -629,17 +645,17 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
-    await waitFor(() => screen.getByText(/confirm deletion/i));
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
+    await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
-    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
     act(() => {
       capturedCallbacks.onSuccess();
     });
     await waitFor(() => {
-      expect(screen.queryByText(/confirm deletion/i)).toBeNull();
+      expect(screen.queryByText(en.messagesPage.deleteConfirmTitle)).toBeNull();
     });
   });
 
@@ -657,18 +673,18 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
-    await waitFor(() => screen.getByText(/confirm deletion/i));
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
+    await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
-    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
     act(() => {
       capturedCallbacks.onError({ error: "Delete failed" });
     });
     await waitFor(() => {
-      expect(screen.getByText(/error deleting message/i)).toBeInTheDocument();
-      expect(screen.queryByText(/confirm deletion/i)).toBeNull();
+      expect(screen.getByText(en.messagesPage.deleteErrorTitle)).toBeInTheDocument();
+      expect(screen.queryByText(en.messagesPage.deleteConfirmTitle)).toBeNull();
     });
   });
 
@@ -678,12 +694,12 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
-    await waitFor(() => screen.getByText(/confirm deletion/i));
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
+    await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.cancel }));
     await waitFor(() => {
-      expect(screen.queryByText(/confirm deletion/i)).toBeNull();
+      expect(screen.queryByText(en.messagesPage.deleteConfirmTitle)).toBeNull();
     });
   });
 
@@ -700,14 +716,14 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     // Expand msg-1 via the "↩ Reply" button
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     // Delete the same expanded card (msg-1 is first)
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -716,7 +732,9 @@ describe("Messages page", () => {
       capturedCallbacks.onSuccess();
     });
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+      expect(
+        screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeNull();
     });
   });
 
@@ -724,14 +742,14 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     // Click Reply without typing anything
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
     await waitFor(() => {
-      expect(screen.getByText(/empty response/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.emptyResponseTitle)).toBeInTheDocument();
     });
   });
 
@@ -748,13 +766,13 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "Great answer!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
 
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
     expect(capturedData.response).toContain("Great answer!");
@@ -773,13 +791,13 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "My answer!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
     act(() => {
@@ -788,7 +806,7 @@ describe("Messages page", () => {
       });
     });
     await waitFor(() => {
-      expect(screen.getByText(/response sent/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.responseSentTitle)).toBeInTheDocument();
       expect(screen.getByText("https://bsky.app/profile/user/post/123")).toBeInTheDocument();
     });
   });
@@ -805,21 +823,21 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "My answer!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
     act(() => {
       capturedCallbacks.onSuccess({});
     });
     await waitFor(() => {
-      expect(screen.getByText(/response sent/i)).toBeInTheDocument();
-      expect(screen.getByText(/your response has been posted/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.responseSentTitle)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.responsePosted)).toBeInTheDocument();
     });
   });
 
@@ -827,9 +845,9 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     expect(screen.getByText("0/277")).toBeInTheDocument();
 
@@ -845,9 +863,9 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     expect(screen.getByText("0/277")).toBeInTheDocument();
 
@@ -863,14 +881,16 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     // Fire Escape on the document (not the textarea) to hit the global keydown handler
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+      expect(
+        screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeNull();
     });
   });
 
@@ -913,7 +933,7 @@ describe("Messages page", () => {
       capturedOnError({ error: "Theme update failed" });
     });
     await waitFor(() => {
-      expect(screen.getByText(/error updating theme/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.themeUpdateErrorTitle)).toBeInTheDocument();
     });
   });
 
@@ -941,14 +961,14 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.messagesPage.addExampleMessages }));
     expect(mockAddMutate).not.toHaveBeenCalled();
   });
 
   it("clicking the Copy button in the hero card triggers haptic and copy", () => {
     setupMocks();
     renderWithProviders(<Messages />);
-    const copyBtn = screen.getByRole("button", { name: /^copy$/i });
+    const copyBtn = screen.getByRole("button", { name: en.common.copy });
     expect(() => fireEvent.click(copyBtn)).not.toThrow();
   });
 
@@ -961,7 +981,7 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const defaultThemeBtn = screen.getByRole("button", { name: /^default$/i });
+    const defaultThemeBtn = screen.getByRole("button", { name: en.themes.image.default });
     fireEvent.click(defaultThemeBtn);
 
     expect(mockMutate).toHaveBeenCalledWith({
@@ -991,12 +1011,16 @@ describe("Messages page", () => {
       fireEvent.focus(card);
       // Enter when not expanded → expand
       fireEvent.keyDown(card, { key: "Enter" });
-      await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+      await waitFor(() =>
+        screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      );
 
       // Enter when expanded → collapse
       fireEvent.keyDown(card, { key: "Enter" });
       await waitFor(() => {
-        expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+        expect(
+          screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+        ).toBeNull();
       });
     }
   });
@@ -1006,15 +1030,17 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     // Open reply via the "↩ Reply" button
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     // Click the message text to hit the card's onClick with isExpanded=true
     const msgText = screen.getByText("Hello?");
     fireEvent.click(msgText);
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+      expect(
+        screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeNull();
     });
   });
 
@@ -1031,18 +1057,18 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     // Click the "↩ Reply" button (text button to open the response area)
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
     // Wait for the response textarea to appear
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "Great question!" },
     });
 
     // Click the "Reply" send button (the gradient button inside the response box)
-    const sendReplyBtn = screen.getByRole("button", { name: /^reply$/i });
+    const sendReplyBtn = screen.getByRole("button", { name: en.replyComposer.reply });
     fireEvent.click(sendReplyBtn);
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
@@ -1051,7 +1077,7 @@ describe("Messages page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/response error/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.responseErrorTitle)).toBeInTheDocument();
     });
   });
 
@@ -1060,11 +1086,13 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /unpin thread root/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel })
+      ).toBeInTheDocument();
     });
   });
 
@@ -1073,13 +1101,15 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
-    await waitFor(() => screen.getByRole("button", { name: /unpin thread root/i }));
+    await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
-    fireEvent.click(screen.getByRole("button", { name: /unpin thread root/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /unpin thread root/i })).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: en.questionCard.unpinThreadRootLabel })
+      ).toBeNull();
     });
   });
 
@@ -1088,9 +1118,9 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
-    await waitFor(() => screen.getByRole("button", { name: /unpin thread root/i }));
+    await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
     // The card should have the pinned entry animation class briefly
     const card = document.getElementById("message-card-msg-1");
@@ -1104,12 +1134,14 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtns = screen.getAllByRole("button", { name: /set as thread root/i });
+    const pinBtns = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel });
     expect(pinBtns.length).toBe(2);
     fireEvent.click(pinBtns[1]);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /unpin thread root/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel })
+      ).toBeInTheDocument();
     });
     await waitFor(() => {
       const cards = document.querySelectorAll('[id^="message-card-"]');
@@ -1127,12 +1159,14 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
-    await waitFor(() => screen.getByRole("button", { name: /unpin thread root/i }));
+    await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
     // Pinned message's delete button has a different aria-label; clicking it is a no-op
-    const pinnedDeleteBtn = screen.getByRole("button", { name: /cannot delete thread root/i });
+    const pinnedDeleteBtn = screen.getByRole("button", {
+      name: en.questionCard.cannotDeleteThreadRootLabel,
+    });
     fireEvent.click(pinnedDeleteBtn);
     expect(mockDeleteMutate).not.toHaveBeenCalled();
   });
@@ -1174,17 +1208,17 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    await waitFor(() => screen.getByRole("button", { name: /unpin thread root/i }));
+    await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
     // Click the card itself (not the ↩ Reply button) to expand the pinned message
     const card = document.getElementById("message-card-msg-1")!;
     fireEvent.click(card);
-    await waitFor(() => screen.getByRole("textbox", { name: /your response/i }));
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "Thread reply!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
     act(() => {
@@ -1197,7 +1231,7 @@ describe("Messages page", () => {
 
     // Pinned message response shows "Response Sent!" (not "Added to thread!" which is for replies-to-thread)
     await waitFor(() => {
-      expect(screen.getByText(/response sent/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.responseSentTitle)).toBeInTheDocument();
     });
     // Verify localStorage threadLinks was updated
     const stored = JSON.parse(localStorage.getItem("threadLinks-did:example:1") || "{}");
@@ -1209,7 +1243,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const replyBtns = screen.getAllByRole("button", { name: /reply/i });
+    const replyBtns = screen.getAllByRole("button", { name: isReplyTriggerName });
     const collapsedBtn = replyBtns.find((b) => b.textContent?.includes("↩"))!;
     const boxDiv = collapsedBtn.parentElement!;
 
@@ -1217,7 +1251,7 @@ describe("Messages page", () => {
     fireEvent.click(boxDiv);
 
     // Card should NOT expand (no textarea) since the click was stopped before Paper onClick
-    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })).toBeNull();
   });
 
   it("collapsed reply Button onClick expands card (userEvent)", async () => {
@@ -1225,14 +1259,16 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const replyBtns = screen.getAllByRole("button", { name: /reply/i });
+    const replyBtns = screen.getAllByRole("button", { name: isReplyTriggerName });
     const collapsedBtn = replyBtns.find((b) => b.textContent?.includes("↩"))!;
 
     const user = userEvent.setup();
     await user.click(collapsedBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole("textbox", { name: /your response/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeInTheDocument();
     });
   });
 
@@ -1244,7 +1280,9 @@ describe("Messages page", () => {
 
     const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
     fireEvent.click(realReplyBtn);
-    const textarea = await screen.findByRole("textbox", { name: /your response/i });
+    const textarea = await screen.findByRole("textbox", {
+      name: en.replyComposer.responseAriaLabel,
+    });
 
     const longText = "a".repeat(260); // > 90% of the default 277 char limit
     fireEvent.change(textarea, { target: { value: longText } });
@@ -1300,7 +1338,7 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add example messages/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.messagesPage.addExampleMessages }));
     await waitFor(() => expect(mockAddMutate).toHaveBeenCalled());
 
     act(() => {
@@ -1325,9 +1363,9 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
-    await waitFor(() => screen.getByText(/confirm deletion/i));
-    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
+    await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
+    fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
 
     act(() => {
@@ -1335,7 +1373,7 @@ describe("Messages page", () => {
     });
     await waitFor(() => {
       expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
-      expect(screen.queryByText(/confirm deletion/i)).toBeNull();
+      expect(screen.queryByText(en.messagesPage.deleteConfirmTitle)).toBeNull();
     });
   });
 
@@ -1346,7 +1384,7 @@ describe("Messages page", () => {
 
     const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
     fireEvent.click(realReplyBtn);
-    await screen.findByRole("textbox", { name: /your response/i });
+    await screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
     // With includeQuestionAsImage off, the question text is subtracted from the base 277 limit.
     expect(screen.queryByText(/^0\/277$/)).toBeNull();
 
@@ -1360,7 +1398,9 @@ describe("Messages page", () => {
     expect(() => rerender(<Messages />)).not.toThrow();
 
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+      expect(
+        screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeNull();
     });
     expect(screen.getByText("What is your favorite color?")).toBeInTheDocument();
   });
@@ -1402,13 +1442,13 @@ describe("Messages page", () => {
     await act(async () => {});
 
     // msg-1 is not the root, and threadLinks["msg-2"] has a uri/cid, so it's unblocked.
-    const replyBtn = screen.getByRole("button", { name: "↩ Reply to thread" });
+    const replyBtn = screen.getByRole("button", { name: en.questionCard.replyToThread });
     fireEvent.click(replyBtn);
-    await screen.findByRole("textbox", { name: /your response/i });
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "Thread reply text" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply to thread$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.replyToThread }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
     expect(mockRespondMutate.mock.calls[0][0].replyTo).toEqual({
       uri: "at://root",
@@ -1419,8 +1459,8 @@ describe("Messages page", () => {
       capturedCallbacks.onSuccess({ link: "https://bsky.app/profile/user/post/thread1" });
     });
     await waitFor(() => {
-      expect(screen.getByText(/added to thread!/i)).toBeInTheDocument();
-      expect(screen.getByText(/added to thread\./i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.threadReplyTitle)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.threadReplyPosted)).toBeInTheDocument();
       expect(screen.getByText("https://bsky.app/profile/user/post/thread1")).toBeInTheDocument();
     });
   });
@@ -1443,21 +1483,21 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const replyBtn = screen.getByRole("button", { name: "↩ Reply to thread" });
+    const replyBtn = screen.getByRole("button", { name: en.questionCard.replyToThread });
     fireEvent.click(replyBtn);
-    await screen.findByRole("textbox", { name: /your response/i });
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "Thread reply text" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply to thread$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.replyToThread }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
     act(() => {
       capturedCallbacks.onSuccess({});
     });
     await waitFor(() => {
-      expect(screen.getByText(/added to thread!/i)).toBeInTheDocument();
-      expect(screen.getByText(/added to thread\./i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.threadReplyTitle)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.threadReplyPosted)).toBeInTheDocument();
     });
   });
 
@@ -1477,9 +1517,9 @@ describe("Messages page", () => {
     // to get into the expanded/blocked state and exercise the Send button's disabled branch.
     const card = document.getElementById("message-card-msg-1")!;
     fireEvent.click(card);
-    await screen.findByRole("textbox", { name: /your response/i });
+    await screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
 
-    const sendBtn = screen.getByRole("button", { name: /^reply to thread$/i });
+    const sendBtn = screen.getByRole("button", { name: en.replyComposer.replyToThread });
     expect(sendBtn).toBeDisabled();
     fireEvent.click(sendBtn);
     expect(mockRespondMutate).not.toHaveBeenCalled();
@@ -1493,7 +1533,7 @@ describe("Messages page", () => {
     const boxDiv = realBtn.parentElement!;
     fireEvent.click(boxDiv);
 
-    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })).toBeNull();
   });
 
   it("collapsed reply Button (exact match) opens the response box when not blocked", async () => {
@@ -1504,7 +1544,9 @@ describe("Messages page", () => {
     fireEvent.click(realBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole("textbox", { name: /your response/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeInTheDocument();
     });
   });
 
@@ -1514,9 +1556,9 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const realBtn = screen.getByRole("button", { name: "↩ Reply to thread" });
+    const realBtn = screen.getByRole("button", { name: en.questionCard.replyToThread });
     fireEvent.click(realBtn);
-    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })).toBeNull();
   });
 
   it("clicking the Copy button shows 'Copied!' after navigator.clipboard.writeText resolves", async () => {
@@ -1528,9 +1570,9 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.copy }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /^copied!$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: en.common.copied })).toBeInTheDocument();
     });
   });
 
@@ -1551,7 +1593,7 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
     renderWithProviders(<Messages />);
 
-    expect(screen.queryByText(/no messages/i)).toBeNull();
+    expect(screen.queryByText(en.messagesPage.noMessagesTitle)).toBeNull();
     expect(screen.queryByText("Hello?")).toBeNull();
   });
 
@@ -1579,7 +1621,7 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^default$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.themes.image.default }));
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
@@ -1589,7 +1631,7 @@ describe("Messages page", () => {
     mockUseUpdateUserSettings.mockReturnValue({ mutate: mockMutate, isPending: true } as any);
     renderWithProviders(<Messages />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^default$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.themes.image.default }));
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
@@ -1601,7 +1643,7 @@ describe("Messages page", () => {
     fireEvent.focus(card);
     fireEvent.keyDown(card, { key: "Tab" });
 
-    expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })).toBeNull();
   });
 
   it("arrow keys do nothing until a card has been focused", () => {
@@ -1642,12 +1684,16 @@ describe("Messages page", () => {
 
     const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
     fireEvent.click(realReplyBtn);
-    const textarea = await screen.findByRole("textbox", { name: /your response/i });
+    const textarea = await screen.findByRole("textbox", {
+      name: en.replyComposer.responseAriaLabel,
+    });
     fireEvent.change(textarea, { target: { value: "line one" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
 
     expect(mockRespondMutate).not.toHaveBeenCalled();
-    expect(screen.getByRole("textbox", { name: /your response/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+    ).toBeInTheDocument();
   });
 
   it("Alt+R shortcut is a no-op when there are no messages", () => {
@@ -1670,7 +1716,7 @@ describe("Messages page", () => {
     } as any);
     rerender(<Messages />);
     await waitFor(() => {
-      expect(screen.getByText(/don.t have any messages yet/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.noMessagesBody)).toBeInTheDocument();
     });
 
     expect(() => fireEvent.keyDown(document, { key: "ArrowDown" })).not.toThrow();
@@ -1739,11 +1785,11 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
-    await waitFor(() => screen.getByText(/confirm deletion/i));
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
+    await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
-    expect(screen.getByText(/confirm deletion/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: en.common.cancel }));
+    expect(screen.getByText(en.messagesPage.deleteConfirmTitle)).toBeInTheDocument();
   });
 
   it("handleSendResponse onError falls back to a default message when err.error is missing", async () => {
@@ -1760,11 +1806,11 @@ describe("Messages page", () => {
 
     const realReplyBtn = screen.getAllByRole("button", { name: "↩ Reply" })[0];
     fireEvent.click(realReplyBtn);
-    await screen.findByRole("textbox", { name: /your response/i });
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    await screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: "Great question!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
 
     act(() => {
@@ -1832,7 +1878,7 @@ describe("Messages page", () => {
     try {
       renderWithProviders(<Messages />);
       // The "Share" button in the profile header hands sharePayload to the OS.
-      const shareButtons = screen.getAllByRole("button", { name: /^share$/i });
+      const shareButtons = screen.getAllByRole("button", { name: en.shareButton.button });
       fireEvent.click(shareButtons[0]);
       await waitFor(() => expect(shareSpy).toHaveBeenCalled());
 
@@ -1852,16 +1898,16 @@ describe("Messages page", () => {
   // ── #365: the render runs beside the composer, not inside the send ─────────
 
   function openComposerFor(index = 0) {
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.filter((b) => b.textContent?.includes("↩"))[index]);
-    return screen.findByRole("textbox", { name: /your response/i });
+    return screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
   }
 
   async function typeAndSend(text = "My answer!") {
-    fireEvent.change(screen.getByRole("textbox", { name: /your response/i }), {
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       target: { value: text },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^reply$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
   }
 
   it("posts a reply that carries an image with the render key the server already holds", async () => {
@@ -1912,7 +1958,7 @@ describe("Messages page", () => {
     await typeAndSend();
 
     expect(mockRespondMutate).not.toHaveBeenCalled();
-    expect(screen.getByText(/rendering your question image/i)).toBeInTheDocument();
+    expect(screen.getByText(en.replyComposer.renderingImage)).toBeInTheDocument();
 
     renderPoll = () => ({ status: "ready" });
     rerender(<Messages />);
@@ -1933,7 +1979,7 @@ describe("Messages page", () => {
     const { rerender } = renderWithProviders(<Messages />);
 
     await openComposerFor();
-    const textarea = screen.getByRole("textbox", { name: /your response/i });
+    const textarea = screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel });
     fireEvent.change(textarea, { target: { value: "My answer!" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
@@ -1958,7 +2004,7 @@ describe("Messages page", () => {
     await typeAndSend();
 
     await waitFor(() => {
-      expect(screen.getByText(/image render failed/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.imageRenderFailedTitle)).toBeInTheDocument();
       expect(screen.getByText(/image service unreachable/i)).toBeInTheDocument();
     });
     expect(mockRespondMutate).not.toHaveBeenCalled();
@@ -1976,7 +2022,7 @@ describe("Messages page", () => {
     await typeAndSend();
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to render the question image/i)).toBeInTheDocument();
+      expect(screen.getByText(en.messagesPage.imageRenderFailedMessage)).toBeInTheDocument();
     });
   });
 
@@ -2001,8 +2047,8 @@ describe("Messages page", () => {
       capturedCallbacks.onError({ status: 409, error: "render not ready" });
     });
 
-    expect(screen.queryByText(/response error/i)).toBeNull();
-    expect(screen.getByText(/rendering your question image/i)).toBeInTheDocument();
+    expect(screen.queryByText(en.messagesPage.responseErrorTitle)).toBeNull();
+    expect(screen.getByText(en.replyComposer.renderingImage)).toBeInTheDocument();
 
     renderPoll = () => ({ status: "ready" });
     rerender(<Messages />);
@@ -2039,7 +2085,7 @@ describe("Messages page", () => {
     await waitFor(() => expect(mockRespondMutate).toHaveBeenCalledTimes(1));
     expect(mockRespondMutate.mock.calls[0][0].renderId).toBeUndefined();
     expect(mockRespondMutate.mock.calls[0][0].includeQuestionAsImage).toBe(true);
-    expect(screen.queryByText(/image render failed/i)).toBeNull();
+    expect(screen.queryByText(en.messagesPage.imageRenderFailedTitle)).toBeNull();
   });
 
   it("abandons a queued reply when the composer is closed before the render lands", async () => {
@@ -2054,11 +2100,13 @@ describe("Messages page", () => {
 
     await openComposerFor();
     await typeAndSend();
-    fireEvent.keyDown(screen.getByRole("textbox", { name: /your response/i }), {
+    fireEvent.keyDown(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
       key: "Escape",
     });
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: /your response/i })).toBeNull();
+      expect(
+        screen.queryByRole("textbox", { name: en.replyComposer.responseAriaLabel })
+      ).toBeNull();
     });
 
     renderPoll = () => ({ status: "ready" });

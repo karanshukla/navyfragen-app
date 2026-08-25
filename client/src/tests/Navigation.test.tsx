@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as authService from "../api/authService";
 import * as profileService from "../api/profileService";
 import * as settingsService from "../api/settingsService";
+import { APP_NAME } from "../lib/brand";
+import { en } from "../lib/i18n/en";
 import { Navigation } from "../Navigation";
 
 import { renderWithProviders } from "./testUtils";
@@ -75,19 +77,19 @@ describe("Navigation", () => {
 
     it("renders Home and Login links", () => {
       renderWithProviders(<Navigation />);
-      expect(screen.getByText("Home")).toBeInTheDocument();
-      expect(screen.getByText("Login")).toBeInTheDocument();
+      expect(screen.getByText(en.common.shortcuts.home)).toBeInTheDocument();
+      expect(screen.getByText(en.common.shortcuts.login)).toBeInTheDocument();
     });
 
     it("does not render Messages or Settings links", () => {
       renderWithProviders(<Navigation />);
-      expect(screen.queryByText("Messages")).toBeNull();
-      expect(screen.queryByText("Settings")).toBeNull();
+      expect(screen.queryByText(en.common.shortcuts.messages)).toBeNull();
+      expect(screen.queryByText(en.common.shortcuts.settings)).toBeNull();
     });
 
     it("does not render the Friends section", () => {
       renderWithProviders(<Navigation />);
-      expect(screen.queryByText(/^moots$/i)).toBeNull();
+      expect(screen.queryByText(en.nav.friendGroups.moots.label)).toBeNull();
     });
   });
 
@@ -99,9 +101,9 @@ describe("Navigation", () => {
         isLoading: true,
       } as any);
       renderWithProviders(<Navigation />);
-      expect(screen.getByText("Home")).toBeInTheDocument();
-      expect(screen.getByText("Messages")).toBeInTheDocument();
-      expect(screen.getByText("Settings")).toBeInTheDocument();
+      expect(screen.getByText(en.common.shortcuts.home)).toBeInTheDocument();
+      expect(screen.getByText(en.common.shortcuts.messages)).toBeInTheDocument();
+      expect(screen.getByText(en.common.shortcuts.settings)).toBeInTheDocument();
     });
 
     it("does not render Login link", () => {
@@ -111,7 +113,7 @@ describe("Navigation", () => {
         isLoading: true,
       } as any);
       renderWithProviders(<Navigation />);
-      expect(screen.queryByText("Login")).toBeNull();
+      expect(screen.queryByText(en.common.shortcuts.login)).toBeNull();
     });
   });
 
@@ -126,7 +128,7 @@ describe("Navigation", () => {
     it("does not render Login link while isLoggedIn is not yet known", () => {
       mockSession({ isLoggedIn: false }, true);
       renderWithProviders(<Navigation />);
-      expect(screen.queryByText("Login")).toBeNull();
+      expect(screen.queryByText(en.common.shortcuts.login)).toBeNull();
     });
 
     it("renders a skeleton placeholder in place of the Login link while loading", () => {
@@ -138,7 +140,7 @@ describe("Navigation", () => {
     it("renders Login link once loading finishes and user is not logged in", () => {
       mockSession({ isLoggedIn: false }, false);
       renderWithProviders(<Navigation />);
-      expect(screen.getByText("Login")).toBeInTheDocument();
+      expect(screen.getByText(en.common.shortcuts.login)).toBeInTheDocument();
     });
 
     it("Alt+L does not navigate to login while session is loading", () => {
@@ -163,9 +165,9 @@ describe("Navigation", () => {
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation />);
-      expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
-      expect(screen.getByText(/^following$/i)).toBeInTheDocument();
-      expect(screen.getByText(/^oomfs$/i)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.moots.label)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.following.label)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.oomfs.label)).toBeInTheDocument();
     });
   });
 
@@ -192,9 +194,11 @@ describe("Navigation", () => {
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation />);
-      expect(screen.getByText(/no mutuals on/i)).toBeInTheDocument();
-      expect(screen.getByText(/no one-sided follows on/i)).toBeInTheDocument();
-      expect(screen.getByText(/none of your followers are on/i)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.moots.emptyText(APP_NAME))).toBeInTheDocument();
+      expect(
+        screen.getByText(en.nav.friendGroups.following.emptyText(APP_NAME))
+      ).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.oomfs.emptyText(APP_NAME))).toBeInTheDocument();
     });
   });
 
@@ -448,7 +452,7 @@ describe("Navigation", () => {
       renderWithProviders(<Navigation />, {
         route: "/profile/alice.bsky.social",
       });
-      expect(screen.getByText(/viewing profile/i)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.viewingProfile)).toBeInTheDocument();
       expect(screen.getByText("@alice.bsky.social")).toBeInTheDocument();
     });
 
@@ -459,7 +463,7 @@ describe("Navigation", () => {
         isLoading: false,
       } as any);
       renderWithProviders(<Navigation />, { route: "/" });
-      expect(screen.queryByText(/viewing profile/i)).toBeNull();
+      expect(screen.queryByText(en.nav.viewingProfile)).toBeNull();
     });
   });
 
@@ -506,19 +510,19 @@ describe("Navigation", () => {
       localStorage.setItem(SECTION_KEY, JSON.stringify({ Moots: false }));
       renderWithProviders(<Navigation />);
       // The Moots section header is still rendered (it's a toggle, not removed)
-      expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.moots.label)).toBeInTheDocument();
     });
 
     it("falls back to open=true when localStorage contains invalid JSON", () => {
       localStorage.setItem(SECTION_KEY, "{{invalid}}");
       // Should not throw, getSectionOpen returns true from catch
       expect(() => renderWithProviders(<Navigation />)).not.toThrow();
-      expect(screen.getByText(/^moots$/i)).toBeInTheDocument();
+      expect(screen.getByText(en.nav.friendGroups.moots.label)).toBeInTheDocument();
     });
 
     it("clicking a FriendSection header toggles it and persists to localStorage", () => {
       renderWithProviders(<Navigation />);
-      const mootsHeader = screen.getByText(/^moots$/i);
+      const mootsHeader = screen.getByText(en.nav.friendGroups.moots.label);
       // Click the header — triggers handleToggle → setSectionOpen → localStorage.setItem
       fireEvent.click(mootsHeader);
       const stored = localStorage.getItem(SECTION_KEY);
@@ -530,7 +534,7 @@ describe("Navigation", () => {
     it("setSectionOpen merges into existing localStorage data", () => {
       localStorage.setItem(SECTION_KEY, JSON.stringify({ Following: false }));
       renderWithProviders(<Navigation />);
-      const mootsHeader = screen.getByText(/^moots$/i);
+      const mootsHeader = screen.getByText(en.nav.friendGroups.moots.label);
       fireEvent.click(mootsHeader);
       const stored = localStorage.getItem(SECTION_KEY);
       const parsed = JSON.parse(stored!);

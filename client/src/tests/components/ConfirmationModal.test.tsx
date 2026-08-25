@@ -4,6 +4,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { ConfirmationModal } from "../../components/ConfirmationModal";
+import { en } from "../../lib/i18n/en";
 import { renderWithProviders } from "../testUtils";
 
 describe("ConfirmationModal", () => {
@@ -25,8 +26,8 @@ describe("ConfirmationModal", () => {
     renderWithProviders(
       <ConfirmationModal opened onClose={vi.fn()} onConfirm={vi.fn()} title="T" message="M" />
     );
-    expect(screen.getByText("Confirm")).toBeInTheDocument();
-    expect(screen.getByText("Cancel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: en.common.confirm })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: en.common.cancel })).toBeInTheDocument();
   });
 
   it("shows custom confirm/cancel labels when provided", () => {
@@ -50,7 +51,7 @@ describe("ConfirmationModal", () => {
     renderWithProviders(
       <ConfirmationModal opened onClose={onClose} onConfirm={vi.fn()} title="T" message="M" />
     );
-    await userEvent.click(screen.getByText("Cancel"));
+    await userEvent.click(screen.getByRole("button", { name: en.common.cancel }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -59,7 +60,7 @@ describe("ConfirmationModal", () => {
     renderWithProviders(
       <ConfirmationModal opened onClose={vi.fn()} onConfirm={onConfirm} title="T" message="M" />
     );
-    await userEvent.click(screen.getByText("Confirm"));
+    await userEvent.click(screen.getByRole("button", { name: en.common.confirm }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
@@ -74,7 +75,7 @@ describe("ConfirmationModal", () => {
         loading
       />
     );
-    const cancelBtn = screen.getByText("Cancel").closest("button");
+    const cancelBtn = screen.getByRole("button", { name: en.common.cancel });
     expect(cancelBtn).toBeDisabled();
   });
 });

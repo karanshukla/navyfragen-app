@@ -5,8 +5,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as messageService from "../../api/messageService";
 import * as profileService from "../../api/profileService";
+import { APP_NAME } from "../../lib/brand";
+import { en } from "../../lib/i18n/en";
+import { getTouchpointTranslations } from "../../lib/touchpointTranslations";
 import PublicProfile from "../../pages/PublicProfile";
 import { renderWithProviders } from "../testUtils";
+
+const t = getTouchpointTranslations("en");
+const esT = getTouchpointTranslations("es");
 
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>();
@@ -121,7 +127,7 @@ describe("PublicProfile page", () => {
       isPending: false,
     } as any);
     renderWithProviders(<PublicProfile />);
-    expect(screen.getByText(/no bluesky account found/i)).toBeInTheDocument();
+    expect(screen.getByText(en.publicProfilePage.noBlueskyAccountTitle)).toBeInTheDocument();
     expect(screen.getByText(/karan\.bsky\.social/i)).toBeInTheDocument();
   });
 
@@ -135,9 +141,9 @@ describe("PublicProfile page", () => {
   it("shows validation error when trying to send an empty message", async () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
     await waitFor(() => {
-      expect(screen.getByText(/message cannot be empty/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.messageEmptyError)).toBeInTheDocument();
     });
   });
 
@@ -160,9 +166,9 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "A great question!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
     await waitFor(() => {
-      expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.confirmSendMessage)).toBeInTheDocument();
     });
   });
 
@@ -193,11 +199,11 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello there!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/are you sure/i));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
 
     // The modal confirm button is labeled "Send Message"
-    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.publicProfilePage.sendMessage }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
     act(() => {
@@ -205,7 +211,7 @@ describe("PublicProfile page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/message sent/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.messageSentTitle)).toBeInTheDocument();
     });
   });
 
@@ -224,10 +230,10 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello there!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/are you sure/i));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
 
-    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.publicProfilePage.sendMessage }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
     act(() => {
@@ -235,7 +241,7 @@ describe("PublicProfile page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to send/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.sendFailedTitle)).toBeInTheDocument();
       expect(screen.getByText(/rate limited/i)).toBeInTheDocument();
     });
   });
@@ -256,7 +262,7 @@ describe("PublicProfile page", () => {
       isPending: false,
     } as any);
     renderWithProviders(<PublicProfile />);
-    expect(screen.getByText(/^not on /i)).toBeInTheDocument();
+    expect(screen.getByText(en.publicProfilePage.notOnAppTitle(APP_NAME))).toBeInTheDocument();
   });
 
   it("shows generic error when handleError has non-404 status", () => {
@@ -294,7 +300,7 @@ describe("PublicProfile page", () => {
       isPending: false,
     } as any);
     renderWithProviders(<PublicProfile />);
-    expect(screen.getByText(/failed to load profile information/i)).toBeInTheDocument();
+    expect(screen.getByText(en.publicProfilePage.profileLoadFailed)).toBeInTheDocument();
   });
 
   it("pressing Enter (without modifiers) in textarea calls handleSend", async () => {
@@ -309,7 +315,7 @@ describe("PublicProfile page", () => {
       metaKey: false,
     });
     await waitFor(() => {
-      expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.confirmSendMessage)).toBeInTheDocument();
     });
   });
 
@@ -320,7 +326,7 @@ describe("PublicProfile page", () => {
     fireEvent.change(textarea, { target: { value: "Hello!" } });
     fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
     await waitFor(() => {
-      expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.confirmSendMessage)).toBeInTheDocument();
     });
   });
 
@@ -330,7 +336,7 @@ describe("PublicProfile page", () => {
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Hello!" } });
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
-    expect(screen.queryByText(/are you sure/i)).toBeNull();
+    expect(screen.queryByText(en.publicProfilePage.confirmSendMessage)).toBeNull();
   });
 
   it("typing an ordinary key in the textarea does not call handleSend", async () => {
@@ -339,7 +345,7 @@ describe("PublicProfile page", () => {
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Hello!" } });
     fireEvent.keyDown(textarea, { key: "a" });
-    expect(screen.queryByText(/are you sure/i)).toBeNull();
+    expect(screen.queryByText(en.publicProfilePage.confirmSendMessage)).toBeNull();
   });
 
   it("pressing Alt+Enter in textarea does not call handleSend", async () => {
@@ -348,7 +354,7 @@ describe("PublicProfile page", () => {
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Hello!" } });
     fireEvent.keyDown(textarea, { key: "Enter", altKey: true });
-    expect(screen.queryByText(/are you sure/i)).toBeNull();
+    expect(screen.queryByText(en.publicProfilePage.confirmSendMessage)).toBeNull();
   });
 
   it("pressing Meta+Enter in textarea does not call handleSend", async () => {
@@ -357,7 +363,7 @@ describe("PublicProfile page", () => {
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Hello!" } });
     fireEvent.keyDown(textarea, { key: "Enter", metaKey: true });
-    expect(screen.queryByText(/are you sure/i)).toBeNull();
+    expect(screen.queryByText(en.publicProfilePage.confirmSendMessage)).toBeNull();
   });
 
   it("clicking the clear button empties the message", async () => {
@@ -366,7 +372,7 @@ describe("PublicProfile page", () => {
     const textarea = screen.getByRole("textbox");
     fireEvent.change(textarea, { target: { value: "Some text" } });
     await waitFor(() => expect(textarea).toHaveValue("Some text"));
-    const clearBtn = screen.getByRole("button", { name: /clear message/i });
+    const clearBtn = screen.getByRole("button", { name: en.askCard.clearMessage });
     fireEvent.click(clearBtn);
     expect(textarea).toHaveValue("");
   });
@@ -424,14 +430,14 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/are you sure/i));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
 
     // Confirm — handleConfirmSend runs and finds no DID
-    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.publicProfilePage.sendMessage }));
 
     await waitFor(() => {
-      expect(screen.getByText(/cannot send message/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.recipientNotFoundMessage)).toBeInTheDocument();
     });
   });
 
@@ -451,15 +457,15 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     // Trigger a form error
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/message cannot be empty/i));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.messageEmptyError));
     // Close the alert — scope with within() to the closest [role="alert"] container
-    const errorText = screen.getByText(/message cannot be empty/i);
+    const errorText = screen.getByText(en.publicProfilePage.messageEmptyError);
     const alertEl = errorText.closest("[role='alert']") as HTMLElement;
     const closeBtn = within(alertEl).getByRole("button");
     fireEvent.click(closeBtn);
     await waitFor(() => {
-      expect(screen.queryByText(/message cannot be empty/i)).toBeNull();
+      expect(screen.queryByText(en.publicProfilePage.messageEmptyError)).toBeNull();
     });
   });
 
@@ -469,19 +475,19 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/are you sure/i));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
     // Click Cancel (calls onClose → setModalOpened(false))
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.cancel }));
     await waitFor(() => {
-      expect(screen.queryByText(/are you sure/i)).toBeNull();
+      expect(screen.queryByText(en.publicProfilePage.confirmSendMessage)).toBeNull();
     });
   });
 
   it("clicking the copy link button does not throw", async () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    const copyBtn = screen.getByRole("button", { name: /copy profile link/i });
+    const copyBtn = screen.getByRole("button", { name: en.profileUrlBar.copyProfileLinkAriaLabel });
     expect(() => fireEvent.click(copyBtn)).not.toThrow();
   });
 
@@ -493,7 +499,7 @@ describe("PublicProfile page", () => {
     });
     setupProfile();
     renderWithProviders(<PublicProfile />);
-    const copyBtn = screen.getByRole("button", { name: /copy profile link/i });
+    const copyBtn = screen.getByRole("button", { name: en.profileUrlBar.copyProfileLinkAriaLabel });
     fireEvent.click(copyBtn);
     // A successful navigator.clipboard.writeText() flips Mantine's `copied`
     // state to true, re-rendering the Tooltip with the "Copied!" label.
@@ -509,7 +515,7 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     const shareBtn = screen.getByRole("button", {
-      name: /share profile link/i,
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
@@ -533,12 +539,12 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     const shareBtn = screen.getByRole("button", {
-      name: /share profile link/i,
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     // No error toast for AbortError
-    expect(screen.queryByText(/share failed/i)).toBeNull();
+    expect(screen.queryByText(en.profileUrlBar.shareFailedTitle)).toBeNull();
     Object.defineProperty(navigator, "share", {
       value: undefined,
       configurable: true,
@@ -555,12 +561,12 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     const shareBtn = screen.getByRole("button", {
-      name: /share profile link/i,
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     await waitFor(() => {
-      expect(screen.getByText(/share failed/i)).toBeInTheDocument();
+      expect(screen.getByText(en.profileUrlBar.shareFailedTitle)).toBeInTheDocument();
     });
     Object.defineProperty(navigator, "share", {
       value: undefined,
@@ -589,7 +595,9 @@ describe("PublicProfile page", () => {
     } as any);
     mockUseSendMessage.mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     renderWithProviders(<PublicProfile />);
-    const shareBtn = screen.getByRole("button", { name: /share profile link/i });
+    const shareBtn = screen.getByRole("button", {
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
+    });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     expect(shareMock).toHaveBeenCalledWith(
@@ -626,7 +634,7 @@ describe("PublicProfile page", () => {
     } as any);
     renderWithProviders(<PublicProfile />);
     // Both the heading text and the textarea aria-label use || profile.handle
-    expect(screen.getByText(/send karan\.bsky\.social an anonymous message/i)).toBeInTheDocument();
+    expect(screen.getByText(t.headline("karan.bsky.social"))).toBeInTheDocument();
     const textarea = screen.getByRole("textbox");
     expect(textarea).toHaveAttribute("aria-label", expect.stringContaining("karan.bsky.social"));
   });
@@ -703,9 +711,9 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/are you sure/i));
-    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
+    fireEvent.click(screen.getByRole("button", { name: en.publicProfilePage.sendMessage }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
     act(() => {
@@ -732,9 +740,9 @@ describe("PublicProfile page", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello!" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
-    await waitFor(() => screen.getByText(/are you sure/i));
-    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
+    fireEvent.click(screen.getByRole("button", { name: en.publicProfilePage.sendMessage }));
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
     act(() => {
@@ -742,7 +750,7 @@ describe("PublicProfile page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/please try again/i)).toBeInTheDocument();
+      expect(screen.getByText(en.publicProfilePage.sendMessageFailed)).toBeInTheDocument();
     });
   });
 
@@ -763,7 +771,7 @@ describe("PublicProfile page", () => {
     } as any);
     renderWithProviders(<PublicProfile />);
     // errObj = null → fallback message and not-404 error type
-    expect(screen.getByText(/failed to resolve handle/i)).toBeInTheDocument();
+    expect(screen.getByText(en.publicProfilePage.handleResolveFailed)).toBeInTheDocument();
   });
 
   // ---- /customise-driven customisations (#199/#177/#275/#266) ----
@@ -796,32 +804,32 @@ describe("PublicProfile page", () => {
     renderWithProviders(<PublicProfile />);
     expect(screen.getByText(/ask me about anything/i)).toBeInTheDocument();
     // Default headline is NOT shown when an override is present.
-    expect(screen.queryByText(/send karan an anonymous message/i)).toBeNull();
+    expect(screen.queryByText(t.headline("Karan"))).toBeNull();
   });
 
   it("falls back to the default headline when the prompt is unset (#199)", () => {
     setupWithSettings({ customPrompt: null });
     renderWithProviders(<PublicProfile />);
-    expect(screen.getByText(/send karan an anonymous message/i)).toBeInTheDocument();
+    expect(screen.getByText(t.headline("Karan"))).toBeInTheDocument();
   });
 
   it("localizes ask-card strings to the owner's touchpoint locale (#266)", () => {
     setupWithSettings({ touchpointLocale: "es" });
     renderWithProviders(<PublicProfile />);
     // Spanish headline, placeholder, send button, and disclaimer.
-    expect(screen.getByText(/envía a karan un mensaje anónimo/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/pregunta algo/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /enviar/i })).toBeInTheDocument();
-    expect(screen.getByText(/tu mensaje se enviará de forma anónima/i)).toBeInTheDocument();
+    expect(screen.getByText(esT.headline("Karan"))).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(esT.placeholder)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: esT.sendLabel })).toBeInTheDocument();
+    expect(screen.getByText(esT.disclaimer)).toBeInTheDocument();
   });
 
   it("shows a closed-inbox state instead of the send form when inboxEnabled is false (#177)", () => {
     setupWithSettings({ inboxEnabled: false });
     renderWithProviders(<PublicProfile />);
     // Closed message shown, no textarea / send button.
-    expect(screen.getByText(/not accepting new messages/i)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/ask something/i)).toBeNull();
-    expect(screen.queryByRole("button", { name: /^send$/i })).toBeNull();
+    expect(screen.getByText(t.inboxClosed)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(t.placeholder)).toBeNull();
+    expect(screen.queryByRole("button", { name: t.sendLabel })).toBeNull();
   });
 
   it("renders the default ask-card gradient when no theme is set (#275)", () => {

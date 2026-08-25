@@ -4,6 +4,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import ShareButton from "../../components/ShareButton";
+import { en } from "../../lib/i18n/en";
 import { renderWithProviders } from "../testUtils";
 
 describe("ShareButton", () => {
@@ -25,7 +26,7 @@ describe("ShareButton", () => {
     it("calls onSuccess when share succeeds", async () => {
       const onSuccess = vi.fn();
       renderWithProviders(<ShareButton shareData={shareData} onSuccess={onSuccess} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });
 
@@ -41,7 +42,7 @@ describe("ShareButton", () => {
       renderWithProviders(
         <ShareButton shareData={shareData} onSuccess={onSuccess} onError={onError} />
       );
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(onSuccess).not.toHaveBeenCalled();
       expect(onError).not.toHaveBeenCalled();
     });
@@ -54,7 +55,7 @@ describe("ShareButton", () => {
         writable: true,
       });
       renderWithProviders(<ShareButton shareData={shareData} onError={onError} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(onError).toHaveBeenCalledTimes(1);
     });
   });
@@ -76,7 +77,7 @@ describe("ShareButton", () => {
     it("copies to clipboard and calls onSuccess", async () => {
       const onSuccess = vi.fn();
       renderWithProviders(<ShareButton shareData={shareData} onSuccess={onSuccess} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://example.com");
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });
@@ -89,7 +90,7 @@ describe("ShareButton", () => {
         writable: true,
       });
       renderWithProviders(<ShareButton shareData={shareData} onError={onError} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(onError).toHaveBeenCalledTimes(1);
     });
   });
@@ -110,8 +111,8 @@ describe("ShareButton", () => {
 
     it("shows unavailable notification", async () => {
       renderWithProviders(<ShareButton shareData={shareData} />);
-      await userEvent.click(screen.getByText("Share"));
-      expect(screen.getByText("Sharing unavailable")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
+      expect(screen.getByText(en.shareButton.sharingUnavailableTitle)).toBeInTheDocument();
     });
   });
 
@@ -124,7 +125,7 @@ describe("ShareButton", () => {
       });
       // No onSuccess prop passed
       renderWithProviders(<ShareButton shareData={shareData} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(document.body).toBeInTheDocument();
     });
 
@@ -136,7 +137,7 @@ describe("ShareButton", () => {
       });
       // No onError prop passed
       renderWithProviders(<ShareButton shareData={shareData} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(document.body).toBeInTheDocument();
     });
 
@@ -153,7 +154,7 @@ describe("ShareButton", () => {
       });
       // No onSuccess prop passed
       renderWithProviders(<ShareButton shareData={shareData} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(document.body).toBeInTheDocument();
     });
 
@@ -170,7 +171,7 @@ describe("ShareButton", () => {
       });
       // No onError prop passed
       renderWithProviders(<ShareButton shareData={shareData} />);
-      await userEvent.click(screen.getByText("Share"));
+      await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
       expect(document.body).toBeInTheDocument();
     });
   });

@@ -1,5 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { en } from "../../client/src/lib/i18n/en";
+import { getTouchpointTranslations } from "../../client/src/lib/touchpointTranslations";
+import { escapeRegex, regexFromTemplate } from "../helpers/i18n";
+
+const t = getTouchpointTranslations("en");
+
 test.use({ storageState: "e2e/.auth/user.json" });
 
 const handle = () => {
@@ -13,9 +19,7 @@ const marker = () => `[e2e profile ${Date.now()}]`;
 
 // Matched by shape because the aria-label embeds the display name, which the
 // test would otherwise have to fetch from the session API.
-const askBox = (page: Page) =>
-  page.getByLabel(/^Send .+ an anonymous message$/);
-
+const askBox = (page: Page) => page.getByLabel(regexFromTemplate(t.headline));
 
 test("send anonymous message to own profile succeeds", async ({ page }) => {
   await page.goto(`/profile/${handle()}`);
@@ -25,16 +29,18 @@ test("send anonymous message to own profile succeeds", async ({ page }) => {
 
   const text = `${marker()} Hello from the e2e suite!`;
   await textarea.fill(text);
-  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await page.getByRole("button", { name: t.sendLabel, exact: true }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Confirm Anonymous Message" });
+  const dialog = page.getByRole("dialog", { name: en.publicProfilePage.confirmSendTitle });
   await expect(dialog).toBeVisible({ timeout: 5_000 });
-  await dialog.getByRole("button", { name: "Send Message" }).click();
+  await dialog.getByRole("button", { name: en.publicProfilePage.sendMessage }).click();
 
   // The cleared textarea is the deterministic success signal; the toast
   // auto-closes after 5s, so it is only asserted opportunistically.
   await expect(textarea).toHaveValue("", { timeout: 15_000 });
-  await expect(page.locator('[role="alert"]').filter({ hasText: "Message sent!" })).toBeVisible({
+  await expect(
+    page.locator('[role="alert"]').filter({ hasText: en.publicProfilePage.messageSentTitle })
+  ).toBeVisible({
     timeout: 4_000,
   });
 
@@ -47,13 +53,17 @@ test("sending an empty message is blocked before the modal", async ({ page }) =>
   const textarea = askBox(page);
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await page.getByRole("button", { name: t.sendLabel, exact: true }).click();
 
   // The inline Alert has role="alert" but no title.
-  await expect(page.locator('[role="alert"]').filter({ hasText: "Message cannot be empty." })).toBeVisible({
+  await expect(
+    page.locator('[role="alert"]').filter({ hasText: en.publicProfilePage.messageEmptyError })
+  ).toBeVisible({
     timeout: 5_000,
   });
-  await expect(page.getByRole("dialog", { name: "Confirm Anonymous Message" })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: en.publicProfilePage.confirmSendTitle })
+  ).toHaveCount(0);
 });
 
 test("cancel confirmation modal does not send the message", async ({ page }) => {
@@ -63,14 +73,18 @@ test("cancel confirmation modal does not send the message", async ({ page }) => 
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
   await textarea.fill(`${marker()} this should NOT be sent`);
-  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await page.getByRole("button", { name: t.sendLabel, exact: true }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Confirm Anonymous Message" });
+  const dialog = page.getByRole("dialog", { name: en.publicProfilePage.confirmSendTitle });
   await expect(dialog).toBeVisible({ timeout: 5_000 });
-  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.getByRole("button", { name: en.common.cancel }).click();
 
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("alert", { name: /Message sent!/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("alert", {
+      name: new RegExp(escapeRegex(en.publicProfilePage.messageSentTitle)),
+    })
+  ).toHaveCount(0);
 });
 
 test("clear button empties the ask box", async ({ page }) => {
@@ -80,7 +94,7 @@ test("clear button empties the ask box", async ({ page }) => {
   await expect(textarea).toBeVisible({ timeout: 10_000 });
 
   await textarea.fill("a draft I will discard");
-  await page.getByRole("button", { name: "Clear message" }).click();
+  await page.getByRole("button", { name: en.askCard.clearMessage }).click();
 
   await expect(textarea).toHaveValue("");
 });

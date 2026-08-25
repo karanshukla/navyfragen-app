@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { en } from "../../lib/i18n/en";
+
 const triggerHaptic = vi.fn();
 vi.mock("use-haptic", () => ({
   useHaptic: () => ({ triggerHaptic }),
@@ -41,7 +43,9 @@ describe("UpdateAvailableButton", () => {
     swUpdate.markUpdateReady();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /update available/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: en.updateAvailableButton.ariaLabel })
+      ).toBeInTheDocument();
     });
   });
 
@@ -50,7 +54,9 @@ describe("UpdateAvailableButton", () => {
 
     renderWithProviders(<UpdateAvailableButton />);
 
-    expect(screen.getByRole("button", { name: /update available/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en.updateAvailableButton.ariaLabel })
+    ).toBeInTheDocument();
   });
 
   it("applies the waiting update when pressed", async () => {
@@ -59,7 +65,7 @@ describe("UpdateAvailableButton", () => {
     swUpdate.markUpdateReady();
     renderWithProviders(<UpdateAvailableButton />);
 
-    await userEvent.click(screen.getByRole("button", { name: /update available/i }));
+    await userEvent.click(screen.getByRole("button", { name: en.updateAvailableButton.ariaLabel }));
 
     expect(applier).toHaveBeenCalledTimes(1);
   });
@@ -69,7 +75,7 @@ describe("UpdateAvailableButton", () => {
     swUpdate.markUpdateReady();
     renderWithProviders(<UpdateAvailableButton />);
 
-    await userEvent.click(screen.getByRole("button", { name: /update available/i }));
+    await userEvent.click(screen.getByRole("button", { name: en.updateAvailableButton.ariaLabel }));
 
     expect(triggerHaptic).toHaveBeenCalledTimes(1);
   });
