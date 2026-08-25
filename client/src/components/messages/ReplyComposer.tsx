@@ -4,6 +4,7 @@ import { useHaptic } from "use-haptic";
 
 import { useTranslations } from "../../lib/i18n";
 import type { Messages } from "../../lib/i18n/types";
+import { useNumberFormat } from "../../lib/useNumberFormat";
 import { useSlowRequestHint } from "../../lib/useSlowRequestHint";
 import { BRAND_GRADIENT } from "../../styles/tokens";
 
@@ -68,6 +69,7 @@ export function ReplyComposer({
 }: ReplyComposerProps) {
   const { triggerHaptic } = useHaptic(1);
   const messages = useTranslations();
+  const formatNumber = useNumberFormat();
   const slow = useSlowRequestHint(sending);
 
   return (
@@ -101,7 +103,7 @@ export function ReplyComposer({
           <Text size="xs" style={styles.count} role={sending ? "status" : undefined}>
             {sending
               ? sendingStatus(messages, slow, includesImage, awaitingRender)
-              : `${value.length}/${characterLimit}`}
+              : `${formatNumber(value.length)}/${formatNumber(characterLimit)}`}
           </Text>
         </Group>
         <Tooltip

@@ -5,7 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as authService from "../../api/authService";
 import * as settingsService from "../../api/settingsService";
 import { STORAGE_PREFIX } from "../../lib/contracts";
-import { I18nProvider, useTranslations, resolveUiLocale, loadCatalog } from "../../lib/i18n";
+import {
+  I18nProvider,
+  useTranslations,
+  useLocale,
+  resolveUiLocale,
+  loadCatalog,
+} from "../../lib/i18n";
 import { en } from "../../lib/i18n/en";
 
 vi.mock("../../api/authService", async (importOriginal) => {
@@ -25,7 +31,12 @@ const STORAGE_KEY = `${STORAGE_PREFIX}_ui_locale`;
 
 function Probe() {
   const messages = useTranslations();
-  return <div data-testid="probe">{JSON.stringify(messages)}</div>;
+  const locale = useLocale();
+  return (
+    <div data-testid="probe" data-locale={locale}>
+      {JSON.stringify(messages)}
+    </div>
+  );
 }
 
 function renderProvider() {
@@ -135,16 +146,79 @@ describe("loadCatalog", () => {
   });
 });
 
-describe("I18nProvider / useTranslations", () => {
+describe("I18nProvider / useTranslations / useLocale", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    document.documentElement.lang = "en";
   });
 
   it("throws when used outside an I18nProvider", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => render(<Probe />)).toThrow(/must be used within an I18nProvider/);
     spy.mockRestore();
+  });
+
+  it("useLocale throws when used outside an I18nProvider", () => {
+    function LocaleOnlyProbe() {
+      useLocale();
+      return null;
+    }
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => render(<LocaleOnlyProbe />)).toThrow(/must be used within an I18nProvider/);
+    spy.mockRestore();
+  });
+
+  it("exposes the resolved locale via useLocale", async () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: false } as any);
+    renderProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", "en");
+    });
+  });
+
+  it("sets document.documentElement.lang to the resolved locale", async () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { uiLocale: "es" },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    renderProvider();
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe("es");
+    });
+  });
+
+  it("updates document.documentElement.lang when the locale changes with no reload", async () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { uiLocale: "en" },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    const { rerender } = renderProvider();
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe("en");
+    });
+
+    mockUseUserSettings.mockReturnValue({
+      data: { uiLocale: "es" },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <Probe />
+        </I18nProvider>
+      </QueryClientProvider>
+    );
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe("es");
+    });
   });
 
   it("renders the en catalog by default", async () => {

@@ -22,6 +22,7 @@ import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useTranslations } from "../lib/i18n";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import { useMessagePreferences } from "../lib/useMessagePreferences";
+import { useNumberFormat } from "../lib/useNumberFormat";
 import { useQuestionRender } from "../lib/useQuestionRender";
 import { useThreadRoot } from "../lib/useThreadRoot";
 import { sunshineButton } from "../styles/tokens";
@@ -422,6 +423,7 @@ export default function Messages() {
 
 function MessageCount({ count }: { count: number }) {
   const messages = useTranslations();
+  const formatNumber = useNumberFormat();
   return (
     <Text fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
       {count > 0 ? (
@@ -429,7 +431,7 @@ function MessageCount({ count }: { count: number }) {
           <span style={{ color: "var(--nf-sunshine)" }} aria-hidden>
             ●
           </span>{" "}
-          {messages.messagesPage.newMessagesCount(count)}
+          {messages.messagesPage.newMessagesCount(formatNumber(count))}
         </>
       ) : (
         messages.messagesPage.noMessagesCount

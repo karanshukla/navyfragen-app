@@ -4,7 +4,7 @@ import { useHaptic } from "use-haptic";
 
 import type { Message } from "../../api/messageService";
 import { formatTimestamp } from "../../lib/formatTimestamp";
-import { useTranslations } from "../../lib/i18n";
+import { useLocale, useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
 import { sunshineButton } from "../../styles/tokens";
 
@@ -56,6 +56,7 @@ export function QuestionCard({
 }: QuestionCardProps) {
   const { triggerHaptic } = useHaptic(1);
   const messages = useTranslations();
+  const locale = useLocale();
   const deleteRefusal = pinned
     ? {
         tooltip: messages.questionCard.cannotDeleteThreadRootTooltip,
@@ -93,7 +94,7 @@ export function QuestionCard({
       <Stack gap="sm" style={{ flex: 1 }}>
         <Group justify="space-between" align="center">
           <Text fz={10} style={styles.timestamp}>
-            {formatTimestamp(message.createdAt)}
+            {formatTimestamp(message.createdAt, locale)}
           </Text>
           <Group gap={2} align="center">
             <Tooltip
