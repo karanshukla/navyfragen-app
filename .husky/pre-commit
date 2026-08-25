@@ -11,3 +11,6 @@ bun run --cwd client typecheck
 
 echo "TypeScript: server..."
 bun run --cwd server typecheck
+
+echo "TypeScript: e2e & scripts..."
+bun run typecheck

@@ -157,6 +157,15 @@ jobs:
         # inside the Bun runtime and needs no native build.)
         run: bun install --frozen-lockfile
 
+      # Nothing else compiles this workspace. Bun runs TypeScript by stripping
+      # types, docker/Dockerfile.server has no build step for the same reason,
+      # and `bun test` strips them too — so before this step a server type
+      # error had no way to fail anything short of production. The config it
+      # runs covers src/tests as well; unlike the client there is no second
+      # config, because a server test reaching a Node global is fine.
+      - name: Typecheck server, tests included
+        run: cd server && bun run typecheck
+
       # Runtime probes that guard Bun-specific regressions not covered by the
       # test suite itself. Both gate the job.
       - name: Probe SQLite data layer + OAuth handle resolution under Bun
@@ -464,6 +473,32 @@ jobs:
 
       - name: Check the policy allows what the client ships
         run: bun run test:bot-policy
+
+  root-typecheck:
+    name: E2E & Script Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # The root tsconfig.json covers e2e/ and scripts/, and no script had ever
+    # run it — it still named `moduleResolution: "node"`, removed from tsc, so
+    # the config could not load at all and had been checking nothing for as
+    # long as it had existed. Deliberately not a step in E2E.yml: that workflow
+    # serializes on one shared live Bluesky account and takes half an hour, so
+    # a spec with a type error should fail here in a minute rather than wait
+    # for the lock.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck e2e specs and repo scripts
+        run: bun run typecheck
 
   coveralls-finish:
     name: Coveralls Finish

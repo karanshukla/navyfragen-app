@@ -13,7 +13,7 @@
     "clean": "bunx --bun rimraf coverage",
     "lint": "bunx --bun oxlint .",
     "lint:fix": "bunx --bun oxlint . --fix",
-    "typecheck": "bunx --bun tsc -p tsconfig.check.json --noEmit",
+    "typecheck": "bunx --bun tsc --noEmit",
     "test": "bun test --isolate --no-env-file --preload ./src/tests/test-bootstrap.js src/tests/",
     "test:watch": "bun test --isolate --no-env-file --watch --preload ./src/tests/test-bootstrap.js src/tests/",
     "test:coverage": "bun test --isolate --no-env-file --coverage --preload ./src/tests/test-bootstrap.js src/tests/",

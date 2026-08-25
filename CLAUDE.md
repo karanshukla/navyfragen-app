@@ -102,6 +102,23 @@ Coverage suppression: the client uses `/* istanbul ignore */`; the server's Bun
 reporter honors no marker at all, so per-file exclusion goes in `server/bunfig.toml`.
 Every suppressed site is catalogued in `docs/testing-notes.md`.
 
+## Typechecking is a CI job, because nothing else does it
+
+Bun runs TypeScript by stripping types, so no test run and no server or
+`html-to-image` Docker build ever type-checks anything. Only the client's
+`vite build` does, and only over `src/`. Every `bun run typecheck` therefore has
+to be wired into CI explicitly, and three of them are:
+
+| Config                                               | Covers                                     | CI job                   |
+| ---------------------------------------------------- | ------------------------------------------ | ------------------------ |
+| `client/tsconfig.json` + `client/tsconfig.test.json` | client app, client tests                   | `Client Tests`           |
+| `server/tsconfig.json`                               | server app **and** `server/src/tests`      | `Server Tests`           |
+| `tsconfig.json` (root)                               | `e2e/`, `playwright.config.ts`, `scripts/` | `E2E & Script Typecheck` |
+
+The root config is `allowJs`, so the `.mjs` checkers in `scripts/` are checked
+against their JSDoc — annotate a new export's params and return there, or its callers
+silently degrade to `any`.
+
 ## Environment setup
 
 Copy `server/.env.template` to `server/.env`. Development defaults are safe locally;

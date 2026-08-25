@@ -70,6 +70,21 @@ token consumption, logout), anonymous message sent, response posted to Bluesky (
 AT URI), account deletion, PDS sync (with counts), settings changes. All 500-class
 errors across controllers and services carry structured `{ err, did }` fields.
 
+## Typechecking
+
+```bash
+bun run typecheck   # run from server/
+```
+
+One config, `tsconfig.json`, covering `src/` and `src/tests` alike. The client
+splits app and test configs to keep a Node global out of app code; a server has no
+reason to want that separation.
+
+Nothing else compiles this workspace. Bun executes TypeScript by stripping types, so
+`docker/Dockerfile.server` has no build step and `bun test` type-checks nothing
+either — which is why this runs in the `Server Tests` job rather than being left to
+a local habit.
+
 ## Testing & coverage
 
 ```bash

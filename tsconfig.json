@@ -1,10 +1,15 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "CommonJS",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
-    "types": ["node"],
-    "moduleResolution": "node"
+    "types": ["node", "bun"],
+    "allowJs": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
   },
-  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+  "include": ["e2e/**/*.ts", "playwright.config.ts", "scripts/**/*.ts", "scripts/**/*.mjs"]
 }
