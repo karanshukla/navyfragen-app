@@ -96,6 +96,13 @@ jobs:
       - name: Build under Bun
         run: cd client && bun run build
 
+      # #406: the es uiLocale catalog must ship as its own lazy-loaded chunk,
+      # not folded into the entry bundle every visitor downloads regardless of
+      # language. Asserted on the dist/ the build step above just produced —
+      # see client/scripts/check-locale-chunking.mjs.
+      - name: Check the es locale ships as its own chunk
+        run: cd client && bun run check:locale-chunking
+
       # `typecheck` runs both configs: the app one the build already covered,
       # and tsconfig.test.json for src/tests. Without this the suite compiles
       # nothing — vitest strips types rather than checking them — so a test

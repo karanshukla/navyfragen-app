@@ -167,15 +167,11 @@ export default function Customise() {
                     ? userSettings!.uiLocale!
                     : "en"
                 }
-                // Only "en" exists (#401) and it's always the selected option, so
-                // Mantine never fires onChange through the rendered UI — see
-                // docs/testing-notes.md.
-                onChange={
+                onChange={(value) => {
+                  // allowDeselect={false} — Mantine never emits null/"" here.
                   /* istanbul ignore next */
-                  (value) => {
-                    updateSettings.mutate({ uiLocale: value || null });
-                  }
-                }
+                  updateSettings.mutate({ uiLocale: value || null });
+                }}
                 disabled={busy}
                 allowDeselect={false}
                 aria-label={messages.customisePage.appLanguage}

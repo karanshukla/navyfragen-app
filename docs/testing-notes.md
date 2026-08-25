@@ -37,59 +37,23 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 
 **What it would take to test:** Not worth pursuing — would require mocking `document.body.style` property assignment to throw, which doesn't reflect any real browser behavior.
 
-### `client/src/pages/Customise.tsx` — unreachable `null` fallback in the locale `Select`'s `onChange`
+### `client/src/pages/Customise.tsx` — unreachable `null` fallback in both locale `Select`s' `onChange`
 
-**Line:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange` handler.
+**Lines:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange`, and `uiLocale: value || null` inside the "App language" `Select`'s `onChange` beside it (the latter reachable at all only since #406 gave `uiLocaleOptions` a second entry — see below).
 
-**Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. This `Select` is rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty locale codes from `touchpointLocales` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
+**Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. Both `Select`s are rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty locale codes from `touchpointLocales`/`uiLocaleOptions` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
 
-**Marker placement:** the `onChange` arrow was rewritten from a concise body to a block body so `/* istanbul ignore next */` has a statement to attach to. Inline on the `value || null` expression it does nothing.
+**Marker placement:** each `onChange` arrow was rewritten from a concise body to a block body so `/* istanbul ignore next */` has a statement to attach to. Inline on the `value || null` expression it does nothing.
 
 **What it would take to test:** Call the `Select`'s `onChange` prop directly (bypassing rendering) with `null`, e.g. by extracting the handler to a named, exported function, or by asserting on the prop passed to a mocked `Select`.
 
-### `client/src/lib/i18n/index.tsx` — unreachable `loadCatalog` loader lookup and `try`/`catch`
+### `client/src/lib/i18n/index.tsx` — `loadCatalog` loader lookup and `try`/`catch` (resolved by #406)
 
-**Lines:** `if (!loader) return { locale: "en", messages: en };` and the `try {
-return { locale, messages: await loader() }; } catch { … }` block that follows it,
-in `loadCatalog`.
+**Status: no longer ignored.** `LOCALE_LOADERS` had no entries before #406 registered `es`, so `loader` was always `undefined` and the `if (!loader)`/`try`/`catch` machinery around it was structurally dead. With a real entry in place, `i18n.test.tsx`'s `loadCatalog` suite now exercises all three outcomes directly — `loadCatalog("es")` resolving the real catalog, `loadCatalog("en")`/an unregistered locale taking the `!loader` branch, and a rejecting loader (mocked via `vi.doMock` on `./es`) falling back to `en` through the `catch`. Both `/* istanbul ignore else */` and `/* istanbul ignore next */` markers were removed.
 
-**Why ignored:** `LOCALE_LOADERS` has no entries until #406 registers the first
-non-English catalog, so `loader` is always `undefined`. The guard's own arm does
-run — a test calls `loadCatalog("de")` and pins that it reports `en` rather than
-echoing the request back — so only the implicit `else`, which would go on to call
-the loader, is dead. That is `ignore else` exactly, and it is narrower than the
-`ignore next` this entry used to describe: the early return stays in the
-denominator and keeps being counted. The `try`/`catch` gets its own marker on the
-`try` statement, same shape as the `AppHeader.tsx` `handleSwitch` catch entry
-(istanbul has no catch-only hint, so the whole block comes out of the
-denominator).
+### `client/src/pages/Customise.tsx` — App language `Select`'s `onChange` (resolved by #406)
 
-**What it would take to test:** Nothing to mock — once #406 adds a real entry to
-`LOCALE_LOADERS`, remove both markers and add two tests: one where the loader
-resolves, one where it rejects and `loadCatalog` falls back to `en`.
-
-### `client/src/pages/Customise.tsx` — unreachable App language `Select`'s `onChange`
-
-**Line:** the `onChange` handler on the "App language" `Select` (`uiLocale`).
-
-**Why ignored:** `uiLocaleOptions` (`lib/i18n/index.tsx`) has exactly one entry — `en` —
-until #406 ships a second `uiLocale` catalog. The `Select`'s displayed `value` is
-always `"en"`, the only option in `data` is also `"en"`, and Mantine does not fire
-`onChange` when a click resolves to the option already selected (verified against
-the rendered DOM: `aria-selected="true"`/`data-checked="true"` on that option before
-the click). The handler is therefore never reachable through the UI while only one
-locale exists — unlike the "Message language" `Select` beside it in the same
-Languages section, which has five options today and reaches `onChange` through a real
-selection change.
-
-**Marker placement:** `/* istanbul ignore next */` sits directly above the `onChange`
-attribute, ignoring the whole arrow function — not just a statement inside it, since
-the function itself is never invoked (0 calls), not merely a branch within a called
-function.
-
-**What it would take to test:** Nothing to mock — once #406 adds a second locale to
-`uiLocaleOptions`, remove the marker and add a "picking a locale" test mirroring the
-`touchpointLocale` one directly above it in `Customise.test.tsx`.
+**Status: no longer ignored.** `uiLocaleOptions` had exactly one entry (`en`) before #406 added `es`, so the `Select`'s displayed value and its only `data` option were always the same, and Mantine never fired `onChange` through the rendered UI. With a second option in place, `Customise.test.tsx` picks `es` from the "App language" `Select` the same way its "picking a locale" test already did for "Message language", and the `/* istanbul ignore next */` that wrapped the whole handler was removed — the `value || null` fallback inside it picked up its own marker instead (see the combined entry above).
 
 ### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
 

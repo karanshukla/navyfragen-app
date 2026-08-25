@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import * as settingsService from "../../api/settingsService";
+import { uiLocaleOptions } from "../../lib/i18n";
 import { en } from "../../lib/i18n/en";
 import { touchpointLocales } from "../../lib/touchpointTranslations";
 import Customise from "../../pages/Customise";
@@ -136,6 +137,20 @@ describe("Customise page", () => {
     fireEvent.click(option);
 
     expect(mutate).toHaveBeenCalledWith({ touchpointLocale: "es" });
+  });
+
+  it("picking a locale fires updateSettings with uiLocale", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    const mutate = mockMutation();
+    renderWithProviders(<Customise />);
+
+    const combobox = screen.getByRole("combobox", { name: en.customisePage.appLanguage });
+    fireEvent.click(combobox);
+    const spanish = uiLocaleOptions.find((l) => l.value === "es")!;
+    const option = screen.getByRole("option", { name: spanish.label });
+    fireEvent.click(option);
+
+    expect(mutate).toHaveBeenCalledWith({ uiLocale: "es" });
   });
 
   it("shows the matching label when touchpointLocale is already set to a known locale", () => {

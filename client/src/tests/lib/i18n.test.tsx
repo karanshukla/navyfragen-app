@@ -13,6 +13,7 @@ import {
   loadCatalog,
 } from "../../lib/i18n";
 import { en } from "../../lib/i18n/en";
+import { es } from "../../lib/i18n/es";
 
 vi.mock("../../api/authService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/authService")>();
@@ -148,6 +149,47 @@ describe("counts reach the catalog as numbers", () => {
   it("formats both counts in the preferences summary", () => {
     expect(en.postingPreferences.summary(1000, 2000)).toBe("1,000 of 2,000 on");
   });
+
+  // Spanish adjectives agree in number with the noun — "1 nuevo" vs "2 nuevos" —
+  // which is exactly the shape #406 depends on the count arriving as a number
+  // for. One test inside the singular rule, one outside it.
+  it("uses the singular Spanish form for exactly one", () => {
+    expect(es.nav.unreadCount(1)).toBe("1 no leído");
+    expect(es.messagesPage.newMessagesCount(1)).toBe("1 nuevo");
+  });
+
+  it("uses the plural Spanish form for zero and for more than one", () => {
+    expect(es.nav.unreadCount(0)).toBe("0 no leídos");
+    expect(es.nav.unreadCount(1234)).toBe("1234 no leídos");
+    expect(es.messagesPage.newMessagesCount(2)).toBe("2 nuevos");
+  });
+});
+
+describe("es catalog interpolations", () => {
+  // es is lazy-loaded and never the active catalog elsewhere in this suite (en
+  // is), so its own interpolating functions get no incidental coverage from
+  // component rendering the way en's do — each one needs a direct call here.
+  it("interpolates every function-valued entry", () => {
+    expect(es.common.switchedToAccount("alice.bsky.social")).toBe("Cambiaste a @alice.bsky.social");
+    expect(es.postingPreferences.summary(3, 5)).toBe("3 de 5 activas");
+    expect(es.nav.friendGroups.moots.emptyText("Navyfragen")).toBe(
+      "Todavía no tienes amigos mutuos en Navyfragen."
+    );
+    expect(es.nav.friendGroups.following.emptyText("Navyfragen")).toBe(
+      "Todavía no tienes seguidos unidireccionales en Navyfragen."
+    );
+    expect(es.nav.friendGroups.oomfs.emptyText("Navyfragen")).toBe(
+      "Ninguno de tus seguidores está en Navyfragen todavía."
+    );
+    expect(es.publicProfilePage.notOnAppTitle("Navyfragen")).toBe("No está en Navyfragen");
+    expect(es.userMenu.logOut("alice.bsky.social")).toBe("Cerrar sesión @alice.bsky.social");
+    expect(es.home.shareTitle("Navyfragen")).toBe("¡Envíame mensajes anónimos en Navyfragen!");
+    expect(es.settingsPage.pdsSyncDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.settingsPage.feedTitle("Navyfragen")).toBe("Feed de Navyfragen");
+    expect(es.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+  });
 });
 
 describe("loadCatalog", () => {
@@ -164,6 +206,25 @@ describe("loadCatalog", () => {
     // would label an English page German for a screen reader and format its
     // dates in a language nothing on screen is written in.
     expect(await loadCatalog("de")).toEqual({ locale: "en", messages: en });
+  });
+
+  it("resolves the real es catalog for locale 'es'", async () => {
+    expect(await loadCatalog("es")).toEqual({ locale: "es", messages: es });
+  });
+
+  it("keeps a regional Spanish tag, so dates and numbers stay regional", async () => {
+    expect(await loadCatalog("es-MX")).toEqual({ locale: "es-MX", messages: es });
+  });
+
+  it("falls back to en when a registered loader rejects", async () => {
+    vi.doMock("../../lib/i18n/es", () => {
+      throw new Error("chunk load failed");
+    });
+    try {
+      expect(await loadCatalog("es")).toEqual({ locale: "en", messages: en });
+    } finally {
+      vi.doUnmock("../../lib/i18n/es");
+    }
   });
 });
 
@@ -215,7 +276,7 @@ describe("I18nProvider / useTranslations / useLocale", () => {
   it("labels the page en when the requested locale has no catalog to render", async () => {
     mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
     mockUseUserSettings.mockReturnValue({
-      data: { uiLocale: "es" },
+      data: { uiLocale: "de" },
       isLoading: false,
       isSuccess: true,
     } as any);
@@ -224,6 +285,21 @@ describe("I18nProvider / useTranslations / useLocale", () => {
       expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", "en");
     });
     expect(document.documentElement.lang).toBe("en");
+  });
+
+  it("renders the es catalog end to end when uiLocale is 'es'", async () => {
+    mockUseSession.mockReturnValue({ data: { isLoggedIn: true }, isLoading: false } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { uiLocale: "es" },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    renderProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", "es");
+    });
+    expect(document.documentElement.lang).toBe("es");
+    expect(screen.getByTestId("probe")).toHaveTextContent(JSON.stringify(es));
   });
 
   it("updates document.documentElement.lang when the locale changes with no reload", async () => {

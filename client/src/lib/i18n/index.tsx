@@ -3,8 +3,8 @@
  * `touchpointLocale` (`../touchpointTranslations.ts`), which is the profile
  * owner's audience's language. See #400 for the two-axis split.
  *
- * Ships English only (#401) — `Messages` has no fields yet, so this module is
- * visually a no-op until #402 extracts real strings into `en.ts`.
+ * Ships English and Spanish (`es`, #406) — `es` is lazy-loaded through
+ * `LOCALE_LOADERS` so the default bundle still carries only `en`.
  */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -21,19 +21,23 @@ export type { Locale, Messages };
 
 const STORAGE_KEY = `${STORAGE_PREFIX}_ui_locale`;
 
-/** Locales this bundle can render as a full catalog. Extend as #406/#410 ship. */
-const SUPPORTED_LOCALES: readonly Locale[] = ["en"];
+/** Locales this bundle can render as a full catalog. Extend as #410 ships more. */
+const SUPPORTED_LOCALES: readonly Locale[] = ["en", "es"];
 
 /** Ordered list for the `/customise` "App language" `<Select>`. `en` first = default. */
 export const uiLocaleOptions: { value: Locale; label: string }[] = [
   { value: "en", label: "English" /* i18n-allow */ },
+  { value: "es", label: "Español" /* i18n-allow */ },
 ];
 
 /**
  * One lazy loader per non-English locale, `await import("./es")` style so the
- * default bundle carries only `en`. Empty until the first ships (#406).
+ * default bundle carries only `en` — `es` ships as its own chunk, fetched only
+ * when a user actually selects it.
  */
-const LOCALE_LOADERS: Partial<Record<string, () => Promise<Messages>>> = {};
+const LOCALE_LOADERS: Partial<Record<string, () => Promise<Messages>>> = {
+  es: () => import("./es").then((m) => m.es),
+};
 
 function primarySubtag(tag: string): string {
   return tag.split("-")[0].toLowerCase();
@@ -93,19 +97,14 @@ export interface ActiveCatalog {
  * the date order and the digit grouping.
  *
  * @see [i18n.test.tsx](../../tests/lib/i18n.test.tsx) — pins the `en`,
- * regional-variant, and unregistered-locale cases; the throwing-loader path
- * gets its own coverage once #406 registers the first real entry in
- * `LOCALE_LOADERS`.
+ * regional-variant, unregistered-locale, real-loader, and rejected-loader
+ * cases.
  */
 export async function loadCatalog(locale: string): Promise<ActiveCatalog> {
   const primary = primarySubtag(locale);
   if (primary === "en") return { locale, messages: en };
   const loader = LOCALE_LOADERS[primary];
-  // LOCALE_LOADERS has no entries until #406 registers the first one, so this
-  // guard always passes and nothing below it runs — see docs/testing-notes.md.
-  /* istanbul ignore else */
   if (!loader) return { locale: "en", messages: en };
-  /* istanbul ignore next */
   try {
     return { locale, messages: await loader() };
   } catch {
