@@ -295,7 +295,7 @@ describe("Settings page", () => {
     expect(
       screen.getByRole("link", { name: en.settingsPage.viewBotOnBluesky })
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /follow the bot/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: en.settingsPage.followTheBotOnBluesky })).toBeNull();
   });
 
   it("opens delete account modal when 'Delete my Data' is clicked", async () => {
@@ -449,7 +449,7 @@ describe("Settings page", () => {
     const alerts = screen.getAllByText(/failed to load settings/i);
     expect(alerts.length).toBeGreaterThanOrEqual(2);
     // Click Retry — covers the onClick on the Button inside settingsLoadError (line 80)
-    fireEvent.click(screen.getAllByRole("button", { name: /retry/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: en.common.retry })[0]);
     await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
   });
 

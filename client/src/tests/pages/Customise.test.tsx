@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as authService from "../../api/authService";
 import * as settingsService from "../../api/settingsService";
 import { en } from "../../lib/i18n/en";
+import { touchpointLocales } from "../../lib/touchpointTranslations";
 import Customise from "../../pages/Customise";
 import { renderWithProviders } from "../testUtils";
 
@@ -127,7 +128,8 @@ describe("Customise page", () => {
     // card title text, then open it and pick Español.
     const combobox = screen.getByRole("combobox", { name: en.customisePage.messageLanguage });
     fireEvent.click(combobox);
-    const option = screen.getByRole("option", { name: /español/i });
+    const spanish = touchpointLocales.find((l) => l.value === "es")!;
+    const option = screen.getByRole("option", { name: spanish.label, exact: true });
     fireEvent.click(option);
 
     expect(mutate).toHaveBeenCalledWith({ touchpointLocale: "es" });
@@ -138,8 +140,9 @@ describe("Customise page", () => {
     mockMutation();
     renderWithProviders(<Customise />);
 
+    const spanish = touchpointLocales.find((l) => l.value === "es")!;
     expect(screen.getByRole("combobox", { name: en.customisePage.messageLanguage })).toHaveValue(
-      "Español"
+      spanish.label
     );
   });
 

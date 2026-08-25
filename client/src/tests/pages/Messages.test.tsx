@@ -53,6 +53,14 @@ const mockUseRenderStatus = vi.mocked(messageService.useRenderStatus);
 const RENDER_ID = "render-abc";
 
 /**
+ * getAllByRole name matcher for a QuestionCard's own reply-trigger button --
+ * matches both catalog labels ("reply" vs "reply to thread", pinned vs not)
+ * rather than English text, so it survives a locale switch.
+ */
+const isReplyTriggerName = (name: string) =>
+  name === en.questionCard.reply || name === en.questionCard.replyToThread;
+
+/**
  * The render pipeline stands in for a server that answers instantly: the start
  * mutation hands back a key synchronously and the poll reports it ready, so a
  * send that queues on the render still lands in the same act() flush. Tests that
@@ -303,7 +311,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -331,7 +339,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -354,7 +362,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
@@ -379,7 +387,7 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
@@ -402,7 +410,7 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
 
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
@@ -431,7 +439,7 @@ describe("Messages page", () => {
     renderPoll = () => ({ status: "rendering" });
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
@@ -517,7 +525,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
 
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
@@ -530,7 +538,7 @@ describe("Messages page", () => {
 
     fireEvent.click(screen.getByLabelText(/question as image/i));
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
 
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
@@ -615,7 +623,7 @@ describe("Messages page", () => {
     await act(async () => {});
 
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => {
@@ -637,7 +645,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
     await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
     fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
@@ -665,7 +673,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
     await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
     fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
@@ -686,7 +694,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
     await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
     fireEvent.click(screen.getByRole("button", { name: en.common.cancel }));
@@ -708,14 +716,14 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     // Expand msg-1 via the "↩ Reply" button
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
     // Delete the same expanded card (msg-1 is first)
     const deleteButtons = screen.getAllByRole("button", {
-      name: /delete message/i,
+      name: en.questionCard.deleteMessageLabel,
     });
     fireEvent.click(deleteButtons[0]);
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -734,7 +742,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
@@ -758,7 +766,7 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
     fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
@@ -783,7 +791,7 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
     fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
@@ -815,7 +823,7 @@ describe("Messages page", () => {
     } as any);
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
     fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
@@ -837,7 +845,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
@@ -855,7 +863,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
@@ -873,7 +881,7 @@ describe("Messages page", () => {
     setupMocks();
     renderWithProviders(<Messages />);
 
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
@@ -1022,7 +1030,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     // Open reply via the "↩ Reply" button
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
     await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
 
@@ -1049,7 +1057,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
 
     // Click the "↩ Reply" button (text button to open the response area)
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     const openReplyBtn = replyButtons.find((b) => b.textContent?.includes("↩"));
     fireEvent.click(openReplyBtn!);
 
@@ -1078,7 +1086,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
 
     await waitFor(() => {
@@ -1093,7 +1101,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
     await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
@@ -1110,7 +1118,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
     await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
@@ -1126,7 +1134,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtns = screen.getAllByRole("button", { name: /set as thread root/i });
+    const pinBtns = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel });
     expect(pinBtns.length).toBe(2);
     fireEvent.click(pinBtns[1]);
 
@@ -1151,7 +1159,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const pinBtn = screen.getAllByRole("button", { name: /set as thread root/i })[0];
+    const pinBtn = screen.getAllByRole("button", { name: en.questionCard.setAsThreadRootLabel })[0];
     fireEvent.click(pinBtn);
     await waitFor(() => screen.getByRole("button", { name: en.questionCard.unpinThreadRootLabel }));
 
@@ -1235,7 +1243,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const replyBtns = screen.getAllByRole("button", { name: /reply/i });
+    const replyBtns = screen.getAllByRole("button", { name: isReplyTriggerName });
     const collapsedBtn = replyBtns.find((b) => b.textContent?.includes("↩"))!;
     const boxDiv = collapsedBtn.parentElement!;
 
@@ -1251,7 +1259,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    const replyBtns = screen.getAllByRole("button", { name: /reply/i });
+    const replyBtns = screen.getAllByRole("button", { name: isReplyTriggerName });
     const collapsedBtn = replyBtns.find((b) => b.textContent?.includes("↩"))!;
 
     const user = userEvent.setup();
@@ -1355,7 +1363,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
     await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
     fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalled());
@@ -1777,7 +1785,7 @@ describe("Messages page", () => {
     renderWithProviders(<Messages />);
     await act(async () => {});
 
-    fireEvent.click(screen.getAllByRole("button", { name: /delete message/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: en.questionCard.deleteMessageLabel })[0]);
     await waitFor(() => screen.getByText(en.messagesPage.deleteConfirmTitle));
 
     fireEvent.click(screen.getByRole("button", { name: en.common.cancel }));
@@ -1870,7 +1878,7 @@ describe("Messages page", () => {
     try {
       renderWithProviders(<Messages />);
       // The "Share" button in the profile header hands sharePayload to the OS.
-      const shareButtons = screen.getAllByRole("button", { name: /^share$/i });
+      const shareButtons = screen.getAllByRole("button", { name: en.shareButton.button });
       fireEvent.click(shareButtons[0]);
       await waitFor(() => expect(shareSpy).toHaveBeenCalled());
 
@@ -1890,7 +1898,7 @@ describe("Messages page", () => {
   // ── #365: the render runs beside the composer, not inside the send ─────────
 
   function openComposerFor(index = 0) {
-    const replyButtons = screen.getAllByRole("button", { name: /reply/i });
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
     fireEvent.click(replyButtons.filter((b) => b.textContent?.includes("↩"))[index]);
     return screen.findByRole("textbox", { name: en.replyComposer.responseAriaLabel });
   }

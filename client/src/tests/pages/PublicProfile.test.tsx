@@ -515,7 +515,7 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     const shareBtn = screen.getByRole("button", {
-      name: /share profile link/i,
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
@@ -539,7 +539,7 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     const shareBtn = screen.getByRole("button", {
-      name: /share profile link/i,
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
@@ -561,7 +561,7 @@ describe("PublicProfile page", () => {
     setupProfile();
     renderWithProviders(<PublicProfile />);
     const shareBtn = screen.getByRole("button", {
-      name: /share profile link/i,
+      name: en.profileUrlBar.shareProfileLinkAriaLabel,
     });
     fireEvent.click(shareBtn);
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
