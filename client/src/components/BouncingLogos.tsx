@@ -28,7 +28,7 @@ const VARIANTS: LogoVariant[] = [
 const SIDES = ["left", "right"] as const;
 
 function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return window.matchMedia("(prefers-reduced-motion: reduce)" /* i18n-allow */).matches;
 }
 
 interface LogoSpec {

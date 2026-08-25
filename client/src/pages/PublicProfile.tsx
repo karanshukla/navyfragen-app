@@ -104,7 +104,7 @@ export default function PublicProfile() {
 
   if (did && profileData && !profileData.exists) {
     return (
-      <ProfileNotice tone="yellow" title={`Not on ${APP_NAME}`}>
+      <ProfileNotice tone="yellow" title={messages.publicProfilePage.notOnAppTitle(APP_NAME)}>
         <strong>@{handle}</strong> {messages.publicProfilePage.notOnAppBodyPrefix}
         {APP_NAME}
         {messages.publicProfilePage.notOnAppBodySuffix}

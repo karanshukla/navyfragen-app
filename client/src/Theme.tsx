@@ -132,11 +132,11 @@ const navyfragenTheme = createTheme({
   spacing: { xs: "8px", sm: "12px", md: "16px", lg: "24px", xl: "32px" },
 
   shadows: {
-    xs: "0 1px 2px rgba(20,18,58,.06)",
-    sm: "0 1px 2px rgba(20,18,58,.06), 0 1px 3px rgba(20,18,58,.04)",
-    md: "0 4px 12px -2px rgba(20,18,58,.08), 0 2px 4px rgba(20,18,58,.04)",
-    lg: "0 12px 30px -8px rgba(20,18,58,.18), 0 4px 10px rgba(20,18,58,.06)",
-    xl: "0 30px 60px -20px rgba(20,18,58,.35)",
+    xs: "0 1px 2px rgba(20,18,58,.06)" /* i18n-allow */,
+    sm: "0 1px 2px rgba(20,18,58,.06), 0 1px 3px rgba(20,18,58,.04)" /* i18n-allow */,
+    md: "0 4px 12px -2px rgba(20,18,58,.08), 0 2px 4px rgba(20,18,58,.04)" /* i18n-allow */,
+    lg: "0 12px 30px -8px rgba(20,18,58,.18), 0 4px 10px rgba(20,18,58,.06)" /* i18n-allow */,
+    xl: "0 30px 60px -20px rgba(20,18,58,.35)" /* i18n-allow */,
   },
 
   components: {

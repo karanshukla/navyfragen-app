@@ -31,7 +31,8 @@ const shortlinkurl = import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profi
 const MAX_BSKY_POST_LENGTH = 280;
 const GENERAL_BUFFER = 3;
 /** How the question is quoted into the post when it is not sent as an image. */
-const quotedQuestion = (message: string) => ` \\n\\nAnon asked via 💙📩❓: *${message}*`;
+const quotedQuestion = (message: string) =>
+  ` \\n\\nAnon asked via 💙📩❓: *${message}*`; /* i18n-allow: budget-only, mirrors the server's own quoting, never rendered by this client */
 
 /** /messages/respond's answer when the render it was handed is not ready yet. */
 const RENDER_NOT_READY = 409;

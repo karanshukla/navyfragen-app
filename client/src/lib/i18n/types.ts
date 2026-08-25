@@ -90,6 +90,7 @@ export interface PostingPreferencesMessages {
   includeQuestionAsImage: { label: string; description: string };
   confirmBeforeDelete: { label: string; description: string };
   autoScrollToMessages: { label: string; description: string };
+  summary: (enabled: number, total: number) => string;
 }
 
 export interface QuestionCardMessages {
@@ -129,7 +130,11 @@ export interface ThemesMessages {
 }
 
 export interface NavMessages {
-  friendGroups: { moots: string; following: string; oomfs: string };
+  friendGroups: {
+    moots: { label: string; emptyText: (appName: string) => string };
+    following: { label: string; emptyText: (appName: string) => string };
+    oomfs: { label: string; emptyText: (appName: string) => string };
+  };
   viewingProfile: string;
   unreadCount: (count: number) => string;
 }
@@ -158,6 +163,7 @@ export interface HomeMessages {
   copyProfileLink: string;
   copyLinkButton: string;
   getStarted: string;
+  shareTitle: (appName: string) => string;
 }
 
 export interface SettingsPageMessages {
@@ -180,6 +186,11 @@ export interface SettingsPageMessages {
   deleteMyData: string;
   deleteAccountTitle: string;
   deleteAccountMessage: string;
+  pdsSyncDescription: (appName: string) => string;
+  feedTitle: (appName: string) => string;
+  feedDescription: (appName: string) => string;
+  dailyNotificationsDescription: (appName: string) => string;
+  deleteMyDataDescription: (appName: string) => string;
 }
 
 export interface CustomisePageMessages {
@@ -211,6 +222,7 @@ export interface PublicProfilePageMessages {
   sendFailedTitle: string;
   noBlueskyAccountTitle: string;
   noBlueskyAccountBody: string;
+  notOnAppTitle: (appName: string) => string;
   notOnAppBodyPrefix: string;
   notOnAppBodySuffix: string;
   profileLoadFailed: string;
@@ -316,6 +328,7 @@ export interface UserMenuMessages {
   accountsLabel: string;
   addAccount: string;
   viewProfile: string;
+  logOut: (handle: string | undefined) => string;
 }
 
 export interface Messages {

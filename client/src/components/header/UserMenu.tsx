@@ -172,7 +172,7 @@ export function UserMenu({
           }}
           leftSection={<IconLogout size="1.2rem" stroke={1.5} />}
         >
-          {`Log out @${userProfile.handle}`}
+          {messages.userMenu.logOut(userProfile.handle)}
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>

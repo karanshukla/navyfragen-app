@@ -4,14 +4,19 @@
 // catalog (client/src/lib/i18n/en.ts), so a new one belongs there too, not
 // scattered back through JSX attributes and object properties.
 //
-// Heuristic, not a parser: a double-quoted string literal counts as prose if
-// it starts uppercase or contains a space, the same reproduction grep #402's
-// own issue used to find the ~210 strings this replaced. A handful of
-// positions are genuinely never prose — an SVG path's `d`, a `rel`
-// attribute, a CSS `fontFamily` value — and are allowlisted by name, as are
-// a few recurring technical values (`KeyboardEvent.key`, `DOMException.name`)
-// allowlisted by exact match. Anything else gets `/* i18n-allow */` on the
-// same line: explicit, and `grep -rn i18n-allow` finds every exception.
+// Heuristic, not a parser: a string literal counts as prose if it starts
+// uppercase or contains a space, the same reproduction grep #402's own issue
+// used to find the ~210 strings this replaced. Template literals count too —
+// interpolating `${APP_NAME}` into a sentence is a reason to catalog the
+// string as a function, not a reason to exempt it — evaluated against their
+// *static* text (the parts outside `${...}`), so `${x}/${y}` reads as empty
+// and `Not on ${APP_NAME}` reads as "Not on ". A handful of positions are
+// genuinely never prose — an SVG path's `d` or `viewBox`, a `rel` attribute,
+// a `transform` or `border` CSS value, a `fontFamily` value — and are
+// allowlisted by name, as are a few recurring technical values
+// (`KeyboardEvent.key`, `DOMException.name`) allowlisted by exact match.
+// Anything else gets `/* i18n-allow */` on the same line: explicit, and
+// `grep -rn i18n-allow` finds every exception.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -48,8 +53,19 @@ export function walk(dir) {
 }
 
 // Position names whose value is never prose regardless of shape: an SVG
-// path's `d`, a link's `rel`, a Mantine theme's `fontFamily`.
-const ALLOWED_POSITION_NAMES = new Set(["rel", "d", "fontFamily"]);
+// path's `d` or `viewBox`, a link's `rel`, a Mantine theme's `fontFamily`,
+// and the `transform`/`border` CSS values that are the template-literal
+// equivalent of the same problem (`` `1px solid ${x}` `` starts with a digit
+// but "1px solid " still contains the space that trips the heuristic).
+const ALLOWED_POSITION_NAMES = new Set([
+  "rel",
+  "d",
+  "viewBox",
+  "fontFamily",
+  "transform",
+  "border",
+  "borderTop",
+]);
 
 // Exact values that are technical vocabulary, not UI copy: KeyboardEvent.key
 // comparisons and DOMException.name checks.
@@ -71,9 +87,43 @@ const ESCAPE_MARKER = "i18n-allow";
 // property, the two positions #402's in-scope rule cares about.
 const STRING_LITERAL = /(?:([A-Za-z][\w-]*)\s*[:=]\s*)?"((?:[^"\\]|\\.)*)"/g;
 
+// Same idea, backtick-delimited — plus an optional `{`, since JSX never
+// allows a bare backtick as an attribute value: `viewBox={\`...\`}`, not
+// `viewBox=\`...\``. Single-line only — this codebase has no multi-line
+// template literals in client/src/**/*.tsx today (checked via an
+// even-backtick-count scan per file), and a line-based checker can't see
+// across a line break anyway.
+const TEMPLATE_LITERAL = /(?:([A-Za-z][\w-]*)\s*[:=]\s*\{?\s*)?`((?:[^`\\]|\\.)*)`/g;
+
 function looksLikeProse(value) {
   if (value.length < 4) return false;
-  return /^[A-Z]/.test(value) || /^[a-z]+ /.test(value);
+  return /^[A-Z]/.test(value) || value.includes(" ");
+}
+
+// The parts of a template literal outside `${...}` — brace-depth aware, so
+// an expression that itself contains braces (`${a ? {x:1}.x : 0}`) doesn't
+// desync the scan. `Not on ${APP_NAME}` reduces to "Not on "; `${x}/${y}`
+// reduces to "/".
+export function staticTextOf(templateContent) {
+  let out = "";
+  let depth = 0;
+
+  for (let i = 0; i < templateContent.length; i++) {
+    const ch = templateContent[i];
+    if (depth === 0 && ch === "$" && templateContent[i + 1] === "{") {
+      depth = 1;
+      i++;
+      continue;
+    }
+    if (depth > 0) {
+      if (ch === "{") depth++;
+      else if (ch === "}") depth--;
+      continue;
+    }
+    out += ch;
+  }
+
+  return out;
 }
 
 // Blanks out line and block comments (line breaks kept, so line numbers
@@ -151,6 +201,14 @@ export function checkFile(file, root = REPO_ROOT) {
       if (name && ALLOWED_POSITION_NAMES.has(name)) continue;
       if (ALLOWED_EXACT_VALUES.has(value)) continue;
       failures.push(`${relative(root, file)}:${index + 1}: "${value}"`);
+    }
+
+    for (const match of line.matchAll(TEMPLATE_LITERAL)) {
+      const [, name, content] = match;
+      const staticText = staticTextOf(content);
+      if (!looksLikeProse(staticText)) continue;
+      if (name && ALLOWED_POSITION_NAMES.has(name)) continue;
+      failures.push(`${relative(root, file)}:${index + 1}: \`${content}\``);
     }
   });
 

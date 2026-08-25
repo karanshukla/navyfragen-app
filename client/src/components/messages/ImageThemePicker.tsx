@@ -23,7 +23,7 @@ export function ImageThemePicker({ selected, disabled, onSelect }: ImageThemePic
   const themes = imageThemeLabels(messages);
   const shortcuts = [
     { label: messages.common.shortcuts.focusCycleCards, hint: "Alt+R" /* i18n-allow */ },
-    { label: messages.common.shortcuts.navigateCards, hint: "↑ / ↓" },
+    { label: messages.common.shortcuts.navigateCards, hint: "↑ / ↓" /* i18n-allow */ },
     { label: messages.common.shortcuts.closeExpandedCard, hint: "Esc" /* i18n-allow */ },
   ];
 
