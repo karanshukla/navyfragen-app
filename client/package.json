@@ -14,6 +14,7 @@
     "test": "bunx --bun vitest run",
     "test:watch": "bunx --bun vitest",
     "test:coverage": "bunx --bun vitest run --coverage",
+    "check:i18n": "bun ../scripts/check-i18n.mjs",
     "probe:bun": "bun --bun probe-bun-vite.mjs",
     "render:brand-assets": "bun scripts/render-brand-assets.ts"
   },

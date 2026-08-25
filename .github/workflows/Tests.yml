@@ -449,3 +449,24 @@ jobs:
           parallel-finished: true
           carryforward: "client,server"
           coverage-threshold-percent: 97
+
+  check-i18n:
+    name: Check i18n
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # #402 moved the client's ~210 UI strings into client/src/lib/i18n/en.ts;
+    # this is what stops a new bare literal from creeping back in.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Test the checker
+        run: bun run test:i18n
+
+      - name: Check for bare prose string literals
+        run: bun run check:i18n
