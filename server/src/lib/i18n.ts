@@ -7,7 +7,7 @@
  * never `touchpointLocale` (the owner's audience) — both push and the seeded
  * questions are read by the owner, not their audience.
  *
- * Ships `en` only. Adding a locale is one object below plus one entry in
+ * Ships `en` and `es`. Adding a locale is one object below plus one entry in
  * `CATALOGS`; nothing else in this module (or its callers) changes.
  */
 import { APP_NAME } from "./brand";
@@ -21,7 +21,7 @@ export interface ServerMessages {
   exampleQuestions: readonly string[];
 }
 
-export type ServerLocale = "en";
+export type ServerLocale = "en" | "es";
 
 const en = {
   push: {
@@ -41,7 +41,25 @@ const en = {
   ],
 } satisfies ServerMessages;
 
-const CATALOGS: Record<ServerLocale, ServerMessages> = { en };
+const es = {
+  push: {
+    titleForHandle: (handle: string) => `Nueva pregunta para @${handle}`,
+    titleAnonymous: "Nueva pregunta anónima",
+    body: `¡Alguien te envió una pregunta anónima en ${APP_NAME}!`,
+  },
+  exampleQuestions: [
+    "¿Te gustan los gatos?",
+    "¿Te gustan los perros?",
+    "¿Cuál es tu película favorita?",
+    "Si pudieras viajar a cualquier lugar, ¿a dónde irías?",
+    "¿Qué es algo que la mayoría de la gente no sabe sobre ti?",
+    "¿Cuál es el mejor consejo que has recibido?",
+    "¿Con qué estás obsesionado/a en este momento?",
+    "¿Cuál es tu opinión más controvertida sobre algo totalmente cotidiano?",
+  ],
+} satisfies ServerMessages;
+
+const CATALOGS: Record<ServerLocale, ServerMessages> = { en, es };
 
 /**
  * Falls back to `en` for an unset, unrecognized, or not-yet-shipped locale —

@@ -39,4 +39,23 @@ describe("getServerMessages", () => {
     assert.strictEqual(typeof messages.push.body, "string");
     assert.ok(Array.isArray(messages.exampleQuestions));
   });
+
+  test("returns the es catalog for 'es'", () => {
+    const messages = getServerMessages("es");
+    assert.strictEqual(messages.push.titleAnonymous, "Nueva pregunta anónima");
+    assert.strictEqual(messages.push.titleForHandle("alice"), "Nueva pregunta para @alice");
+    assert.strictEqual(
+      messages.push.body,
+      `¡Alguien te envió una pregunta anónima en ${APP_NAME}!`
+    );
+    assert.strictEqual(messages.exampleQuestions.length, 8);
+  });
+
+  test("does not fall back to en for 'es'", () => {
+    assert.notDeepStrictEqual(getServerMessages("es"), getServerMessages("en"));
+  });
+
+  test("falls back to en for a related-but-unrecognized locale tag like 'es-MX'", () => {
+    assert.deepStrictEqual(getServerMessages("es-MX"), getServerMessages("en"));
+  });
 });
