@@ -116,14 +116,15 @@ export function AppLayout() {
 }
 
 function NotFoundPage() {
+  const messages = useTranslations();
   return (
     <Container>
       <Paper p="xl" radius="md" withBorder shadow="xs">
         <Title order={2} style={{ color: dangerText }}>
-          404 - Not Found
+          {messages.notFoundPage.title}
         </Title>
         <Text c="dimmed" mt="md">
-          The requested resource was not found.
+          {messages.notFoundPage.message}
         </Text>
       </Paper>
     </Container>

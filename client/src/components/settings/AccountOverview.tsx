@@ -1,5 +1,7 @@
 import { Paper, SimpleGrid, Skeleton, Stack, Text } from "@mantine/core";
 
+import { useTranslations } from "../../lib/i18n";
+
 import * as styles from "./AccountOverview.styles";
 
 /** Deliberately unequal, to create visual hierarchy. */
@@ -18,10 +20,11 @@ interface AccountOverviewProps {
 }
 
 export function AccountOverview({ loading, stats }: AccountOverviewProps) {
+  const messages = useTranslations();
   return (
     <Paper withBorder style={styles.panel}>
       <Text fw={700} fz={18} mb={18}>
-        Account Overview
+        {messages.settingsPage.accountOverview}
       </Text>
       {loading ? (
         <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl">

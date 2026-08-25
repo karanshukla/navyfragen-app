@@ -310,6 +310,7 @@ export const en = {
   },
   settingsPage: {
     heading: "Settings",
+    accountOverview: "Account Overview",
     updateFailedTitle: "Update Failed",
     pdsSync: "PDS Sync",
     messagesInInbox: "Messages in inbox",
@@ -381,5 +382,9 @@ export const en = {
       E2E_LOGIN_NO_DID: "Login failed. Please try again.",
     },
     generic: "Something went wrong. Please try again.",
+  },
+  notFoundPage: {
+    title: "404 - Not Found",
+    message: "The requested resource was not found.",
   },
 } satisfies Messages;
