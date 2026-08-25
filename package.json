@@ -12,6 +12,7 @@
     "prepare": "bunx --bun husky || true",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "typecheck": "bunx --bun tsc --noEmit",
     "check:doc-links": "bun scripts/check-doc-links.mjs",
     "test:doc-links": "bun test scripts/check-doc-links.test.ts",
     "check:i18n": "bun scripts/check-i18n.mjs",
@@ -20,6 +21,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@types/bun": "1.4.0",
+    "@types/node": "^26.2.0",
     "concurrently": "^10.0.5",
     "dotenv": "^17.4.2",
     "happy-dom": "^20.11.6",

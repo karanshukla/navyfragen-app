@@ -51,7 +51,15 @@ const SKIP_DIRS = new Set([
 /** Path, relative to `client/src`, of the touchpoint catalogs (#266). */
 const TOUCHPOINT_CATALOG = join("lib", "touchpointTranslations.ts");
 
+/**
+ * Every `.ts`/`.tsx` file under `dir` the checker is responsible for.
+ *
+ * @param {string} dir Directory to descend into.
+ * @param {string} [root] Root the skip list is resolved against; defaults to `dir`.
+ * @returns {string[]} Absolute paths.
+ */
 export function walk(dir, root = dir) {
+  /** @type {string[]} */
   const found = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith(".")) continue;
