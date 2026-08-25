@@ -58,4 +58,58 @@ describe("getServerMessages", () => {
   test("falls back to en for a related-but-unrecognized locale tag like 'es-MX'", () => {
     assert.deepStrictEqual(getServerMessages("es-MX"), getServerMessages("en"));
   });
+
+  test("returns the pt catalog for 'pt'", () => {
+    const messages = getServerMessages("pt");
+    assert.strictEqual(messages.push.titleAnonymous, "Nova pergunta anônima");
+    assert.strictEqual(messages.push.titleForHandle("alice"), "Nova pergunta para @alice");
+    assert.strictEqual(messages.push.body, `Alguém te enviou uma pergunta anônima no ${APP_NAME}!`);
+    assert.strictEqual(messages.exampleQuestions.length, 8);
+  });
+
+  test("does not fall back to en for 'pt'", () => {
+    assert.notDeepStrictEqual(getServerMessages("pt"), getServerMessages("en"));
+  });
+
+  test("falls back to en for a related-but-unrecognized locale tag like 'pt-BR'", () => {
+    assert.deepStrictEqual(getServerMessages("pt-BR"), getServerMessages("en"));
+  });
+
+  test("returns the de catalog for 'de'", () => {
+    const messages = getServerMessages("de");
+    assert.strictEqual(messages.push.titleAnonymous, "Neue anonyme Frage");
+    assert.strictEqual(messages.push.titleForHandle("alice"), "Neue Frage für @alice");
+    assert.strictEqual(
+      messages.push.body,
+      `Jemand hat dir eine anonyme Frage auf ${APP_NAME} geschickt!`
+    );
+    assert.strictEqual(messages.exampleQuestions.length, 8);
+  });
+
+  test("does not fall back to en for 'de'", () => {
+    assert.notDeepStrictEqual(getServerMessages("de"), getServerMessages("en"));
+  });
+
+  test("falls back to en for a related-but-unrecognized locale tag like 'de-AT'", () => {
+    assert.deepStrictEqual(getServerMessages("de-AT"), getServerMessages("en"));
+  });
+
+  test("returns the fr catalog for 'fr'", () => {
+    const messages = getServerMessages("fr");
+    assert.strictEqual(messages.push.titleAnonymous, "Nouvelle question anonyme");
+    assert.strictEqual(messages.push.titleForHandle("alice"), "Nouvelle question pour @alice");
+    assert.strictEqual(
+      messages.push.body,
+      `Quelqu'un t'a envoyé une question anonyme sur ${APP_NAME} !`
+    );
+    assert.strictEqual(messages.exampleQuestions.length, 8);
+  });
+
+  test("does not fall back to en for 'fr'", () => {
+    assert.notDeepStrictEqual(getServerMessages("fr"), getServerMessages("en"));
+  });
+
+  test("falls back to en for a related-but-unrecognized locale tag like 'fr-CA'", () => {
+    assert.deepStrictEqual(getServerMessages("fr-CA"), getServerMessages("en"));
+  });
 });
