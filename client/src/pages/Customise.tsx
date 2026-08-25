@@ -17,7 +17,7 @@ import { ProfileThemeSwatches } from "../components/customise/ProfileThemeSwatch
 import { SettingsSection } from "../components/customise/SettingsSection";
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
-import { useTranslations } from "../lib/i18n";
+import { uiLocaleOptions, useTranslations } from "../lib/i18n";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 import { useNumberFormat } from "../lib/useNumberFormat";
 
@@ -25,7 +25,7 @@ import * as styles from "./Customise.styles";
 
 const MAX_PROMPT_LENGTH = 100;
 const CARD_SPAN = { base: 12, md: 6 };
-/** The swatch picker needs the width; on mobile every card is full width anyway. */
+/** The swatch picker and the prompt both want the width; mobile is full width anyway. */
 const FULL_ROW_SPAN = 12;
 
 /**
@@ -107,7 +107,7 @@ export default function Customise() {
         eyebrow={messages.customisePage.yourPublicProfile}
         help={messages.customisePage.yourPublicProfileHelp}
       >
-        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+        <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.customisePage.profilePrompt}
             description={messages.customisePage.profilePromptDescription}
@@ -127,6 +127,58 @@ export default function Customise() {
                 aria-label={messages.customisePage.profilePrompt}
                 description={`${formatNumber(promptDraft.length)}/${formatNumber(MAX_PROMPT_LENGTH)}`}
                 styles={styles.promptCounter}
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
+
+        <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.customisePage.profileCardColour}
+            description={messages.customisePage.profileCardColourDescription}
+          >
+            {field(
+              56,
+              <ProfileThemeSwatches
+                value={userSettings?.profileCardTheme ?? null}
+                disabled={busy}
+                onPick={(value) => updateSettings.mutate({ profileCardTheme: value })}
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
+      </SettingsSection>
+
+      <SettingsSection
+        eyebrow={messages.customisePage.languages}
+        help={messages.customisePage.languagesHelp}
+      >
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.customisePage.appLanguage}
+            description={messages.customisePage.appLanguageDescription}
+          >
+            {field(
+              36,
+              <Select
+                data={uiLocaleOptions}
+                value={
+                  uiLocaleOptions.some((l) => l.value === userSettings?.uiLocale)
+                    ? userSettings!.uiLocale!
+                    : "en"
+                }
+                // Only "en" exists (#401) and it's always the selected option, so
+                // Mantine never fires onChange through the rendered UI — see
+                // docs/testing-notes.md.
+                onChange={
+                  /* istanbul ignore next */
+                  (value) => {
+                    updateSettings.mutate({ uiLocale: value || null });
+                  }
+                }
+                disabled={busy}
+                allowDeselect={false}
+                aria-label={messages.customisePage.appLanguage}
               />
             )}
           </SettingsCard>
@@ -154,22 +206,6 @@ export default function Customise() {
                 disabled={busy}
                 allowDeselect={false}
                 aria-label={messages.customisePage.messageLanguage}
-              />
-            )}
-          </SettingsCard>
-        </Grid.Col>
-
-        <Grid.Col span={FULL_ROW_SPAN} style={{ display: "flex" }}>
-          <SettingsCard
-            title={messages.customisePage.profileCardColour}
-            description={messages.customisePage.profileCardColourDescription}
-          >
-            {field(
-              56,
-              <ProfileThemeSwatches
-                value={userSettings?.profileCardTheme ?? null}
-                disabled={busy}
-                onPick={(value) => updateSettings.mutate({ profileCardTheme: value })}
               />
             )}
           </SettingsCard>

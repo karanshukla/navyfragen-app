@@ -37,6 +37,7 @@ function mockSettings(overrides: Record<string, unknown> = {}) {
       customPrompt: null,
       profileCardTheme: null,
       touchpointLocale: null,
+      uiLocale: null,
       createdAt: "2025-01-01T00:00:00.000Z",
       ...overrides,
     },
@@ -83,9 +84,11 @@ describe("Customise page", () => {
     expect(screen.getByRole("heading", { name: en.customisePage.heading })).toBeInTheDocument();
     // Section eyebrows
     expect(screen.getByText(en.customisePage.yourPublicProfile)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.languages)).toBeInTheDocument();
     expect(screen.getByText(en.customisePage.messageIntake)).toBeInTheDocument();
     // Wired cards
     expect(screen.getByText(en.customisePage.profilePrompt)).toBeInTheDocument();
+    expect(screen.getByText(en.customisePage.appLanguage)).toBeInTheDocument();
     expect(screen.getByText(en.customisePage.messageLanguage)).toBeInTheDocument();
     expect(screen.getByText(en.customisePage.profileCardColour)).toBeInTheDocument();
     expect(screen.getByText(en.customisePage.inbox)).toBeInTheDocument();
@@ -146,6 +149,47 @@ describe("Customise page", () => {
     );
   });
 
+  it("shows English as the App language selector's default value", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: null }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.appLanguage })).toHaveValue(
+      "English"
+    );
+  });
+
+  it("shows the matching label when uiLocale is already set to a known locale", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: "en" }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.appLanguage })).toHaveValue(
+      "English"
+    );
+  });
+
+  it("shows English for the App language selector when uiLocale is an unsupported value", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ uiLocale: "de" }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.appLanguage })).toHaveValue(
+      "English"
+    );
+  });
+
+  it("disables the App language selector while an update is in flight", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    mockUseUpdateUserSettings.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+    } as any);
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.appLanguage })).toBeDisabled();
+  });
+
   it("picking a profile card theme swatch fires updateSettings with profileCardTheme", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());
     const mutate = mockMutation();
@@ -200,6 +244,7 @@ describe("Customise page", () => {
 
     expect(screen.getByRole("heading", { name: en.customisePage.heading })).toBeInTheDocument();
     expect(screen.queryByLabelText(en.customisePage.profilePrompt)).toBeNull();
+    expect(screen.queryByLabelText(en.customisePage.appLanguage)).toBeNull();
     expect(screen.queryByLabelText(en.customisePage.messageLanguage)).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
   });

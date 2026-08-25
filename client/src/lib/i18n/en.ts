@@ -166,12 +166,18 @@ export const en = {
     profilePromptDescription:
       "The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”.",
     profilePromptPlaceholder: "Ask me anything…",
-    messageLanguage: "Message language",
-    messageLanguageDescription:
-      "Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting.",
     profileCardColour: "Profile card colour",
     profileCardColourDescription:
       "The colour treatment of your ask card. Curated presets keep the text and button legible on every option.",
+    languages: "Languages",
+    languagesHelp:
+      "Two audiences, two languages — the one you read the app in, and the one your visitors read.",
+    appLanguage: "App language",
+    appLanguageDescription:
+      "The language you read the app in — nav, buttons, and toasts. Only you see it.",
+    messageLanguage: "Message language",
+    messageLanguageDescription:
+      "Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting.",
     messageIntake: "Message intake",
     messageIntakeHelp: "Who can reach your inbox, and what gets through.",
     inbox: "Inbox",
@@ -333,9 +339,6 @@ export const en = {
     installApplicationDescription:
       "Install the app for faster access on any device: phone, tablet or laptop. It runs in the same browser, and you can uninstall it any time.",
     install: "Install ",
-    appLanguage: "App language",
-    appLanguageDescription:
-      "The language you read the app in — nav, buttons, and toasts. Separate from Message language on Customise, which is what visitors and your audience see.",
     openFeedOnBluesky: "Open Feed on Bluesky",
     dailyNotifications: "Daily Notifications",
     viewBotOnBluesky: "View bot on Bluesky",

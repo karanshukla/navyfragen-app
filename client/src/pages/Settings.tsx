@@ -1,4 +1,4 @@
-import { Alert, Button, Grid, Select, Skeleton, Title } from "@mantine/core";
+import { Alert, Button, Grid, Skeleton, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconDownload, IconExternalLink, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
@@ -20,7 +20,7 @@ import { AccountOverview, type Stat } from "../components/settings/AccountOvervi
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
 import { APP_NAME } from "../lib/brand";
-import { uiLocaleOptions, useLocale, useTranslations } from "../lib/i18n";
+import { useLocale, useTranslations } from "../lib/i18n";
 import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useNumberFormat } from "../lib/useNumberFormat";
 
@@ -58,7 +58,6 @@ export default function Settings() {
   const isFollowingBot = Boolean(botFollowData?.following);
 
   const { triggerHaptic } = useHaptic(1);
-  const busy = updateSettings.isPending;
 
   const handleInstallClick = async () => {
     triggerHaptic();
@@ -160,40 +159,6 @@ export default function Settings() {
             control={pdsSyncControl}
           >
             {settingsError ? settingsLoadError : null}
-          </SettingsCard>
-        </Grid.Col>
-
-        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
-          <SettingsCard
-            title={messages.settingsPage.appLanguage}
-            description={messages.settingsPage.appLanguageDescription}
-          >
-            {settingsLoading ? (
-              <Skeleton height={36} radius="sm" />
-            ) : settingsError ? (
-              settingsLoadError
-            ) : (
-              <Select
-                data={uiLocaleOptions}
-                value={
-                  uiLocaleOptions.some((l) => l.value === userSettings?.uiLocale)
-                    ? userSettings!.uiLocale!
-                    : "en"
-                }
-                // Only "en" exists (#401) and it's always the selected option, so
-                // Mantine never fires onChange through the rendered UI — see
-                // docs/testing-notes.md.
-                onChange={
-                  /* istanbul ignore next */
-                  (value) => {
-                    updateSettings.mutate({ uiLocale: value || null });
-                  }
-                }
-                disabled={busy}
-                allowDeselect={false}
-                aria-label={messages.settingsPage.appLanguage}
-              />
-            )}
           </SettingsCard>
         </Grid.Col>
 

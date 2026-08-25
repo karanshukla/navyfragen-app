@@ -68,7 +68,7 @@ denominator).
 `LOCALE_LOADERS`, remove both markers and add two tests: one where the loader
 resolves, one where it rejects and `loadCatalog` falls back to `en`.
 
-### `client/src/pages/Settings.tsx` — unreachable App language `Select`'s `onChange`
+### `client/src/pages/Customise.tsx` — unreachable App language `Select`'s `onChange`
 
 **Line:** the `onChange` handler on the "App language" `Select` (`uiLocale`).
 
@@ -78,9 +78,9 @@ always `"en"`, the only option in `data` is also `"en"`, and Mantine does not fi
 `onChange` when a click resolves to the option already selected (verified against
 the rendered DOM: `aria-selected="true"`/`data-checked="true"` on that option before
 the click). The handler is therefore never reachable through the UI while only one
-locale exists — unlike the `/customise` "Message language" `Select` two entries
-above, which has five options today and reaches `onChange` through a real selection
-change.
+locale exists — unlike the "Message language" `Select` beside it in the same
+Languages section, which has five options today and reaches `onChange` through a real
+selection change.
 
 **Marker placement:** `/* istanbul ignore next */` sits directly above the `onChange`
 attribute, ignoring the whole arrow function — not just a statement inside it, since
@@ -88,8 +88,8 @@ the function itself is never invoked (0 calls), not merely a branch within a cal
 function.
 
 **What it would take to test:** Nothing to mock — once #406 adds a second locale to
-`uiLocaleOptions`, remove the marker and add a "picking a locale" test mirroring
-`Customise.test.tsx`'s `touchpointLocale` one.
+`uiLocaleOptions`, remove the marker and add a "picking a locale" test mirroring the
+`touchpointLocale` one directly above it in `Customise.test.tsx`.
 
 ### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
 
