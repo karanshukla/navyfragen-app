@@ -279,6 +279,8 @@ export const en = {
   updateAvailableButton: {
     ariaLabel: "Update available — reload to apply",
     buttonLabel: "Update",
+    applyingAriaLabel: "Applying the update — the page will reload",
+    applyingLabel: "Updating…",
   },
   userMenu: {
     switchAccountErrorTitle: "Couldn't switch account",

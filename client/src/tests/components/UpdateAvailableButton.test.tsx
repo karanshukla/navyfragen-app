@@ -80,6 +80,34 @@ describe("UpdateAvailableButton", () => {
     expect(triggerHaptic).toHaveBeenCalledTimes(1);
   });
 
+  it("shows a pending state while the update is being applied", async () => {
+    swUpdate.setUpdateApplier(vi.fn());
+    swUpdate.markUpdateReady();
+    renderWithProviders(<UpdateAvailableButton />);
+
+    await userEvent.click(screen.getByRole("button", { name: en.updateAvailableButton.ariaLabel }));
+
+    const button = screen.getByRole("button", {
+      name: en.updateAvailableButton.applyingAriaLabel,
+    });
+    expect(button).toHaveTextContent(en.updateAvailableButton.applyingLabel);
+    expect(button).toBeDisabled();
+  });
+
+  it("does not apply the update twice when pressed again", async () => {
+    const applier = vi.fn();
+    swUpdate.setUpdateApplier(applier);
+    swUpdate.markUpdateReady();
+    renderWithProviders(<UpdateAvailableButton />);
+
+    await userEvent.click(screen.getByRole("button", { name: en.updateAvailableButton.ariaLabel }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en.updateAvailableButton.applyingAriaLabel })
+    );
+
+    expect(applier).toHaveBeenCalledTimes(1);
+  });
+
   it("unsubscribes from the store on unmount", () => {
     const { unmount } = renderWithProviders(<UpdateAvailableButton />);
 
