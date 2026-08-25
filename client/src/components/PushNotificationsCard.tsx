@@ -11,23 +11,22 @@ import {
 } from "../api/notificationService";
 import { useTranslations } from "../lib/i18n";
 import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
+import type { Messages } from "../lib/i18n/types";
 
 import { SettingsCard } from "./SettingsCard";
 import { SettingsToggle } from "./SettingsToggle";
 
 const SUBSCRIBED_FLAG = "nf-push-subscribed";
 
-const DESCRIPTION =
-  "Get a push notification when a message arrives. Accept your browser's prompt to turn it on; clearing site data turns it off. Covers every account signed in on this device.";
-
 function blockedReason(
+  messages: Messages,
   isServerPushAvailable: boolean | undefined,
   permission: PushPermission
 ): string | undefined {
-  if (isServerPushAvailable === false) return "Push is not configured on this server.";
-  if (permission === "unsupported") return "This browser cannot receive push notifications.";
+  if (isServerPushAvailable === false) return messages.pushNotificationsCard.serverUnavailable;
+  if (permission === "unsupported") return messages.pushNotificationsCard.browserUnsupported;
   if (permission === "denied") {
-    return "Blocked in your browser settings. Re-allow notifications for this site to turn it on.";
+    return messages.pushNotificationsCard.browserBlocked;
   }
   return undefined;
 }
@@ -51,7 +50,7 @@ export function PushNotificationsCard() {
   const isSubscribed = permission === "granted" && locallySubscribed;
 
   const isBusy = enablePush.isPending || disablePush.isPending;
-  const unavailable = blockedReason(isServerPushAvailable, permission);
+  const unavailable = blockedReason(messages, isServerPushAvailable, permission);
 
   const togglePush = async () => {
     try {
@@ -66,7 +65,7 @@ export function PushNotificationsCard() {
       }
     } catch (err) {
       notifications.show({
-        title: "Push notifications",
+        title: messages.pushNotificationsCard.toastTitle,
         message: resolveApiErrorMessage(err as { error?: string; message?: string }, messages),
         color: "red",
       });
@@ -75,15 +74,15 @@ export function PushNotificationsCard() {
 
   return (
     <SettingsCard
-      title="Push Notifications"
-      description={DESCRIPTION}
+      title={messages.pushNotificationsCard.title}
+      description={messages.pushNotificationsCard.description}
       note={unavailable}
       control={
         isCheckingAvailability ? (
           <Skeleton height={22} width={38} radius="xl" />
         ) : (
           <SettingsToggle
-            label="Push Notifications"
+            label={messages.pushNotificationsCard.title}
             checked={isSubscribed}
             onChange={togglePush}
             disabled={unavailable !== undefined}

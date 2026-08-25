@@ -225,6 +225,39 @@ export const en = {
     tryAgain: "Try again",
     redirectNotice: "You will be redirected automatically once login is complete.",
   },
+  pushNotificationsCard: {
+    description:
+      "Get a push notification when a message arrives. Accept your browser's prompt to turn it on; clearing site data turns it off. Covers every account signed in on this device.",
+    serverUnavailable: "Push is not configured on this server.",
+    browserUnsupported: "This browser cannot receive push notifications.",
+    browserBlocked:
+      "Blocked in your browser settings. Re-allow notifications for this site to turn it on.",
+    toastTitle: "Push notifications",
+    title: "Push Notifications",
+  },
+  shareButton: {
+    linkCopiedTitle: "Copied!",
+    linkCopiedMessage: "Link copied to clipboard.",
+    copyFailedTitle: "Copy failed",
+    copyFailedMessage: "Failed to copy link to clipboard.",
+    sharingUnavailableTitle: "Sharing unavailable",
+    sharingUnavailableMessage: "Sharing is not supported on this browser.",
+    button: "Share",
+  },
+  questionRender: {
+    renderLost: "The question image could not be rendered. Try sending again.",
+    renderUnreachable: "Could not check on the question image. Try sending again.",
+  },
+  notificationService: {
+    serverUnavailable: "Push notifications are not available on this server",
+    browserUnsupported: "Push notifications are not supported by this browser",
+    permissionDenied: "Notification permission was not granted",
+    subscriptionMissingEndpoint: "Push subscription returned no endpoint",
+  },
+  updateAvailableButton: {
+    ariaLabel: "Update available — reload to apply",
+    buttonLabel: "Update",
+  },
   userMenu: {
     switchAccountErrorTitle: "Couldn't switch account",
     userAvatarAltFallback: "User Avatar",

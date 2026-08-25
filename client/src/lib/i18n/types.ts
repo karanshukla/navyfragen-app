@@ -279,6 +279,42 @@ export interface OAuthCallbackMessages {
   redirectNotice: string;
 }
 
+export interface PushNotificationsCardMessages {
+  description: string;
+  serverUnavailable: string;
+  browserUnsupported: string;
+  browserBlocked: string;
+  toastTitle: string;
+  title: string;
+}
+
+export interface ShareButtonMessages {
+  linkCopiedTitle: string;
+  linkCopiedMessage: string;
+  copyFailedTitle: string;
+  copyFailedMessage: string;
+  sharingUnavailableTitle: string;
+  sharingUnavailableMessage: string;
+  button: string;
+}
+
+export interface QuestionRenderMessages {
+  renderLost: string;
+  renderUnreachable: string;
+}
+
+export interface NotificationServiceMessages {
+  serverUnavailable: string;
+  browserUnsupported: string;
+  permissionDenied: string;
+  subscriptionMissingEndpoint: string;
+}
+
+export interface UpdateAvailableButtonMessages {
+  ariaLabel: string;
+  buttonLabel: string;
+}
+
 export interface UserMenuMessages {
   switchAccountErrorTitle: string;
   userAvatarAltFallback: string;
@@ -311,4 +347,9 @@ export interface Messages {
   handleSuggestions: HandleSuggestionsMessages;
   e2eLoginPanel: E2ELoginPanelMessages;
   oauthCallback: OAuthCallbackMessages;
+  pushNotificationsCard: PushNotificationsCardMessages;
+  shareButton: ShareButtonMessages;
+  questionRender: QuestionRenderMessages;
+  notificationService: NotificationServiceMessages;
+  updateAvailableButton: UpdateAvailableButtonMessages;
 }
