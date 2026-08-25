@@ -4,6 +4,7 @@ import { useHaptic } from "use-haptic";
 
 import type { Message } from "../../api/messageService";
 import { formatTimestamp } from "../../lib/formatTimestamp";
+import { useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
 import { sunshineButton } from "../../styles/tokens";
 
@@ -54,10 +55,17 @@ export function QuestionCard({
   composer,
 }: QuestionCardProps) {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
   const deleteRefusal = pinned
-    ? { tooltip: "Unpin thread first", label: "Cannot delete thread root" }
+    ? {
+        tooltip: messages.questionCard.cannotDeleteThreadRootTooltip,
+        label: messages.questionCard.cannotDeleteThreadRootLabel,
+      }
     : locked
-      ? { tooltip: "Finish posting first", label: "Cannot delete while posting" }
+      ? {
+          tooltip: messages.questionCard.cannotDeleteWhilePostingTooltip,
+          label: messages.questionCard.cannotDeleteWhilePostingLabel,
+        }
       : null;
 
   return (
@@ -89,7 +97,11 @@ export function QuestionCard({
           </Text>
           <Group gap={2} align="center">
             <Tooltip
-              label={pinned ? "Unpin thread" : "Pin as thread root"}
+              label={
+                pinned
+                  ? messages.questionCard.unpinThreadTooltip
+                  : messages.questionCard.pinAsThreadRootTooltip
+              }
               withArrow
               position="left"
               openDelay={500}
@@ -97,7 +109,11 @@ export function QuestionCard({
               <ActionIcon
                 size="lg"
                 className={pinned ? "nf-pin-btn--active" : "nf-pin-btn"}
-                aria-label={pinned ? "Unpin thread root" : "Set as thread root"}
+                aria-label={
+                  pinned
+                    ? messages.questionCard.unpinThreadRootLabel
+                    : messages.questionCard.setAsThreadRootLabel
+                }
                 onClick={(e) => {
                   e.stopPropagation();
                   onTogglePin();
@@ -110,7 +126,7 @@ export function QuestionCard({
               </ActionIcon>
             </Tooltip>
             <Tooltip
-              label={deleteRefusal?.tooltip ?? "Delete message"}
+              label={deleteRefusal?.tooltip ?? messages.questionCard.deleteMessageTooltip}
               withArrow
               position="left"
               openDelay={500}
@@ -118,7 +134,7 @@ export function QuestionCard({
               <ActionIcon
                 size="lg"
                 className={deleteRefusal ? undefined : "nf-delete-btn"}
-                aria-label={deleteRefusal?.label ?? "Delete message"}
+                aria-label={deleteRefusal?.label ?? messages.questionCard.deleteMessageLabel}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (deleteRefusal) return;
@@ -162,7 +178,7 @@ export function QuestionCard({
         ) : (
           <Box mt={4} onClick={(e) => e.stopPropagation()}>
             <Tooltip
-              label="Respond to the thread root first"
+              label={messages.common.respondToThreadRootFirst}
               disabled={!blocked}
               withArrow
               openDelay={300}
@@ -180,7 +196,7 @@ export function QuestionCard({
                 fw={700}
                 style={{ ...sunshineButton, ...styles.replyButton(blocked) }}
               >
-                {inThread ? "↩ Reply to thread" : "↩ Reply"}
+                {inThread ? messages.questionCard.replyToThread : messages.questionCard.reply}
               </Button>
             </Tooltip>
           </Box>

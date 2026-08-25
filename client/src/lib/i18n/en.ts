@@ -11,6 +11,7 @@ export const en = {
     copyLink: "Copy link",
     share: "Share",
     userAltFallback: "User",
+    respondToThreadRootFirst: "Respond to the thread root first",
     shortcuts: {
       title: "Keyboard Shortcuts",
       home: "Home",
@@ -52,6 +53,70 @@ export const en = {
   },
   inboxLinkCard: {
     eyebrow: "Your inbox link · publicly accessible",
+  },
+  postingPreferences: {
+    title: "Posting preferences",
+    appendProfileLink: {
+      label: "Auto-append inbox link",
+      description: "Appends your link to every post. Reduces character budget.",
+    },
+    useGradients: {
+      label: "Gradient backgrounds",
+      description: "Pretty for screenshots. Turn off for higher contrast.",
+    },
+    includeQuestionAsImage: {
+      label: "Question as image",
+      description: "Generates a shareable image with auto alt text.",
+    },
+    confirmBeforeDelete: {
+      label: "Confirm before deleting",
+      description: "Leave off if you want to bulk-delete messages.",
+    },
+    autoScrollToMessages: {
+      label: "Auto-scroll to messages",
+      description: "Scrolls new messages into view when they load.",
+    },
+  },
+  questionCard: {
+    cannotDeleteThreadRootTooltip: "Unpin thread first",
+    cannotDeleteThreadRootLabel: "Cannot delete thread root",
+    cannotDeleteWhilePostingTooltip: "Finish posting first",
+    cannotDeleteWhilePostingLabel: "Cannot delete while posting",
+    unpinThreadTooltip: "Unpin thread",
+    pinAsThreadRootTooltip: "Pin as thread root",
+    unpinThreadRootLabel: "Unpin thread root",
+    setAsThreadRootLabel: "Set as thread root",
+    deleteMessageTooltip: "Delete message",
+    deleteMessageLabel: "Delete message",
+    replyToThread: "↩ Reply to thread",
+    reply: "↩ Reply",
+  },
+  replyComposer: {
+    stillRenderingImage: "Still rendering your question image…",
+    renderingImage: "Rendering your question image…",
+    posting: "Posting…",
+    stillGoingWakingRenderer: "Still going, waking the image renderer…",
+    stillGoing: "Still going…",
+    responseAriaLabel: "Your response",
+    placeholder: "write your reply…",
+    replyToThread: "Reply to thread",
+    reply: "Reply",
+  },
+  imageThemePicker: {
+    title: "Image theme",
+  },
+  themes: {
+    image: {
+      default: "Default",
+      compressed: "Compressed",
+      twitter: "Twitter Style",
+    },
+    profileCard: {
+      royal: "Royal",
+      aurora: "Aurora",
+      ember: "Ember",
+      verdant: "Verdant",
+    },
   },
   errors: {
     codes: {

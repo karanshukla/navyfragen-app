@@ -23,6 +23,12 @@ interface Options extends Omit<RenderOptions, "wrapper"> {
  * throwing when `I18nProvider` calls the now-missing export. `messages` lets
  * an individual test override the catalog; every other test gets `en` for
  * free.
+ *
+ * `Notifications` sits inside `I18nContext.Provider` rather than beside it —
+ * it renders toast content (e.g. a notification `message` built from a
+ * component that calls `useTranslations()`) through its own portal, which
+ * resolves context from its position in the React tree, not from where that
+ * content was created.
  */
 export function renderWithProviders(
   ui: React.ReactElement,
@@ -39,8 +45,8 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MantineProvider forceColorScheme={colorScheme}>
-          <Notifications />
           <I18nContext.Provider value={{ locale: "en", messages }}>
+            <Notifications />
             <MemoryRouter initialEntries={[route]}>
               <BounceLogosProvider>{children}</BounceLogosProvider>
             </MemoryRouter>

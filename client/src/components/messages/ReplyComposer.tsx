@@ -2,6 +2,8 @@ import { Box, Button, Group, Text, Textarea, Tooltip } from "@mantine/core";
 import { IconSend2 } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import { useTranslations } from "../../lib/i18n";
+import type { Messages } from "../../lib/i18n/types";
 import { useSlowRequestHint } from "../../lib/useSlowRequestHint";
 import { BRAND_GRADIENT } from "../../styles/tokens";
 
@@ -34,12 +36,21 @@ interface ReplyComposerProps {
  * pins both sides of the hint delay, that a text-only reply is never blamed on
  * the image renderer, and that a queued send says it is waiting on the image.
  */
-function sendingStatus(slow: boolean, includesImage: boolean, awaitingRender: boolean): string {
+function sendingStatus(
+  messages: Messages,
+  slow: boolean,
+  includesImage: boolean,
+  awaitingRender: boolean
+): string {
   if (awaitingRender) {
-    return slow ? "Still rendering your question image…" : "Rendering your question image…";
+    return slow
+      ? messages.replyComposer.stillRenderingImage
+      : messages.replyComposer.renderingImage;
   }
-  if (!slow) return "Posting…";
-  return includesImage ? "Still going, waking the image renderer…" : "Still going…";
+  if (!slow) return messages.replyComposer.posting;
+  return includesImage
+    ? messages.replyComposer.stillGoingWakingRenderer
+    : messages.replyComposer.stillGoing;
 }
 
 export function ReplyComposer({
@@ -56,6 +67,7 @@ export function ReplyComposer({
   textareaRef,
 }: ReplyComposerProps) {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
   const slow = useSlowRequestHint(sending);
 
   return (
@@ -69,7 +81,7 @@ export function ReplyComposer({
         autosize
         minRows={2}
         maxRows={4}
-        aria-label="Your response"
+        aria-label={messages.replyComposer.responseAriaLabel}
         onKeyDown={(e) => {
           e.stopPropagation();
           if (e.key === "Escape") {
@@ -80,7 +92,7 @@ export function ReplyComposer({
             onSend();
           }
         }}
-        placeholder="write your reply…"
+        placeholder={messages.replyComposer.placeholder}
         styles={styles.textarea}
       />
       <Group justify="space-between" align="center" mt={8}>
@@ -88,12 +100,12 @@ export function ReplyComposer({
           <CharRing count={value.length} limit={characterLimit} />
           <Text size="xs" style={styles.count} role={sending ? "status" : undefined}>
             {sending
-              ? sendingStatus(slow, includesImage, awaitingRender)
+              ? sendingStatus(messages, slow, includesImage, awaitingRender)
               : `${value.length}/${characterLimit}`}
           </Text>
         </Group>
         <Tooltip
-          label="Respond to the thread root first"
+          label={messages.common.respondToThreadRootFirst}
           disabled={!blocked}
           withArrow
           openDelay={300}
@@ -110,7 +122,7 @@ export function ReplyComposer({
             gradient={BRAND_GRADIENT}
             leftSection={<IconSend2 size={12} />}
           >
-            {inThread ? "Reply to thread" : "Reply"}
+            {inThread ? messages.replyComposer.replyToThread : messages.replyComposer.reply}
           </Button>
         </Tooltip>
       </Group>

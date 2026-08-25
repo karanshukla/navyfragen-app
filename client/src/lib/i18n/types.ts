@@ -35,6 +35,7 @@ export interface CommonMessages {
   copyLink: string;
   share: string;
   userAltFallback: string;
+  respondToThreadRootFirst: string;
   shortcuts: {
     title: string;
     home: string;
@@ -83,9 +84,59 @@ export interface InboxLinkCardMessages {
   eyebrow: string;
 }
 
+export interface PostingPreferencesMessages {
+  title: string;
+  appendProfileLink: { label: string; description: string };
+  useGradients: { label: string; description: string };
+  includeQuestionAsImage: { label: string; description: string };
+  confirmBeforeDelete: { label: string; description: string };
+  autoScrollToMessages: { label: string; description: string };
+}
+
+export interface QuestionCardMessages {
+  cannotDeleteThreadRootTooltip: string;
+  cannotDeleteThreadRootLabel: string;
+  cannotDeleteWhilePostingTooltip: string;
+  cannotDeleteWhilePostingLabel: string;
+  unpinThreadTooltip: string;
+  pinAsThreadRootTooltip: string;
+  unpinThreadRootLabel: string;
+  setAsThreadRootLabel: string;
+  deleteMessageTooltip: string;
+  deleteMessageLabel: string;
+  replyToThread: string;
+  reply: string;
+}
+
+export interface ReplyComposerMessages {
+  stillRenderingImage: string;
+  renderingImage: string;
+  posting: string;
+  stillGoingWakingRenderer: string;
+  stillGoing: string;
+  responseAriaLabel: string;
+  placeholder: string;
+  replyToThread: string;
+  reply: string;
+}
+
+export interface ImageThemePickerMessages {
+  title: string;
+}
+
+export interface ThemesMessages {
+  image: { default: string; compressed: string; twitter: string };
+  profileCard: { royal: string; aurora: string; ember: string; verdant: string };
+}
+
 export interface Messages {
   errors: ErrorMessages;
   common: CommonMessages;
   messagesPage: MessagesPageMessages;
   inboxLinkCard: InboxLinkCardMessages;
+  postingPreferences: PostingPreferencesMessages;
+  questionCard: QuestionCardMessages;
+  replyComposer: ReplyComposerMessages;
+  imageThemePicker: ImageThemePickerMessages;
+  themes: ThemesMessages;
 }
