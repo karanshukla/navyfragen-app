@@ -179,8 +179,6 @@ export interface SettingsPageMessages {
   installApplication: string;
   installApplicationDescription: string;
   install: string;
-  appLanguage: string;
-  appLanguageDescription: string;
   openFeedOnBluesky: string;
   dailyNotifications: string;
   viewBotOnBluesky: string;
@@ -203,10 +201,14 @@ export interface CustomisePageMessages {
   profilePrompt: string;
   profilePromptDescription: string;
   profilePromptPlaceholder: string;
-  messageLanguage: string;
-  messageLanguageDescription: string;
   profileCardColour: string;
   profileCardColourDescription: string;
+  languages: string;
+  languagesHelp: string;
+  appLanguage: string;
+  appLanguageDescription: string;
+  messageLanguage: string;
+  messageLanguageDescription: string;
   messageIntake: string;
   messageIntakeHelp: string;
   inbox: string;

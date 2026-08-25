@@ -445,9 +445,8 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    // Both the PDS Sync and App language cards render the same shared alert now.
     const alerts = screen.getAllByText(/failed to load settings/i);
-    expect(alerts.length).toBeGreaterThanOrEqual(2);
+    expect(alerts.length).toBeGreaterThanOrEqual(1);
     // Click Retry — covers the onClick on the Button inside settingsLoadError (line 80)
     fireEvent.click(screen.getAllByRole("button", { name: en.common.retry })[0]);
     await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
@@ -660,100 +659,6 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     expect(screen.getByRole("switch", { name: en.settingsPage.pdsSync })).toBeDisabled();
-  });
-
-  it("shows English as the App language selector's default value", () => {
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default", uiLocale: null },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toHaveValue(
-      "English"
-    );
-  });
-
-  it("disables the App language selector while an update is in flight", () => {
-    mockUseUpdateUserSettings.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: true,
-    } as any);
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default", uiLocale: null },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toBeDisabled();
-  });
-
-  it("shows the matching label when uiLocale is already set to a known locale", () => {
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default", uiLocale: "en" },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toHaveValue(
-      "English"
-    );
-  });
-
-  it("shows English for the App language selector when uiLocale is an unsupported value", () => {
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default", uiLocale: "de" },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toHaveValue(
-      "English"
-    );
   });
 
   it("shows skeleton for daily notifications card while bot-follow status is loading", () => {

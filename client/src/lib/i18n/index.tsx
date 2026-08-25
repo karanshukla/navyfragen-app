@@ -24,7 +24,7 @@ const STORAGE_KEY = `${STORAGE_PREFIX}_ui_locale`;
 /** Locales this bundle can render as a full catalog. Extend as #406/#410 ship. */
 const SUPPORTED_LOCALES: readonly Locale[] = ["en"];
 
-/** Ordered list for the `/settings` "App language" `<Select>`. `en` first = default. */
+/** Ordered list for the `/customise` "App language" `<Select>`. `en` first = default. */
 export const uiLocaleOptions: { value: Locale; label: string }[] = [
   { value: "en", label: "English" /* i18n-allow */ },
 ];

@@ -44,8 +44,10 @@ test.beforeEach(async ({ page }) => {
 
 test("customise page renders the wired cards", async ({ page }) => {
   await expect(page.getByText(en.customisePage.yourPublicProfile, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.languages, { exact: true })).toBeVisible();
   await expect(page.getByText(en.customisePage.messageIntake, { exact: true })).toBeVisible();
   await expect(page.getByText(en.customisePage.profilePrompt, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.appLanguage, { exact: true })).toBeVisible();
   await expect(page.getByText(en.customisePage.messageLanguage, { exact: true })).toBeVisible();
   await expect(page.getByText(en.customisePage.profileCardColour, { exact: true })).toBeVisible();
   await expect(page.getByText(en.customisePage.inbox, { exact: true }).first()).toBeVisible();
