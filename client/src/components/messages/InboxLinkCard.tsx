@@ -2,6 +2,7 @@ import { Box, Button, CopyButton, Group, Paper, Text, Tooltip } from "@mantine/c
 import { IconClipboard } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import { useTranslations } from "../../lib/i18n";
 import { warmOgCard } from "../../lib/ogWarm";
 import ShareButton, { onGradientButton } from "../ShareButton";
 
@@ -18,6 +19,7 @@ interface InboxLinkCardProps {
 
 export function InboxLinkCard({ shortUrl, fullUrl, handle, shareData }: InboxLinkCardProps) {
   const { triggerHaptic } = useHaptic(1);
+  const messages = useTranslations();
   const warmShareTarget = () => warmOgCard(handle);
 
   return (
@@ -25,7 +27,7 @@ export function InboxLinkCard({ shortUrl, fullUrl, handle, shareData }: InboxLin
       <Group align="center" gap="md" wrap="wrap">
         <Box style={{ flex: 1, minWidth: 200 }}>
           <Text size="xs" fw={500} mb={6} style={styles.eyebrow}>
-            Your inbox link · publicly accessible
+            {messages.inboxLinkCard.eyebrow}
           </Text>
           <Text fw={700} fz={17} style={styles.url}>
             {shortUrl}
@@ -34,7 +36,7 @@ export function InboxLinkCard({ shortUrl, fullUrl, handle, shareData }: InboxLin
         <Group gap="xs" wrap="wrap">
           <CopyButton value={fullUrl}>
             {({ copied, copy }) => (
-              <Tooltip label={copied ? "Copied!" : "Copy link"} withArrow>
+              <Tooltip label={copied ? messages.common.copied : messages.common.copyLink} withArrow>
                 <Button
                   onClick={() => {
                     triggerHaptic();
@@ -47,7 +49,7 @@ export function InboxLinkCard({ shortUrl, fullUrl, handle, shareData }: InboxLin
                   leftSection={<IconClipboard size={14} />}
                   style={onGradientButton}
                 >
-                  {copied ? "Copied!" : "Copy"}
+                  {copied ? messages.common.copied : messages.common.copy}
                 </Button>
               </Tooltip>
             )}

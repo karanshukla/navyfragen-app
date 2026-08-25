@@ -22,6 +22,37 @@ export const en = {
       closeExpandedCard: "Close expanded card",
     },
   },
+  messagesPage: {
+    themeUpdateErrorTitle: "Error updating theme",
+    addExamplesErrorTitle: "Error Adding Examples",
+    deleteErrorTitle: "Error Deleting Message",
+    threadReplyTitle: "Added to thread!",
+    responseSentTitle: "Response Sent!",
+    responseErrorTitle: "Response Error",
+    emptyResponseTitle: "Empty Response",
+    emptyResponseMessage: "Response cannot be empty.",
+    imageRenderFailedTitle: "Image Render Failed",
+    imageRenderFailedMessage: "Failed to render the question image.",
+    notLoggedInTitle: "Not logged in",
+    notLoggedInMessage: "Please log in to see your messages.",
+    heading: "Messages",
+    noMessagesCount: "no messages",
+    newMessagesCount: (count: number) => `${count} new`,
+    noMessagesTitle: "No messages",
+    noMessagesBody:
+      "You don't have any messages yet. Share your profile link to receive anonymous questions.",
+    addExampleMessages: "Add example messages",
+    deleteConfirmTitle: "Confirm Deletion",
+    deleteConfirmMessage:
+      "Are you sure you want to delete this message? This action cannot be undone.",
+    threadReplyPosted: "Added to thread.",
+    responsePosted: "Your response has been posted.",
+    welcomeBackTitle: "Welcome back!",
+    welcomeBackMessage: "You have successfully logged in.",
+  },
+  inboxLinkCard: {
+    eyebrow: "Your inbox link · publicly accessible",
+  },
   errors: {
     codes: {
       NOT_AUTHENTICATED: "You're not signed in. Please log in and try again.",

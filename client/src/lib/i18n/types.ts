@@ -52,7 +52,40 @@ export interface CommonMessages {
  * extraction, so keeping the error-code strings in their own sub-object lets
  * #402 fill in the rest of `Messages` around this without touching it.
  */
+export interface MessagesPageMessages {
+  themeUpdateErrorTitle: string;
+  addExamplesErrorTitle: string;
+  deleteErrorTitle: string;
+  threadReplyTitle: string;
+  responseSentTitle: string;
+  responseErrorTitle: string;
+  emptyResponseTitle: string;
+  emptyResponseMessage: string;
+  imageRenderFailedTitle: string;
+  imageRenderFailedMessage: string;
+  notLoggedInTitle: string;
+  notLoggedInMessage: string;
+  heading: string;
+  noMessagesCount: string;
+  newMessagesCount: (count: number) => string;
+  noMessagesTitle: string;
+  noMessagesBody: string;
+  addExampleMessages: string;
+  deleteConfirmTitle: string;
+  deleteConfirmMessage: string;
+  threadReplyPosted: string;
+  responsePosted: string;
+  welcomeBackTitle: string;
+  welcomeBackMessage: string;
+}
+
+export interface InboxLinkCardMessages {
+  eyebrow: string;
+}
+
 export interface Messages {
   errors: ErrorMessages;
   common: CommonMessages;
+  messagesPage: MessagesPageMessages;
+  inboxLinkCard: InboxLinkCardMessages;
 }
