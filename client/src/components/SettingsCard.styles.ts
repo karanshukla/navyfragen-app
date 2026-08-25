@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { surface } from "../styles/tokens";
 
 export const card: CSSProperties = {
+  width: "100%",
   height: "100%",
   display: "flex",
   flexDirection: "column",
