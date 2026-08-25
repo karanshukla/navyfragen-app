@@ -74,7 +74,7 @@ describe("AppHeader", () => {
     mockUseSession.mockReturnValue({ data: undefined, isLoading: true } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
     // Loader renders as a specific element; check no login button
-    expect(screen.queryByText("Login")).not.toBeInTheDocument();
+    expect(screen.queryByText(en.common.shortcuts.login)).not.toBeInTheDocument();
   });
 
   it("shows Login button when not logged in", () => {
@@ -83,7 +83,7 @@ describe("AppHeader", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
-    expect(screen.getByText("Login")).toBeInTheDocument();
+    expect(screen.getByText(en.common.shortcuts.login)).toBeInTheDocument();
   });
 
   it("shows UserMenu when logged in with profile", () => {
@@ -100,7 +100,7 @@ describe("AppHeader", () => {
     } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
     expect(screen.getByText("Foo Bar")).toBeInTheDocument();
-    expect(screen.queryByText("Login")).not.toBeInTheDocument();
+    expect(screen.queryByText(en.common.shortcuts.login)).not.toBeInTheDocument();
   });
 
   it("shows sun icon in dark mode", () => {
@@ -111,7 +111,7 @@ describe("AppHeader", () => {
     } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
     // Sun icon has aria-label or is findable; just check render doesn't crash
-    const toggleBtn = screen.getByLabelText("Toggle color scheme");
+    const toggleBtn = screen.getByLabelText(en.appHeader.toggleColorScheme);
     expect(toggleBtn).toBeInTheDocument();
   });
 
@@ -122,7 +122,7 @@ describe("AppHeader", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
-    const toggleBtn = screen.getByLabelText("Toggle color scheme");
+    const toggleBtn = screen.getByLabelText(en.appHeader.toggleColorScheme);
     expect(toggleBtn).toBeInTheDocument();
   });
 
@@ -164,7 +164,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const logoutItem = screen.getByText("Log out @foo.bsky.social");
+      const logoutItem = screen.getByText(en.userMenu.logOut("foo.bsky.social"));
       await userEvent.click(logoutItem);
       expect(logoutMock).toHaveBeenCalled();
     }
@@ -180,7 +180,7 @@ describe("AppHeader", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<AppHeader {...defaultProps} />);
-    const toggleBtn = screen.getByLabelText("Toggle color scheme");
+    const toggleBtn = screen.getByLabelText(en.appHeader.toggleColorScheme);
     fireEvent.click(toggleBtn);
     expect(toggleMock).toHaveBeenCalled();
   });
@@ -192,7 +192,7 @@ describe("AppHeader", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<AppHeader {...defaultProps} onNavClose={onNavClose} />);
-    const loginBtn = screen.getByText("Login");
+    const loginBtn = screen.getByText(en.common.shortcuts.login);
     fireEvent.click(loginBtn);
     expect(onNavClose).toHaveBeenCalled();
   });
@@ -215,7 +215,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const viewProfileItem = screen.getByText("View Profile");
+      const viewProfileItem = screen.getByText(en.userMenu.viewProfile);
       fireEvent.click(viewProfileItem);
       expect(onNavClose).toHaveBeenCalled();
     }
@@ -257,7 +257,7 @@ describe("AppHeader", () => {
     const userBtn = screen.getByText("Foo").closest("button");
     if (userBtn) {
       await userEvent.click(userBtn);
-      const logoutItem = screen.getByText("Log out @foo.bsky.social");
+      const logoutItem = screen.getByText(en.userMenu.logOut("foo.bsky.social"));
       fireEvent.click(logoutItem);
       // The catch block resets body styles
       expect(document.body.style.pointerEvents).toBe("");
@@ -360,7 +360,7 @@ describe("AppHeader", () => {
 
       expect(vi.mocked(showNotification)).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "Couldn't switch account",
+          title: en.userMenu.switchAccountErrorTitle,
           message: en.errors.codes.ACCOUNT_SWITCH_FAILED,
         })
       );
@@ -384,7 +384,10 @@ describe("AppHeader", () => {
       });
 
       expect(vi.mocked(showNotification)).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Couldn't switch account", message: en.errors.generic })
+        expect.objectContaining({
+          title: en.userMenu.switchAccountErrorTitle,
+          message: en.errors.generic,
+        })
       );
     });
 
@@ -406,7 +409,7 @@ describe("AppHeader", () => {
       const activeItem = screen.getByText("@active.bsky.social").closest('[role="menuitem"]');
       expect(activeItem).toHaveAttribute("data-disabled", "true");
       // ...with no "Accounts" label (only shown when there are others)...
-      expect(screen.queryByText("Accounts")).not.toBeInTheDocument();
+      expect(screen.queryByText(en.userMenu.accountsLabel)).not.toBeInTheDocument();
       // ...and no other switchable accounts listed beneath it.
       expect(screen.queryByText("Other User")).not.toBeInTheDocument();
       expect(screen.queryByText("@other.bsky.social")).not.toBeInTheDocument();
@@ -451,7 +454,7 @@ describe("AppHeader", () => {
       const onNavClose = vi.fn();
       renderWithProviders(<AppHeader {...defaultProps} onNavClose={onNavClose} />);
       await openMenu();
-      const addAccountItem = screen.getByText("Add account");
+      const addAccountItem = screen.getByText(en.userMenu.addAccount);
       fireEvent.click(addAccountItem);
       expect(onNavClose).toHaveBeenCalled();
       expect(addAccountItem.closest("a")).toHaveAttribute("href", "/login?add=1");
@@ -483,8 +486,8 @@ describe("AppHeader", () => {
       setViewport(1400, 900);
       mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
       renderWithProviders(<AppHeader {...defaultProps} />);
-      expect(screen.queryByText("Disable animations")).not.toBeInTheDocument();
-      expect(screen.queryByText("Enable animations")).not.toBeInTheDocument();
+      expect(screen.queryByText(en.appHeader.disableAnimations)).not.toBeInTheDocument();
+      expect(screen.queryByText(en.appHeader.enableAnimations)).not.toBeInTheDocument();
     });
 
     it("appears on a very wide (4K-style) viewport and toggles its own label", async () => {
@@ -492,12 +495,12 @@ describe("AppHeader", () => {
       mockUseSession.mockReturnValue({ data: { isLoggedIn: false }, isLoading: false } as any);
       renderWithProviders(<AppHeader {...defaultProps} />);
 
-      const toggleBtn = screen.getByText("Disable animations");
+      const toggleBtn = screen.getByText(en.appHeader.disableAnimations);
       await userEvent.click(toggleBtn);
-      expect(screen.getByText("Enable animations")).toBeInTheDocument();
+      expect(screen.getByText(en.appHeader.enableAnimations)).toBeInTheDocument();
 
-      await userEvent.click(screen.getByText("Enable animations"));
-      expect(screen.getByText("Disable animations")).toBeInTheDocument();
+      await userEvent.click(screen.getByText(en.appHeader.enableAnimations));
+      expect(screen.getByText(en.appHeader.disableAnimations)).toBeInTheDocument();
     });
   });
 });

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InboxLinkCard } from "../../components/messages/InboxLinkCard";
+import { en } from "../../lib/i18n/en";
 import { renderWithProviders } from "../testUtils";
 
 const SHARE_DATA = {
@@ -43,7 +44,7 @@ describe("InboxLinkCard OG warm", () => {
   it("warms the owner's OG card when the inbox link is copied", async () => {
     renderCard();
 
-    await userEvent.click(screen.getByRole("button", { name: /^copy$/i }));
+    await userEvent.click(screen.getByRole("button", { name: en.common.copy }));
 
     expect(fetchSpy).toHaveBeenCalledWith("/og-warm/karan.bsky.social", { method: "POST" });
   });
@@ -56,7 +57,7 @@ describe("InboxLinkCard OG warm", () => {
     });
     renderCard();
 
-    await userEvent.click(screen.getByRole("button", { name: /^share$/i }));
+    await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
 
     await waitFor(() =>
       expect(fetchSpy).toHaveBeenCalledWith("/og-warm/karan.bsky.social", { method: "POST" })
@@ -71,7 +72,7 @@ describe("InboxLinkCard OG warm", () => {
     });
     renderCard();
 
-    await userEvent.click(screen.getByRole("button", { name: /^share$/i }));
+    await userEvent.click(screen.getByRole("button", { name: en.shareButton.button }));
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -83,10 +84,10 @@ describe("InboxLinkCard OG warm", () => {
     );
     renderCard();
 
-    await userEvent.click(screen.getByRole("button", { name: /^copy$/i }));
+    await userEvent.click(screen.getByRole("button", { name: en.common.copy }));
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /^copied!$/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: en.common.copied })).toBeInTheDocument()
     );
     expect(screen.queryByText(/failed/i)).toBeNull();
   });

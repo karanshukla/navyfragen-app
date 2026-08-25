@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
+import { APP_NAME } from "../../lib/brand";
+import { en } from "../../lib/i18n/en";
 import Home from "../../pages/Home";
 import { renderWithProviders } from "../testUtils";
 
@@ -31,10 +33,10 @@ describe("Home page", () => {
     mockUseSession.mockReturnValue({ data: undefined, isLoading: true } as any);
     renderWithProviders(<Home />);
     expect(
-      screen.getByRole("heading", { level: 1, name: /anonymous questions and answers/i })
+      screen.getByRole("heading", { level: 1, name: `${APP_NAME}${en.home.titleSuffix}` })
     ).toBeInTheDocument();
-    expect(screen.queryByText(/get started/i)).toBeNull();
-    expect(screen.queryByText(/view your messages/i)).toBeNull();
+    expect(screen.queryByText(en.home.getStarted)).toBeNull();
+    expect(screen.queryByText(en.home.viewYourMessages)).toBeNull();
   });
 
   it("shows feature list and Get Started button when logged out", () => {
@@ -43,9 +45,9 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    expect(screen.getByRole("link", { name: /get started/i })).toBeInTheDocument();
-    expect(screen.getByText(/fast and free/i)).toBeInTheDocument();
-    expect(screen.getByText(/open source/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: en.home.getStarted })).toBeInTheDocument();
+    expect(screen.getByText(en.home.sellingPoints.fastAndFree.title)).toBeInTheDocument();
+    expect(screen.getByText(en.home.sellingPoints.openSource.title)).toBeInTheDocument();
   });
 
   it("shows personalised welcome and Messages button when logged in", () => {
@@ -60,7 +62,7 @@ describe("Home page", () => {
     renderWithProviders(<Home />);
     // Name appears inside a styled div (not a heading element)
     expect(screen.getByText("Karan")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /view your messages/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: en.home.viewYourMessages })).toBeInTheDocument();
   });
 
   it("renders Bluesky and GitHub links in the feedback section", () => {
@@ -71,7 +73,9 @@ describe("Home page", () => {
     renderWithProviders(<Home />);
     const bskyLink = screen.getByRole("link", { name: /@navyfragen\.app/i });
     expect(bskyLink).toHaveAttribute("href", "https://bsky.app/profile/navyfragen.app");
-    const githubLink = screen.getByRole("link", { name: /github/i });
+    const githubLink = screen.getByRole("link", {
+      name: `${en.home.githubContactLabel}${APP_NAME}`,
+    });
     expect(githubLink).toHaveAttribute("href", "https://github.com/karanshukla/navyfragen-app");
   });
 
@@ -116,8 +120,8 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: en.home.copyLinkButton })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: en.common.share })).toBeInTheDocument();
   });
 
   it("clicking Share invokes navigator.share when available", async () => {
@@ -135,7 +139,7 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    fireEvent.click(screen.getByRole("button", { name: /share/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.share }));
     await waitFor(() => expect(shareMock).toHaveBeenCalled());
     Object.defineProperty(navigator, "share", {
       value: undefined,
@@ -162,7 +166,7 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    fireEvent.click(screen.getByRole("button", { name: /share/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.share }));
     await waitFor(() => expect(writeTextMock).toHaveBeenCalled());
   });
 
@@ -194,9 +198,9 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    fireEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.home.copyLinkButton }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /copied!/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: en.common.copied })).toBeInTheDocument();
     });
   });
 
@@ -220,7 +224,7 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    fireEvent.click(screen.getByRole("button", { name: /share/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.share }));
     // Neither API available — no crash, nothing happens
     expect(document.body).toBeInTheDocument();
   });
@@ -231,7 +235,7 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    expect(screen.queryByRole("button", { name: /copy link/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /share/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: en.home.copyLinkButton })).toBeNull();
+    expect(screen.queryByRole("button", { name: en.common.share })).toBeNull();
   });
 });

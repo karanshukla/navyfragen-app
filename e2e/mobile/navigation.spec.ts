@@ -1,5 +1,8 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 
+import { en } from "../../client/src/lib/i18n/en";
+import { escapeRegex } from "../helpers/i18n";
+
 test.use({ storageState: "e2e/.auth/user.json" });
 
 // Runs at the "Pixel 7" viewport, below the `sm` breakpoint, so the sidebar
@@ -10,6 +13,9 @@ const handle = () => {
   if (!h) throw new Error("E2E_HANDLE must be set");
   return h;
 };
+
+// The name may carry an unread badge ("Messages 3"), hence the trailing \b.
+const messagesLinkName = new RegExp(`^${escapeRegex(en.common.shortcuts.messages)}\\b`);
 
 /** The mobile burger button (no aria-label). It's the first button rendered in
  * the AppShell header — placed before the wordmark — and only exists on mobile
@@ -60,20 +66,23 @@ test("burger opens and closes the navigation drawer", async ({ page }) => {
 test("tapping a nav link navigates and closes the drawer", async ({ page }) => {
   await openDrawer(page);
 
-  // The name may carry an unread badge ("Messages 3").
-  await page.locator("nav").getByRole("link", { name: /^Messages\b/ }).click();
+  await page.locator("nav").getByRole("link", { name: messagesLinkName }).click();
 
   await expect(page).toHaveURL(/\/messages/);
-  await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.messagesPage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
   await expectDrawerClosed(page);
 });
 
 test("home hero links to messages on mobile", async ({ page }) => {
-  await page.getByRole("link", { name: "View Your Messages" }).click();
+  await page.getByRole("link", { name: en.home.viewYourMessages, exact: true }).click();
   await expect(page).toHaveURL(/\/messages/);
-  await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.messagesPage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
 });
@@ -83,7 +92,7 @@ test("navigate to own profile via the user menu on mobile", async ({ page }) => 
 
   // No stable aria-label on the trigger.
   await page.locator("header").getByRole("button").last().click();
-  await page.getByRole("menuitem", { name: "View Profile" }).click();
+  await page.getByRole("menuitem", { name: en.userMenu.viewProfile, exact: true }).click();
 
   await expect(page).toHaveURL(new RegExp(`/profile/${h.replace(".", "\\.")}`), {
     timeout: 10_000,
@@ -99,7 +108,7 @@ test("color scheme toggle works on mobile", async ({ page }) => {
   const before = await html.getAttribute("data-mantine-color-scheme");
   const expected = before === "light" ? "dark" : "light";
 
-  await page.getByRole("button", { name: "Toggle color scheme" }).click();
+  await page.getByRole("button", { name: en.appHeader.toggleColorScheme, exact: true }).click();
 
   await expect(html).toHaveAttribute("data-mantine-color-scheme", expected, {
     timeout: 5_000,

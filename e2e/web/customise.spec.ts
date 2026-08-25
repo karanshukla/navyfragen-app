@@ -1,6 +1,15 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { en } from "../../client/src/lib/i18n/en";
+import {
+  getTouchpointTranslations,
+  touchpointLocales,
+} from "../../client/src/lib/touchpointTranslations";
+import { regexFromTemplate } from "../helpers/i18n";
 import { flipSettingsSwitch, settingsSwitch } from "../helpers/settings-switch";
+
+const spanish = touchpointLocales.find((l) => l.value === "es")!;
+const t = getTouchpointTranslations("en");
 
 test.use({ storageState: "e2e/.auth/user.json" });
 
@@ -26,57 +35,68 @@ async function patchSettings(page: Page, patch: Record<string, unknown>) {
 test.beforeEach(async ({ page }) => {
   await page.goto("/customise");
   await expect(page).toHaveURL(/\/customise/);
-  await expect(page.getByRole("heading", { name: "Customise", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.customisePage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
 });
 
 test("customise page renders the wired cards", async ({ page }) => {
-  await expect(page.getByText("Your public profile", { exact: true })).toBeVisible();
-  await expect(page.getByText("Message intake", { exact: true })).toBeVisible();
-  await expect(page.getByText("Profile prompt", { exact: true })).toBeVisible();
-  await expect(page.getByText("Message language", { exact: true })).toBeVisible();
-  await expect(page.getByText("Profile card colour", { exact: true })).toBeVisible();
-  await expect(page.getByText("Inbox", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Profanity filter", { exact: true })).toBeVisible();
-  // The Notifications section was intentionally removed.
+  await expect(page.getByText(en.customisePage.yourPublicProfile, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.messageIntake, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.profilePrompt, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.messageLanguage, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.profileCardColour, { exact: true })).toBeVisible();
+  await expect(page.getByText(en.customisePage.inbox, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(en.customisePage.profanityFilter, { exact: true })).toBeVisible();
+  // The Notifications section was intentionally removed; "What sends a push"
+  // is not — and was never — catalog copy, so there is no `en.*` key for it.
   await expect(page.getByText("What sends a push", { exact: true })).toHaveCount(0);
 });
 
 test("inbox toggle flips and is restored afterwards", async ({ page }) => {
-  const toggle = settingsSwitch(page, "Inbox");
+  const toggle = settingsSwitch(page, en.customisePage.inbox);
   await expect(toggle).toBeVisible({ timeout: 10_000 });
   const initiallyChecked = await toggle.isChecked();
 
   await flipSettingsSwitch(toggle);
   // The switch follows the settings query, so wait for the server value first.
-  await expect.poll(async () => Boolean((await getSettings(page)).inboxEnabled), {
-    timeout: 10_000,
-  }).toBe(!initiallyChecked);
+  await expect
+    .poll(async () => Boolean((await getSettings(page)).inboxEnabled), {
+      timeout: 10_000,
+    })
+    .toBe(!initiallyChecked);
   await expect(toggle).toBeChecked({ checked: !initiallyChecked });
 
   await flipSettingsSwitch(toggle);
-  await expect.poll(async () => Boolean((await getSettings(page)).inboxEnabled), {
-    timeout: 10_000,
-  }).toBe(initiallyChecked);
+  await expect
+    .poll(async () => Boolean((await getSettings(page)).inboxEnabled), {
+      timeout: 10_000,
+    })
+    .toBe(initiallyChecked);
   await expect(toggle).toBeChecked({ checked: initiallyChecked });
 });
 
 test("profanity filter toggle flips and is restored afterwards", async ({ page }) => {
-  const toggle = settingsSwitch(page, "Profanity filter");
+  const toggle = settingsSwitch(page, en.customisePage.profanityFilter);
   await expect(toggle).toBeVisible({ timeout: 10_000 });
   const initiallyChecked = await toggle.isChecked();
 
   await flipSettingsSwitch(toggle);
-  await expect.poll(async () => Boolean((await getSettings(page)).profanityFilterEnabled), {
-    timeout: 10_000,
-  }).toBe(!initiallyChecked);
+  await expect
+    .poll(async () => Boolean((await getSettings(page)).profanityFilterEnabled), {
+      timeout: 10_000,
+    })
+    .toBe(!initiallyChecked);
   await expect(toggle).toBeChecked({ checked: !initiallyChecked });
 
   await flipSettingsSwitch(toggle);
-  await expect.poll(async () => Boolean((await getSettings(page)).profanityFilterEnabled), {
-    timeout: 10_000,
-  }).toBe(initiallyChecked);
+  await expect
+    .poll(async () => Boolean((await getSettings(page)).profanityFilterEnabled), {
+      timeout: 10_000,
+    })
+    .toBe(initiallyChecked);
   await expect(toggle).toBeChecked({ checked: initiallyChecked });
 });
 
@@ -99,14 +119,14 @@ test("custom prompt persists on blur and is cleared afterwards", async ({ page }
 });
 
 test("message language selector changes locale and is restored afterwards", async ({ page }) => {
-  const select = page.getByRole("combobox", { name: /message language/i });
+  const select = page.getByRole("combobox", { name: en.customisePage.messageLanguage });
   await expect(select).toBeVisible({ timeout: 10_000 });
   await expect(select).toBeEnabled({ timeout: 10_000 });
 
   const initial = (await getSettings(page)).touchpointLocale ?? "en";
 
   await select.click();
-  await page.getByRole("option", { name: /^español$/i }).click();
+  await page.getByRole("option", { name: spanish.label, exact: true }).click();
 
   let settings = await getSettings(page);
   expect(settings.touchpointLocale).toBe("es");
@@ -117,7 +137,7 @@ test("message language selector changes locale and is restored afterwards", asyn
 });
 
 test("profile card colour swatch changes theme and is restored afterwards", async ({ page }) => {
-  const ember = page.getByRole("button", { name: /^ember$/i });
+  const ember = page.getByRole("button", { name: en.themes.profileCard.ember, exact: true });
   await expect(ember).toBeVisible({ timeout: 10_000 });
   await expect(ember).toBeEnabled({ timeout: 10_000 });
 
@@ -141,13 +161,13 @@ test("closed inbox shows a not-accepting-messages state on the public profile", 
   try {
     await page.goto(`/profile/${handle()}`);
     // The card stays themed; only the send form is replaced.
-    await expect(page.getByText(/not accepting new messages/i)).toBeVisible({
+    await expect(page.getByText(t.inboxClosed)).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByLabel(/^Send .+ an anonymous message$/)).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Send", exact: true })).toHaveCount(0);
+    await expect(page.getByLabel(regexFromTemplate(t.headline))).toHaveCount(0);
+    await expect(page.getByRole("button", { name: t.sendLabel, exact: true })).toHaveCount(0);
   } finally {
-      await patchSettings(page, { inboxEnabled: true });
+    await patchSettings(page, { inboxEnabled: true });
   }
 });
 
@@ -168,7 +188,10 @@ test("profanity filter silently drops a flagged message", async ({ page }) => {
     expect(profane.ok(), "profane send returned success to sender").toBeTruthy();
 
     const clean = await page.request.post("/api/messages/send", {
-      data: { recipient: did, message: `[e2e profanity ${Date.now()}] what's your favorite color?` },
+      data: {
+        recipient: did,
+        message: `[e2e profanity ${Date.now()}] what's your favorite color?`,
+      },
     });
     expect(clean.ok(), "clean send returned success").toBeTruthy();
 

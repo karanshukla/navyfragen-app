@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { en } from "../../client/src/lib/i18n/en";
 import { flipSettingsSwitch, settingsSwitch } from "../helpers/settings-switch";
 
 test.use({ storageState: "e2e/.auth/user.json" });
@@ -16,21 +17,23 @@ async function pdsSyncEnabled(page: Page) {
 test.beforeEach(async ({ page }) => {
   await page.goto("/settings");
   await expect(page).toHaveURL(/\/settings/);
-  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.settingsPage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
 });
 
 test("settings page renders key cards", async ({ page }) => {
   // Card titles are bold <Text>, not headings.
-  await expect(page.getByText("PDS Sync", { exact: true })).toBeVisible({
+  await expect(page.getByText(en.settingsPage.pdsSync, { exact: true })).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page.getByText("Push Notifications", { exact: true })).toBeVisible();
+  await expect(page.getByText(en.pushNotificationsCard.title, { exact: true })).toBeVisible();
 });
 
 test("PDS sync toggle flips and is restored afterwards", async ({ page }) => {
-  const sync = settingsSwitch(page, "PDS Sync");
+  const sync = settingsSwitch(page, en.settingsPage.pdsSync);
   await expect(sync).toBeVisible({ timeout: 10_000 });
   const initiallyChecked = await sync.isChecked();
 

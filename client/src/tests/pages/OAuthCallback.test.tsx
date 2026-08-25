@@ -30,13 +30,13 @@ describe("OAuthCallback page", () => {
     renderWithProviders(<OAuthCallback />, {
       route: "/oauth_callback?oauth_token=abc123",
     });
-    expect(screen.getByText(/logging you in/i)).toBeInTheDocument();
+    expect(screen.getByText(en.oauthCallback.loggingIn)).toBeInTheDocument();
   });
 
   it("shows error when oauth_token is absent from URL", async () => {
     renderWithProviders(<OAuthCallback />, { route: "/oauth_callback" });
     await waitFor(() => {
-      expect(screen.getByText(/missing oauth token/i)).toBeInTheDocument();
+      expect(screen.getByText(en.oauthCallback.missingToken)).toBeInTheDocument();
     });
   });
 
@@ -89,6 +89,6 @@ describe("OAuthCallback page", () => {
       route: "/oauth_callback?oauth_token=abc123",
       colorScheme: "dark",
     });
-    expect(screen.getByText(/logging you in/i)).toBeInTheDocument();
+    expect(screen.getByText(en.oauthCallback.loggingIn)).toBeInTheDocument();
   });
 });

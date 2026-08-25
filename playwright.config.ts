@@ -20,6 +20,11 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:8090",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // Pins the browser's resolved language so `navigator.languages` — and
+    // therefore `resolveUiLocale`'s fallback rung — is deterministic across
+    // CI runners regardless of the host machine's own locale. Applies to
+    // every project below; neither overrides it.
+    locale: "en-US",
   },
   projects: [
     {

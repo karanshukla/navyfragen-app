@@ -6,6 +6,7 @@ import * as notificationService from "../../api/notificationService";
 import * as profileService from "../../api/profileService";
 import * as settingsService from "../../api/settingsService";
 import * as installPromptContext from "../../components/InstallPromptContext";
+import { APP_NAME } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
 import Settings from "../../pages/Settings";
 import { renderWithProviders } from "../testUtils";
@@ -104,7 +105,7 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    expect(screen.getByText(/cannot access this page without logging in/i)).toBeInTheDocument();
+    expect(screen.getByText(en.common.accessDeniedMessage)).toBeInTheDocument();
   });
 
   it("shows skeleton placeholders while stats are loading", () => {
@@ -123,7 +124,7 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
     expect(screen.getByText(/account overview/i)).toBeInTheDocument();
     // Stats values not visible while loading
-    expect(screen.queryByText("Messages in inbox")).toBeNull();
+    expect(screen.queryByText(en.settingsPage.messagesInInbox)).toBeNull();
   });
 
   it("renders all four account overview stats when data is loaded", () => {
@@ -145,13 +146,13 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
 
     expect(screen.getByText("7")).toBeInTheDocument();
-    expect(screen.getByText("Messages in inbox")).toBeInTheDocument();
+    expect(screen.getByText(en.settingsPage.messagesInInbox)).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("Answers on PDS")).toBeInTheDocument();
-    expect(screen.getByText("Active since")).toBeInTheDocument();
+    expect(screen.getByText(en.settingsPage.answersOnPds)).toBeInTheDocument();
+    expect(screen.getByText(en.settingsPage.activeSince)).toBeInTheDocument();
     // PDS URL with https:// stripped
     expect(screen.getByText("bsky.social")).toBeInTheDocument();
-    expect(screen.getByText("PDS")).toBeInTheDocument();
+    expect(screen.getByText(en.settingsPage.pdsLabel)).toBeInTheDocument();
   });
 
   it("shows em-dash placeholders when stats are absent", () => {
@@ -198,7 +199,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    fireEvent.click(screen.getByRole("switch", { name: /pds sync/i }));
+    fireEvent.click(screen.getByRole("switch", { name: en.settingsPage.pdsSync }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ pdsSyncEnabled: false }));
@@ -265,7 +266,7 @@ describe("Settings page", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/update failed/i)).toBeInTheDocument();
+      expect(screen.getByText(en.settingsPage.updateFailedTitle)).toBeInTheDocument();
       expect(screen.getByText(en.errors.codes.SETTINGS_UPDATE_FAILED)).toBeInTheDocument();
     });
   });
@@ -291,7 +292,9 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    expect(screen.getByRole("link", { name: /view bot on bluesky/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: en.settingsPage.viewBotOnBluesky })
+    ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /follow the bot/i })).toBeNull();
   });
 
@@ -312,9 +315,9 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.settingsPage.deleteMyData }));
     await waitFor(() => {
-      expect(screen.getByText(/are you sure you want to delete your account/i)).toBeInTheDocument();
+      expect(screen.getByText(en.settingsPage.deleteAccountMessage)).toBeInTheDocument();
     });
   });
 
@@ -348,9 +351,9 @@ describe("Settings page", () => {
     });
 
     renderWithProviders(<Settings />);
-    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
-    await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
-    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.settingsPage.deleteMyData }));
+    await waitFor(() => screen.getByText(en.settingsPage.deleteAccountMessage));
+    fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -388,9 +391,9 @@ describe("Settings page", () => {
     window.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")) as any;
 
     renderWithProviders(<Settings />);
-    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
-    await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
-    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.settingsPage.deleteMyData }));
+    await waitFor(() => screen.getByText(en.settingsPage.deleteAccountMessage));
+    fireEvent.click(screen.getByRole("button", { name: en.common.delete }));
 
     await waitFor(() => {
       expect(document.body.style.pointerEvents).toBe("");
@@ -415,12 +418,12 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    fireEvent.click(screen.getByRole("button", { name: /delete my data/i }));
-    await waitFor(() => screen.getByText(/are you sure you want to delete your account/i));
+    fireEvent.click(screen.getByRole("button", { name: en.settingsPage.deleteMyData }));
+    await waitFor(() => screen.getByText(en.settingsPage.deleteAccountMessage));
     // Click Cancel to trigger onClose → setDeleteModalOpened(false)
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: en.common.cancel }));
     await waitFor(() => {
-      expect(screen.queryByText(/are you sure you want to delete your account/i)).toBeNull();
+      expect(screen.queryByText(en.settingsPage.deleteAccountMessage)).toBeNull();
     });
   });
 
@@ -477,7 +480,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     const installBtn = screen.getByRole("button", {
-      name: /^install\b/i,
+      name: `${en.settingsPage.install}${APP_NAME}`,
     });
     fireEvent.click(installBtn);
     await waitFor(() => {
@@ -561,7 +564,7 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
 
     // fireEvent.click dispatches even on disabled buttons in JSDOM
-    fireEvent.click(screen.getByRole("button", { name: /^install\b/i }));
+    fireEvent.click(screen.getByRole("button", { name: `${en.settingsPage.install}${APP_NAME}` }));
 
     // noopInstall.installPrompt is null → handleInstallClick returns early
     expect(noopInstall.setInstallPrompt).not.toHaveBeenCalled();
@@ -594,7 +597,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^install\b/i }));
+    fireEvent.click(screen.getByRole("button", { name: `${en.settingsPage.install}${APP_NAME}` }));
 
     await waitFor(() => {
       expect(installPromptMock.prompt).toHaveBeenCalled();
@@ -628,7 +631,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    fireEvent.click(screen.getByRole("switch", { name: /pds sync/i }));
+    fireEvent.click(screen.getByRole("switch", { name: en.settingsPage.pdsSync }));
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ imageTheme: "default" }));
@@ -656,7 +659,7 @@ describe("Settings page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Settings />);
-    expect(screen.getByRole("switch", { name: /pds sync/i })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: en.settingsPage.pdsSync })).toBeDisabled();
   });
 
   it("shows English as the App language selector's default value", () => {
@@ -677,7 +680,9 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    expect(screen.getByRole("combobox", { name: /app language/i })).toHaveValue("English");
+    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toHaveValue(
+      "English"
+    );
   });
 
   it("disables the App language selector while an update is in flight", () => {
@@ -702,7 +707,7 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    expect(screen.getByRole("combobox", { name: /app language/i })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toBeDisabled();
   });
 
   it("shows the matching label when uiLocale is already set to a known locale", () => {
@@ -723,7 +728,9 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    expect(screen.getByRole("combobox", { name: /app language/i })).toHaveValue("English");
+    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toHaveValue(
+      "English"
+    );
   });
 
   it("shows English for the App language selector when uiLocale is an unsupported value", () => {
@@ -744,7 +751,9 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
 
-    expect(screen.getByRole("combobox", { name: /app language/i })).toHaveValue("English");
+    expect(screen.getByRole("combobox", { name: en.settingsPage.appLanguage })).toHaveValue(
+      "English"
+    );
   });
 
   it("shows skeleton for daily notifications card while bot-follow status is loading", () => {
@@ -769,6 +778,6 @@ describe("Settings page", () => {
     } as any);
     renderWithProviders(<Settings />);
     // botFollowLoading=true → covers the sessionLoading||botFollowLoading true branch
-    expect(screen.getByText(/daily notifications/i)).toBeInTheDocument();
+    expect(screen.getByText(en.settingsPage.dailyNotifications)).toBeInTheDocument();
   });
 });

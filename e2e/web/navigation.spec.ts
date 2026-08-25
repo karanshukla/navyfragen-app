@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+import { APP_NAME_WORDMARK } from "../../client/src/lib/brand";
+import { en } from "../../client/src/lib/i18n/en";
+import { escapeRegex } from "../helpers/i18n";
+
 test.use({ storageState: "e2e/.auth/user.json" });
 
 const handle = () => {
@@ -8,13 +12,21 @@ const handle = () => {
   return h;
 };
 
+// "navy" and "fragen" are separate spans, so the accessible name has a space
+// between them; built from the wordmark itself so a brand-copy edit can't
+// desync this from what actually renders.
+const wordmarkName = new RegExp(
+  `${escapeRegex(APP_NAME_WORDMARK[0])}.*${escapeRegex(APP_NAME_WORDMARK[1])}`,
+  "i"
+);
+// The name may carry an unread badge ("Messages 3"), hence the trailing \b.
+const messagesLinkName = new RegExp(`^${escapeRegex(en.common.shortcuts.messages)}\\b`);
 
 test("header wordmark returns home", async ({ page }) => {
   await page.goto("/messages");
   await expect(page).toHaveURL(/\/messages/);
 
-  // "navy" and "fragen" are separate spans, so the accessible name has a space.
-  await page.getByRole("link", { name: /navy.*fragen/i }).first().click();
+  await page.getByRole("link", { name: wordmarkName }).first().click();
   await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
   await expect(page.locator("main, [role=main]")).toBeVisible();
 });
@@ -22,22 +34,26 @@ test("header wordmark returns home", async ({ page }) => {
 test("sidebar navigates between home, messages, and settings", async ({ page }) => {
   await page.goto("/");
 
-  // The name may carry an unread badge ("Messages 3"), hence the trailing
-  // number; the navbar scope avoids the home hero's "View Your Messages".
+  // The navbar scope avoids the home hero's "View Your Messages" link, which
+  // carries the same "Messages" substring.
   const navbar = page.locator("nav").first();
-  await navbar.getByRole("link", { name: /^Messages\b/ }).click();
+  await navbar.getByRole("link", { name: messagesLinkName }).click();
   await expect(page).toHaveURL(/\/messages/);
-  await expect(page.getByRole("heading", { name: "Messages", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.messagesPage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
 
-  await navbar.getByRole("link", { name: "Settings" }).click();
+  await navbar.getByRole("link", { name: en.common.shortcuts.settings, exact: true }).click();
   await expect(page).toHaveURL(/\/settings/);
-  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: en.settingsPage.heading, exact: true })
+  ).toBeVisible({
     timeout: 10_000,
   });
 
-  await navbar.getByRole("link", { name: "Home" }).click();
+  await navbar.getByRole("link", { name: en.common.shortcuts.home, exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 
@@ -61,7 +77,7 @@ test("user menu links to own profile", async ({ page }) => {
 
   // No stable aria-label on the trigger: its name is the user's display name.
   await page.locator("header").getByRole("button").last().click();
-  await page.getByRole("menuitem", { name: "View Profile" }).click();
+  await page.getByRole("menuitem", { name: en.userMenu.viewProfile, exact: true }).click();
 
   await expect(page).toHaveURL(new RegExp(`/profile/${h.replace(".", "\\.")}`), {
     timeout: 10_000,
@@ -79,7 +95,7 @@ test("color scheme toggle flips the theme", async ({ page }) => {
   const before = await html.getAttribute("data-mantine-color-scheme");
   const expected = before === "light" ? "dark" : "light";
 
-  await page.getByRole("button", { name: "Toggle color scheme" }).click();
+  await page.getByRole("button", { name: en.appHeader.toggleColorScheme, exact: true }).click();
 
   await expect(html).toHaveAttribute("data-mantine-color-scheme", expected, {
     timeout: 5_000,
