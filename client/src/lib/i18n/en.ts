@@ -43,7 +43,7 @@ export const en = {
     notLoggedInMessage: "Please log in to see your messages.",
     heading: "Messages",
     noMessagesCount: "no messages",
-    newMessagesCount: (count: number) => `${count} new`,
+    newMessagesCount: (count: string) => `${count} new`,
     noMessagesTitle: "No messages",
     noMessagesBody:
       "You don't have any messages yet. Share your profile link to receive anonymous questions.",
@@ -81,7 +81,7 @@ export const en = {
       label: "Auto-scroll to messages",
       description: "Scrolls new messages into view when they load.",
     },
-    summary: (enabled: number, total: number) => `${enabled} of ${total} on`,
+    summary: (enabled: string, total: string) => `${enabled} of ${total} on`,
   },
   questionCard: {
     cannotDeleteThreadRootTooltip: "Unpin thread first",
@@ -140,7 +140,7 @@ export const en = {
       },
     },
     viewingProfile: "Viewing profile",
-    unreadCount: (count: number) => `${count} unread`,
+    unreadCount: (count: string) => `${count} unread`,
   },
   appHeader: {
     disableAnimations: "Disable animations",

@@ -20,8 +20,9 @@ import { AccountOverview, type Stat } from "../components/settings/AccountOvervi
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
 import { APP_NAME } from "../lib/brand";
-import { uiLocaleOptions, useTranslations } from "../lib/i18n";
+import { uiLocaleOptions, useLocale, useTranslations } from "../lib/i18n";
 import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
+import { useNumberFormat } from "../lib/useNumberFormat";
 
 const NOTIFICATION_BOT = "https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i";
 const CARD_SPAN = { base: 12, md: 6, lg: 4 };
@@ -29,6 +30,8 @@ const CARD_SPAN = { base: 12, md: 6, lg: 4 };
 export default function Settings() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const messages = useTranslations();
+  const locale = useLocale();
+  const formatNumber = useNumberFormat();
 
   const { data: session, isLoading: sessionLoading } = useSession();
   const {
@@ -92,17 +95,17 @@ export default function Settings() {
 
   const stats: Stat[] = [
     {
-      value: userStats?.messageCount ?? "—",
+      value: userStats?.messageCount != null ? formatNumber(userStats.messageCount) : "—",
       label: messages.settingsPage.messagesInInbox,
       size: "large",
     },
     {
-      value: pdsInfo?.recordCount ?? "—",
+      value: pdsInfo?.recordCount != null ? formatNumber(pdsInfo.recordCount) : "—",
       label: messages.settingsPage.answersOnPds,
       size: "large",
     },
     {
-      value: formatMemberSince(userStats?.memberSince),
+      value: formatMemberSince(userStats?.memberSince, locale),
       label: messages.settingsPage.activeSince,
       size: "medium",
     },
@@ -289,9 +292,9 @@ export default function Settings() {
   );
 }
 
-function formatMemberSince(memberSince: string | null | undefined): string {
+function formatMemberSince(memberSince: string | null | undefined, locale: string): string {
   if (!memberSince) return "—";
-  return new Date(memberSince).toLocaleDateString(undefined, {
+  return new Date(memberSince).toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

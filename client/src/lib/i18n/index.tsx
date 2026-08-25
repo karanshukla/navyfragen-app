@@ -142,6 +142,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     };
   }, [resolvedLocale]);
 
+  useEffect(() => {
+    document.documentElement.lang = active.locale;
+  }, [active.locale]);
+
   return <I18nContext.Provider value={active}>{children}</I18nContext.Provider>;
 }
 
@@ -151,4 +155,12 @@ export function useTranslations(): Messages {
     throw new Error("useTranslations must be used within an I18nProvider" /* i18n-allow */);
   }
   return context.messages;
+}
+
+export function useLocale(): string {
+  const context = useContext(I18nContext);
+  if (!context) {
+    throw new Error("useLocale must be used within an I18nProvider" /* i18n-allow */);
+  }
+  return context.locale;
 }

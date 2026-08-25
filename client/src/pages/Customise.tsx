@@ -19,6 +19,7 @@ import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
 import { useTranslations } from "../lib/i18n";
 import { touchpointLocales } from "../lib/touchpointTranslations";
+import { useNumberFormat } from "../lib/useNumberFormat";
 
 import * as styles from "./Customise.styles";
 
@@ -38,6 +39,7 @@ function on(value: number | boolean | null | undefined): boolean {
 
 export default function Customise() {
   const messages = useTranslations();
+  const formatNumber = useNumberFormat();
   const { data: session, isLoading: sessionLoading } = useSession();
   const {
     data: userSettings,
@@ -123,7 +125,7 @@ export default function Customise() {
                 maxLength={MAX_PROMPT_LENGTH}
                 disabled={busy}
                 aria-label={messages.customisePage.profilePrompt}
-                description={`${promptDraft.length}/${MAX_PROMPT_LENGTH}`}
+                description={`${formatNumber(promptDraft.length)}/${formatNumber(MAX_PROMPT_LENGTH)}`}
                 styles={styles.promptCounter}
               />
             )}

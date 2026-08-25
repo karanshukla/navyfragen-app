@@ -4,6 +4,7 @@ import { useHaptic } from "use-haptic";
 
 import { useTranslations } from "../../lib/i18n";
 import type { TouchpointTranslations } from "../../lib/touchpointTranslations";
+import { useNumberFormat } from "../../lib/useNumberFormat";
 import { sunshineButton } from "../../styles/tokens";
 
 import * as styles from "./AskCard.styles";
@@ -43,6 +44,7 @@ export function AskCard({
 }: AskCardProps) {
   const { triggerHaptic } = useHaptic(1);
   const messages = useTranslations();
+  const formatNumber = useNumberFormat();
 
   return (
     <Paper ref={cardRef} onClick={() => textareaRef.current?.focus()} style={styles.card(gradient)}>
@@ -74,7 +76,7 @@ export function AskCard({
               disabled={sending}
               aria-label={headline}
               placeholder={translations.placeholder}
-              description={`${value.length}/${maxLength}`}
+              description={`${formatNumber(value.length)}/${formatNumber(maxLength)}`}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
                 if (e.shiftKey || e.altKey || e.metaKey) return;
