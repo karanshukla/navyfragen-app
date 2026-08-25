@@ -174,7 +174,7 @@ export function useMessages(
     queryFn: () =>
       did
         ? messageService.getMessages(did)
-        : /* istanbul ignore next */ Promise.reject("No DID provided"),
+        : /* istanbul ignore next */ Promise.reject("No DID provided" /* i18n-allow */),
     enabled: !!did,
     ...(options || {}),
   });
@@ -195,7 +195,7 @@ export function useRenderStatus(
     queryFn: () =>
       renderId
         ? messageService.getRenderStatus(renderId)
-        : /* istanbul ignore next */ Promise.reject("No renderId provided"),
+        : /* istanbul ignore next */ Promise.reject("No renderId provided" /* i18n-allow */),
     enabled: !!renderId,
     staleTime: 0,
     // A settled render is read-once on the server: a focus refetch would clear a

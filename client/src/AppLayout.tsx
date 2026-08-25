@@ -7,6 +7,7 @@ import { useSwitchAccount } from "./api/authService";
 import { AppHeader } from "./components/AppHeader";
 import { BouncingLogos } from "./components/BouncingLogos";
 import { buildAccountSwitchUrl, consumeAccountSwitchToast } from "./lib/accountSwitchToast";
+import { useTranslations } from "./lib/i18n";
 import { consumeNotificationSwitchRequest } from "./lib/notificationSwitch";
 import { Navigation } from "./Navigation";
 import Customise from "./pages/Customise";
@@ -24,6 +25,7 @@ export function AppLayout() {
   const navbarRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const { mutate: switchAccount } = useSwitchAccount();
+  const t = useTranslations();
 
   useEffect(() => {
     const notifyRequest = consumeNotificationSwitchRequest();
@@ -41,8 +43,8 @@ export function AppLayout() {
       return;
     }
 
-    consumeAccountSwitchToast((message) => {
-      showNotification({ message, color: "green" });
+    consumeAccountSwitchToast((handle) => {
+      showNotification({ message: t.common.switchedToAccount(handle), color: "green" });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, test } from "bun:test";
 
-import { checkFile, staticTextOf, stripComments, walk } from "./check-i18n.mjs";
+import { checkFile, isLocaleCatalog, staticTextOf, stripComments, walk } from "./check-i18n.mjs";
 
 let root: string;
 let srcDir: string;
@@ -91,20 +91,14 @@ describe("allowlisted positions and values", () => {
   });
 
   test("accepts an exact-match technical value (DOMException.name)", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      `if (error.name === "AbortError") return;\n`
-    );
+    const failures = failuresFor("Foo.tsx", `if (error.name === "AbortError") return;\n`);
     assert.deepStrictEqual(failures, []);
   });
 });
 
 describe("template literals as prose candidates", () => {
   test("flags a template literal that starts with prose", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      "const title = `Not on ${APP_NAME}`;\n"
-    );
+    const failures = failuresFor("Foo.tsx", "const title = `Not on ${APP_NAME}`;\n");
     assert.strictEqual(failures.length, 1);
     assert.match(failures[0], /Foo\.tsx:1/);
   });
@@ -147,10 +141,7 @@ describe("template literals as prose candidates", () => {
   });
 
   test("still rejects prose under an unrelated property of the same value shape", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      "const style = { caption: `1px solid the border` };\n"
-    );
+    const failures = failuresFor("Foo.tsx", "const style = { caption: `1px solid the border` };\n");
     assert.strictEqual(failures.length, 1);
   });
 
@@ -165,36 +156,24 @@ describe("template literals as prose candidates", () => {
   });
 
   test("a JSX attribute template literal with real prose is still flagged despite the `{`", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      "<Alert title={`Not on ${APP_NAME}`} />;\n"
-    );
+    const failures = failuresFor("Foo.tsx", "<Alert title={`Not on ${APP_NAME}`} />;\n");
     assert.strictEqual(failures.length, 1);
   });
 
   test("respects i18n-allow on a template literal", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      "const x = `Not on ${APP_NAME}` /* i18n-allow */;\n"
-    );
+    const failures = failuresFor("Foo.tsx", "const x = `Not on ${APP_NAME}` /* i18n-allow */;\n");
     assert.deepStrictEqual(failures, []);
   });
 });
 
 describe("the i18n-allow escape hatch", () => {
   test("accepts a flagged literal marked i18n-allow on the same line", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      `{ label: "English" /* i18n-allow */ }\n`
-    );
+    const failures = failuresFor("Foo.tsx", `{ label: "English" /* i18n-allow */ }\n`);
     assert.deepStrictEqual(failures, []);
   });
 
   test("does not suppress a violation on a different line", () => {
-    const failures = failuresFor(
-      "Foo.tsx",
-      `// i18n-allow\nconst title = "Not logged in";\n`
-    );
+    const failures = failuresFor("Foo.tsx", `// i18n-allow\nconst title = "Not logged in";\n`);
     assert.strictEqual(failures.length, 1);
   });
 });
@@ -219,9 +198,71 @@ describe("comments never count as code", () => {
   });
 
   test("still flags real code following a stripped block comment on the same line", () => {
+    const failures = failuresFor("Foo.tsx", `const x = /* noted */ "Not logged in";\n`);
+    assert.strictEqual(failures.length, 1);
+  });
+});
+
+describe("locale catalogs are exempt whole", () => {
+  test("a file ending in `satisfies Messages` reports nothing", () => {
     const failures = failuresFor(
-      "Foo.tsx",
-      `const x = /* noted */ "Not logged in";\n`
+      "lib/i18n/de.ts",
+      `export const de = { greeting: "Guten Tag" } satisfies Messages;
+`
+    );
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("a file merely mentioning Messages is still checked", () => {
+    const failures = failuresFor(
+      "lib/i18n/apiErrors.ts",
+      `import type { Messages } from "./types";
+const fallback = "Something went wrong";
+`
+    );
+    assert.strictEqual(failures.length, 1);
+  });
+
+  test("isLocaleCatalog needs the satisfies keyword, not just the type name", () => {
+    assert.ok(isLocaleCatalog(`} satisfies Messages;`));
+    assert.ok(!isLocaleCatalog(`function f(m: Messages) {}`));
+  });
+});
+
+describe("identifier vocabulary is never prose", () => {
+  test("accepts a SCREAMING_SNAKE error code", () => {
+    const failures = failuresFor(
+      "lib/contracts.ts",
+      `const codes = ["NOT_AUTHENTICATED"];
+`
+    );
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("accepts an all-caps tagName comparison", () => {
+    const failures = failuresFor(
+      "lib/nav.ts",
+      `const skip = ["INPUT", "TEXTAREA"];
+`
+    );
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("accepts a header name and a feature-detection key", () => {
+    const failures = failuresFor(
+      "api/client.ts",
+      `const h = { "Content-Type": "application/json" };
+if ("PushManager" in window) {}
+`
+    );
+    assert.deepStrictEqual(failures, []);
+  });
+
+  test("still flags a capitalized sentence that only looks like an identifier", () => {
+    const failures = failuresFor(
+      "lib/foo.ts",
+      `const m = "NO_SUCH thing happened";
+`
     );
     assert.strictEqual(failures.length, 1);
   });
@@ -269,13 +310,31 @@ describe("staticTextOf", () => {
 });
 
 describe("walk", () => {
-  test("only collects .tsx files", () => {
+  test("collects both .ts and .tsx, and nothing else", () => {
     write("Foo.tsx", "");
     write("bar.ts", "");
-    write("styles.styles.ts", "");
+    write("readme.md", "");
+    write("logo.svg", "");
+    const found = walk(srcDir)
+      .map((file) => basename(file))
+      .sort();
+    assert.deepStrictEqual(found, ["Foo.tsx", "bar.ts"]);
+  });
+
+  test("skips a .styles.ts file, whose values are CSS", () => {
+    write("Foo.tsx", "");
+    write("Foo.styles.ts", "");
     const found = walk(srcDir);
     assert.strictEqual(found.length, 1);
     assert.ok(found[0].endsWith("Foo.tsx"));
+  });
+
+  test("skips the touchpoint catalog, which is the other locale axis", () => {
+    write("lib/touchpointTranslations.ts", "");
+    write("lib/other.ts", "");
+    const found = walk(srcDir);
+    assert.strictEqual(found.length, 1);
+    assert.ok(found[0].endsWith("other.ts"));
   });
 
   test("skips a tests directory at any depth", () => {

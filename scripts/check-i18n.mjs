@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// Fails when a .tsx file under client/src holds a bare string literal that
-// looks like English prose — #402 moved the client's UI copy into the i18n
+// Fails when a .ts or .tsx file under client/src holds a bare string literal
+// that looks like English prose — #402 moved the client's UI copy into the i18n
 // catalog (client/src/lib/i18n/en.ts), so a new one belongs there too, not
 // scattered back through JSX attributes and object properties.
 //
@@ -17,6 +17,12 @@
 // (`KeyboardEvent.key`, `DOMException.name`) allowlisted by exact match.
 // Anything else gets `/* i18n-allow */` on the same line: explicit, and
 // `grep -rn i18n-allow` finds every exception.
+//
+// Three kinds of file are prose by construction and are skipped whole rather
+// than line by line: a locale catalog (identified by `satisfies Messages`, so
+// every locale #406/#410 adds is covered without editing this list), the
+// touchpoint catalogs (`touchpointTranslations.ts` — the other locale axis,
+// hand-maintained by design, #266), and `*.styles.ts`, whose values are CSS.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -36,7 +42,10 @@ const SKIP_DIRS = new Set([
   "tests",
 ]);
 
-export function walk(dir) {
+/** Path, relative to `client/src`, of the touchpoint catalogs (#266). */
+const TOUCHPOINT_CATALOG = join("lib", "touchpointTranslations.ts");
+
+export function walk(dir, root = dir) {
   const found = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith(".")) continue;
@@ -44,10 +53,13 @@ export function walk(dir) {
 
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      found.push(...walk(full));
-    } else if (entry.name.endsWith(".tsx")) {
-      found.push(full);
+      found.push(...walk(full, root));
+      continue;
     }
+    if (!entry.name.endsWith(".ts") && !entry.name.endsWith(".tsx")) continue;
+    if (entry.name.endsWith(".styles.ts")) continue;
+    if (relative(root, full) === TOUCHPOINT_CATALOG) continue;
+    found.push(full);
   }
   return found;
 }
@@ -67,9 +79,13 @@ const ALLOWED_POSITION_NAMES = new Set([
   "borderTop",
 ]);
 
-// Exact values that are technical vocabulary, not UI copy: KeyboardEvent.key
-// comparisons and DOMException.name checks.
+// Exact values that are technical vocabulary, not UI copy: a header name, two
+// `in window` feature-detection keys, KeyboardEvent.key comparisons, and
+// DOMException.name checks.
 const ALLOWED_EXACT_VALUES = new Set([
+  "Content-Type",
+  "Notification",
+  "PushManager",
   "Escape",
   "Enter",
   "Tab",
@@ -95,8 +111,16 @@ const STRING_LITERAL = /(?:([A-Za-z][\w-]*)\s*[:=]\s*)?"((?:[^"\\]|\\.)*)"/g;
 // across a line break anyway.
 const TEMPLATE_LITERAL = /(?:([A-Za-z][\w-]*)\s*[:=]\s*\{?\s*)?`((?:[^`\\]|\\.)*)`/g;
 
+// SCREAMING_SNAKE is an identifier vocabulary this codebase uses for values
+// that cross a wire or a platform boundary — the error codes in contracts.ts,
+// an HTTP method, a service-worker postMessage type, a tagName comparison.
+// None of it is ever shown to a user, and all of it trips the leading-capital
+// rule below.
+const IDENTIFIER_TOKEN = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$/;
+
 function looksLikeProse(value) {
   if (value.length < 4) return false;
+  if (IDENTIFIER_TOKEN.test(value)) return false;
   return /^[A-Z]/.test(value) || value.includes(" ");
 }
 
@@ -186,9 +210,20 @@ export function stripComments(source) {
   return out;
 }
 
+/**
+ * A locale catalog is entirely prose on purpose. `satisfies Messages` is what
+ * pins one to the `Messages` shape (see client/src/lib/i18n/types.ts), so it
+ * doubles as the marker — a new locale file is exempt the moment it compiles,
+ * with nothing to add here.
+ */
+export function isLocaleCatalog(source) {
+  return /\bsatisfies\s+Messages\b/.test(source);
+}
+
 export function checkFile(file, root = REPO_ROOT) {
   const failures = [];
   const source = readFileSync(file, "utf8");
+  if (isLocaleCatalog(source)) return failures;
   const originalLines = source.split("\n");
   const codeLines = stripComments(source).split("\n");
 

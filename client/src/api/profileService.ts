@@ -80,7 +80,7 @@ export function usePublicProfile(did: string | null) {
     queryFn: () =>
       did
         ? profileService.getPublicProfile(did)
-        : /* istanbul ignore next */ Promise.reject("No DID provided"),
+        : /* istanbul ignore next */ Promise.reject("No DID provided" /* i18n-allow */),
     enabled: !!did,
     staleTime: 30 * 60 * 1000,
   });
@@ -92,7 +92,7 @@ export function useUserExists(did: string | null) {
     queryFn: () =>
       did
         ? profileService.userExists(did)
-        : /* istanbul ignore next */ Promise.reject("No DID provided"),
+        : /* istanbul ignore next */ Promise.reject("No DID provided" /* i18n-allow */),
     enabled: !!did,
   });
 }
@@ -153,7 +153,7 @@ export function useResolveHandle(handle: string | null) {
     queryFn: () =>
       handle
         ? profileService.resolveHandle(handle)
-        : /* istanbul ignore next */ Promise.reject("No handle provided"),
+        : /* istanbul ignore next */ Promise.reject("No handle provided" /* i18n-allow */),
     enabled: !!handle,
     staleTime: Infinity,
   });
