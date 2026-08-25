@@ -22,24 +22,24 @@ describe("accountSwitchToast", () => {
   });
 
   describe("consumeAccountSwitchToast", () => {
-    it("fires the toast and strips the param when the marker is present", () => {
+    it("reports the handle and strips the param when the marker is present", () => {
       window.history.replaceState({}, "", "/?accountSwitched=karan.bsky.social");
-      const showToast = vi.fn();
+      const onSwitched = vi.fn();
 
-      consumeAccountSwitchToast(showToast);
+      consumeAccountSwitchToast(onSwitched);
 
-      expect(showToast).toHaveBeenCalledOnce();
-      expect(showToast).toHaveBeenCalledWith("Switched to @karan.bsky.social");
+      expect(onSwitched).toHaveBeenCalledOnce();
+      expect(onSwitched).toHaveBeenCalledWith("karan.bsky.social");
       expect(window.location.search).toBe("");
     });
 
     it("is a no-op when the marker is absent", () => {
       window.history.replaceState({}, "", "/messages");
-      const showToast = vi.fn();
+      const onSwitched = vi.fn();
 
-      consumeAccountSwitchToast(showToast);
+      consumeAccountSwitchToast(onSwitched);
 
-      expect(showToast).not.toHaveBeenCalled();
+      expect(onSwitched).not.toHaveBeenCalled();
     });
   });
 });

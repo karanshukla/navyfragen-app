@@ -7,6 +7,14 @@ export interface ApiError {
   status?: number;
 }
 
+/**
+ * What `apiClient` throws when a non-OK response carries no JSON body.
+ * `error` holds a machine code everywhere else, and `resolveApiErrorMessage`
+ * renders the localized generic string for any value it does not recognise,
+ * so this one only ever reaches a log.
+ */
+const UNPARSEABLE_ERROR_BODY = { error: "Unknown error" /* i18n-allow */ };
+
 export const apiClient = {
   get: async <T>(endpoint: string): Promise<T> => {
     const headers: Record<string, string> = {
@@ -19,7 +27,7 @@ export const apiClient = {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      const error = await response.json().catch(() => UNPARSEABLE_ERROR_BODY);
       throw { ...error, status: response.status } as ApiError;
     }
     return response.json() as Promise<T>;
@@ -37,7 +45,7 @@ export const apiClient = {
       body: data ? JSON.stringify(data) : undefined,
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      const error = await response.json().catch(() => UNPARSEABLE_ERROR_BODY);
       throw { ...error, status: response.status } as ApiError;
     }
     return response.json() as Promise<T>;
@@ -55,7 +63,7 @@ export const apiClient = {
       body: data ? JSON.stringify(data) : undefined,
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      const error = await response.json().catch(() => UNPARSEABLE_ERROR_BODY);
       throw { ...error, status: response.status } as ApiError;
     }
     return response.json() as Promise<T>;

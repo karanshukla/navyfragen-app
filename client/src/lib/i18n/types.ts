@@ -39,6 +39,7 @@ export interface CommonMessages {
   errorTitle: string;
   accessDeniedMessage: string;
   settingsLoadErrorTitle: string;
+  switchedToAccount: (handle: string) => string;
   shortcuts: {
     title: string;
     home: string;

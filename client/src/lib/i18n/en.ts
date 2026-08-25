@@ -15,6 +15,7 @@ export const en = {
     errorTitle: "Error",
     accessDeniedMessage: "You cannot access this page without logging in.",
     settingsLoadErrorTitle: "Failed to load settings",
+    switchedToAccount: (handle: string) => `Switched to @${handle}`,
     shortcuts: {
       title: "Keyboard Shortcuts",
       home: "Home",

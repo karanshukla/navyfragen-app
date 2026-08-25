@@ -62,7 +62,10 @@ const APP_BADGE = "/favicon-32x32.png";
 self.addEventListener("push", (event) => {
   let data: PushPayload = {
     title: APP_NAME,
-    body: "You have a new update",
+    // A push payload carries a server-localized body (#405); this default
+    // only covers one that failed to parse. A service worker has neither the
+    // React context nor localStorage, so it cannot resolve `uiLocale` itself.
+    body: "You have a new update" /* i18n-allow */,
     url: "/messages",
   };
   try {
@@ -115,7 +118,10 @@ self.addEventListener("notificationclick", (event) => {
           await client.navigate(targetUrl);
           return;
         } catch (err) {
-          console.warn("[sw] focus/navigate failed, falling back to openWindow", err);
+          console.warn(
+            "[sw] focus/navigate failed, falling back to openWindow" /* i18n-allow */,
+            err
+          );
         }
       }
 
