@@ -39,6 +39,18 @@ describe("SettingsCard", () => {
     expect(screen.queryByText("Why it is off")).toBeNull();
   });
 
+  it("fills its grid column, so cards in different rows share edges", () => {
+    const { container } = renderWithProviders(
+      <SettingsCard title="T" description="D">
+        <span>child</span>
+      </SettingsCard>
+    );
+    expect(container.querySelector(".mantine-Paper-root")).toHaveStyle({
+      width: "100%",
+      height: "100%",
+    });
+  });
+
   it("renders correctly in dark mode", () => {
     const { container } = renderWithProviders(
       <SettingsCard title="T" description="D">

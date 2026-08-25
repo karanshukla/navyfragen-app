@@ -16,6 +16,9 @@ interface SettingsCardProps {
 /**
  * Owns the card surface and the one layout rule the settings pages follow:
  * state sits next to the title, the action sits at the bottom edge.
+ *
+ * @see [SettingsCard.test.tsx](../tests/components/SettingsCard.test.tsx) — pins
+ * that the card fills its column, so cards in different rows share edges.
  */
 export function SettingsCard({ title, description, control, note, children }: SettingsCardProps) {
   return (
