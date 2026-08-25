@@ -10,10 +10,19 @@ permissions:
   contents: read
   pull-requests: write
 
+# A superseded PR run holds its runners until it finishes, and this workflow
+# fans out to seven jobs, so pushing twice in quick succession starves the next
+# run of the queue. Main is exempt: its runs are the merge-status record and
+# cancelling one leaves a commit with no verdict.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   client-tests:
     name: Client Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -53,10 +62,15 @@ jobs:
           # createServer + fetch of a TSX route through @vitejs/plugin-react.
           # `vite build` (the Docker path) and vitest (its own module runner)
           # both skip the dev server, so this is its only coverage.
+          # Capture through a file, not `$(...)`: command substitution waits for
+          # the pipe to close rather than for the process, so a dev server that
+          # fails to release its socket hangs the step indefinitely.
           set +e
-          probe_out=$(bun run probe:bun 2>&1)
+          timeout --signal=TERM --kill-after=15s 120s bun run probe:bun \
+            > "$RUNNER_TEMP/probe.log" 2>&1
           probe_exit=$?
           set -e
+          probe_out=$(cat "$RUNNER_TEMP/probe.log")
           echo "$probe_out" | tee /dev/stderr >/dev/null
           {
             echo "<details><summary><code>bun-vite-dev-server</code></summary>"
@@ -67,6 +81,10 @@ jobs:
             echo ""
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$probe_exit" -eq 124 ] || [ "$probe_exit" -eq 137 ]; then
+            echo "::error::Vite dev server probe exceeded its 120s budget"
+            exit 1
+          fi
           if [ "$probe_exit" -ne 0 ] || ! echo "$probe_out" | grep -q 'OK bun='; then
             echo "::error::Vite dev server did not pass under Bun"
             exit 1
@@ -110,6 +128,7 @@ jobs:
   server-tests:
     name: Server Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -283,6 +302,7 @@ jobs:
   opengraph-tests:
     name: OpenGraph Service (Go) Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: opengraph-service
@@ -319,6 +339,7 @@ jobs:
   html-to-image-tests:
     name: HTML-to-Image Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: html-to-image
@@ -395,6 +416,7 @@ jobs:
   doc-links:
     name: Doc Links
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # CLAUDE.md lets a test carry a business rule in place of a comment, on the
     # condition that the code links to that test. A renamed test breaks the link
@@ -418,6 +440,7 @@ jobs:
   bot-policy:
     name: Anubis Bot Policy
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # The policy allowed /site.webmanifest long after vite-plugin-pwa started
     # emitting /manifest.webmanifest, so the real file was challenged while the
@@ -439,6 +462,7 @@ jobs:
     needs: [client-tests, server-tests]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Finalize Coveralls build
