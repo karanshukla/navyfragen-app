@@ -277,21 +277,41 @@ describe("AppLayout", () => {
   describe("onSuccess of a notifyDid switch", () => {
     const originalLocation = window.location;
 
+    /**
+     * `window` is `Window & typeof globalThis`, whose `location` setter takes
+     * `string & Location` so that `location = "/path"` compiles, while the
+     * getter returns a plain `Location`. Restoring a saved one therefore needs
+     * a widening cast as much as installing a stub does, so both go through
+     * here instead of repeating it at three call sites.
+     */
+    function assignLocation(next: Location): void {
+      window.location = next as unknown as string & Location;
+    }
+
+    /**
+     * Swaps in a `location` whose `href` setter records instead of navigating,
+     * and hands back a reader for whatever was written to it.
+     */
+    function captureHrefWrites(): () => string {
+      let captured = "";
+      assignLocation({
+        ...originalLocation,
+        get href() {
+          return captured || originalLocation.href;
+        },
+        set href(value: string) {
+          captured = value;
+        },
+      } as unknown as Location);
+      return () => captured;
+    }
+
     afterEach(() => {
-      window.location = originalLocation;
+      assignLocation(originalLocation);
     });
 
     it("navigates to the accountSwitched URL when the notification carried a handle", () => {
-      let capturedHref = "";
-      window.location = {
-        ...originalLocation,
-        get href() {
-          return capturedHref || originalLocation.href;
-        },
-        set href(value: string) {
-          capturedHref = value;
-        },
-      } as unknown as Location;
+      const capturedHref = captureHrefWrites();
 
       const mutate = vi.fn((_vars, { onSuccess }) => onSuccess());
       mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
@@ -303,20 +323,11 @@ describe("AppLayout", () => {
 
       renderWithProviders(<AppLayout />);
 
-      expect(capturedHref).toBe("/messages?accountSwitched=foo.bsky.social");
+      expect(capturedHref()).toBe("/messages?accountSwitched=foo.bsky.social");
     });
 
     it("leaves the URL unchanged when the notification carried no handle", () => {
-      let capturedHref = "";
-      window.location = {
-        ...originalLocation,
-        get href() {
-          return capturedHref || originalLocation.href;
-        },
-        set href(value: string) {
-          capturedHref = value;
-        },
-      } as unknown as Location;
+      const capturedHref = captureHrefWrites();
 
       const mutate = vi.fn((_vars, { onSuccess }) => onSuccess());
       mockUseSwitchAccount.mockReturnValue({ mutate, isPending: false } as any);
@@ -324,7 +335,7 @@ describe("AppLayout", () => {
 
       renderWithProviders(<AppLayout />);
 
-      expect(capturedHref).toBe(originalLocation.href);
+      expect(capturedHref()).toBe(originalLocation.href);
     });
   });
 });
