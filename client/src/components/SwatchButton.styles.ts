@@ -16,12 +16,16 @@ export const button = (selected: boolean, disabled?: boolean): CSSProperties => 
   transition: "border-color var(--nf-dur-fast) var(--nf-ease)",
 });
 
-export const preview: CSSProperties = {
-  aspectRatio: "4/3",
+export const preview = (aspectRatio: string): CSSProperties => ({
+  aspectRatio,
   borderRadius: 5,
   overflow: "hidden",
-};
+});
 
 export const label: CSSProperties = {
   color: textDefault,
+  // A long single-word preset name (pt "Verdejante") is narrower than its
+  // swatch on every viewport but the smallest phones, where it breaks rather
+  // than spilling over the neighbouring swatch.
+  overflowWrap: "break-word",
 };

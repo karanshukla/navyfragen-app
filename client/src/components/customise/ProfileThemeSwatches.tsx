@@ -5,6 +5,7 @@ import { SwatchButton } from "../SwatchButton";
 import * as styles from "./ProfileThemeSwatches.styles";
 
 const DEFAULT_THEME = "royal";
+const COLOUR_BAND_ASPECT = "16/9";
 
 interface ProfileThemeSwatchesProps {
   value: string | null;
@@ -14,8 +15,11 @@ interface ProfileThemeSwatchesProps {
 
 /**
  * Ask-card colour picker. Same swatch chrome as the image-theme picker; the
- * preview is a gradient fill rather than a card mockup, because the choice only
+ * preview is a gradient band rather than a card mockup, because the choice only
  * affects the card's background.
+ *
+ * @see [ProfileThemeSwatches.test.tsx](../../tests/components/ProfileThemeSwatches.test.tsx)
+ * — pins the band.
  */
 export function ProfileThemeSwatches({ value, disabled, onPick }: ProfileThemeSwatchesProps) {
   const messages = useTranslations();
@@ -28,6 +32,7 @@ export function ProfileThemeSwatches({ value, disabled, onPick }: ProfileThemeSw
           selected={(value ?? DEFAULT_THEME) === themeValue}
           disabled={disabled}
           onClick={() => onPick(themeValue)}
+          previewAspect={COLOUR_BAND_ASPECT}
         >
           <div style={styles.fill(theme.gradient)} />
         </SwatchButton>

@@ -1,12 +1,16 @@
 import type { CSSProperties } from "react";
 
 /**
- * Wraps rather than squeezing: four fixed columns clipped the widest label on a
- * narrow card. The cap keeps swatches swatch-sized on a full-width row.
+ * One row, like the image-theme picker: equal columns that shrink with the card.
+ * The cap keeps swatches swatch-sized on a full-width row.
+ *
+ * @see [ProfileThemeSwatches.test.tsx](../../tests/components/ProfileThemeSwatches.test.tsx)
+ * — pins the single row, which is what keeps this card level with the prompt
+ * card sharing its row.
  */
 export const grid: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(96px, 132px))",
+  gridTemplateColumns: "repeat(4, minmax(0, 132px))",
   gap: 10,
 };
 
