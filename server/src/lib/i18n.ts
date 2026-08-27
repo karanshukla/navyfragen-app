@@ -117,14 +117,54 @@ const fr = {
 const CATALOGS: Record<ServerLocale, ServerMessages> = { en, es, pt, de, fr };
 
 /**
+ * The primary subtag, lowercased: the part of a BCP-47 tag that picks the
+ * words. `es-419` and `ES` both reduce to `es`.
+ */
+function primarySubtag(tag: string): string {
+  return tag.split("-")[0].toLowerCase();
+}
+
+/**
+ * Whether `value` is a well-formed BCP-47 tag whose primary subtag has a
+ * catalog — the check the `/settings` route runs before persisting a locale,
+ * so a stored `uiLocale`/`touchpointLocale` is always something every reader
+ * of it (this module, the client's `Intl` formatters, the Go OG service) can
+ * accept. Well-formedness is `Intl.getCanonicalLocales`' answer rather than a
+ * regex of our own: it is the same grammar the formatters themselves throw
+ * `RangeError` on.
+ *
+ * @see [i18n.test.ts](../tests/i18n.test.ts) — pins the regional-variant,
+ * malformed-tag, and unsupported-language cases.
+ */
+export function isSupportedLocaleTag(value: string): boolean {
+  try {
+    Intl.getCanonicalLocales(value);
+  } catch {
+    return false;
+  }
+  return Object.hasOwn(CATALOGS, primarySubtag(value));
+}
+
+/**
  * Falls back to `en` for an unset, unrecognized, or not-yet-shipped locale —
  * the same "fall back rather than widen" contract as the client's
- * `loadCatalog`. Never throws: a caller with a bad or missing locale string
- * still gets a full catalog.
+ * `loadCatalog`, and matched on the primary subtag for the same reason, so a
+ * regional variant reads its language's catalog instead of English.
+ *
+ * `Object.hasOwn`, not `in`: `in` answers true for every name on
+ * `Object.prototype`, so a locale of `toString` or `__proto__` would return a
+ * prototype member typed as a catalog and every caller would throw on the
+ * first property read. Never throws: a caller with a bad or missing locale
+ * string still gets a full catalog.
+ *
+ * @see [i18n.test.ts](../tests/i18n.test.ts) — pins the prototype-key and
+ * regional-variant cases alongside the plain fallback.
  */
 export function getServerMessages(locale: string | null | undefined): ServerMessages {
-  if (locale && locale in CATALOGS) {
-    return CATALOGS[locale as ServerLocale];
+  if (!locale) return CATALOGS.en;
+  const primary = primarySubtag(locale);
+  if (Object.hasOwn(CATALOGS, primary)) {
+    return CATALOGS[primary as ServerLocale];
   }
   return CATALOGS.en;
 }

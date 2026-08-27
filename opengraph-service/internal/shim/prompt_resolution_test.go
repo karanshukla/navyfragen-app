@@ -77,3 +77,28 @@ func TestTouchpointPrompts_EnglishEntryMatchesDefaultPrompt(t *testing.T) {
 			touchpointPrompts["en"], DefaultPrompt)
 	}
 }
+
+// A regional variant is a tag the NF server now accepts for touchpointLocale,
+// and the client renders that profile in the tag's language — so the card has
+// to agree rather than falling back to English.
+func TestResolvePrompt_RegionalVariant_UsesItsLanguage(t *testing.T) {
+	for _, tc := range []struct{ locale, want string }{
+		{"pt-BR", touchpointPrompts["pt"]},
+		{"es-419", touchpointPrompts["es"]},
+		{"DE-AT", touchpointPrompts["de"]},
+		{"fr-CA", touchpointPrompts["fr"]},
+		{"en-GB", DefaultPrompt},
+	} {
+		if got := resolvePrompt("", tc.locale); got != tc.want {
+			t.Errorf("resolvePrompt(%q) = %q, want %q", tc.locale, got, tc.want)
+		}
+	}
+}
+
+func TestResolvePrompt_UnsupportedLanguage_StillFallsBackToEnglish(t *testing.T) {
+	for _, locale := range []string{"ja", "nl-BE", ""} {
+		if got := resolvePrompt("", locale); got != DefaultPrompt {
+			t.Errorf("resolvePrompt(%q) = %q, want DefaultPrompt", locale, got)
+		}
+	}
+}

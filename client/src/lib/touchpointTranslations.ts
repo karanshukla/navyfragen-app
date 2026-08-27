@@ -102,12 +102,26 @@ const translations: Record<TouchpointLocale, TouchpointTranslations> = {
   },
 };
 
-/** Anything unset or unrecognised falls back to English. */
+/**
+ * Anything unset or unrecognised falls back to English, matched on the primary
+ * subtag so a regional variant reads its own language rather than English.
+ *
+ * `Object.hasOwn`, not `in`: `in` answers true for every name on
+ * `Object.prototype`, so a `touchpointLocale` of `toString` or `__proto__`
+ * would hand back a prototype member typed as a catalog — and this one renders
+ * on the public profile, where the first `headline(name)` call would throw for
+ * every visitor, not just for the owner who set it.
+ *
+ * @see [touchpointTranslations.test.ts](../tests/lib/touchpointTranslations.test.ts):
+ * pins the prototype-key and regional-variant cases.
+ */
 export function getTouchpointTranslations(
   locale: string | null | undefined
 ): TouchpointTranslations {
-  if (locale && locale in translations) {
-    return translations[locale as TouchpointLocale];
+  if (!locale) return translations.en;
+  const primary = locale.split("-")[0].toLowerCase();
+  if (Object.hasOwn(translations, primary)) {
+    return translations[primary as TouchpointLocale];
   }
   return translations.en;
 }

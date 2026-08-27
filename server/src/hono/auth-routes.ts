@@ -11,7 +11,7 @@ import {
   toAccountEntry,
   upsertAccount,
 } from "#/auth/session";
-import { errorBody, errorMessage } from "#/lib/errors";
+import { errorBody } from "#/lib/errors";
 import { env } from "#/lib/env";
 import { pdsRegion } from "#/lib/pds-region";
 import { AuthService } from "#/services/auth-service";
@@ -55,7 +55,8 @@ export function createAuthHono(ctx: AppContext, deps: AuthDeps = {}): Hono {
         ctx.logger.info({ redirectUrl }, "OAuth authorize succeeded");
         return c.json({ redirectUrl });
       } catch (err: unknown) {
-        return c.json({ error: errorMessage(err) || "couldn't initiate login" }, 500);
+        ctx.logger.error({ err, handle }, "Failed to start OAuth authorize");
+        return c.json(errorBody("LOGIN_INIT_FAILED", "Couldn't initiate login"), 500);
       }
     }
   );

@@ -3,7 +3,14 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
 import { errorBody, errorMessage } from "#/lib/errors";
-import { MessageService } from "#/services/message-service";
+import { isSupportedLocaleTag } from "#/lib/i18n";
+import {
+  INBOX_CLOSED,
+  MESSAGE_NOT_FOUND,
+  MessageService,
+  NOT_AUTHORIZED_TO_DELETE,
+  RECIPIENT_NOT_FOUND,
+} from "#/services/message-service";
 import { NotificationService } from "#/services/notification-service";
 import { ProfileService } from "#/services/profile-service";
 import {
@@ -119,10 +126,10 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
         const msg = errorMessage(err);
         if (msg === QUESTION_NOT_IN_INBOX) {
           ctx.logger.warn({ tid, did }, "Render requested for a question outside the inbox");
-          return c.json({ error: msg }, 404);
+          return c.json(errorBody("RENDER_QUESTION_NOT_IN_INBOX", QUESTION_NOT_IN_INBOX), 404);
         }
         ctx.logger.error({ err, tid, did }, "Failed to enqueue question image render");
-        return c.json({ error: msg || "Failed to start the image render" }, 500);
+        return c.json(errorBody("RENDER_START_FAILED", "Failed to start the image render"), 500);
       }
     }
   );
@@ -195,7 +202,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
           { err, tid, did },
           "Error in /messages/respond endpoint while trying to post to Bluesky"
         );
-        return c.json({ error: errorMessage(err) || "Failed to post to Bluesky" }, 500);
+        return c.json(errorBody("BLUESKY_POST_FAILED", "Failed to post to Bluesky"), 500);
       }
     }
   );
@@ -226,8 +233,13 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       } catch (err: unknown) {
         ctx.logger.error({ err, recipient }, "Failed to send message");
         const msg = errorMessage(err);
-        const status = msg.includes("not found") ? 404 : msg.includes("not accepting") ? 403 : 500;
-        return c.json({ error: msg || "Failed to send message" }, status);
+        if (msg === RECIPIENT_NOT_FOUND) {
+          return c.json(errorBody("USER_NOT_FOUND", RECIPIENT_NOT_FOUND), 404);
+        }
+        if (msg === INBOX_CLOSED) {
+          return c.json(errorBody("INBOX_CLOSED", INBOX_CLOSED), 403);
+        }
+        return c.json(errorBody("MESSAGE_SEND_FAILED", "Failed to send message"), 500);
       }
     }
   );
@@ -265,8 +277,14 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       return c.json({ success: true });
     } catch (err: unknown) {
       const msg = errorMessage(err);
-      const status = msg.includes("not found") ? 404 : msg.includes("Not authorized") ? 403 : 500;
-      return c.json({ error: msg || "Failed to delete message" }, status);
+      if (msg === MESSAGE_NOT_FOUND) {
+        return c.json(errorBody("MESSAGE_NOT_FOUND", MESSAGE_NOT_FOUND), 404);
+      }
+      if (msg === NOT_AUTHORIZED_TO_DELETE) {
+        return c.json(errorBody("MESSAGE_DELETE_NOT_AUTHORIZED", NOT_AUTHORIZED_TO_DELETE), 403);
+      }
+      ctx.logger.error({ err, tid, userSessionDid }, "Failed to delete message");
+      return c.json(errorBody("MESSAGE_DELETE_FAILED", "Failed to delete message"), 500);
     }
   });
 
@@ -295,7 +313,7 @@ export function createMessageHono(ctx: AppContext, deps: MessageDeps = {}): Hono
       return c.json({ success: true });
     } catch (err: unknown) {
       ctx.logger.error({ err, did: userSessionDid }, "Failed to delete account data");
-      return c.json({ error: errorMessage(err) || "Failed to delete account data" }, 500);
+      return c.json(errorBody("ACCOUNT_DELETE_FAILED", "Failed to delete account data"), 500);
     }
   });
 
@@ -519,6 +537,14 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     }
   });
 
+  // Both locale columns are read back by formatters that reject a malformed
+  // BCP-47 tag outright — `Intl.NumberFormat`/`toLocaleString` on the client
+  // throw `RangeError`, which takes the page down — so an unusable tag is
+  // rejected here rather than persisted and rendered later.
+  // @see [settings-controller.test.ts](../tests/settings-controller.test.ts):
+  // "rejects a malformed locale tag" and "rejects an unsupported language".
+  const localeTag = z.string().refine(isSupportedLocaleTag);
+
   const updateSchema = z.object({
     pdsSyncEnabled: z.boolean().optional(),
     imageTheme: z.string().min(1).nullable().optional(),
@@ -526,8 +552,8 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     profanityFilterEnabled: z.boolean().optional(),
     customPrompt: z.string().max(100).nullable().optional(),
     profileCardTheme: z.string().nullable().optional(),
-    touchpointLocale: z.string().nullable().optional(),
-    uiLocale: z.string().nullable().optional(),
+    touchpointLocale: localeTag.nullable().optional(),
+    uiLocale: localeTag.nullable().optional(),
   });
 
   app.post(

@@ -13,6 +13,7 @@ import { ProfileSkeleton } from "../components/profile/ProfileSkeleton";
 import { ProfileUrlBar } from "../components/profile/ProfileUrlBar";
 import { APP_NAME } from "../lib/brand";
 import { useTranslations } from "../lib/i18n";
+import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import type { Messages } from "../lib/i18n/types";
 import { profileCardGradient } from "../lib/themes";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
@@ -170,6 +171,15 @@ export default function PublicProfile() {
   );
 }
 
+/**
+ * `error` on an API failure is a machine code (`server/src/lib/contracts.ts`),
+ * so it goes through `resolveApiErrorMessage` — rendering the field itself
+ * would put `HANDLE_RESOLVE_FAILED` in front of a visitor, and this is the one
+ * page a logged-out stranger sees.
+ *
+ * @see [PublicProfile.test.tsx](../tests/pages/PublicProfile.test.tsx):
+ * "renders a localized sentence, never the server's error code".
+ */
 function describeHandleError(
   messages: Messages,
   error: unknown
@@ -180,18 +190,20 @@ function describeHandleError(
   >;
   return {
     is404: fields.status === 404,
-    message:
-      typeof fields.error === "string"
-        ? fields.error
-        : messages.publicProfilePage.handleResolveFailed,
+    message: resolveApiErrorMessage(
+      fields,
+      messages,
+      messages.publicProfilePage.handleResolveFailed
+    ),
   };
 }
 
 function sendFailureMessage(messages: Messages, err: unknown): string {
-  const fields = err as Record<string, unknown>;
-  if (typeof fields?.message === "string") return fields.message;
-  if (typeof fields?.error === "string") return fields.error;
-  return messages.publicProfilePage.sendMessageFailed;
+  return resolveApiErrorMessage(
+    err as Record<string, unknown>,
+    messages,
+    messages.publicProfilePage.sendMessageFailed
+  );
 }
 
 /** Keeps the composer in view when a soft keyboard opens under it. */

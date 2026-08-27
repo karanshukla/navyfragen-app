@@ -39,15 +39,49 @@ export const uiLocaleOptions: { value: Locale; label: string }[] = [
  * default bundle carries only `en` — each non-English locale ships as its own
  * chunk, fetched only when a user actually selects it.
  */
-const LOCALE_LOADERS: Partial<Record<string, () => Promise<Messages>>> = {
-  es: () => import("./es").then((m) => m.es),
-  pt: () => import("./pt").then((m) => m.pt),
-  de: () => import("./de").then((m) => m.de),
-  fr: () => import("./fr").then((m) => m.fr),
-};
+const LOCALE_LOADERS: ReadonlyMap<string, () => Promise<Messages>> = new Map([
+  ["es", () => import("./es").then((m) => m.es)],
+  ["pt", () => import("./pt").then((m) => m.pt)],
+  ["de", () => import("./de").then((m) => m.de)],
+  ["fr", () => import("./fr").then((m) => m.fr)],
+]);
 
 function primarySubtag(tag: string): string {
   return tag.split("-")[0].toLowerCase();
+}
+
+/**
+ * The tag `ActiveCatalog.locale` is allowed to carry, which is narrower than
+ * the tag that was requested: everything downstream of it — `Intl.NumberFormat`
+ * (`../useNumberFormat.ts`), `toLocaleString` (`../formatTimestamp.ts`) —
+ * throws `RangeError` on a malformed BCP-47 tag rather than falling back, and
+ * that throw lands mid-render and takes the whole page down. A tag the
+ * formatters would reject is therefore reduced to its primary subtag, which
+ * `resolveUiLocale` only ever produced from a supported list.
+ *
+ * `Intl.getCanonicalLocales` is the arbiter rather than a regex here because
+ * it is the same grammar the formatters themselves apply.
+ *
+ * @see [i18n.test.tsx](../../tests/lib/i18n.test.tsx) — pins that a malformed
+ * regional tag still renders, and formats, instead of throwing.
+ */
+function renderableTag(locale: string): string {
+  try {
+    Intl.getCanonicalLocales(locale);
+    return locale;
+  } catch {
+    return primarySubtag(locale);
+  }
+}
+
+/**
+ * `readStoredJson` returns whatever JSON the key holds, and the locale rungs
+ * below call string methods on it — so a key holding an object (a stale
+ * format, a collision) would throw rather than read as absent.
+ */
+function readStoredLocale(): string | null {
+  const stored = readStoredJson<unknown>(STORAGE_KEY);
+  return typeof stored === "string" ? stored : null;
 }
 
 export interface ResolveUiLocaleInput {
@@ -108,12 +142,13 @@ export interface ActiveCatalog {
  * cases.
  */
 export async function loadCatalog(locale: string): Promise<ActiveCatalog> {
-  const primary = primarySubtag(locale);
-  if (primary === "en") return { locale, messages: en };
-  const loader = LOCALE_LOADERS[primary];
+  const tag = renderableTag(locale);
+  const primary = primarySubtag(tag);
+  if (primary === "en") return { locale: tag, messages: en };
+  const loader = LOCALE_LOADERS.get(primary);
   if (!loader) return { locale: "en", messages: en };
   try {
-    return { locale, messages: await loader() };
+    return { locale: tag, messages: await loader() };
   } catch {
     return { locale: "en", messages: en };
   }
@@ -133,7 +168,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         settingsUiLocale: uiLocale,
         settingsLoaded,
         isLoggedIn,
-        storedLocale: readStoredJson<string>(STORAGE_KEY),
+        storedLocale: readStoredLocale(),
         navigatorLanguages: navigator.languages ?? [navigator.language],
       }),
     [uiLocale, settingsLoaded, isLoggedIn]
