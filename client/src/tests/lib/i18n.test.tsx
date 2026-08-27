@@ -400,11 +400,18 @@ describe("loadCatalog", () => {
   });
 });
 
+/**
+ * Seeded into `<html lang>` before every provider render so each assertion on
+ * it proves the provider wrote the tag. Seeding `"en"` instead would let the
+ * `en` cases pass without the provider ever running.
+ */
+const LANG_BEFORE_PROVIDER = "zz";
+
 describe("I18nProvider / useTranslations / useLocale", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    document.documentElement.lang = "en";
+    document.documentElement.lang = LANG_BEFORE_PROVIDER;
   });
 
   it("throws when used outside an I18nProvider", () => {
@@ -455,8 +462,8 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     renderProvider();
     await waitFor(() => {
       expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", "en");
+      expect(document.documentElement.lang).toBe("en");
     });
-    expect(document.documentElement.lang).toBe("en");
   });
 
   it("renders the es catalog end to end when uiLocale is 'es'", async () => {
@@ -469,8 +476,8 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     renderProvider();
     await waitFor(() => {
       expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", "es");
+      expect(document.documentElement.lang).toBe("es");
     });
-    expect(document.documentElement.lang).toBe("es");
     expect(screen.getByTestId("probe")).toHaveTextContent(JSON.stringify(es));
   });
 
@@ -488,8 +495,8 @@ describe("I18nProvider / useTranslations / useLocale", () => {
     renderProvider();
     await waitFor(() => {
       expect(screen.getByTestId("probe")).toHaveAttribute("data-locale", locale);
+      expect(document.documentElement.lang).toBe(locale);
     });
-    expect(document.documentElement.lang).toBe(locale);
     expect(screen.getByTestId("probe")).toHaveTextContent(JSON.stringify(catalog));
   });
 
