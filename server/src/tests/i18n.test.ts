@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { test, describe } from "bun:test";
 
-import { getServerMessages, type ServerMessages } from "../lib/i18n";
+import { getServerMessages, isSupportedLocaleTag, type ServerMessages } from "../lib/i18n";
 import { APP_NAME } from "../lib/brand";
 
 describe("getServerMessages", () => {
@@ -32,6 +32,17 @@ describe("getServerMessages", () => {
     assert.deepStrictEqual(getServerMessages(""), getServerMessages("en"));
   });
 
+  test("reads a regional variant's own language, not English", () => {
+    assert.deepStrictEqual(getServerMessages("es-419"), getServerMessages("es"));
+    assert.deepStrictEqual(getServerMessages("PT-BR"), getServerMessages("pt"));
+  });
+
+  for (const prototypeKey of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
+    test(`falls back to en for the prototype key ${prototypeKey}`, () => {
+      assert.deepStrictEqual(getServerMessages(prototypeKey), getServerMessages("en"));
+    });
+  }
+
   test("satisfies the ServerMessages shape", () => {
     const messages: ServerMessages = getServerMessages("en");
     assert.strictEqual(typeof messages.push.titleForHandle, "function");
@@ -55,8 +66,8 @@ describe("getServerMessages", () => {
     assert.notDeepStrictEqual(getServerMessages("es"), getServerMessages("en"));
   });
 
-  test("falls back to en for a related-but-unrecognized locale tag like 'es-MX'", () => {
-    assert.deepStrictEqual(getServerMessages("es-MX"), getServerMessages("en"));
+  test("reads the es catalog for the regional variant 'es-MX'", () => {
+    assert.deepStrictEqual(getServerMessages("es-MX"), getServerMessages("es"));
   });
 
   test("returns the pt catalog for 'pt'", () => {
@@ -71,8 +82,8 @@ describe("getServerMessages", () => {
     assert.notDeepStrictEqual(getServerMessages("pt"), getServerMessages("en"));
   });
 
-  test("falls back to en for a related-but-unrecognized locale tag like 'pt-BR'", () => {
-    assert.deepStrictEqual(getServerMessages("pt-BR"), getServerMessages("en"));
+  test("reads the pt catalog for the regional variant 'pt-BR'", () => {
+    assert.deepStrictEqual(getServerMessages("pt-BR"), getServerMessages("pt"));
   });
 
   test("returns the de catalog for 'de'", () => {
@@ -90,8 +101,8 @@ describe("getServerMessages", () => {
     assert.notDeepStrictEqual(getServerMessages("de"), getServerMessages("en"));
   });
 
-  test("falls back to en for a related-but-unrecognized locale tag like 'de-AT'", () => {
-    assert.deepStrictEqual(getServerMessages("de-AT"), getServerMessages("en"));
+  test("reads the de catalog for the regional variant 'de-AT'", () => {
+    assert.deepStrictEqual(getServerMessages("de-AT"), getServerMessages("de"));
   });
 
   test("returns the fr catalog for 'fr'", () => {
@@ -109,7 +120,32 @@ describe("getServerMessages", () => {
     assert.notDeepStrictEqual(getServerMessages("fr"), getServerMessages("en"));
   });
 
-  test("falls back to en for a related-but-unrecognized locale tag like 'fr-CA'", () => {
-    assert.deepStrictEqual(getServerMessages("fr-CA"), getServerMessages("en"));
+  test("reads the fr catalog for the regional variant 'fr-CA'", () => {
+    assert.deepStrictEqual(getServerMessages("fr-CA"), getServerMessages("fr"));
+  });
+});
+
+describe("isSupportedLocaleTag", () => {
+  test("accepts a shipped locale and its regional variants", () => {
+    for (const tag of ["en", "es", "pt", "de", "fr", "en-GB", "es-419", "PT-BR"]) {
+      assert.strictEqual(isSupportedLocaleTag(tag), true, tag);
+    }
+  });
+
+  test("rejects a malformed tag the Intl formatters would throw on", () => {
+    for (const tag of ["en-", "es-", "en--x", "", "en_US"]) {
+      assert.strictEqual(isSupportedLocaleTag(tag), false, tag);
+    }
+  });
+
+  test("rejects a well-formed tag in a language with no catalog", () => {
+    assert.strictEqual(isSupportedLocaleTag("ja"), false);
+    assert.strictEqual(isSupportedLocaleTag("nl-BE"), false);
+  });
+
+  test("rejects a prototype key", () => {
+    for (const tag of ["toString", "constructor", "__proto__"]) {
+      assert.strictEqual(isSupportedLocaleTag(tag), false, tag);
+    }
   });
 });

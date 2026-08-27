@@ -215,6 +215,43 @@ describe("Settings (Hono)", () => {
       assert.strictEqual(secondPass.uiLocale, undefined);
     });
 
+    test("accepts a regional variant of a shipped locale", async () => {
+      const { app, service, headers } = makeApp();
+      const res = await app.request("/settings", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ uiLocale: "es-419" }),
+      });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(service.updateSettings.mock.calls[0][1].uiLocale, "es-419");
+    });
+
+    test("rejects a malformed locale tag", async () => {
+      const { app, service, headers } = makeApp();
+      for (const uiLocale of ["en-", "es-", "en--x", "toString"]) {
+        const res = await app.request("/settings", {
+          method: "POST",
+          headers: jsonHeaders(headers),
+          body: JSON.stringify({ uiLocale }),
+        });
+        assert.strictEqual(res.status, 400, uiLocale);
+      }
+      assert.strictEqual(service.updateSettings.mock.calls.length, 0);
+    });
+
+    test("rejects an unsupported language on either locale axis", async () => {
+      const { app, service, headers } = makeApp();
+      for (const body of [{ uiLocale: "ja" }, { touchpointLocale: "nl-BE" }]) {
+        const res = await app.request("/settings", {
+          method: "POST",
+          headers: jsonHeaders(headers),
+          body: JSON.stringify(body),
+        });
+        assert.strictEqual(res.status, 400, JSON.stringify(body));
+      }
+      assert.strictEqual(service.updateSettings.mock.calls.length, 0);
+    });
+
     test("coerces profanityFilterEnabled to a strict boolean when provided", async () => {
       const { app, service, headers } = makeApp();
       await app.request("/settings", {

@@ -412,6 +412,20 @@ export const de = {
         "Wir konnten Push-Benachrichtigungen nicht aktivieren. Bitte versuche es erneut.",
       PUSH_UNSUBSCRIBE_FAILED:
         "Wir konnten Push-Benachrichtigungen nicht deaktivieren. Bitte versuche es erneut.",
+      INBOX_CLOSED:
+        "Dieser Posteingang ist geschlossen und nimmt derzeit keine neuen Nachrichten an.",
+      MESSAGE_SEND_FAILED: "Wir konnten deine Nachricht nicht senden. Bitte versuche es erneut.",
+      MESSAGE_NOT_FOUND: "Wir konnten diese Nachricht nicht finden.",
+      MESSAGE_DELETE_NOT_AUTHORIZED:
+        "Diese Nachricht gehört dir nicht, du kannst sie nicht löschen.",
+      MESSAGE_DELETE_FAILED: "Wir konnten diese Nachricht nicht löschen. Bitte versuche es erneut.",
+      BLUESKY_POST_FAILED:
+        "Wir konnten deine Antwort nicht auf Bluesky posten. Bitte versuche es erneut.",
+      ACCOUNT_DELETE_FAILED:
+        "Wir konnten deine Kontodaten nicht löschen. Bitte versuche es erneut.",
+      RENDER_QUESTION_NOT_IN_INBOX: "Diese Frage ist nicht mehr in deinem Posteingang.",
+      RENDER_START_FAILED: "Wir konnten das Bild nicht erzeugen. Bitte versuche es erneut.",
+      LOGIN_INIT_FAILED: "Wir konnten die Anmeldung nicht starten. Bitte versuche es erneut.",
       E2E_LOGIN_UNAVAILABLE: "Der Testlogin ist hier nicht verfügbar.",
       E2E_LOGIN_NO_DID: "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
     },

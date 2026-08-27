@@ -18,19 +18,21 @@ export interface ApiErrorLike {
 
 /**
  * Three rungs, in order: a catalog string for the server's machine code, the
- * server's own English `message`, then a generic localized fallback. Never
- * renders the code itself or an unrecognized `error` value — those are for
- * logs, not humans.
+ * server's own English `message`, then a localized fallback — `fallback` where
+ * the call site has copy for the thing that failed, `errors.generic`
+ * otherwise. Never renders the code itself or an unrecognized `error` value —
+ * those are for logs, not humans.
  *
  * @see [apiErrors.test.ts](../../tests/lib/apiErrors.test.ts) — one test per
- * rung.
+ * rung, plus the caller-supplied fallback.
  */
 export function resolveApiErrorMessage(
   err: ApiErrorLike | null | undefined,
-  messages: Messages
+  messages: Messages,
+  fallback: string = messages.errors.generic
 ): string {
   const code = err?.error;
   if (isErrorCode(code)) return messages.errors.codes[code];
   if (err?.message) return err.message;
-  return messages.errors.generic;
+  return fallback;
 }

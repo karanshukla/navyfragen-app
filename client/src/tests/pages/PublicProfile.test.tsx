@@ -237,13 +237,38 @@ describe("PublicProfile page", () => {
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
 
     act(() => {
-      capturedCallbacks.onError({ error: "Rate limited" });
+      capturedCallbacks.onError({ error: "INBOX_CLOSED", status: 403 });
     });
 
     await waitFor(() => {
       expect(screen.getByText(en.publicProfilePage.sendFailedTitle)).toBeInTheDocument();
-      expect(screen.getByText(/rate limited/i)).toBeInTheDocument();
+      expect(screen.getByText(en.errors.codes.INBOX_CLOSED)).toBeInTheDocument();
     });
+    expect(screen.queryByText(/INBOX_CLOSED/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the page's own copy when the send failure carries no code", async () => {
+    let capturedCallbacks: any;
+    setupProfile();
+    const mockMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    mockUseSendMessage.mockReturnValue({ mutate: mockMutate, isPending: false } as any);
+
+    renderWithProviders(<PublicProfile />);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hello there!" } });
+    fireEvent.click(screen.getByRole("button", { name: t.sendLabel }));
+    await waitFor(() => screen.getByText(en.publicProfilePage.confirmSendMessage));
+    fireEvent.click(screen.getByRole("button", { name: en.publicProfilePage.sendMessage }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onError({});
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(en.publicProfilePage.sendMessageFailed)).toBeInTheDocument()
+    );
   });
 
   it("shows the not-on-the-app notice when the user is on Bluesky but has no inbox", () => {
@@ -265,11 +290,11 @@ describe("PublicProfile page", () => {
     expect(screen.getByText(en.publicProfilePage.notOnAppTitle(APP_NAME))).toBeInTheDocument();
   });
 
-  it("shows generic error when handleError has non-404 status", () => {
+  it("renders a localized sentence, never the server's error code", () => {
     mockUseResolveHandle.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: { status: 500, error: "Internal server error" },
+      error: { status: 500, error: "HANDLE_RESOLVE_FAILED" },
     } as any);
     mockUsePublicProfile.mockReturnValue({
       data: undefined,
@@ -281,7 +306,27 @@ describe("PublicProfile page", () => {
       isPending: false,
     } as any);
     renderWithProviders(<PublicProfile />);
-    expect(screen.getByText(/internal server error/i)).toBeInTheDocument();
+    expect(screen.getByText(en.errors.codes.HANDLE_RESOLVE_FAILED)).toBeInTheDocument();
+    expect(screen.queryByText(/HANDLE_RESOLVE_FAILED/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the page's own copy when the handle failure carries no code", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: { status: 500 },
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseSendMessage.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByText(en.publicProfilePage.handleResolveFailed)).toBeInTheDocument();
   });
 
   it("shows profile error fallback when profile exists but data is null", () => {

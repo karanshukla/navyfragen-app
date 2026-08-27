@@ -79,6 +79,24 @@ describe("touchpointTranslations (#266)", () => {
     expect(t.sendLabel).toBe("Send");
   });
 
+  it("falls back to English for a prototype key rather than throwing", () => {
+    // `in` would answer true for every one of these and hand back a member of
+    // Object.prototype, which the first `headline(name)` call would throw on —
+    // and this catalog renders on the public profile, for every visitor.
+    for (const key of ["toString", "constructor", "__proto__", "hasOwnProperty", "valueOf"]) {
+      const t = getTouchpointTranslations(key);
+      expect(t.sendLabel).toBe("Send");
+      expect(t.headline("Ada")).toBe("Send Ada an anonymous message");
+    }
+  });
+
+  it("reads a regional variant's own language, not English", () => {
+    expect(getTouchpointTranslations("es-419").sendLabel).toBe("Enviar");
+    expect(getTouchpointTranslations("PT-BR").sendLabel).toBe(
+      getTouchpointTranslations("pt").sendLabel
+    );
+  });
+
   it("returns distinct copy for a non-English locale", () => {
     // Sanity check that the table actually localizes — not just en under
     // every key. Spanish send label is "Enviar".

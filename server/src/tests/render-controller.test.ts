@@ -167,10 +167,10 @@ describe("Question image render pipeline (Hono)", () => {
       assert.strictEqual((ctx.db.selectFrom as any).mock.calls.length, 0);
     });
 
-    test("returns 500 when the enqueue itself fails", async () => {
+    test("returns 500 and RENDER_START_FAILED without echoing the exception text", async () => {
       const renderService: any = {
         enqueue: mock(async () => {
-          throw new Error("resolver down");
+          throw new Error("resolver down at 10.0.0.4:8080");
         }),
         readStatus: mock(),
         claimReady: mock(),
@@ -183,7 +183,9 @@ describe("Question image render pipeline (Hono)", () => {
       });
 
       assert.strictEqual(res.status, 500);
-      assert.strictEqual((await res.json()).error, "resolver down");
+      const body = await res.json();
+      assert.strictEqual(body.error, "RENDER_START_FAILED");
+      assert.ok(!JSON.stringify(body).includes("10.0.0.4"));
     });
   });
 

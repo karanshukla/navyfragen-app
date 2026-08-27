@@ -70,6 +70,8 @@ const assetContents = new Map(
 );
 
 const summaries = [];
+/** Locale → the dist chunk files its marker was found in. */
+const chunksByLocale = new Map();
 
 for (const [locale, marker] of Object.entries(LOCALE_MARKERS)) {
   const filesWithMarker = assetFiles.filter((file) => assetContents.get(file).includes(marker));
@@ -87,7 +89,24 @@ for (const [locale, marker] of Object.entries(LOCALE_MARKERS)) {
     );
   }
 
+  chunksByLocale.set(locale, filesWithMarker);
   summaries.push(`${locale} (${filesWithMarker.join(", ")})`);
+}
+
+// "Own chunk" is per locale, not "some lazy chunk": Rollup is free to fold the
+// four catalogs into one shared chunk, which passes both checks above while
+// making a visitor who picks Spanish download German, French and Portuguese
+// too. Sharing a file is what proves that happened.
+for (const [locale, files] of chunksByLocale) {
+  for (const [otherLocale, otherFiles] of chunksByLocale) {
+    if (locale >= otherLocale) continue;
+    const shared = files.filter((file) => otherFiles.includes(file));
+    if (shared.length > 0) {
+      fail(
+        `the ${locale} and ${otherLocale} catalogs share a chunk (${shared.join(", ")}), so picking either downloads both — check the \`import("./<locale>")\` loaders in client/src/lib/i18n/index.tsx.`
+      );
+    }
+  }
 }
 
 console.log(

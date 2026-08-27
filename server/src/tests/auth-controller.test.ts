@@ -136,11 +136,11 @@ describe("Auth (Hono)", () => {
       assert.strictEqual(res.status, 500);
     });
 
-    test("returns fallback error message when thrown error has empty message", async () => {
+    test("returns 500 and LOGIN_INIT_FAILED without echoing the exception text", async () => {
       const { app, headers } = makeApp({
         serviceOverride: {
           getOAuthRedirectUrl: mock(async () => {
-            throw new Error("");
+            throw new Error("resolve failed for pds at 10.0.0.4");
           }),
         },
       });
@@ -151,7 +151,8 @@ describe("Auth (Hono)", () => {
       });
       assert.strictEqual(res.status, 500);
       const body = await res.json();
-      assert.strictEqual(body.error, "couldn't initiate login");
+      assert.strictEqual(body.error, "LOGIN_INIT_FAILED");
+      assert.ok(!JSON.stringify(body).includes("10.0.0.4"));
     });
   });
 

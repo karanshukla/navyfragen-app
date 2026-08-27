@@ -29,6 +29,21 @@ interface SyncOutcome {
   errors: { tid: string; error: string }[];
 }
 
+/**
+ * The `sendMessage`/`deleteMessage` rejections a route maps to a specific
+ * status and error code. Named constants rather than prose compared with
+ * `String.includes`, mirroring `render-service.ts`'s `QUESTION_NOT_IN_INBOX`:
+ * an equality check against one of these is what lets the route answer with a
+ * machine code instead of echoing the exception's text to the caller.
+ *
+ * @see [message-controller.test.ts](../tests/message-controller.test.ts) —
+ * one test per sentinel, pinning the status and code it maps to.
+ */
+export const RECIPIENT_NOT_FOUND = "Recipient not found (user profile does not exist)";
+export const INBOX_CLOSED = "This inbox is closed and not accepting new messages";
+export const MESSAGE_NOT_FOUND = "Message not found";
+export const NOT_AUTHORIZED_TO_DELETE = "Not authorized to delete this message";
+
 export class MessageService {
   constructor(
     private db: Database,
@@ -113,13 +128,13 @@ export class MessageService {
   async sendMessage(recipient: string, message: string): Promise<{ success: boolean }> {
     try {
       if (!(await this.userProfileExists(recipient))) {
-        throw new Error("Recipient not found (user profile does not exist)");
+        throw new Error(RECIPIENT_NOT_FOUND);
       }
 
       const intakeSettings = await this.readIntakeSettings(recipient);
 
       if (intakeSettings && !intakeSettings.inboxEnabled) {
-        throw new Error("This inbox is closed and not accepting new messages");
+        throw new Error(INBOX_CLOSED);
       }
 
       if (intakeSettings?.profanityFilterEnabled && containsProfanity(message)) {
@@ -160,11 +175,11 @@ export class MessageService {
         .executeTakeFirst();
 
       if (!message) {
-        throw new Error("Message not found");
+        throw new Error(MESSAGE_NOT_FOUND);
       }
 
       if (message.recipient !== userDid) {
-        throw new Error("Not authorized to delete this message");
+        throw new Error(NOT_AUTHORIZED_TO_DELETE);
       }
 
       await this.db.deleteFrom("message").where("tid", "=", tid).execute();

@@ -49,4 +49,16 @@ describe("resolveApiErrorMessage", () => {
   it("rung 3: falls back to generic for undefined", () => {
     expect(resolveApiErrorMessage(undefined, en)).toBe(en.errors.generic);
   });
+
+  it("rung 3: prefers a caller-supplied fallback over the generic string", () => {
+    const fallback = en.publicProfilePage.sendMessageFailed;
+    expect(resolveApiErrorMessage({}, en, fallback)).toBe(fallback);
+    expect(resolveApiErrorMessage(null, en, fallback)).toBe(fallback);
+  });
+
+  it("a caller-supplied fallback never outranks a recognized code", () => {
+    expect(
+      resolveApiErrorMessage({ error: "INBOX_CLOSED" }, en, en.publicProfilePage.sendMessageFailed)
+    ).toBe(en.errors.codes.INBOX_CLOSED);
+  });
 });

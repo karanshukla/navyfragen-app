@@ -32,6 +32,25 @@ describe("Route error responses carry a machine code, never bare prose", () => {
   }
 });
 
+/**
+ * The literal-prose scan above cannot see `{ error: errorMessage(err) }`,
+ * which is worse than a literal: the value is whatever text the exception
+ * carried, so it is both unlocalizable by the client and a way for an
+ * internal message to reach the caller verbatim. Seven route handlers shipped
+ * that shape past the literal scan, so the computed form gets its own check.
+ */
+describe("Route error responses never carry a computed prose value", () => {
+  for (const file of ROUTE_FILES) {
+    it(`${file} builds no { error: <expression> } response`, () => {
+      const source = readFileSync(join(HONO_DIR, file), "utf8");
+      const computedSites = [...source.matchAll(/\{\s*error:([^,}\n]+)/g)]
+        .map((m) => m[1].trim())
+        .filter((value) => !value.startsWith('"'));
+      assert.deepStrictEqual(computedSites, []);
+    });
+  }
+});
+
 describe("ErrorCode union stays in sync with the client mirror", () => {
   it("server and client declare the exact same set of codes", () => {
     const clientSource = readFileSync(CLIENT_CONTRACTS_PATH, "utf8");

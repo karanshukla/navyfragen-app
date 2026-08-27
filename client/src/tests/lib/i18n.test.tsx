@@ -365,6 +365,29 @@ describe("loadCatalog", () => {
     expect(await loadCatalog("fr")).toEqual({ locale: "fr", messages: fr });
   });
 
+  it("reduces a malformed tag to one the Intl formatters accept", async () => {
+    // "en-"/"es-" are what `Intl.NumberFormat` throws RangeError on. The
+    // catalog is still the right one; only the tag is trimmed back.
+    expect(await loadCatalog("en-")).toEqual({ locale: "en", messages: en });
+    expect(await loadCatalog("es-")).toEqual({ locale: "es", messages: es });
+  });
+
+  it("hands back a tag every locale-aware formatter can consume", async () => {
+    for (const requested of ["en-", "es-", "en--x", "es-MX", "en-GB", "fr"]) {
+      const { locale } = await loadCatalog(requested);
+      expect(() => new Intl.NumberFormat(locale).format(1234)).not.toThrow();
+      expect(() => new Date(0).toLocaleString(locale, { month: "short" })).not.toThrow();
+    }
+  });
+
+  it("reports en for a prototype key rather than treating it as a loader", async () => {
+    // `LOCALE_LOADERS` is a Map, so `constructor` and `toString` are misses
+    // rather than inherited functions that would be called as loaders.
+    for (const key of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+      expect(await loadCatalog(key)).toEqual({ locale: "en", messages: en });
+    }
+  });
+
   it("falls back to en when a registered loader rejects", async () => {
     vi.doMock("../../lib/i18n/es", () => {
       throw new Error("chunk load failed");

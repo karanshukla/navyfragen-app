@@ -78,10 +78,22 @@ func resolvePrompt(customPrompt, locale string) string {
 	if p := strings.TrimSpace(customPrompt); p != "" {
 		return p
 	}
-	if p, ok := touchpointPrompts[locale]; ok {
+	if p, ok := touchpointPrompts[primarySubtag(locale)]; ok {
 		return p
 	}
 	return DefaultPrompt
+}
+
+// primarySubtag is the part of a BCP-47 tag that picks the language, matching
+// how the TS side resolves a locale (client/src/lib/touchpointTranslations.ts,
+// server/src/lib/i18n.ts): "pt-BR" reads the pt prompt rather than falling all
+// the way back to English.
+// [TestResolvePrompt_RegionalVariant_UsesItsLanguage] pins it.
+func primarySubtag(locale string) string {
+	if i := strings.Index(locale, "-"); i >= 0 {
+		locale = locale[:i]
+	}
+	return strings.ToLower(locale)
 }
 
 // ── Palette ──────────────────────────────────────────────────────────────────

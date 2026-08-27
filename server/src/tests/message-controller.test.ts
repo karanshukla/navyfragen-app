@@ -2,6 +2,12 @@ import assert from "node:assert";
 import { test, describe, afterEach, mock } from "bun:test";
 
 import { createMessageHono, type MessageDeps } from "#/hono/message-routes";
+import {
+  INBOX_CLOSED,
+  MESSAGE_NOT_FOUND,
+  NOT_AUTHORIZED_TO_DELETE,
+  RECIPIENT_NOT_FOUND,
+} from "#/services/message-service";
 import { withTestSession, sessionHeader } from "./helpers/hono-test";
 
 import type { AppContext } from "#/index";
@@ -248,12 +254,12 @@ describe("Messages (Hono)", () => {
       assert.strictEqual(callArgs[5], true);
     });
 
-    test("returns 500 with fallback message when service throws with empty message", async () => {
+    test("returns 500 and BLUESKY_POST_FAILED without echoing the exception text", async () => {
       const { app, headers } = makeApp({
         oauthRestore: restoreSuccess,
         serviceOverride: {
           respondToMessage: mock(async () => {
-            throw new Error("");
+            throw new Error("XRPCError: upstream said secret_detail");
           }),
         },
       });
@@ -264,7 +270,8 @@ describe("Messages (Hono)", () => {
       });
       assert.strictEqual(res.status, 500);
       const body = await res.json();
-      assert.strictEqual(body.error, "Failed to post to Bluesky");
+      assert.strictEqual(body.error, "BLUESKY_POST_FAILED");
+      assert.ok(!JSON.stringify(body).includes("secret_detail"));
     });
 
     test("returns 500 when service throws", async () => {
@@ -338,11 +345,11 @@ describe("Messages (Hono)", () => {
       assert.strictEqual((ctx.logger.error as any).mock.calls.length, 1);
     });
 
-    test("returns 404 when service throws with 'not found'", async () => {
+    test("returns 404 and USER_NOT_FOUND for the recipient-not-found sentinel", async () => {
       const { app, headers } = makeApp({
         serviceOverride: {
           sendMessage: mock(async () => {
-            throw new Error("User not found");
+            throw new Error(RECIPIENT_NOT_FOUND);
           }),
         },
       });
@@ -352,13 +359,14 @@ describe("Messages (Hono)", () => {
         body: JSON.stringify({ recipient: "did:foo", message: "hi" }),
       });
       assert.strictEqual(res.status, 404);
+      assert.strictEqual((await res.json()).error, "USER_NOT_FOUND");
     });
 
-    test("returns 403 when service throws with 'not accepting'", async () => {
+    test("returns 403 and INBOX_CLOSED for the closed-inbox sentinel", async () => {
       const { app, headers } = makeApp({
         serviceOverride: {
           sendMessage: mock(async () => {
-            throw new Error("Recipient is not accepting messages");
+            throw new Error(INBOX_CLOSED);
           }),
         },
       });
@@ -368,6 +376,7 @@ describe("Messages (Hono)", () => {
         body: JSON.stringify({ recipient: "did:foo", message: "hi" }),
       });
       assert.strictEqual(res.status, 403);
+      assert.strictEqual((await res.json()).error, "INBOX_CLOSED");
     });
 
     test("returns 500 when service throws other error", async () => {
@@ -386,11 +395,11 @@ describe("Messages (Hono)", () => {
       assert.strictEqual(res.status, 500);
     });
 
-    test("returns 500 with fallback message when error has empty message string", async () => {
+    test("returns 500 and MESSAGE_SEND_FAILED without echoing the exception text", async () => {
       const { app, headers } = makeApp({
         serviceOverride: {
           sendMessage: mock(async () => {
-            throw new Error("");
+            throw new Error("SQLITE_ERROR: no such column: secret_column");
           }),
         },
       });
@@ -401,7 +410,8 @@ describe("Messages (Hono)", () => {
       });
       assert.strictEqual(res.status, 500);
       const body = await res.json();
-      assert.strictEqual(body.error, "Failed to send message");
+      assert.strictEqual(body.error, "MESSAGE_SEND_FAILED");
+      assert.ok(!JSON.stringify(body).includes("secret_column"));
     });
   });
 
@@ -484,30 +494,32 @@ describe("Messages (Hono)", () => {
       assert.deepStrictEqual(body, { success: true });
     });
 
-    test("returns 404 when service throws 'not found'", async () => {
+    test("returns 404 and MESSAGE_NOT_FOUND for the not-found sentinel", async () => {
       const { app, headers } = makeApp({
         oauthRestore: restoreSuccess,
         serviceOverride: {
           deleteMessage: mock(async () => {
-            throw new Error("Message not found");
+            throw new Error(MESSAGE_NOT_FOUND);
           }),
         },
       });
       const res = await app.request("/messages/t1", { method: "DELETE", headers });
       assert.strictEqual(res.status, 404);
+      assert.strictEqual((await res.json()).error, "MESSAGE_NOT_FOUND");
     });
 
-    test("returns 403 when service throws 'Not authorized'", async () => {
+    test("returns 403 and MESSAGE_DELETE_NOT_AUTHORIZED for someone else's message", async () => {
       const { app, headers } = makeApp({
         oauthRestore: restoreSuccess,
         serviceOverride: {
           deleteMessage: mock(async () => {
-            throw new Error("Not authorized");
+            throw new Error(NOT_AUTHORIZED_TO_DELETE);
           }),
         },
       });
       const res = await app.request("/messages/t1", { method: "DELETE", headers });
       assert.strictEqual(res.status, 403);
+      assert.strictEqual((await res.json()).error, "MESSAGE_DELETE_NOT_AUTHORIZED");
     });
 
     test("returns 500 on other error", async () => {
@@ -523,19 +535,20 @@ describe("Messages (Hono)", () => {
       assert.strictEqual(res.status, 500);
     });
 
-    test("returns 500 with fallback message when error has empty message string", async () => {
+    test("returns 500 and MESSAGE_DELETE_FAILED without echoing the exception text", async () => {
       const { app, headers } = makeApp({
         oauthRestore: restoreSuccess,
         serviceOverride: {
           deleteMessage: mock(async () => {
-            throw new Error("");
+            throw new Error("SQLITE_ERROR: no such column: secret_column");
           }),
         },
       });
       const res = await app.request("/messages/t1", { method: "DELETE", headers });
       assert.strictEqual(res.status, 500);
       const body = await res.json();
-      assert.strictEqual(body.error, "Failed to delete message");
+      assert.strictEqual(body.error, "MESSAGE_DELETE_FAILED");
+      assert.ok(!JSON.stringify(body).includes("secret_column"));
     });
   });
 
@@ -596,19 +609,20 @@ describe("Messages (Hono)", () => {
       assert.strictEqual(res.status, 500);
     });
 
-    test("returns 500 with fallback message when error has empty message string", async () => {
+    test("returns 500 and ACCOUNT_DELETE_FAILED without echoing the exception text", async () => {
       const { app, headers } = makeApp({
         oauthRestore: restoreSuccess,
         serviceOverride: {
           deleteUserData: mock(async () => {
-            throw new Error("");
+            throw new Error("SQLITE_ERROR: no such column: secret_column");
           }),
         },
       });
       const res = await app.request("/delete-account", { method: "DELETE", headers });
       assert.strictEqual(res.status, 500);
       const body = await res.json();
-      assert.strictEqual(body.error, "Failed to delete account data");
+      assert.strictEqual(body.error, "ACCOUNT_DELETE_FAILED");
+      assert.ok(!JSON.stringify(body).includes("secret_column"));
     });
   });
 
