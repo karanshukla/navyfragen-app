@@ -149,3 +149,29 @@ describe("isSupportedLocaleTag", () => {
     }
   });
 });
+
+/**
+ * The catalogs address the reader directly, so a translation is one bad verb
+ * away from having to guess their gender. Every other catalog in the app
+ * rephrases instead of shipping an inclusive marker; nothing enforced that
+ * here, and all three of `obsesionado/a`, `obcecado(a)` and `obsédé(e)` had
+ * shipped before this test existed.
+ */
+const GENDER_MARKER = /\((?:a|e|as|os|es)\)|\w+o\/a\b/u;
+
+describe("no catalog resorts to an inclusive gender marker", () => {
+  for (const locale of ["en", "es", "pt", "de", "fr"] as const) {
+    const messages: ServerMessages = getServerMessages(locale);
+    const strings = [
+      messages.push.titleAnonymous,
+      messages.push.titleForHandle("alice"),
+      messages.push.body,
+      ...messages.exampleQuestions,
+    ];
+    for (const value of strings) {
+      test(`${locale}: ${value}`, () => {
+        assert.strictEqual(GENDER_MARKER.test(value), false);
+      });
+    }
+  }
+});

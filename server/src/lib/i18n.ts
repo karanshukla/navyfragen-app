@@ -53,9 +53,9 @@ const es = {
     "¿Te gustan los perros?",
     "¿Cuál es tu película favorita?",
     "Si pudieras viajar a cualquier lugar, ¿a dónde irías?",
-    "¿Qué es algo que la mayoría de la gente no sabe sobre ti?",
+    "¿Qué es lo que la mayoría de la gente no sabe de ti?",
     "¿Cuál es el mejor consejo que has recibido?",
-    "¿Con qué estás obsesionado/a en este momento?",
+    "¿Cuál es tu obsesión del momento?",
     "¿Cuál es tu opinión más controvertida sobre algo totalmente cotidiano?",
   ],
 } satisfies ServerMessages;
@@ -73,7 +73,7 @@ const pt = {
     "Se você pudesse viajar para qualquer lugar, para onde iria?",
     "O que a maioria das pessoas não sabe sobre você?",
     "Qual é o melhor conselho que você já recebeu?",
-    "Com o que você está obcecado(a) atualmente?",
+    "Qual é a sua obsessão do momento?",
     "Qual é a sua opinião impopular sobre algo totalmente banal?",
   ],
 } satisfies ServerMessages;
@@ -89,7 +89,7 @@ const de = {
     "Magst du Hunde?",
     "Was ist dein Lieblingsfilm?",
     "Wenn du überallhin reisen könntest, wohin würdest du gehen?",
-    "Was weiß die meisten Leute nicht über dich?",
+    "Was wissen die meisten Leute nicht über dich?",
     "Was ist der beste Rat, den du je bekommen hast?",
     "Wovon bist du gerade besessen?",
     "Was ist deine unpopuläre Meinung zu etwas völlig Alltäglichem?",
@@ -109,7 +109,7 @@ const fr = {
     "Si tu pouvais voyager n'importe où, où irais-tu ?",
     "Qu'est-ce que la plupart des gens ne savent pas sur toi ?",
     "Quel est le meilleur conseil qu'on t'ait jamais donné ?",
-    "Par quoi es-tu obsédé(e) en ce moment ?",
+    "Quelle est ton obsession du moment ?",
     "Quel est ton avis impopulaire sur un sujet totalement banal ?",
   ],
 } satisfies ServerMessages;
