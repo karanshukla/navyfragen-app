@@ -194,7 +194,7 @@ export const fr = {
       "Désactive pour arrêter de recevoir de nouveaux messages tout en gardant ton compte, ton historique et tes réglages intacts. Les visiteurs verront un statut « n'accepte pas de messages ».",
     profanityFilter: "Filtre de grossièretés",
     profanityFilterDescription:
-      "Une fois activé, les messages entrants sont filtrés à l'aide d'une liste de mots en anglais - les autres langues passent sans filtrage. Les messages signalés sont discrètement écartés - l'expéditeur voit une réponse de succès, mais le message n'atteint jamais ta boîte de réception.",
+      "Une fois activé, les messages entrants sont filtrés à l'aide de listes de mots en anglais, espagnol, portugais, allemand et français - chaque message est vérifié dans les cinq langues, quelle que soit la langue que tu as choisie dans l'appli. Les messages signalés sont discrètement écartés - l'expéditeur voit une réponse de succès, mais le message n'atteint jamais ta boîte de réception.",
   },
   publicProfilePage: {
     messageEmptyError: "Le message ne peut pas être vide.",

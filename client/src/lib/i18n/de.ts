@@ -172,8 +172,8 @@ export const de = {
     yourPublicProfileHelp: "Was Besucher sehen, bevor sie dir eine anonyme Nachricht senden.",
     profilePrompt: "Profiltext",
     profilePromptDescription:
-      "Die Überschrift über deinem Nachrichtenfeld. Leer lassen, um „Sende [dir] eine anonyme Nachricht” zu verwenden.",
-    profilePromptPlaceholder: "Frag mich etwas…",
+      "Die Überschrift über deinem Nachrichtenfeld. Leer lassen, um „Sende [dir] eine anonyme Nachricht“ zu verwenden.",
+    profilePromptPlaceholder: "Frag mich alles…",
     profileCardColour: "Profilkarten-Farbe",
     profileCardColourDescription:
       "Die Farbgestaltung deiner Frage-Karte. Die kuratierten Voreinstellungen halten Text und Buttons bei jeder Option gut lesbar.",
@@ -190,10 +190,10 @@ export const de = {
     messageIntakeHelp: "Wer deinen Posteingang erreichen kann und was durchgelassen wird.",
     inbox: "Posteingang",
     inboxDescription:
-      "Deaktivieren, um keine neuen Nachrichten mehr zu erhalten – dein Konto, Verlauf und deine Einstellungen bleiben erhalten. Besucher sehen den Status „nimmt keine Nachrichten an”.",
+      "Deaktivieren, um keine neuen Nachrichten mehr zu erhalten – dein Konto, Verlauf und deine Einstellungen bleiben erhalten. Besucher sehen den Status „nimmt keine Nachrichten an“.",
     profanityFilter: "Schimpfwortfilter",
     profanityFilterDescription:
-      "Wenn aktiviert, werden eingehende Nachrichten anhand einer englischsprachigen Wortliste geprüft – andere Sprachen werden nicht gefiltert. Markierte Nachrichten werden stillschweigend verworfen – der Absender sieht eine Erfolgsmeldung, aber die Nachricht erreicht deinen Posteingang nie.",
+      "Wenn aktiviert, werden eingehende Nachrichten anhand von Wortlisten für Englisch, Spanisch, Portugiesisch, Deutsch und Französisch geprüft – jede Nachricht wird gegen alle fünf abgeglichen, unabhängig davon, welche Sprache du in der App eingestellt hast. Markierte Nachrichten werden stillschweigend verworfen – der Absender sieht eine Erfolgsmeldung, aber die Nachricht erreicht deinen Posteingang nie.",
   },
   publicProfilePage: {
     messageEmptyError: "Die Nachricht darf nicht leer sein.",

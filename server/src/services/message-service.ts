@@ -5,7 +5,8 @@ import { Logger } from "pino";
 import { type Database } from "../database/db";
 import { errorMessage } from "../lib/errors";
 import { getServerMessages } from "../lib/i18n";
-import { containsProfanity } from "../lib/profanity";
+import { findProfanity } from "../lib/profanity";
+import type { ProfanityMatch } from "../lib/profanity";
 import { withRetry } from "../lib/retry";
 import { ids } from "../lexicon/lexicons";
 import { type Record as MessageSchemaRecord } from "../lexicon/types/app/navyfragen/message";
@@ -137,8 +138,9 @@ export class MessageService {
         throw new Error(INBOX_CLOSED);
       }
 
-      if (intakeSettings?.profanityFilterEnabled && containsProfanity(message)) {
-        return this.dropWithoutTellingSender(recipient);
+      const flagged = intakeSettings?.profanityFilterEnabled ? findProfanity(message) : null;
+      if (flagged) {
+        return this.dropWithoutTellingSender(recipient, flagged);
       }
 
       const tid = `anon-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -161,8 +163,14 @@ export class MessageService {
    * a flagged message still answers success and is never inserted, so a sender
    * cannot probe the filter.
    */
-  private dropWithoutTellingSender(recipient: string): { success: boolean } {
-    this.logger.info({ recipient }, "Message silently dropped (profanity filter)");
+  private dropWithoutTellingSender(
+    recipient: string,
+    flagged: ProfanityMatch
+  ): { success: boolean } {
+    this.logger.info(
+      { recipient, flaggedWord: flagged.word, flaggedLanguage: flagged.language },
+      "Message silently dropped (profanity filter)"
+    );
     return { success: true };
   }
 

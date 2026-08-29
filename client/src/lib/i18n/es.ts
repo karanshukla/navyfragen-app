@@ -173,7 +173,7 @@ export const es = {
     yourPublicProfileHelp: "Lo que ven los visitantes antes de enviarte un mensaje anónimo.",
     profilePrompt: "Frase de tu perfil",
     profilePromptDescription:
-      "El titular que se muestra encima de tu caja de mensajes. Déjalo en blanco para usar «Envía a [tú] un mensaje anónimo».",
+      "El titular que se muestra encima de tu caja de mensajes. Déjalo en blanco para usar «Envía a [ti] un mensaje anónimo».",
     profilePromptPlaceholder: "Pregúntame lo que quieras…",
     profileCardColour: "Color de la tarjeta de perfil",
     profileCardColourDescription:
@@ -194,7 +194,7 @@ export const es = {
       "Desactívala para dejar de recibir mensajes nuevos sin perder tu cuenta, historial ni configuración. Los visitantes verán un estado de «no acepta mensajes».",
     profanityFilter: "Filtro de lenguaje ofensivo",
     profanityFilterDescription:
-      "Cuando está activado, los mensajes entrantes se filtran con una lista de palabras en inglés - otros idiomas pasan sin filtrar. Los mensajes marcados se descartan en silencio - quien lo envía ve una respuesta de éxito, pero el mensaje nunca llega a tu bandeja.",
+      "Cuando está activado, los mensajes entrantes se filtran con listas de palabras en inglés, español, portugués, alemán y francés - cada mensaje se comprueba en los cinco idiomas, sea cual sea el idioma que tengas configurado en la app. Los mensajes marcados se descartan en silencio - quien lo envía ve una respuesta de éxito, pero el mensaje nunca llega a tu bandeja.",
   },
   publicProfilePage: {
     messageEmptyError: "El mensaje no puede estar vacío.",
@@ -402,14 +402,15 @@ export const es = {
       PUSH_NOT_CONFIGURED: "Las notificaciones push no están disponibles en este servidor.",
       PUSH_SUBSCRIBE_FAILED: "No pudimos activar las notificaciones push. Inténtalo de nuevo.",
       PUSH_UNSUBSCRIBE_FAILED: "No pudimos desactivar las notificaciones push. Inténtalo de nuevo.",
-      INBOX_CLOSED: "Este buzón está cerrado y no acepta mensajes nuevos en este momento.",
+      INBOX_CLOSED:
+        "Esta bandeja de entrada está cerrada y no acepta mensajes nuevos en este momento.",
       MESSAGE_SEND_FAILED: "No pudimos enviar tu mensaje. Inténtalo de nuevo.",
-      MESSAGE_NOT_FOUND: "No encontramos ese mensaje.",
+      MESSAGE_NOT_FOUND: "No pudimos encontrar ese mensaje.",
       MESSAGE_DELETE_NOT_AUTHORIZED: "Ese mensaje no es tuyo, no puedes eliminarlo.",
       MESSAGE_DELETE_FAILED: "No pudimos eliminar ese mensaje. Inténtalo de nuevo.",
       BLUESKY_POST_FAILED: "No pudimos publicar tu respuesta en Bluesky. Inténtalo de nuevo.",
       ACCOUNT_DELETE_FAILED: "No pudimos eliminar los datos de tu cuenta. Inténtalo de nuevo.",
-      RENDER_QUESTION_NOT_IN_INBOX: "Esa pregunta ya no está en tu buzón.",
+      RENDER_QUESTION_NOT_IN_INBOX: "Esa pregunta ya no está en tu bandeja de entrada.",
       RENDER_START_FAILED: "No pudimos generar la imagen. Inténtalo de nuevo.",
       LOGIN_INIT_FAILED: "No pudimos iniciar la sesión. Inténtalo de nuevo.",
       E2E_LOGIN_UNAVAILABLE: "El inicio de sesión de prueba no está disponible aquí.",
