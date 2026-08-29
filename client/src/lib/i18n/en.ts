@@ -185,7 +185,7 @@ export const en = {
       "Turn off to stop receiving new messages while keeping your account, history, and settings intact. Visitors see a “not accepting messages” state.",
     profanityFilter: "Profanity filter",
     profanityFilterDescription:
-      "When on, incoming messages are screened against an English-language wordlist - other languages pass through unfiltered. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
+      "When on, incoming messages are screened against wordlists for English, Spanish, Portuguese, German and French - every message is checked against all five, whatever language you have the app set to. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
   },
   publicProfilePage: {
     messageEmptyError: "Message cannot be empty.",

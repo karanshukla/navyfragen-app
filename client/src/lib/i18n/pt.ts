@@ -172,11 +172,11 @@ export const pt = {
       "O que os visitantes veem antes de enviar uma mensagem anônima para você.",
     profilePrompt: "Frase do perfil",
     profilePromptDescription:
-      "O título mostrado acima da sua caixa de mensagem. Deixe em branco para usar «Envie a [você] uma mensagem anônima».",
+      "O título mostrado acima da sua caixa de mensagem. Deixe em branco para usar «Envie uma mensagem anônima para [você]».",
     profilePromptPlaceholder: "Pergunte-me qualquer coisa…",
     profileCardColour: "Cor do cartão de perfil",
     profileCardColourDescription:
-      "O tratamento de cor do seu cartão de perguntas. Os predefinidos mantêm o texto e os botões legíveis em todas as opções.",
+      "O esquema de cores do seu cartão de perguntas. As predefinições selecionadas mantêm o texto e o botão legíveis em todas as opções.",
     languages: "Idiomas",
     languagesHelp:
       "Dois públicos, dois idiomas: aquele em que você lê o app e aquele que seus visitantes leem.",
@@ -193,7 +193,7 @@ export const pt = {
       "Desative para parar de receber novas mensagens mantendo sua conta, histórico e configurações intactos. Os visitantes verão um estado de «não aceita mensagens».",
     profanityFilter: "Filtro de palavrões",
     profanityFilterDescription:
-      "Quando ativado, as mensagens recebidas são filtradas com uma lista de palavras em inglês - outros idiomas passam sem filtro. Mensagens sinalizadas são descartadas silenciosamente - quem envia vê uma resposta de sucesso, mas a mensagem nunca chega à sua caixa de entrada.",
+      "Quando ativado, as mensagens recebidas são filtradas com listas de palavras em inglês, espanhol, português, alemão e francês - cada mensagem é verificada nos cinco idiomas, qualquer que seja o idioma configurado no app. Mensagens sinalizadas são descartadas silenciosamente - quem envia vê uma resposta de sucesso, mas a mensagem nunca chega à sua caixa de entrada.",
   },
   publicProfilePage: {
     messageEmptyError: "A mensagem não pode estar vazia.",
@@ -276,7 +276,7 @@ export const pt = {
     linkCopiedTitle: "Copiado!",
     linkCopiedMessage: "Link copiado para a área de transferência.",
     copyFailedTitle: "Falha ao copiar",
-    copyFailedMessage: "Não foi possível copiar o link para a área de transferência.",
+    copyFailedMessage: "Falha ao copiar o link para a área de transferência.",
     sharingUnavailableTitle: "Compartilhamento indisponível",
     sharingUnavailableMessage: "O compartilhamento não é compatível com este navegador.",
     button: "Compartilhar",
@@ -357,7 +357,7 @@ export const pt = {
     deleteAccountMessage:
       "Tem certeza de que deseja excluir sua conta e todos os dados? Isso não pode ser desfeito.",
     pdsSyncDescription: (appName: string) =>
-      `${appName} sincroniza suas mensagens anônimas com seu PDS do Bluesky (servidor de dados pessoal). Desative isso para mantê-las apenas nos servidores do ${appName}. A publicação no Bluesky não é afetada.`,
+      `${appName} sincroniza suas mensagens anônimas com seu PDS do Bluesky (servidor de dados pessoais). Desative isso para mantê-las apenas nos servidores do ${appName}. A publicação no Bluesky não é afetada.`,
     feedTitle: (appName: string) => `Feed do ${appName}`,
     feedDescription: (appName: string) =>
       `Explore perguntas e respostas anônimas publicadas por todos no ${appName} ao redor do mundo. Este feed pode conter conteúdo destinado a adultos. Veja por sua conta e risco.`,
@@ -402,10 +402,11 @@ export const pt = {
       PUSH_NOT_CONFIGURED: "As notificações push não estão disponíveis neste servidor.",
       PUSH_SUBSCRIBE_FAILED: "Não conseguimos ativar as notificações push. Tente novamente.",
       PUSH_UNSUBSCRIBE_FAILED: "Não conseguimos desativar as notificações push. Tente novamente.",
-      INBOX_CLOSED: "Esta caixa de entrada está fechada e não aceita novas mensagens no momento.",
+      INBOX_CLOSED:
+        "Esta caixa de entrada está fechada e não está aceitando novas mensagens no momento.",
       MESSAGE_SEND_FAILED: "Não conseguimos enviar sua mensagem. Tente novamente.",
       MESSAGE_NOT_FOUND: "Não encontramos essa mensagem.",
-      MESSAGE_DELETE_NOT_AUTHORIZED: "Essa mensagem não é sua para excluir.",
+      MESSAGE_DELETE_NOT_AUTHORIZED: "Você não tem permissão para excluir essa mensagem.",
       MESSAGE_DELETE_FAILED: "Não conseguimos excluir essa mensagem. Tente novamente.",
       BLUESKY_POST_FAILED: "Não conseguimos publicar sua resposta no Bluesky. Tente novamente.",
       ACCOUNT_DELETE_FAILED: "Não conseguimos excluir os dados da sua conta. Tente novamente.",
