@@ -1,6 +1,26 @@
 {
   "bots": [
     {
+      "name": "probe-dotenv",
+      "path_regex": "(^|/)\\.env([./~-]|$)",
+      "action": "DENY"
+    },
+    {
+      "name": "probe-path-traversal",
+      "path_regex": "\\.\\.|(^|/)@(fs|vite)(/|$)|(^|/)proc/(self|[0-9]+)/",
+      "action": "DENY"
+    },
+    {
+      "name": "probe-vcs-and-cms",
+      "path_regex": "(^|/)\\.git(/|$)|(^|/)wp/|(^|/)(wp-admin|wp-content|wp-includes|wlwmanifest\\.xml)(/|$)",
+      "action": "DENY"
+    },
+    {
+      "name": "probe-credentials",
+      "path_regex": "(^|/)\\.(aws|ssh|anthropic|openai|azure|gcloud|oci|docker|kube|config|htpasswd|netrc|npmrc)(/|$)|(^|/)(id_rsa|id_dsa|id_ecdsa|id_ed25519|private-key|credentials|secrets)(\\.[a-z0-9]+)?$|\\.(php|pem|key|p12|pfx|keystore|sql|bak|old|swp|ini|conf|ya?ml|db)$",
+      "action": "DENY"
+    },
+    {
       "name": "static-assets",
       "path_regex": "^/(assets/.*|[^/]+\\.(css|ico|js|json|mjs|png|svg|txt|webmanifest|webp|woff|woff2|xml))$",
       "action": "ALLOW"

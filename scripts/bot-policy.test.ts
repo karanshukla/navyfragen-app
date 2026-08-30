@@ -83,3 +83,127 @@ describe("anubis bot policy", () => {
     assert.equal(policy.status_codes.CHALLENGE, 200);
   });
 });
+
+// On 2026-08-30 a single host sprayed 254 distinct credential paths across 194
+// spoofed user agents in 88 seconds. Roughly half were denied only because the
+// spoofed agent happened to match an ai-* rule; the rest — .aws/credentials,
+// gcloud/credentials.db, id_dsa, server.key — were handed a solvable
+// proof-of-work challenge instead. Whether a credential probe is blocked must
+// not depend on which user agent the scanner picked, so these rules match on
+// path alone and sit ahead of every ALLOW.
+describe("credential and CMS probes", () => {
+  const SCANNER_UA =
+    "Mozilla/5.0 (compatible; Claude-User/1.0; +https://www.anthropic.com/claude-user)";
+
+  describe("dotenv files", () => {
+    test("denies the .env family wherever it is nested", () => {
+      for (const path of [
+        "/.env",
+        "/.env.bak",
+        "/.env.old",
+        "/.env.swp",
+        "/.env.example",
+        "/app/.env",
+        "/v1/.env",
+        "/backend/.env",
+      ]) {
+        assert.equal(verdict(path), "DENY", path);
+      }
+    });
+
+    test("still allows the client metadata document the OAuth flow needs", () => {
+      assert.equal(verdict("/client-metadata.json"), "ALLOW");
+    });
+  });
+
+  describe("path traversal", () => {
+    test("denies Vite @fs traversal and /proc reads", () => {
+      for (const path of [
+        "/@fs/../../../../../root/.env",
+        "/@fs/proc/self/environ",
+        "/@fs/proc/1/environ",
+        "/@vite/env",
+        "/uploads../.env",
+        "/img../.env",
+      ]) {
+        assert.equal(verdict(path), "DENY", path);
+      }
+    });
+
+    test("still allows a content-hashed bundle, which has no dot-dot in it", () => {
+      assert.equal(verdict("/assets/index-DeIhOTij.js"), "ALLOW");
+    });
+  });
+
+  describe("version control and CMS", () => {
+    test("denies .git and WordPress probes, including doubled slashes", () => {
+      for (const path of [
+        "/.git/config",
+        "//wp-includes/ID3/license.txt",
+        "//blog/wp-includes/wlwmanifest.xml",
+        "/wp/wp-login.php",
+        "/wp-config.php",
+        "//xmlrpc.php",
+        "/config.php",
+        "/config.php.bak",
+      ]) {
+        assert.equal(verdict(path), "DENY", path);
+      }
+    });
+
+    test("still allows the sitemap, whose .xml the CMS rules must not claim", () => {
+      assert.equal(verdict("/sitemap.xml"), "ALLOW");
+      assert.equal(verdict("/robots.txt"), "ALLOW");
+    });
+  });
+
+  describe("keys and cloud credentials", () => {
+    test("denies key material and provider credential files", () => {
+      for (const path of [
+        "/id_dsa",
+        "/id_rsa",
+        "/private-key",
+        "/server.key",
+        "/@fs/proc/self/cwd/.aws/credentials",
+        "/@fs/root/.config/gcloud/credentials.db",
+        "/@fs/home/ubuntu/.anthropic/config.json",
+        "/@fs/root/.openai/config.json",
+        "/@fs/home/ubuntu/.oci/config",
+        "/config/database.yml",
+        "/config/secrets.yml",
+        "/bootstrap.yml",
+      ]) {
+        assert.equal(verdict(path), "DENY", path);
+      }
+    });
+
+    test("still allows the precached app shell", () => {
+      assert.equal(verdict("/index.html"), "ALLOW");
+      assert.equal(verdict("/manifest.webmanifest"), "ALLOW");
+    });
+  });
+
+  // The scanner's whole point was rotating identities, so the verdict has to be
+  // identical for a probe wearing a spoofed AI agent and one wearing a browser.
+  test("denies a probe regardless of the user agent it wears", () => {
+    assert.equal(verdict("/@fs/.env", SCANNER_UA), "DENY");
+    assert.equal(verdict("/@fs/.env", "Bluesky Cardyb/1.1"), "DENY");
+    assert.equal(verdict("/.aws/credentials", SCANNER_UA), "DENY");
+  });
+
+  // /.well-known/ is the one dotted prefix a future ATProto route would serve.
+  test("does not deny .well-known, which is not a probe prefix", () => {
+    assert.notEqual(verdict("/.well-known/atproto-did"), "DENY");
+  });
+
+  test("keeps every DENY rule ahead of the first ALLOW, so none can be shadowed", () => {
+    const named = policy.bots.filter((rule: { import?: string }) => !rule.import);
+    const lastDeny = named.findLastIndex((rule: { action: string }) => rule.action === "DENY");
+    const firstAllow = named.findIndex((rule: { action: string }) => rule.action === "ALLOW");
+
+    assert.ok(
+      lastDeny < firstAllow,
+      `DENY at ${lastDeny} must precede first ALLOW at ${firstAllow}`
+    );
+  });
+});
