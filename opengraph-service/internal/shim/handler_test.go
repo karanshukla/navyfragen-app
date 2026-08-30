@@ -32,7 +32,7 @@ func newHandlerOn(t *testing.T, cache *FileCache, fetcher ProfileFetcher, render
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = io.WriteString(w, `<!DOCTYPE html><html><head>
-<meta property="og:image" content="https://navyfragen.app/navyfragen-og.png">
+<meta property="og:image" content="https://navyfragen.app/og.png">
 </head><body>SPA</body></html>`)
 	}))
 	t.Cleanup(upstream.Close)
@@ -117,7 +117,7 @@ func TestHandler_CardybOnProfile_GeneratesOGResponse(t *testing.T) {
 	}
 	// Must NOT leak the upstream's generic og:image — that is the whole point of
 	// the shim.
-	if strings.Contains(body, "navyfragen-og.png") {
+	if strings.Contains(body, "og.png") {
 		t.Fatalf("response leaked the generic upstream og:image\n--- body ---\n%s", body)
 	}
 	// The upstream SPA body must not appear in a generated response.
@@ -216,7 +216,7 @@ func TestHandler_BrowserOnProfile_ProxiesToUpstream(t *testing.T) {
 		t.Fatalf("browser UA should proxy upstream; got\n--- body ---\n%s", body)
 	}
 	// The generic og:image from the upstream must be intact (no rewrite).
-	if !strings.Contains(body, "navyfragen-og.png") {
+	if !strings.Contains(body, "og.png") {
 		t.Fatalf("proxied response missing upstream og:image\n--- body ---\n%s", body)
 	}
 	// No generation must have fired.

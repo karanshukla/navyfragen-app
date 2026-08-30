@@ -39,8 +39,8 @@ export default defineConfig({
       // Port of client/public/site.webmanifest. vite-plugin-pwa generates and
       // injects the manifest link, so the static file is no longer needed.
       manifest: {
-        name: "Navyfragen - Anonymous question inbox for Bluesky",
-        short_name: "Navyfragen",
+        name: `${brand.appName} - Anonymous question inbox for Bluesky`,
+        short_name: brand.appName,
         theme_color: "#1E1B4B",
         background_color: "#FDF8FF",
         display: "standalone",
