@@ -114,10 +114,10 @@ const navyfragenTheme = createTheme({
   white: "#FDF8FF",
   black: "#1E1B4B",
 
-  fontFamily: "Inter, system-ui, sans-serif",
+  fontFamily: "var(--nf-font-sans)",
 
   headings: {
-    fontFamily: "Inter, system-ui, sans-serif",
+    fontFamily: "var(--nf-font-sans)",
     fontWeight: "800",
     sizes: {
       h1: { fontSize: "42px", lineHeight: "1.1", fontWeight: "800" },

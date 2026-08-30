@@ -146,8 +146,9 @@ body {
   --nf-grad-ember: linear-gradient(135deg, #c2410c 0%, #be123c 55%, #9f1239 100%);
   --nf-grad-verdant: linear-gradient(135deg, #0f766e 0%, #047857 55%, #065f46 100%);
 
-  --nf-font-sans: "Inter", system-ui, sans-serif;
-  --nf-font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  --nf-font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
 
   --nf-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --nf-dur-fast: 120ms;

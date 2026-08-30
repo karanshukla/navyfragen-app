@@ -53,8 +53,6 @@ export const radiusPanel = "var(--nf-radius-panel)";
 export const radiusControl = "var(--nf-radius-control)";
 export const radiusPill = "var(--nf-radius-pill)";
 
-export const fontMono = "var(--nf-font-mono)";
-
 /**
  * The one gradient pairing for Mantine's `variant="gradient"`. Both shades are
  * pinned a step deeper than the palette default so white button labels clear AA

@@ -142,8 +142,13 @@ var (
 
 // ── Typography ───────────────────────────────────────────────────────────────
 
-// ogFontStack leads with Inter — the app's --nf-font-sans — then falls through
-// the Noto families for scripts Inter does not cover.
+// ogFontStack leads with 'Noto Sans' and its per-script siblings. The app's
+// --nf-font-sans is the platform system stack, which this renderer cannot use:
+// system-ui in the Chromium container resolves to whatever fontconfig happens
+// to hold, so the same input would render in a different face per deploy. Noto
+// is the webfont stand-in that keeps the render deterministic and covers the
+// scripts a container's system font does not.
+// [TestOGFontStack_LeadsWithNotoNotABrandWebfont] pins that.
 //
 // 'Noto Color Emoji' MUST stay last, after the generic `sans-serif`. It ships a
 // U+0020 whose advance is 1.25em, so any earlier position makes it the winning
@@ -151,11 +156,11 @@ var (
 // and every gap in the image blows out to 4.5x. Emoji still resolve from it
 // there, because no text font in the stack has emoji glyphs to preempt it.
 // [TestOGFontStack_EmojiFamilyIsLast] pins the ordering.
-const ogFontStack = `Inter, 'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Liberation Sans', 'DejaVu Sans', sans-serif, 'Noto Color Emoji'`
+const ogFontStack = `'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Hebrew', 'Noto Sans Thai', 'Liberation Sans', 'DejaVu Sans', sans-serif, 'Noto Color Emoji'`
 
 // ogFontLink loads the stack above. Without it the render falls back to
 // whatever the container happens to have installed.
-const ogFontLink = `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">`
+const ogFontLink = `<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Devanagari:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">`
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
 //
