@@ -11,21 +11,65 @@ permissions:
 
 # The suite drives one shared live Bluesky test account and mutates global state
 # on it (customise.spec flips touchpointLocale; inbox/profile-send-message write
-# and delete real messages), so two runs overlapping stomp each other. The group
-# is deliberately workflow-wide rather than per-ref: a PR run and a main run
-# collide just as badly as two main runs. cancel-in-progress stays false because
-# specs restore the state they mutate in teardown, and a cancelled run skips that.
+# and delete real messages), so two runs overlapping stomp each other.
+#
+# That cross-ref serialisation cannot live here. A concurrency group holds
+# exactly one pending run: when a third queues, GitHub cancels the second, and
+# cancel-in-progress: false does not change that. A cancelled run never reports
+# its check, and Playwright E2E Tests is required, so the pull request is left
+# blocked with nothing to re-run. On 2026-08-30 five Dependabot merges inside
+# eight minutes cancelled four E2E runs this way, main's own head among them.
+# The lock is therefore taken inside the job, where waiting evicts nothing.
+#
+# This group is per-ref, and sheds only runs made obsolete by a newer push to
+# the same ref, whose check the newer SHA supersedes anyway. cancel-in-progress
+# stays false because specs restore the state they mutate in teardown, and a
+# cancelled run skips that.
 concurrency:
-  group: e2e-shared-test-account
+  group: e2e-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   e2e:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Generous because the job now spends part of its life queueing for the
+    # shared account rather than running Playwright.
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      actions: read
 
     steps:
+      # Proceed only once every older E2E run has finished. run_number is a
+      # total order, so exactly one waiter is released at a time and the queue
+      # is FIFO. Runs that have not started yet are counted too: a queued run
+      # with a lower number will overtake this one as soon as a runner frees
+      # up, and ignoring it here would put two suites on the account at once.
+      - name: Wait for the shared Bluesky test account
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_NUMBER: ${{ github.run_number }}
+          REPO: ${{ github.repository }}
+        run: |
+          deadline=$(( SECONDS + 1800 ))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            ahead=$(gh api "repos/$REPO/actions/workflows/E2E.yml/runs?per_page=100" \
+              | jq --argjson me "$RUN_NUMBER" \
+                  '[.workflow_runs[]
+                    | select(.status != "completed" and .run_number < $me)]
+                   | length') || ahead=unavailable
+            if [ "$ahead" = "0" ]; then
+              echo "Shared account is free, starting the suite."
+              exit 0
+            fi
+            echo "Waiting on $ahead older E2E run(s)."
+            sleep 20
+          done
+          echo "Timed out waiting for the shared test account." >&2
+          exit 1
+
       - uses: actions/checkout@v4
 
       # The one place in the repo that still needs Node. Playwright's test
