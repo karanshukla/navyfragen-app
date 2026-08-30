@@ -26,13 +26,13 @@
     ]
   },
   "dependencies": {
-    "@atproto/api": "^0.20.41",
-    "@atproto/common": "^0.8.0",
-    "@atproto/identity": "^0.5.9",
+    "@atproto/api": "^0.20.42",
+    "@atproto/common": "^0.8.1",
+    "@atproto/identity": "^0.5.10",
     "@atproto/lexicon": "^0.7.11",
-    "@atproto/oauth-client-node": "^0.5.3",
+    "@atproto/oauth-client-node": "^0.5.4",
     "@atproto/syntax": "^0.7.4",
-    "@atproto/xrpc-server": "^0.12.2",
+    "@atproto/xrpc-server": "^0.12.7",
     "@axiomhq/pino": "^2.0.0",
     "@hono/zod-validator": "^0.9.0",
     "@types/cryptr": "^4.0.3",
@@ -54,7 +54,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@atproto/lex-cli": "^0.10.10",
+    "@atproto/lex-cli": "^0.10.11",
     "@types/bun": "1.4.0",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.23.1",
