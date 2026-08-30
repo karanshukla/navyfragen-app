@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import * as messageService from "../../api/messageService";
-import { APP_NAME } from "../../lib/brand";
+import { APP_DOMAIN, APP_NAME } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
 import Home from "../../pages/Home";
 import { renderWithProviders } from "../testUtils";
@@ -71,8 +71,8 @@ describe("Home page", () => {
       isLoading: false,
     } as any);
     renderWithProviders(<Home />);
-    const bskyLink = screen.getByRole("link", { name: /@navyfragen\.app/i });
-    expect(bskyLink).toHaveAttribute("href", "https://bsky.app/profile/navyfragen.app");
+    const bskyLink = screen.getByRole("link", { name: `@${APP_DOMAIN}` });
+    expect(bskyLink).toHaveAttribute("href", `https://bsky.app/profile/${APP_DOMAIN}`);
     const githubLink = screen.getByRole("link", {
       name: `${en.home.githubContactLabel}${APP_NAME}`,
     });

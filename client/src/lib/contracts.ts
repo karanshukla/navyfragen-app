@@ -16,6 +16,23 @@
 export const STORAGE_PREFIX = "navyfragen";
 
 /**
+ * The record key of the app's feed generator record, so the feed's `at://`
+ * URI is whatever anyone who saved or pinned it already holds. Renaming the
+ * app does not rename this, for the same reason `STORAGE_PREFIX` does not:
+ * the old value is already in other people's hands.
+ *
+ * It is the app's own *handle* that follows the brand — that is
+ * `APP_DOMAIN` (`./brand.ts`), and the two are deliberately separate here
+ * because they sit next to each other in one URL and have opposite
+ * change-rules. The generator record is published outside this repo, so
+ * nothing here fails if it drifts.
+ *
+ * @see [Settings.test.tsx](../tests/pages/Settings.test.tsx): spells the feed
+ * URL out as a literal, so a rename fails it instead of following it.
+ */
+export const FEED_RKEY = "navyfragen";
+
+/**
  * Mirrors `server/src/lib/contracts.ts`'s `ERROR_CODES`. Every server route
  * error response is `{ error: <one of these>, message: "..." }`; `error` is
  * the stable code, never localized. `client/src/lib/i18n/en.ts` maps each of

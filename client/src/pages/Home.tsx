@@ -22,7 +22,7 @@ import { useSession } from "../api/authService";
 import { useSyncMessages } from "../api/messageService";
 import { ShortcutList, type Shortcut } from "../components/ShortcutList";
 import { WinkMark } from "../components/WinkMark";
-import { APP_NAME } from "../lib/brand";
+import { APP_DOMAIN, APP_NAME } from "../lib/brand";
 import { useTranslations } from "../lib/i18n";
 import type { Messages } from "../lib/i18n/types";
 import { BRAND_GRADIENT } from "../styles/tokens";
@@ -102,10 +102,10 @@ export default function Home() {
           <Stack gap="sm">
             <ContactLink
               caption={messages.home.reachOutOnBluesky}
-              href="https://bsky.app/profile/navyfragen.app"
+              href={`https://bsky.app/profile/${APP_DOMAIN}`}
               icon={<IconButterfly size={18} />}
             >
-              @navyfragen.app
+              @{APP_DOMAIN}
             </ContactLink>
             <ContactLink
               caption={messages.home.submitAnIssueOnGitHub}

@@ -19,7 +19,8 @@ import { PushNotificationsCard } from "../components/PushNotificationsCard";
 import { AccountOverview, type Stat } from "../components/settings/AccountOverview";
 import { SettingsCard } from "../components/SettingsCard";
 import { SettingsToggle } from "../components/SettingsToggle";
-import { APP_NAME } from "../lib/brand";
+import { APP_DOMAIN, APP_NAME } from "../lib/brand";
+import { FEED_RKEY } from "../lib/contracts";
 import { useLocale, useTranslations } from "../lib/i18n";
 import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useNumberFormat } from "../lib/useNumberFormat";
@@ -173,7 +174,7 @@ export default function Settings() {
           >
             <Button
               component="a"
-              href="https://bsky.app/profile/navyfragen.app/feed/navyfragen"
+              href={`https://bsky.app/profile/${APP_DOMAIN}/feed/${FEED_RKEY}`}
               target="_blank"
               rel="noopener noreferrer"
               fullWidth

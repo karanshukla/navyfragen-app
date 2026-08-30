@@ -6,7 +6,7 @@ import * as notificationService from "../../api/notificationService";
 import * as profileService from "../../api/profileService";
 import * as settingsService from "../../api/settingsService";
 import * as installPromptContext from "../../components/InstallPromptContext";
-import { APP_NAME } from "../../lib/brand";
+import { APP_DOMAIN, APP_NAME } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
 import Settings from "../../pages/Settings";
 import { renderWithProviders } from "../testUtils";
@@ -684,5 +684,37 @@ describe("Settings page", () => {
     renderWithProviders(<Settings />);
     // botFollowLoading=true → covers the sessionLoading||botFollowLoading true branch
     expect(screen.getByText(en.settingsPage.dailyNotifications)).toBeInTheDocument();
+  });
+  /**
+   * The feed rkey is a frozen contract and the handle is not, so this spells
+   * the rkey out as a literal while letting the domain follow `brand.json`.
+   * A rename therefore fails here and nowhere else, which is the point: the
+   * `at://` URI is already in the hands of anyone who pinned the feed.
+   */
+  it("links the feed at its published rkey, which a rename must not silently change", () => {
+    mockUseSession.mockReturnValue({
+      data: { isLoggedIn: true, profile: { did: "did:plc:abc", handle: "alice.bsky.social" } },
+      isLoading: false,
+    } as any);
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: 1, imageTheme: "default" },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+    mockUseUserStats.mockReturnValue({
+      data: { messageCount: 0, memberSince: null },
+      isLoading: false,
+    } as any);
+    mockUsePdsInfo.mockReturnValue({
+      data: { recordCount: 0, pdsUrl: null },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Settings />);
+    const feedLink = screen.getByRole("link", { name: en.settingsPage.openFeedOnBluesky });
+    expect(feedLink).toHaveAttribute(
+      "href",
+      `https://bsky.app/profile/${APP_DOMAIN}/feed/navyfragen`
+    );
   });
 });
