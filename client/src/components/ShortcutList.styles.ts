@@ -14,4 +14,5 @@ export const row: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   gap: 12,
+  padding: "5px 0",
 };

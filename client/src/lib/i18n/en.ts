@@ -164,7 +164,7 @@ export const en = {
     yourPublicProfileHelp: "What visitors see before they send you an anonymous message.",
     profilePrompt: "Profile prompt",
     profilePromptDescription:
-      "The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message”.",
+      "The headline shown above your message box. Leave blank to fall back to “Send [you] an anonymous message” in your selected language. This is overriden if you turn off your inbox. ",
     profilePromptPlaceholder: "Ask me anything…",
     profileCardColour: "Profile card colour",
     profileCardColourDescription:
@@ -174,7 +174,7 @@ export const en = {
       "Two audiences, two languages — the one you read the app in, and the one your visitors read.",
     appLanguage: "App language",
     appLanguageDescription:
-      "The language you read the app in — nav, buttons, and toasts. Only you see it.",
+      "The language you read the app in - nav, buttons, and toasts. Only you see it.",
     messageLanguage: "Message language",
     messageLanguageDescription:
       "Language of the prompt, share text, and anonymity disclaimer shown to visitors and your audience. Your custom message prompt overrides this setting.",

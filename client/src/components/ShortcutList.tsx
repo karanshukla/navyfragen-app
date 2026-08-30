@@ -24,7 +24,7 @@ export function ShortcutList({ title, shortcuts }: ShortcutListProps) {
       <Title order={2} style={styles.heading}>
         {title}
       </Title>
-      <Stack gap={4}>
+      <Stack gap={6}>
         {shortcuts.map(({ label, hint }) => (
           <Box key={label} style={styles.row}>
             <Text fz={13}>{label}</Text>
