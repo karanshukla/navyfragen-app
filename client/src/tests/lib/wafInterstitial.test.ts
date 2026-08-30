@@ -28,7 +28,7 @@ describe("isWafInterstitial", () => {
     ["service worker", "/sw.js"],
     ["icon", "/android-chrome-192x192.png"],
     ["json", "/client-metadata.json"],
-    ["font", "/assets/inter.woff2"],
+    ["font", "/assets/body-text.woff2"],
   ])("rejects an HTML body served for a %s", (_label, path) => {
     expect(isWafInterstitial(`${ORIGIN}${path}`, CHALLENGE_TYPE)).toBe(true);
   });

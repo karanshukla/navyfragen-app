@@ -1,13 +1,6 @@
 import type { CSSProperties } from "react";
 
-import {
-  border,
-  fontMono,
-  radiusPill,
-  surfaceGhost,
-  textDefault,
-  textDimmed,
-} from "../../styles/tokens";
+import { border, radiusPill, surfaceGhost, textDefault, textDimmed } from "../../styles/tokens";
 
 export const pill: CSSProperties = {
   display: "inline-flex",
@@ -17,7 +10,6 @@ export const pill: CSSProperties = {
   border,
   padding: "6px 12px 6px 10px",
   borderRadius: radiusPill,
-  fontFamily: fontMono,
   fontSize: 12,
   color: textDimmed,
 };

@@ -128,15 +128,24 @@ func TestOGFontStack_HasALocalTextFallbackBeforeTheGeneric(t *testing.T) {
 	}
 }
 
-func TestOGTemplate_RequestsInterToMatchTheApp(t *testing.T) {
+// The app dropped its brand webfont for the platform system stack, so the OG
+// image has no brand face to match. What it still needs is a deterministic
+// render: system-ui inside the Chromium container is whatever fontconfig holds,
+// so the stack leads with the Noto webfonts instead of following the app
+// literally. Re-adding a brand webfont here reintroduces both the extra fetch
+// and the drift from the app's typography.
+func TestOGFontStack_LeadsWithNotoNotABrandWebfont(t *testing.T) {
 	html := BuildOGTemplate(OGInput{Handle: "a.bsky.social"})
-	// --nf-font-sans in client/src/index.css leads with Inter; the OG image is
-	// the app's own surface and should not be set in a different face.
-	if !strings.Contains(html, "family=Inter") {
-		t.Fatalf("template does not load Inter, so it will not match the app's typography")
+	if !strings.HasPrefix(ogFontStack, "'Noto Sans',") {
+		t.Fatalf("Noto Sans must lead the stack, got %s", ogFontStack)
 	}
-	if !strings.HasPrefix(ogFontStack, "Inter,") {
-		t.Fatalf("Inter must lead the stack, got %s", ogFontStack)
+	if !strings.Contains(html, "family=Noto+Sans") {
+		t.Fatalf("template does not load Noto Sans, so the render is at the container's mercy")
+	}
+	for _, brand := range []string{"Inter", "JetBrains"} {
+		if strings.Contains(html, brand) {
+			t.Fatalf("template requests the %s webfont; the app no longer ships one", brand)
+		}
 	}
 }
 
