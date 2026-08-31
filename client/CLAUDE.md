@@ -34,8 +34,8 @@ Rules; reasoning in `docs/design-tokens.md`.
   not an inline ternary. If a style function needs a business rule, the rule belongs
   in the component or a hook.
 - **`src/index.css` is the single source of truth for colour**, in three layers:
-  brand primitives → semantic tokens (`--nf-surface`, `--nf-link`, …) → on-gradient
-  tokens (`--nf-on-grad*`, deliberately not scheme-aware). Components read only from
+  brand primitives → semantic tokens (`--ds-surface`, `--ds-link`, …) → on-gradient
+  tokens (`--ds-on-grad*`, deliberately not scheme-aware). Components read only from
   the last two.
 - **No component calls `useComputedColorScheme` to choose a colour** — light values
   sit on `:root`, dark under `:root[data-mantine-color-scheme="dark"]`, and the
@@ -44,7 +44,7 @@ Rules; reasoning in `docs/design-tokens.md`.
   `:root[data-mantine-color-scheme="…"]` exactly; a bare attribute selector loses on
   specificity and silently does nothing.
 - `src/tests/theme/contrast.test.ts` fails on any documented pair below WCAG AA, and
-  on any `--nf-*` token that is declared-but-unused or used-but-undeclared.
+  on any `--ds-*` token that is declared-but-unused or used-but-undeclared.
 
 ## Two tsconfigs, and why
 

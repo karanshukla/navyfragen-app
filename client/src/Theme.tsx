@@ -94,13 +94,13 @@ const dark: MantineColorsTuple = [
  * colour against its own tint at WCAG AA.
  */
 export const ALERT_TONES = {
-  red: { rgb: "220,38,38", title: "var(--nf-tone-red)" },
-  crimson: { rgb: "201,42,42", title: "var(--nf-tone-red)" },
-  green: { rgb: "34,197,94", title: "var(--nf-tone-green)" },
-  yellow: { rgb: "250,204,21", title: "var(--nf-tone-yellow)" },
-  royal: { rgb: "59,91,255", title: "var(--nf-tone-royal)" },
-  blue: { rgb: "59,91,255", title: "var(--nf-tone-royal)" },
-  purple: { rgb: "139,92,246", title: "var(--nf-tone-purple)" },
+  red: { rgb: "220,38,38", title: "var(--ds-tone-red)" },
+  crimson: { rgb: "201,42,42", title: "var(--ds-tone-red)" },
+  green: { rgb: "34,197,94", title: "var(--ds-tone-green)" },
+  yellow: { rgb: "250,204,21", title: "var(--ds-tone-yellow)" },
+  royal: { rgb: "59,91,255", title: "var(--ds-tone-royal)" },
+  blue: { rgb: "59,91,255", title: "var(--ds-tone-royal)" },
+  purple: { rgb: "139,92,246", title: "var(--ds-tone-purple)" },
 } as const;
 
 const DEFAULT_ALERT_TONE = ALERT_TONES.royal;
@@ -114,10 +114,10 @@ const navyfragenTheme = createTheme({
   white: "#FDF8FF",
   black: "#1E1B4B",
 
-  fontFamily: "var(--nf-font-sans)",
+  fontFamily: "var(--ds-font-sans)",
 
   headings: {
-    fontFamily: "var(--nf-font-sans)",
+    fontFamily: "var(--ds-font-sans)",
     fontWeight: "800",
     sizes: {
       h1: { fontSize: "42px", lineHeight: "1.1", fontWeight: "800" },
@@ -145,12 +145,12 @@ const navyfragenTheme = createTheme({
         const tone = ALERT_TONES[props.color as keyof typeof ALERT_TONES] ?? DEFAULT_ALERT_TONE;
         return {
           root: {
-            borderRadius: "var(--nf-radius-control)",
+            borderRadius: "var(--ds-radius-control)",
             background: `rgba(${tone.rgb},0.09)`,
             border: `1px solid rgba(${tone.rgb},0.22)`,
           },
           title: {
-            fontFamily: "var(--nf-font-sans)",
+            fontFamily: "var(--ds-font-sans)",
             fontWeight: 700,
             color: tone.title,
           },
@@ -160,8 +160,8 @@ const navyfragenTheme = createTheme({
 
     Notification: Notification.extend({
       styles: {
-        root: { borderRadius: "var(--nf-radius-control)" },
-        title: { fontFamily: "var(--nf-font-sans)", fontWeight: 700 },
+        root: { borderRadius: "var(--ds-radius-control)" },
+        title: { fontFamily: "var(--ds-font-sans)", fontWeight: 700 },
       },
     }),
   },

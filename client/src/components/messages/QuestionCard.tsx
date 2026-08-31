@@ -84,7 +84,7 @@ export function QuestionCard({
           onToggleExpanded();
         }
       }}
-      className={justPinned ? "nf-pinned-card-enter" : undefined}
+      className={justPinned ? "ds-pinned-card-enter" : undefined}
       style={styles.card({ gradient, pinned, focused })}
       onClick={() => {
         triggerHaptic();
@@ -109,7 +109,7 @@ export function QuestionCard({
             >
               <ActionIcon
                 size="lg"
-                className={pinned ? "nf-pin-btn--active" : "nf-pin-btn"}
+                className={pinned ? "ds-pin-btn--active" : "ds-pin-btn"}
                 aria-label={
                   pinned
                     ? messages.questionCard.unpinThreadRootLabel
@@ -134,7 +134,7 @@ export function QuestionCard({
             >
               <ActionIcon
                 size="lg"
-                className={deleteRefusal ? undefined : "nf-delete-btn"}
+                className={deleteRefusal ? undefined : "ds-delete-btn"}
                 aria-label={deleteRefusal?.label ?? messages.questionCard.deleteMessageLabel}
                 onClick={(e) => {
                   e.stopPropagation();

@@ -139,7 +139,7 @@ function BouncingLogo({
         transform: `translate(${initialState.x}px, ${initialState.y}px)`,
       }}
     >
-      <div className={variant.spin ? "nf-bounce-spin" : undefined}>
+      <div className={variant.spin ? "ds-bounce-spin" : undefined}>
         <WinkMark size={variant.size} sparkle={variant.sparkle} aria-hidden />
       </div>
     </div>

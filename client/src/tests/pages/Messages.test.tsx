@@ -1292,7 +1292,7 @@ describe("Messages page", () => {
     });
 
     const dangerCircle = Array.from(document.querySelectorAll("svg circle")).find(
-      (c) => c.getAttribute("stroke") === "var(--nf-compose-warn)"
+      (c) => c.getAttribute("stroke") === "var(--ds-compose-warn)"
     );
     expect(dangerCircle).toBeTruthy();
   });

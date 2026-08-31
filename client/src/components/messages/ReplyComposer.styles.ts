@@ -2,16 +2,16 @@ import type { CSSProperties } from "react";
 
 export const panel: CSSProperties = {
   marginTop: 4,
-  background: "var(--nf-compose-bg)",
-  borderRadius: "var(--nf-radius-control)",
+  background: "var(--ds-compose-bg)",
+  borderRadius: "var(--ds-radius-control)",
   padding: 12,
-  border: "1.5px solid var(--nf-compose-border)",
+  border: "1.5px solid var(--ds-compose-border)",
 };
 
 export const textarea = {
   input: {
     background: "transparent",
-    color: "var(--nf-compose-fg)",
+    color: "var(--ds-compose-fg)",
     border: "none",
     padding: 0,
   },
@@ -22,5 +22,5 @@ export const textarea = {
  * and lands at 2.6:1 on the composer's paper in dark mode.
  */
 export const count: CSSProperties = {
-  color: "var(--nf-compose-fg-muted)",
+  color: "var(--ds-compose-fg-muted)",
 };

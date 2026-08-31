@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="32" height="32">
   <defs>
-    <linearGradient id="nf-favicon-grad" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="ds-favicon-grad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#3349E0"></stop>
       <stop offset="55%" stop-color="#6B3FD4"></stop>
       <stop offset="100%" stop-color="#4F1FA6"></stop>
     </linearGradient>
   </defs>
-  <rect width="160" height="160" rx="36" fill="url(#nf-favicon-grad)"></rect>
+  <rect width="160" height="160" rx="36" fill="url(#ds-favicon-grad)"></rect>
   <ellipse cx="40" cy="100" rx="11" ry="6" fill="#FDF8FF" opacity="0.18"></ellipse>
   <ellipse cx="120" cy="100" rx="11" ry="6" fill="#FDF8FF" opacity="0.18"></ellipse>
   <circle cx="60" cy="66" r="10" fill="#FDF8FF"></circle>

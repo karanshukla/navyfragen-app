@@ -74,8 +74,8 @@ body {
   width: 1400px;
   max-width: 100vw;
   pointer-events: none;
-  border-left: 1px solid var(--nf-boundary-border);
-  border-right: 1px solid var(--nf-boundary-border);
+  border-left: 1px solid var(--ds-boundary-border);
+  border-right: 1px solid var(--ds-boundary-border);
   z-index: 200;
 }
 
@@ -110,10 +110,10 @@ body {
    1. Brand primitives — the raw palette and gradients. Scheme-independent.
       Nothing outside this file should reference them directly; they exist so
       the semantic layer has a single place to read a hue from.
-   2. Semantic tokens — named for the job rather than the colour (`--nf-surface`,
-      not `--nf-lavender-ish`). Light values live on `:root` and dark values
+   2. Semantic tokens — named for the job rather than the colour (`--ds-surface`,
+      not `--ds-lavender-ish`). Light values live on `:root` and dark values
       override them under [data-mantine-color-scheme="dark"], so a component
-      writes `var(--nf-surface)` once and both schemes follow. This is why no
+      writes `var(--ds-surface)` once and both schemes follow. This is why no
       component needs `useComputedColorScheme` to pick a background.
    3. On-gradient tokens — the one family that is deliberately scheme-independent,
       because the brand gradients are dark in both schemes, so text painted on
@@ -126,117 +126,117 @@ body {
 
 /* ── Layer 1: brand primitives ── */
 :root {
-  --nf-midnight: #1e1b4b;
-  --nf-royal: #3b5bff;
-  --nf-royal-deep: #2a47e6;
-  --nf-purple: #8b5cf6;
-  --nf-purple-deep: #7847e0;
-  --nf-lavender: #c4b5fd;
-  --nf-paper: #fdf8ff;
-  --nf-sunshine: #facc15;
-  --nf-crimson: #c92a2a;
+  --ds-midnight: #1e1b4b;
+  --ds-royal: #3b5bff;
+  --ds-royal-deep: #2a47e6;
+  --ds-purple: #8b5cf6;
+  --ds-purple-deep: #7847e0;
+  --ds-lavender: #c4b5fd;
+  --ds-paper: #fdf8ff;
+  --ds-sunshine: #facc15;
+  --ds-crimson: #c92a2a;
 
-  --nf-grad-mark: linear-gradient(135deg, #3349e0 0%, #5322c5 55%, #4f1fa6 100%);
-  --nf-grad-dark: linear-gradient(135deg, #1e1b4b 0%, #3b2e78 50%, #6b3fd4 100%);
+  --ds-grad-mark: linear-gradient(135deg, #3349e0 0%, #5322c5 55%, #4f1fa6 100%);
+  --ds-grad-dark: linear-gradient(135deg, #1e1b4b 0%, #3b2e78 50%, #6b3fd4 100%);
 
   /* Curated ask-card colour presets (#275). Every stop is dark enough that the
      white headline / Send button clear AA across the whole ramp — the earlier
      mid-tone cyan, emerald and orange stops did not. */
-  --nf-grad-aurora: linear-gradient(135deg, #1d4ed8 0%, #0369a1 55%, #0e7490 100%);
-  --nf-grad-ember: linear-gradient(135deg, #c2410c 0%, #be123c 55%, #9f1239 100%);
-  --nf-grad-verdant: linear-gradient(135deg, #0f766e 0%, #047857 55%, #065f46 100%);
+  --ds-grad-aurora: linear-gradient(135deg, #1d4ed8 0%, #0369a1 55%, #0e7490 100%);
+  --ds-grad-ember: linear-gradient(135deg, #c2410c 0%, #be123c 55%, #9f1239 100%);
+  --ds-grad-verdant: linear-gradient(135deg, #0f766e 0%, #047857 55%, #065f46 100%);
 
-  --nf-font-sans:
+  --ds-font-sans:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
 
-  --nf-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --nf-dur-fast: 120ms;
-  --nf-dur-base: 200ms;
+  --ds-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ds-dur-fast: 120ms;
+  --ds-dur-base: 200ms;
 
-  --nf-radius-card: 18px;
-  --nf-radius-panel: 16px;
-  --nf-radius-control: 12px;
-  --nf-radius-pill: 999px;
+  --ds-radius-card: 18px;
+  --ds-radius-panel: 16px;
+  --ds-radius-control: 12px;
+  --ds-radius-pill: 999px;
 }
 
 /* ── Layer 2: semantic tokens — light ── */
 :root {
   /* Card sitting on the page background, and the barely-there step above it. */
-  --nf-surface: #f2ebff;
-  --nf-surface-ghost: #faf7ff;
+  --ds-surface: #f2ebff;
+  --ds-surface-ghost: #faf7ff;
   /* Halo behind the login / OAuth panels. */
-  --nf-surface-glow: radial-gradient(
+  --ds-surface-glow: radial-gradient(
     ellipse 60% 100% at 50% 0%,
     rgba(196, 181, 253, 0.4),
     transparent 70%
   );
   /* Keyboard-focus wash on a suggestion row. */
-  --nf-surface-highlight: rgba(51, 73, 224, 0.08);
+  --ds-surface-highlight: rgba(51, 73, 224, 0.08);
 
-  --nf-link: var(--nf-purple-deep);
-  --nf-accent-text: var(--nf-royal-deep);
+  --ds-link: var(--ds-purple-deep);
+  --ds-accent-text: var(--ds-royal-deep);
 
-  --nf-nav-active-bg: #ede9ff;
-  --nf-nav-active-color: var(--nf-midnight);
+  --ds-nav-active-bg: #ede9ff;
+  --ds-nav-active-color: var(--ds-midnight);
 
   /* Sits between two areas of identical background, so it needs to read
      stronger than an ordinary card border. */
-  --nf-boundary-border: rgba(30, 27, 75, 0.14);
+  --ds-boundary-border: rgba(30, 27, 75, 0.14);
 
-  --nf-danger-fg: var(--nf-crimson);
-  --nf-danger-bg: rgba(201, 42, 42, 0.12);
-  --nf-selected-bg: rgba(59, 91, 255, 0.12);
-  --nf-selected-border: var(--nf-royal);
+  --ds-danger-fg: var(--ds-crimson);
+  --ds-danger-bg: rgba(201, 42, 42, 0.12);
+  --ds-selected-bg: rgba(59, 91, 255, 0.12);
+  --ds-selected-border: var(--ds-royal);
 
   /* Alert title colours. The alert's own background is an alpha tint of the
      tone, so these are read against a very pale wash and have to be far darker
      than the tone itself. */
-  --nf-tone-red: #b02525;
-  --nf-tone-green: #166534;
-  --nf-tone-yellow: #7a6105;
-  --nf-tone-royal: #2a47e6;
-  --nf-tone-purple: #522ba3;
+  --ds-tone-red: #b02525;
+  --ds-tone-green: #166534;
+  --ds-tone-yellow: #7a6105;
+  --ds-tone-royal: #2a47e6;
+  --ds-tone-purple: #522ba3;
 
   /* Fallbacks for the card-local foreground pair below. A question card
      overrides both on its own root; anything using the classes outside one still
      gets readable text rather than an unresolved var. */
-  --nf-card-fg: var(--mantine-color-text);
-  --nf-card-fg-muted: var(--mantine-color-dimmed);
-  --nf-card-fg-faint: var(--mantine-color-dimmed);
-  --nf-card-accent: var(--nf-link);
-  --nf-card-edge: var(--mantine-color-default-border);
+  --ds-card-fg: var(--mantine-color-text);
+  --ds-card-fg-muted: var(--mantine-color-dimmed);
+  --ds-card-fg-faint: var(--mantine-color-dimmed);
+  --ds-card-accent: var(--ds-link);
+  --ds-card-edge: var(--mantine-color-default-border);
 }
 
 /* ── Layer 2: semantic tokens — dark ── */
 :root[data-mantine-color-scheme="dark"] {
-  --nf-surface: rgba(255, 255, 255, 0.06);
-  --nf-surface-ghost: rgba(255, 255, 255, 0.03);
-  --nf-surface-glow: radial-gradient(
+  --ds-surface: rgba(255, 255, 255, 0.06);
+  --ds-surface-ghost: rgba(255, 255, 255, 0.03);
+  --ds-surface-glow: radial-gradient(
     ellipse 60% 100% at 50% 0%,
     rgba(139, 92, 246, 0.15),
     transparent 70%
   );
-  --nf-surface-highlight: rgba(107, 63, 212, 0.2);
+  --ds-surface-highlight: rgba(107, 63, 212, 0.2);
 
-  --nf-link: var(--nf-lavender);
-  --nf-accent-text: var(--nf-lavender);
+  --ds-link: var(--ds-lavender);
+  --ds-accent-text: var(--ds-lavender);
 
-  --nf-nav-active-bg: rgba(107, 63, 212, 0.22);
-  --nf-nav-active-color: var(--nf-paper);
+  --ds-nav-active-bg: rgba(107, 63, 212, 0.22);
+  --ds-nav-active-color: var(--ds-paper);
 
-  --nf-boundary-border: rgba(255, 255, 255, 0.14);
+  --ds-boundary-border: rgba(255, 255, 255, 0.14);
 
-  --nf-danger-fg: #fca5a5;
-  --nf-danger-bg: rgba(220, 38, 38, 0.18);
-  --nf-selected-bg: rgba(59, 91, 255, 0.18);
-  --nf-selected-border: #6178ff;
+  --ds-danger-fg: #fca5a5;
+  --ds-danger-bg: rgba(220, 38, 38, 0.18);
+  --ds-selected-bg: rgba(59, 91, 255, 0.18);
+  --ds-selected-border: #6178ff;
 
-  --nf-tone-red: #ff8787;
-  --nf-tone-green: #69db7c;
-  --nf-tone-yellow: #ffe57a;
-  --nf-tone-royal: #849bff;
-  --nf-tone-purple: #ac8afd;
+  --ds-tone-red: #ff8787;
+  --ds-tone-green: #69db7c;
+  --ds-tone-yellow: #ffe57a;
+  --ds-tone-royal: #849bff;
+  --ds-tone-purple: #ac8afd;
 }
 
 /* ── Mantine bridges ── */
@@ -244,11 +244,11 @@ body {
    specificity of Mantine's own scheme blocks; at (0,1,0) they were being
    outranked and silently doing nothing. Only variables Mantine does not
    re-emit at runtime can be set here — `--mantine-color-body` comes from
-   `theme.white` / `dark[7]` instead, and brand text uses the `--nf-*` tokens
+   `theme.white` / `dark[7]` instead, and brand text uses the `--ds-*` tokens
    above rather than fighting the provider's `-text` variables. */
 :root[data-mantine-color-scheme="light"] {
   --mantine-color-default-border: #e6ddff;
-  /* Mantine's default (gray-6) reads 2.9:1 on --nf-surface, which had every
+  /* Mantine's default (gray-6) reads 2.9:1 on --ds-surface, which had every
      card description in the app below AA. */
   --mantine-color-dimmed: #5b5680;
 }
@@ -263,12 +263,12 @@ body {
    the lightest alpha that still clears AA over the lightest gradient stop;
    -faint is for rules and progress tracks only, never text. */
 :root {
-  --nf-on-grad: var(--nf-paper);
-  --nf-on-grad-muted: rgba(253, 248, 255, 0.85);
-  --nf-on-grad-accent: #e9ddff;
-  --nf-on-grad-faint: rgba(253, 248, 255, 0.4);
-  --nf-on-grad-fill: rgba(253, 248, 255, 0.15);
-  --nf-on-grad-border: rgba(253, 248, 255, 0.25);
+  --ds-on-grad: var(--ds-paper);
+  --ds-on-grad-muted: rgba(253, 248, 255, 0.85);
+  --ds-on-grad-accent: #e9ddff;
+  --ds-on-grad-faint: rgba(253, 248, 255, 0.4);
+  --ds-on-grad-fill: rgba(253, 248, 255, 0.15);
+  --ds-on-grad-border: rgba(253, 248, 255, 0.25);
 }
 
 /* ── Reply composer ── */
@@ -277,13 +277,13 @@ body {
    written rather than for the app around it. Its accents therefore have to be
    read against white, not against the page. */
 :root {
-  --nf-compose-bg: #ffffff;
-  --nf-compose-fg: var(--nf-midnight);
-  --nf-compose-fg-muted: #5b5680;
-  --nf-compose-border: var(--nf-royal);
-  --nf-compose-accent: var(--nf-royal);
-  --nf-compose-warn: #8f7206;
-  --nf-compose-track: rgba(30, 27, 75, 0.15);
+  --ds-compose-bg: #ffffff;
+  --ds-compose-fg: var(--ds-midnight);
+  --ds-compose-fg-muted: #5b5680;
+  --ds-compose-border: var(--ds-royal);
+  --ds-compose-accent: var(--ds-royal);
+  --ds-compose-warn: #8f7206;
+  --ds-compose-track: rgba(30, 27, 75, 0.15);
 }
 
 /* ── Card-local foreground ── */
@@ -291,35 +291,35 @@ body {
    surface, and its contents have to follow. The card sets these two on its own
    root (see QuestionCard.styles.ts) and every descendant reads them, so the
    choice is made once instead of at each Text. */
-.nf-oncard {
-  color: var(--nf-card-fg);
+.ds-oncard {
+  color: var(--ds-card-fg);
 }
-.nf-oncard-muted {
-  color: var(--nf-card-fg-muted);
+.ds-oncard-muted {
+  color: var(--ds-card-fg-muted);
 }
 
 /* ── Icon buttons on a question card ── */
-.nf-delete-btn:hover,
-.nf-delete-btn:focus-visible {
-  color: var(--nf-danger-fg) !important;
-  background: var(--nf-danger-bg) !important;
+.ds-delete-btn:hover,
+.ds-delete-btn:focus-visible {
+  color: var(--ds-danger-fg) !important;
+  background: var(--ds-danger-bg) !important;
 }
 
-.nf-pin-btn:hover,
-.nf-pin-btn:focus-visible {
-  color: var(--nf-royal) !important;
-  background: var(--nf-selected-bg) !important;
+.ds-pin-btn:hover,
+.ds-pin-btn:focus-visible {
+  color: var(--ds-royal) !important;
+  background: var(--ds-selected-bg) !important;
 }
 
 /* Already pinned, so the hover affordance is "unpin" rather than "pin". */
-.nf-pin-btn--active:hover,
-.nf-pin-btn--active:focus-visible {
-  color: var(--nf-on-grad-accent) !important;
+.ds-pin-btn--active:hover,
+.ds-pin-btn--active:focus-visible {
+  color: var(--ds-on-grad-accent) !important;
   background: rgba(196, 181, 253, 0.15) !important;
 }
 
 /* ── Animation ── */
-@keyframes nf-pin-settle {
+@keyframes ds-pin-settle {
   from {
     opacity: 0.55;
     transform: translateY(-14px) scale(0.97);
@@ -330,12 +330,12 @@ body {
   }
 }
 
-.nf-pinned-card-enter {
-  animation: nf-pin-settle 0.38s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+.ds-pinned-card-enter {
+  animation: ds-pin-settle 0.38s cubic-bezier(0.34, 1.45, 0.64, 1) both;
 }
 
 /* Bouncing logo easter egg — slow spin variant */
-@keyframes nf-bounce-spin {
+@keyframes ds-bounce-spin {
   from {
     transform: rotate(0deg);
   }
@@ -344,18 +344,18 @@ body {
   }
 }
 
-.nf-bounce-spin {
-  animation: nf-bounce-spin 6s linear infinite;
+.ds-bounce-spin {
+  animation: ds-bounce-spin 6s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nf-pinned-card-enter,
-  .nf-bounce-spin {
+  .ds-pinned-card-enter,
+  .ds-bounce-spin {
     animation: none;
   }
 }
 
 /* Alert / notification brand radius */
 .mantine-Alert-root {
-  border-radius: var(--nf-radius-control);
+  border-radius: var(--ds-radius-control);
 }

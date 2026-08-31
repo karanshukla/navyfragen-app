@@ -35,7 +35,7 @@ const BODY: Record<Scheme, Rgb> = {
 };
 
 function surface(scheme: Scheme): Rgb {
-  return flatten(token("--nf-surface", scheme), BODY[scheme]);
+  return flatten(token("--ds-surface", scheme), BODY[scheme]);
 }
 
 function ratio(fg: string, bg: Rgb, scheme: Scheme): number {
@@ -54,23 +54,23 @@ describe("body text", () => {
   });
 
   it.each(SCHEMES)("dimmed text clears AA on the ghost surface (%s)", (scheme) => {
-    const ghost = flatten(token("--nf-surface-ghost", scheme), BODY[scheme]);
+    const ghost = flatten(token("--ds-surface-ghost", scheme), BODY[scheme]);
     expect(ratio("--mantine-color-dimmed", ghost, scheme)).toBeGreaterThanOrEqual(AA);
   });
 
   it("brand-accented body text clears AA on the light card surface", () => {
     // The plain `royal` fill is 4.4:1 here, which is why text gets its own token.
-    expect(ratio("--nf-accent-text", surface("light"), "light")).toBeGreaterThanOrEqual(AA);
+    expect(ratio("--ds-accent-text", surface("light"), "light")).toBeGreaterThanOrEqual(AA);
   });
 
   it.each(SCHEMES)("link colour clears AA on the card surface (%s)", (scheme) => {
-    expect(ratio("--nf-link", surface(scheme), scheme)).toBeGreaterThanOrEqual(AA);
+    expect(ratio("--ds-link", surface(scheme), scheme)).toBeGreaterThanOrEqual(AA);
   });
 });
 
 describe("text on brand gradients", () => {
-  const GRADIENTS = ["--nf-grad-mark", "--nf-grad-dark"];
-  const FOREGROUNDS = ["--nf-on-grad", "--nf-on-grad-muted", "--nf-on-grad-accent"];
+  const GRADIENTS = ["--ds-grad-mark", "--ds-grad-dark"];
+  const FOREGROUNDS = ["--ds-on-grad", "--ds-on-grad-muted", "--ds-on-grad-accent"];
 
   it.each(GRADIENTS.flatMap((g) => FOREGROUNDS.map((f) => [g, f])))(
     "%s carries %s at AA across the whole ramp",
@@ -83,11 +83,11 @@ describe("text on brand gradients", () => {
     }
   );
 
-  it.each(["--nf-grad-aurora", "--nf-grad-ember", "--nf-grad-verdant", "--nf-grad-mark"])(
+  it.each(["--ds-grad-aurora", "--ds-grad-ember", "--ds-grad-verdant", "--ds-grad-mark"])(
     "ask-card preset %s carries white text at AA across the whole ramp",
     (preset) => {
       expect(
-        worstOnGradient(parseColor(token("--nf-on-grad")), token(preset))
+        worstOnGradient(parseColor(token("--ds-on-grad")), token(preset))
       ).toBeGreaterThanOrEqual(AA);
     }
   );
@@ -95,8 +95,8 @@ describe("text on brand gradients", () => {
   it("the faint on-gradient token is not strong enough for text", () => {
     // Pinned so nobody promotes it to a Text colour: it exists for rules and
     // progress-ring tracks, where contrast is not a legibility requirement.
-    const grad = token("--nf-grad-dark");
-    const fg = flatten(token("--nf-on-grad-faint"), worstStop(grad));
+    const grad = token("--ds-grad-dark");
+    const fg = flatten(token("--ds-on-grad-faint"), worstStop(grad));
     expect(worstOnGradient(fg, grad)).toBeLessThan(AA_LARGE);
   });
 });
@@ -104,7 +104,7 @@ describe("text on brand gradients", () => {
 describe("controls", () => {
   it("the sunshine call-to-action carries its dark ink at AA", () => {
     expect(
-      contrast(parseColor(token("--nf-midnight")), parseColor(token("--nf-sunshine")))
+      contrast(parseColor(token("--ds-midnight")), parseColor(token("--ds-sunshine")))
     ).toBeGreaterThanOrEqual(AA);
   });
 
@@ -121,8 +121,8 @@ describe("controls", () => {
   });
 
   it.each(SCHEMES)("the active nav item is legible on its own tint (%s)", (scheme) => {
-    const bg = flatten(token("--nf-nav-active-bg", scheme), BODY[scheme]);
-    expect(ratio("--nf-nav-active-color", bg, scheme)).toBeGreaterThanOrEqual(AA);
+    const bg = flatten(token("--ds-nav-active-bg", scheme), BODY[scheme]);
+    expect(ratio("--ds-nav-active-color", bg, scheme)).toBeGreaterThanOrEqual(AA);
   });
 });
 
@@ -138,14 +138,14 @@ describe("alert tones", () => {
 });
 
 describe("token hygiene", () => {
-  it("declares no --nf-* token that nothing references", async () => {
+  it("declares no --ds-* token that nothing references", async () => {
     const sources = await collectSources(SRC);
     const used = referencedTokens(sources);
     const orphans = declaredTokens().filter((name) => !used.has(name));
     expect(orphans).toEqual([]);
   });
 
-  it("references no --nf-* token that nothing declares", async () => {
+  it("references no --ds-* token that nothing declares", async () => {
     const declared = new Set(declaredTokens());
     const sources = await collectSources(SRC);
     const undeclared = [...referencedTokens(sources)].filter((name) => !declared.has(name));

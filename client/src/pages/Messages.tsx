@@ -426,7 +426,7 @@ function MessageCount({ count }: { count: number }) {
     <Text fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
       {count > 0 ? (
         <>
-          <span style={{ color: "var(--nf-sunshine)" }} aria-hidden>
+          <span style={{ color: "var(--ds-sunshine)" }} aria-hidden>
             ●
           </span>{" "}
           {messages.messagesPage.newMessagesCount(count)}

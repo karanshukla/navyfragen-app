@@ -15,7 +15,7 @@ export function WinkMark({
   style,
   "aria-hidden": ariaHidden,
 }: WinkMarkProps) {
-  const gradId = `nf-mark-${size}`;
+  const gradId = `ds-mark-${size}`;
   return (
     <svg
       width={size}

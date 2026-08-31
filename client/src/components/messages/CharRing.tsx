@@ -9,7 +9,7 @@ const DANGER_AT = 0.9;
  * Circular character-budget meter for the reply composer.
  *
  * Both stroke colours are the composer's own, not the brand ones: the ring is
- * drawn on the composer's paper surface, where `--nf-sunshine` sits at 1.7:1 and
+ * drawn on the composer's paper surface, where `--ds-sunshine` sits at 1.7:1 and
  * the track was invisible entirely.
  *
  * @see [Messages.test.tsx](../../tests/pages/Messages.test.tsx): pins the switch
@@ -17,7 +17,7 @@ const DANGER_AT = 0.9;
  */
 export function CharRing({ count, limit }: { count: number; limit: number }) {
   const filled = Math.min(count / limit, 1);
-  const stroke = count > limit * DANGER_AT ? "var(--nf-compose-warn)" : "var(--nf-compose-accent)";
+  const stroke = count > limit * DANGER_AT ? "var(--ds-compose-warn)" : "var(--ds-compose-accent)";
 
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ flexShrink: 0 }}>
@@ -26,7 +26,7 @@ export function CharRing({ count, limit }: { count: number; limit: number }) {
         cy={CENTRE}
         r={RADIUS}
         fill="none"
-        stroke="var(--nf-compose-track)"
+        stroke="var(--ds-compose-track)"
         strokeWidth={2.5}
       />
       <circle

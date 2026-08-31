@@ -101,7 +101,7 @@ func primarySubtag(locale string) string {
 // Mirrors client/src/index.css's design tokens so a shared link looks like the
 // page it points at. The OG canvas has no colour scheme to follow, so it takes
 // the dark treatment the app's brand gradients already assume
-// (`--nf-on-grad-*` exists for exactly this reason).
+// (`--ds-on-grad-*` exists for exactly this reason).
 //
 // [TestOGPalette_EveryTextColourClearsAAOnEverySurface] checks every text
 // colour here against every surface it can land on, and
@@ -110,7 +110,7 @@ func primarySubtag(locale string) string {
 // client/src/tests/theme/contrast.test.ts: changing a value below fails a test
 // rather than silently shipping unreadable text.
 const (
-	// ogGradMark matches --nf-grad-mark, the app's primary brand gradient.
+	// ogGradMark matches --ds-grad-mark, the app's primary brand gradient.
 	ogGradMark = "linear-gradient(135deg, #3349E0 0%, #5322C5 55%, #4F1FA6 100%)"
 
 	// The content surface below the banner. A two-stop vertical ramp rather
@@ -118,7 +118,7 @@ const (
 	ogSurfaceTop    = "#1B1747"
 	ogSurfaceBottom = "#12102F"
 
-	ogText       = "#FDF8FF" // --nf-paper
+	ogText       = "#FDF8FF" // --ds-paper
 	ogTextMuted  = "#C3BCE4"
 	ogTextAccent = "#DCC9FF"
 
@@ -143,7 +143,7 @@ var (
 // ── Typography ───────────────────────────────────────────────────────────────
 
 // ogFontStack leads with 'Noto Sans' and its per-script siblings. The app's
-// --nf-font-sans is the platform system stack, which this renderer cannot use:
+// --ds-font-sans is the platform system stack, which this renderer cannot use:
 // system-ui in the Chromium container resolves to whatever fontconfig happens
 // to hold, so the same input would render in a different face per deploy. Noto
 // is the webfont stand-in that keeps the render deterministic and covers the

@@ -7,7 +7,7 @@
 >
 > **Interactive mockups:** open [`customise-mockups/index.html`](./customise-mockups/index.html)
 > in a browser. It reproduces the real app chrome (header + nav) and lets you
-> flip between the three designs and light/dark, using the actual `--nf-*`
+> flip between the three designs and light/dark, using the actual `--ds-*`
 > tokens from `client/src/index.css`.
 
 ## The constraint
@@ -133,7 +133,7 @@ Design B's grouped controls in a left column; a **sticky live preview of the
 public-profile ask-card** in a right column. Because #199 (prompt), #266
 (language) and #177 (inbox on/off) all change *exactly what a visitor sees*, the
 preview renders the real ask-card (reusing `PublicProfile.tsx`'s gradient
-`--nf-grad-mark` card) and updates as you type the prompt, pick a language, or
+`--ds-grad-mark` card) and updates as you type the prompt, pick a language, or
 toggle the inbox closed — turning three abstract settings into "this is what a
 stranger will actually see."
 

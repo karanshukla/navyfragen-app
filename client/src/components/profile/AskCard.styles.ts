@@ -20,8 +20,8 @@ export const headline: CSSProperties = {
 /** The input is a paper affordance on the gradient, same as the reply composer. */
 export const textarea = {
   input: {
-    backgroundColor: "var(--nf-compose-bg)",
-    color: "var(--nf-compose-fg)",
+    backgroundColor: "var(--ds-compose-bg)",
+    color: "var(--ds-compose-fg)",
     border: "none",
   },
   description: {

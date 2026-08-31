@@ -24,22 +24,22 @@ export interface CardState {
  * card surface, and everything inside it has to follow. Rather than each Text
  * repeating the choice — which is how the message body ended up hard-coded to
  * white and therefore invisible on the light surface — the card publishes four
- * `--nf-card-*` custom properties and its children read those.
+ * `--ds-card-*` custom properties and its children read those.
  */
 function foreground(gradient: boolean): CSSProperties {
   return {
-    "--nf-card-fg": gradient ? onGrad : textDefault,
-    "--nf-card-fg-muted": gradient ? onGradMuted : textDimmed,
-    "--nf-card-fg-faint": gradient ? onGradFaint : textDimmed,
-    "--nf-card-accent": gradient ? onGradAccent : "var(--nf-link)",
-    "--nf-card-edge": gradient ? "rgba(255,255,255,0.10)" : borderColor,
+    "--ds-card-fg": gradient ? onGrad : textDefault,
+    "--ds-card-fg-muted": gradient ? onGradMuted : textDimmed,
+    "--ds-card-fg-faint": gradient ? onGradFaint : textDimmed,
+    "--ds-card-accent": gradient ? onGradAccent : "var(--ds-link)",
+    "--ds-card-edge": gradient ? "rgba(255,255,255,0.10)" : borderColor,
   } as CSSProperties;
 }
 
 function borderFor({ pinned, focused }: CardState): string {
-  if (pinned) return "2px solid var(--nf-royal)";
-  if (focused) return "2px solid var(--nf-purple)";
-  return "2px solid var(--nf-card-edge)";
+  if (pinned) return "2px solid var(--ds-royal)";
+  if (focused) return "2px solid var(--ds-purple)";
+  return "2px solid var(--ds-card-edge)";
 }
 
 export const card = (state: CardState): CSSProperties => ({
@@ -52,26 +52,26 @@ export const card = (state: CardState): CSSProperties => ({
     : "0 4px 16px -8px rgba(0,0,0,0.3)",
   padding: "8px 20px 20px",
   transition:
-    "border-color var(--nf-dur-fast) var(--nf-ease), box-shadow var(--nf-dur-fast) var(--nf-ease)",
+    "border-color var(--ds-dur-fast) var(--ds-ease), box-shadow var(--ds-dur-fast) var(--ds-ease)",
   cursor: "pointer",
   display: "flex",
   flexDirection: "column",
 });
 
 export const timestamp: CSSProperties = {
-  color: "var(--nf-card-fg-muted)",
+  color: "var(--ds-card-fg-muted)",
   letterSpacing: "0.08em",
   textTransform: "uppercase",
 };
 
 export const iconButton = (active: boolean): CSSProperties => ({
-  color: active ? "var(--nf-royal)" : "var(--nf-card-fg-muted)",
+  color: active ? "var(--ds-royal)" : "var(--ds-card-fg-muted)",
   transition:
-    "color var(--nf-dur-fast) var(--nf-ease), background var(--nf-dur-fast) var(--nf-ease)",
+    "color var(--ds-dur-fast) var(--ds-ease), background var(--ds-dur-fast) var(--ds-ease)",
 });
 
 export const disabledIconButton: CSSProperties = {
-  color: "var(--nf-card-fg-faint)",
+  color: "var(--ds-card-fg-faint)",
   cursor: "not-allowed",
 };
 
@@ -83,7 +83,7 @@ export const bodyWrap: CSSProperties = {
 };
 
 export const body: CSSProperties = {
-  color: "var(--nf-card-fg)",
+  color: "var(--ds-card-fg)",
   fontSize: 20,
   lineHeight: 1.35,
   wordBreak: "break-word",
@@ -97,7 +97,7 @@ export const threadLink: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 4,
-  color: "var(--nf-card-accent)",
+  color: "var(--ds-card-accent)",
   textDecoration: "none",
   fontSize: 11,
 };
@@ -109,7 +109,7 @@ export const threadLinkText: CSSProperties = {
 };
 
 export const replyButton = (blocked: boolean): CSSProperties => ({
-  color: "var(--nf-midnight)",
+  color: "var(--ds-midnight)",
   opacity: blocked ? 0.45 : 1,
   cursor: blocked ? "not-allowed" : undefined,
 });

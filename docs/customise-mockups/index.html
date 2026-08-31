@@ -3,13 +3,13 @@
 <style>
   /* ── Navyfragen tokens, lifted verbatim from client/src/index.css + Theme.tsx ── */
   :root {
-    --nf-royal: #3b5bff;
-    --nf-purple: #8b5cf6;
-    --nf-lavender: #c4b5fd;
-    --nf-sunshine: #facc15;
-    --nf-midnight: #1e1b4b;
-    --nf-grad-mark: linear-gradient(135deg, #3349e0 0%, #6b3fd4 55%, #4f1fa6 100%);
-    --nf-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ds-royal: #3b5bff;
+    --ds-purple: #8b5cf6;
+    --ds-lavender: #c4b5fd;
+    --ds-sunshine: #facc15;
+    --ds-midnight: #1e1b4b;
+    --ds-grad-mark: linear-gradient(135deg, #3349e0 0%, #6b3fd4 55%, #4f1fa6 100%);
+    --ds-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
     /* light (default) */
     --page: #fdf8ff;
@@ -43,7 +43,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
-    font-family: var(--nf-font);
+    font-family: var(--ds-font);
     background: var(--page);
     color: var(--text);
     -webkit-font-smoothing: antialiased;
@@ -115,7 +115,7 @@
   .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
   .wink {
     width: 26px; height: 26px; border-radius: 8px;
-    background: var(--nf-grad-mark);
+    background: var(--ds-grad-mark);
     display: grid; place-items: center;
     color: #fff; font-size: 14px; font-weight: 800;
   }
@@ -139,12 +139,12 @@
   .nav-item.active { background: var(--nav-active-bg); color: var(--nav-active-color); font-weight: 600; }
   .nav-item .badge {
     margin-left: auto;
-    background: var(--nf-sunshine); color: var(--nf-midnight);
+    background: var(--ds-sunshine); color: var(--ds-midnight);
     font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
   }
   .nav-eyebrow { font-size: 11px; font-weight: 600; color: var(--dimmed); text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 2px 8px; }
   .friend { display: flex; align-items: center; gap: 10px; padding: 4px; }
-  .friend .av { width: 28px; height: 28px; border-radius: 50%; background: var(--nf-grad-mark); flex-shrink: 0; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; }
+  .friend .av { width: 28px; height: 28px; border-radius: 50%; background: var(--ds-grad-mark); flex-shrink: 0; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; }
   .friend .fn { font-size: 13px; font-weight: 600; line-height: 1.3; }
   .friend .fh { font-size: 10px; color: var(--dimmed); line-height: 1.3; }
 
@@ -185,7 +185,7 @@
     border-radius: 8px; padding: 9px 16px; cursor: pointer;
     border: 1px solid transparent; width: 100%;
   }
-  .btn-filled { background: var(--nf-royal); color: #fff; }
+  .btn-filled { background: var(--ds-royal); color: #fff; }
   .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
   .label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; }
   .input, .select {
@@ -198,7 +198,7 @@
   .counter { font-size: 11px; color: var(--dimmed); margin-top: 5px; text-align: right; }
 
   .switch-row { display: flex; align-items: center; gap: 12px; }
-  .switch { --on: var(--nf-royal); position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border); flex-shrink: 0; cursor: pointer; transition: background 150ms; }
+  .switch { --on: var(--ds-royal); position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border); flex-shrink: 0; cursor: pointer; transition: background 150ms; }
   .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 150ms; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
   .switch[data-on="true"] { background: var(--on); }
   .switch[data-on="true"]::after { transform: translateX(20px); }
@@ -208,8 +208,8 @@
   /* SegmentedControl (profanity reject/mask) */
   .segctl { display: inline-flex; padding: 3px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; gap: 2px; width: 100%; }
   .segctl button { flex: 1; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--dimmed); background: transparent; border: 0; border-radius: 6px; padding: 7px; cursor: pointer; }
-  .segctl button[aria-pressed="true"] { background: var(--nf-royal); color: #fff; }
-  .open-q { font-size: 11px; color: var(--nf-purple); font-weight: 600; margin-top: 8px; }
+  .segctl button[aria-pressed="true"] { background: var(--ds-royal); color: #fff; }
+  .open-q { font-size: 11px; color: var(--ds-purple); font-weight: 600; margin-top: 8px; }
 
   .stack { display: flex; flex-direction: column; gap: 14px; }
   .divider { height: 1px; background: var(--border); margin: 4px 0; }
@@ -220,7 +220,7 @@
   .preview-wrap { position: sticky; top: 70px; }
   .preview-eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dimmed); margin: 0 0 10px; }
   .askcard {
-    background: var(--nf-grad-mark);
+    background: var(--ds-grad-mark);
     border: 2px solid var(--border);
     border-radius: 18px;
     padding: 26px;
@@ -229,11 +229,11 @@
   .askcard .prompt { font-size: 21px; font-weight: 700; text-align: center; letter-spacing: -0.01em; margin: 0 0 18px; line-height: 1.25; }
   .askcard .ta { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 12px; color: rgba(255,255,255,0.85); font-size: 14px; min-height: 54px; }
   .askcard .send-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-  .askcard .send { background: var(--nf-sunshine); color: var(--nf-midnight); font-weight: 700; font-size: 13px; border: 0; border-radius: 8px; padding: 8px 16px; }
+  .askcard .send { background: var(--ds-sunshine); color: var(--ds-midnight); font-weight: 700; font-size: 13px; border: 0; border-radius: 8px; padding: 8px 16px; }
   .askcard.closed { text-align: center; }
   .askcard .closed-msg { font-size: 15px; font-weight: 600; padding: 14px 4px; }
   .preview-note { font-size: 12px; color: var(--dimmed); margin-top: 12px; line-height: 1.5; }
-  .live { font-size: 11px; font-weight: 700; color: var(--nf-royal); text-transform: uppercase; letter-spacing: 0.05em; }
+  .live { font-size: 11px; font-weight: 700; color: var(--ds-royal); text-transform: uppercase; letter-spacing: 0.05em; }
 
   .hidden { display: none !important; }
   .field-note { font-size: 12px; color: var(--dimmed); margin-top: 8px; line-height: 1.5; }

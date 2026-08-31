@@ -64,18 +64,18 @@ export function token(name: string, scheme: Scheme = "light"): string {
   return value;
 }
 
-/** Every `--nf-*` token declared anywhere in the stylesheet. */
+/** Every `--ds-*` token declared anywhere in the stylesheet. */
 export function declaredTokens(): string[] {
   return [...new Set([...declarations.light.keys(), ...declarations.dark.keys()])].filter((k) =>
-    k.startsWith("--nf-")
+    k.startsWith("--ds-")
   );
 }
 
-/** Every `--nf-*` token *referenced* from TS/TSX/CSS sources. */
+/** Every `--ds-*` token *referenced* from TS/TSX/CSS sources. */
 export function referencedTokens(sources: string[]): Set<string> {
   const used = new Set<string>();
   for (const source of sources) {
-    for (const m of source.matchAll(/var\((--nf-[\w-]+)\)/g)) used.add(m[1]);
+    for (const m of source.matchAll(/var\((--ds-[\w-]+)\)/g)) used.add(m[1]);
   }
   return used;
 }
