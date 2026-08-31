@@ -105,11 +105,15 @@ body {
 /* ══════════════════════════════════════════════════════════════════════════
    DESIGN TOKENS
 
-   Three layers, and components may only read from the third:
+   Three layers, and components may only read from the second and third:
 
-   1. Brand primitives — the raw palette and gradients. Scheme-independent.
-      Nothing outside this file should reference them directly; they exist so
-      the semantic layer has a single place to read a hue from.
+   1. Brand primitives — scheme-independent raw values, in three groups. The
+      *brand palette* is the set of hues a repaint replaces, and nothing outside
+      this file may reference one: it exists so the semantic layer has a single
+      place to read a hue from, and `contrast.test.ts` fails the build on any
+      component that reaches past it. The *brand gradients* and the *structural
+      primitives* (type, motion, radius) carry no such restriction — components
+      read those directly.
    2. Semantic tokens — named for the job rather than the colour (`--ds-surface`,
       not `--ds-accent-soft-ish`). Light values live on `:root` and dark values
       override them under [data-mantine-color-scheme="dark"], so a component
@@ -124,7 +128,7 @@ body {
    drops below WCAG AA.
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Layer 1: brand primitives ── */
+/* ── Layer 1a: brand palette — repaint here, and only here ── */
 :root {
   --ds-ink: #1e1b4b;
   --ds-primary: #3b5bff;
@@ -135,7 +139,10 @@ body {
   --ds-paper: #fdf8ff;
   --ds-highlight: #facc15;
   --ds-danger: #c92a2a;
+}
 
+/* ── Layer 1b: brand gradients ── */
+:root {
   --ds-grad-mark: linear-gradient(135deg, #3349e0 0%, #5322c5 55%, #4f1fa6 100%);
   --ds-grad-dark: linear-gradient(135deg, #1e1b4b 0%, #3b2e78 50%, #6b3fd4 100%);
 
@@ -145,7 +152,10 @@ body {
   --ds-grad-aurora: linear-gradient(135deg, #1d4ed8 0%, #0369a1 55%, #0e7490 100%);
   --ds-grad-ember: linear-gradient(135deg, #c2410c 0%, #be123c 55%, #9f1239 100%);
   --ds-grad-verdant: linear-gradient(135deg, #0f766e 0%, #047857 55%, #065f46 100%);
+}
 
+/* ── Layer 1c: structural primitives — type, motion, radius ── */
+:root {
   --ds-font-sans:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
@@ -188,6 +198,19 @@ body {
   --ds-danger-bg: rgba(201, 42, 42, 0.12);
   --ds-selected-bg: rgba(59, 91, 255, 0.12);
   --ds-selected-border: var(--ds-primary);
+
+  /* Keyboard focus, and the border marking a pinned card. Two separate jobs
+     that happen to share a hue today; keeping them apart means a repaint can
+     pull them apart without hunting through components. */
+  --ds-focus-ring: var(--ds-accent);
+  --ds-pinned-border: var(--ds-primary);
+  /* An icon button on a card, in its "on" state; off is --ds-card-fg-muted. */
+  --ds-card-action-active: var(--ds-primary);
+
+  /* Unread counts, the new-message dot and the reply call-to-action: one fill
+     with one legible ink, so the pair cannot drift apart. */
+  --ds-attention-bg: var(--ds-highlight);
+  --ds-attention-fg: var(--ds-ink);
 
   /* Alert title colours. The alert's own background is an alpha tint of the
      tone, so these are read against a very pale wash and have to be far darker

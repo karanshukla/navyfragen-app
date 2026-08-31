@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "vitest";
@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 import appTheme, { ALERT_TONES } from "../../Theme";
 
 import { contrast, flatten, parseColor, worstOnGradient, type Rgb } from "./colorMath";
-import { declaredTokens, referencedTokens, token, type Scheme } from "./readTokens";
+import { declaredTokens, paletteTokens, referencedTokens, token, type Scheme } from "./readTokens";
 
 /**
  * The palette's accessibility rules, executable.
@@ -140,7 +140,7 @@ describe("alert tones", () => {
 describe("token hygiene", () => {
   it("declares no --ds-* token that nothing references", async () => {
     const sources = await collectSources(SRC);
-    const used = referencedTokens(sources);
+    const used = referencedTokens(sources.map((s) => s.text));
     const orphans = declaredTokens().filter((name) => !used.has(name));
     expect(orphans).toEqual([]);
   });
@@ -148,8 +148,29 @@ describe("token hygiene", () => {
   it("references no --ds-* token that nothing declares", async () => {
     const declared = new Set(declaredTokens());
     const sources = await collectSources(SRC);
-    const undeclared = [...referencedTokens(sources)].filter((name) => !declared.has(name));
+    const undeclared = [...referencedTokens(sources.map((s) => s.text))].filter(
+      (name) => !declared.has(name)
+    );
     expect(undeclared).toEqual([]);
+  });
+
+  /**
+   * The rule that makes a repaint a one-file change. A component naming a hue
+   * directly is invisible until someone swaps the palette and one border stays
+   * the old blue, so it fails here instead: give the colour a semantic token in
+   * index.css and reference that.
+   */
+  it("keeps the brand palette out of everything but index.css", async () => {
+    const palette = new Set(paletteTokens());
+    const sources = await collectSources(SRC);
+    const leaks = sources
+      .filter((s) => !s.path.endsWith("index.css"))
+      .flatMap((s) =>
+        [...referencedTokens([s.text])]
+          .filter((name) => palette.has(name))
+          .map((name) => `${relative(SRC, s.path).split(sep).join("/")} -> ${name}`)
+      );
+    expect(leaks).toEqual([]);
   });
 });
 
@@ -163,14 +184,19 @@ function worstStop(gradient: string): Rgb {
   );
 }
 
-async function collectSources(dir: string): Promise<string[]> {
-  const out: string[] = [];
+interface Source {
+  path: string;
+  text: string;
+}
+
+async function collectSources(dir: string): Promise<Source[]> {
+  const out: Source[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...(await collectSources(path)));
     } else if (/\.(tsx?|css)$/.test(entry.name)) {
-      out.push(readFileSync(path, "utf8"));
+      out.push({ path, text: readFileSync(path, "utf8") });
     }
   }
   return out;

@@ -4,8 +4,8 @@ import { radiusPill } from "../../styles/tokens";
 
 /** The highlight fill demands the dark brand ink; white on it is 1.5:1. */
 export const badge: CSSProperties = {
-  background: "var(--ds-highlight)",
-  color: "var(--ds-ink)",
+  background: "var(--ds-attention-bg)",
+  color: "var(--ds-attention-fg)",
   padding: "1px 7px",
   borderRadius: radiusPill,
   fontSize: 9,

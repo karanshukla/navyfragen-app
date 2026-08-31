@@ -18,7 +18,7 @@ export const staticRow: CSSProperties = {
 
 export const row = (focused: boolean): CSSProperties => ({
   ...staticRow,
-  outline: focused ? "2px solid var(--ds-accent)" : "none",
+  outline: focused ? "2px solid var(--ds-focus-ring)" : "none",
   outlineOffset: "-2px",
   background: focused ? surfaceHighlight : undefined,
 });

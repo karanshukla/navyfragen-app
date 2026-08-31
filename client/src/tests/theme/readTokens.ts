@@ -14,6 +14,9 @@ const CSS_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "../../index.c
 
 export type Scheme = "light" | "dark";
 
+const PALETTE_START = "/* ── Layer 1a:";
+const PALETTE_END = "/* ── Layer 1b:";
+
 const SELECTORS: Record<Scheme, string[]> = {
   light: [":root", ':root[data-mantine-color-scheme="light"]'],
   dark: [':root[data-mantine-color-scheme="dark"]'],
@@ -69,6 +72,18 @@ export function declaredTokens(): string[] {
   return [...new Set([...declarations.light.keys(), ...declarations.dark.keys()])].filter((k) =>
     k.startsWith("--ds-")
   );
+}
+
+/**
+ * The brand palette (layer 1a) — the tokens a repaint replaces. Sliced out of
+ * the stylesheet by its layer markers rather than re-listed here, so a hue added
+ * to that block is covered without anyone remembering to update this file.
+ */
+export function paletteTokens(): string[] {
+  const start = css.indexOf(PALETTE_START);
+  const end = css.indexOf(PALETTE_END);
+  if (start < 0 || end < 0) throw new Error("Layer 1a/1b markers missing from index.css");
+  return [...css.slice(start, end).matchAll(/(--ds-[\w-]+)\s*:/g)].map((m) => m[1]);
 }
 
 /** Every `--ds-*` token *referenced* from TS/TSX/CSS sources. */

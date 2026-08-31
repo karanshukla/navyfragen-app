@@ -62,6 +62,6 @@ export const BRAND_GRADIENT = { from: "primary.6", to: "accent.7", deg: 135 } as
 
 /** Highlight call-to-action: the bright fill demands the dark brand ink, not white. */
 export const highlightButton = {
-  color: "var(--ds-ink)",
+  color: "var(--ds-attention-fg)",
   fontWeight: 700,
 } as const;

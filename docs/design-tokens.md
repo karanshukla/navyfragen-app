@@ -18,8 +18,15 @@ component or a hook.
 `client/src/index.css` is the single source of truth for colour, and it is layered —
 components may only read from the last two layers:
 
-1. **Brand primitives** (`--ds-primary`, `--ds-grad-mark`, …) — scheme-independent raw
-   palette. Referenced only by the semantic layer in the same file.
+1. **Brand primitives** — scheme-independent raw values, in three groups.
+   - _1a, the brand palette_ (`--ds-primary`, `--ds-ink`, `--ds-highlight`, …) — the
+     hues a repaint replaces. **Nothing outside `index.css` may reference one**, and
+     `contrast.test.ts` fails on any file that does. Reaching for `var(--ds-primary)`
+     in a component means the colour needs a semantic token; add one here.
+   - _1b, the brand gradients_ (`--ds-grad-mark`, the ask-card presets) — components
+     read these directly; a gradient is a single design decision, not a hue.
+   - _1c, structural primitives_ (`--ds-font-sans`, `--ds-ease`, `--ds-dur-*`,
+     `--ds-radius-*`) — carry no colour and no restriction.
 2. **Semantic tokens** (`--ds-surface`, `--ds-link`, `--ds-nav-active-bg`, …) — named
    for the job. Light values on `:root`, dark overrides under
    `:root[data-mantine-color-scheme="dark"]`. **This is why no component calls

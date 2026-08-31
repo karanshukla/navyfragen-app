@@ -37,8 +37,8 @@ function foreground(gradient: boolean): CSSProperties {
 }
 
 function borderFor({ pinned, focused }: CardState): string {
-  if (pinned) return "2px solid var(--ds-primary)";
-  if (focused) return "2px solid var(--ds-accent)";
+  if (pinned) return "2px solid var(--ds-pinned-border)";
+  if (focused) return "2px solid var(--ds-focus-ring)";
   return "2px solid var(--ds-card-edge)";
 }
 
@@ -65,7 +65,7 @@ export const timestamp: CSSProperties = {
 };
 
 export const iconButton = (active: boolean): CSSProperties => ({
-  color: active ? "var(--ds-primary)" : "var(--ds-card-fg-muted)",
+  color: active ? "var(--ds-card-action-active)" : "var(--ds-card-fg-muted)",
   transition:
     "color var(--ds-dur-fast) var(--ds-ease), background var(--ds-dur-fast) var(--ds-ease)",
 });
@@ -109,7 +109,7 @@ export const threadLinkText: CSSProperties = {
 };
 
 export const replyButton = (blocked: boolean): CSSProperties => ({
-  color: "var(--ds-ink)",
+  color: "var(--ds-attention-fg)",
   opacity: blocked ? 0.45 : 1,
   cursor: blocked ? "not-allowed" : undefined,
 });
