@@ -42,7 +42,8 @@ error rather than a colour that silently resolves to nothing.
 
 ## Repainting the brand
 
-Colour lives in exactly two places, and both are checked against each other:
+Colour lives in three places. The first two are checked against each other; the
+third is a separate service and cannot be, so it is the one to remember:
 
 1. `client/src/index.css`, layer 1a — the `--ds-*` palette. The layer-1b gradients
    and the `rgba()` tints in layer 2 spell their channels out rather than
@@ -51,6 +52,11 @@ Colour lives in exactly two places, and both are checked against each other:
 2. `client/src/Theme.tsx` — Mantine's `MantineColorsTuple`s, which cannot be CSS
    variables because Mantine derives hover, light and outline variants from literal
    values, along with `white`, `black` and the `ALERT_TONES` channel triplets.
+3. `opengraph-service/internal/shim/template.go` — the share-card renderer mirrors
+   the palette in Go constants (`ogGradMark`, `ogText`, …). It is a different
+   language in a different service, so nothing can pin it against the stylesheet;
+   its own tests check that the card stays legible, not that it still matches the
+   app. A repaint that skips it leaves every shared link wearing the old brand.
 
 The second is a copy of the first, so `contrast.test.ts` pins every shared shade:
 change a hex in one and the suite names the token that no longer agrees. Work
