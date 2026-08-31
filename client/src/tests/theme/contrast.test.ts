@@ -137,6 +137,43 @@ describe("alert tones", () => {
   });
 });
 
+/**
+ * Mantine's palette and `index.css` are two independent copies of the same brand
+ * colours, and they have to be: Mantine needs literal tuples to derive hover,
+ * light and outline variants from, the browser needs custom properties. So a
+ * repaint has to edit both, and a half-finished one is invisible — the filled
+ * buttons change and one border stays the old hue. Each pair below is pinned so
+ * that stops being something you have to notice.
+ */
+describe("the Mantine palette and the stylesheet agree", () => {
+  const SHADES: [string, string][] = [
+    ["--ds-primary", appTheme.colors!.primary![6]],
+    ["--ds-primary-deep", appTheme.colors!.primary![7]],
+    ["--ds-accent", appTheme.colors!.accent![6]],
+    ["--ds-accent-deep", appTheme.colors!.accent![7]],
+    ["--ds-ink", appTheme.colors!.ink![7]],
+    ["--ds-highlight", appTheme.colors!.highlight![5]],
+    ["--ds-danger", appTheme.colors!.danger![6]],
+    ["--ds-paper", appTheme.white!],
+    ["--ds-ink", appTheme.black!],
+  ];
+
+  it.each(SHADES)("%s is the same colour as its Mantine shade", (name, shade) => {
+    expect(parseColor(shade)).toEqual(parseColor(token(name)));
+  });
+
+  /** The Alert tints are built from raw channel triplets, a third copy again. */
+  const TONES: [string, string][] = [
+    ["--ds-primary", ALERT_TONES.primary.rgb],
+    ["--ds-accent", ALERT_TONES.accent.rgb],
+    ["--ds-danger", ALERT_TONES.danger.rgb],
+  ];
+
+  it.each(TONES)("%s is the same colour as its alert tone", (name, rgb) => {
+    expect(parseColor(`rgb(${rgb})`)).toEqual(parseColor(token(name)));
+  });
+});
+
 describe("token hygiene", () => {
   it("declares no --ds-* token that nothing references", async () => {
     const sources = await collectSources(SRC);

@@ -40,6 +40,34 @@ components may only read from the last two layers:
 `src/styles/tokens.ts` gives these TypeScript handles so a renamed token is a compile
 error rather than a colour that silently resolves to nothing.
 
+## Repainting the brand
+
+Colour lives in exactly two places, and both are checked against each other:
+
+1. `client/src/index.css`, layer 1a — the `--ds-*` palette. The layer-1b gradients
+   and the `rgba()` tints in layer 2 spell their channels out rather than
+   referencing a palette token, so they need editing too; they are at least all in
+   this one file, and `grep -n 'rgba(' client/src/index.css` lists them.
+2. `client/src/Theme.tsx` — Mantine's `MantineColorsTuple`s, which cannot be CSS
+   variables because Mantine derives hover, light and outline variants from literal
+   values, along with `white`, `black` and the `ALERT_TONES` channel triplets.
+
+The second is a copy of the first, so `contrast.test.ts` pins every shared shade:
+change a hex in one and the suite names the token that no longer agrees. Work
+outward from layer 1a — semantic tokens resolve through it, and no component names
+a hue at all, so nothing below the palette should need editing.
+
+Palette entries are named for the job they do (`primary`, `accent`, `ink`,
+`highlight`, `danger`), not the hue they currently hold, so a repaint changes
+values and leaves every name and call site alone. Two things intentionally keep a
+hue name: `PROFILE_CARD_GRADIENTS.royal` is a persisted user setting rather than a
+palette entry, and the comment on the `danger` tuple quotes the old
+`color="crimson"` because it records why that spelling was a bug.
+
+The suite is the acceptance test for a repaint: contrast pairs are re-checked at
+WCAG AA, so a hue that reads well on white and badly on the dark surface fails
+before it ships.
+
 ## Gradient usage
 
 - `--ds-grad-mark` — the primary brand gradient; use it for every interactive card
