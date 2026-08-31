@@ -220,7 +220,7 @@ export default function Settings() {
               fullWidth
               radius="md"
               fw={600}
-              color="crimson"
+              color="danger"
               variant="filled"
               leftSection={<IconTrash size={16} />}
               onClick={() => {

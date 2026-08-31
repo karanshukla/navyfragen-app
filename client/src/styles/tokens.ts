@@ -56,12 +56,12 @@ export const radiusPill = "var(--ds-radius-pill)";
 /**
  * The one gradient pairing for Mantine's `variant="gradient"`. Both shades are
  * pinned a step deeper than the palette default so white button labels clear AA
- * at the purple end, where plain `purple` lands at 4.0:1.
+ * at the accent end, where plain `accent` lands at 4.0:1.
  */
-export const BRAND_GRADIENT = { from: "royal.6", to: "purple.7", deg: 135 } as const;
+export const BRAND_GRADIENT = { from: "primary.6", to: "accent.7", deg: 135 } as const;
 
-/** Sunshine call-to-action: yellow fill demands the dark brand ink, not white. */
-export const sunshineButton = {
-  color: "var(--ds-midnight)",
+/** Highlight call-to-action: the bright fill demands the dark brand ink, not white. */
+export const highlightButton = {
+  color: "var(--ds-ink)",
   fontWeight: 700,
 } as const;

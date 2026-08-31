@@ -9,7 +9,7 @@ const DANGER_AT = 0.9;
  * Circular character-budget meter for the reply composer.
  *
  * Both stroke colours are the composer's own, not the brand ones: the ring is
- * drawn on the composer's paper surface, where `--ds-sunshine` sits at 1.7:1 and
+ * drawn on the composer's paper surface, where `--ds-highlight` sits at 1.7:1 and
  * the track was invisible entirely.
  *
  * @see [Messages.test.tsx](../../tests/pages/Messages.test.tsx): pins the switch

@@ -59,7 +59,7 @@ describe("body text", () => {
   });
 
   it("brand-accented body text clears AA on the light card surface", () => {
-    // The plain `royal` fill is 4.4:1 here, which is why text gets its own token.
+    // The plain `primary` fill is 4.4:1 here, which is why text gets its own token.
     expect(ratio("--ds-accent-text", surface("light"), "light")).toBeGreaterThanOrEqual(AA);
   });
 
@@ -102,21 +102,21 @@ describe("text on brand gradients", () => {
 });
 
 describe("controls", () => {
-  it("the sunshine call-to-action carries its dark ink at AA", () => {
+  it("the highlight call-to-action carries its dark ink at AA", () => {
     expect(
-      contrast(parseColor(token("--ds-midnight")), parseColor(token("--ds-sunshine")))
+      contrast(parseColor(token("--ds-ink")), parseColor(token("--ds-highlight")))
     ).toBeGreaterThanOrEqual(AA);
   });
 
   it.each(SCHEMES)("filled primary buttons carry white labels at AA (%s)", (scheme) => {
-    const fill = appTheme.colors!.royal![appTheme.primaryShade as number];
+    const fill = appTheme.colors!.primary![appTheme.primaryShade as number];
     expect(contrast(parseColor(appTheme.white!), parseColor(fill))).toBeGreaterThanOrEqual(AA);
     expect(scheme).toBeTruthy();
   });
 
   it("destructive buttons carry white labels at AA", () => {
     expect(
-      contrast(parseColor(appTheme.white!), parseColor(appTheme.colors!.crimson![6]))
+      contrast(parseColor(appTheme.white!), parseColor(appTheme.colors!.danger![6]))
     ).toBeGreaterThanOrEqual(AA);
   });
 

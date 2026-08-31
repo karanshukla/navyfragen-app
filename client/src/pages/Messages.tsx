@@ -24,7 +24,7 @@ import { getTouchpointTranslations } from "../lib/touchpointTranslations";
 import { useMessagePreferences } from "../lib/useMessagePreferences";
 import { useQuestionRender } from "../lib/useQuestionRender";
 import { useThreadRoot } from "../lib/useThreadRoot";
-import { sunshineButton } from "../styles/tokens";
+import { highlightButton } from "../styles/tokens";
 
 const shortlinkurl = import.meta.env.VITE_SHORTLINK_URL || "localhost:5173/profile";
 
@@ -379,7 +379,7 @@ export default function Messages() {
           />
         </>
       ) : (
-        <Alert color="royal" title={messages.messagesPage.noMessagesTitle}>
+        <Alert color="primary" title={messages.messagesPage.noMessagesTitle}>
           <Text fz="sm" mb="sm">
             {messages.messagesPage.noMessagesBody}
           </Text>
@@ -391,9 +391,9 @@ export default function Messages() {
             loading={examplesLoading}
             size="xs"
             radius="md"
-            color="sunshine"
+            color="highlight"
             variant="filled"
-            style={sunshineButton}
+            style={highlightButton}
           >
             {messages.messagesPage.addExampleMessages}
           </Button>
@@ -426,7 +426,7 @@ function MessageCount({ count }: { count: number }) {
     <Text fz={11} c="dimmed" mt={6} style={{ letterSpacing: "0.05em" }}>
       {count > 0 ? (
         <>
-          <span style={{ color: "var(--ds-sunshine)" }} aria-hidden>
+          <span style={{ color: "var(--ds-highlight)" }} aria-hidden>
             ●
           </span>{" "}
           {messages.messagesPage.newMessagesCount(count)}

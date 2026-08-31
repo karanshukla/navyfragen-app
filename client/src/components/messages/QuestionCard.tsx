@@ -6,7 +6,7 @@ import type { Message } from "../../api/messageService";
 import { formatTimestamp } from "../../lib/formatTimestamp";
 import { useLocale, useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
-import { sunshineButton } from "../../styles/tokens";
+import { highlightButton } from "../../styles/tokens";
 
 import * as styles from "./QuestionCard.styles";
 
@@ -192,10 +192,10 @@ export function QuestionCard({
                 }}
                 fullWidth
                 radius="md"
-                color="sunshine"
+                color="highlight"
                 variant="filled"
                 fw={700}
-                style={{ ...sunshineButton, ...styles.replyButton(blocked) }}
+                style={{ ...highlightButton, ...styles.replyButton(blocked) }}
               >
                 {inThread ? messages.questionCard.replyToThread : messages.questionCard.reply}
               </Button>

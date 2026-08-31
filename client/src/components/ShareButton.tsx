@@ -48,7 +48,7 @@ const ShareButton = ({ shareData, onSuccess, onError }: ShareButtonProps) => {
       try {
         await navigator.clipboard.writeText(shareData.url);
         notifications.show({
-          color: "royal",
+          color: "primary",
           title: messages.shareButton.linkCopiedTitle,
           message: messages.shareButton.linkCopiedMessage,
         });

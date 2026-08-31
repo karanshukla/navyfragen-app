@@ -29,7 +29,7 @@ export function UpdateAvailableButton() {
       size="xs"
       radius="xl"
       variant="light"
-      color="royal"
+      color="primary"
       leftSection={<IconRefresh size={14} />}
       aria-label={
         applying

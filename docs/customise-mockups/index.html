@@ -3,11 +3,11 @@
 <style>
   /* ── Navyfragen tokens, lifted verbatim from client/src/index.css + Theme.tsx ── */
   :root {
-    --ds-royal: #3b5bff;
-    --ds-purple: #8b5cf6;
-    --ds-lavender: #c4b5fd;
-    --ds-sunshine: #facc15;
-    --ds-midnight: #1e1b4b;
+    --ds-primary: #3b5bff;
+    --ds-accent: #8b5cf6;
+    --ds-accent-soft: #c4b5fd;
+    --ds-highlight: #facc15;
+    --ds-ink: #1e1b4b;
     --ds-grad-mark: linear-gradient(135deg, #3349e0 0%, #6b3fd4 55%, #4f1fa6 100%);
     --ds-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
@@ -139,7 +139,7 @@
   .nav-item.active { background: var(--nav-active-bg); color: var(--nav-active-color); font-weight: 600; }
   .nav-item .badge {
     margin-left: auto;
-    background: var(--ds-sunshine); color: var(--ds-midnight);
+    background: var(--ds-highlight); color: var(--ds-ink);
     font-size: 9px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
   }
   .nav-eyebrow { font-size: 11px; font-weight: 600; color: var(--dimmed); text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 2px 8px; }
@@ -185,7 +185,7 @@
     border-radius: 8px; padding: 9px 16px; cursor: pointer;
     border: 1px solid transparent; width: 100%;
   }
-  .btn-filled { background: var(--ds-royal); color: #fff; }
+  .btn-filled { background: var(--ds-primary); color: #fff; }
   .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
   .label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; }
   .input, .select {
@@ -198,7 +198,7 @@
   .counter { font-size: 11px; color: var(--dimmed); margin-top: 5px; text-align: right; }
 
   .switch-row { display: flex; align-items: center; gap: 12px; }
-  .switch { --on: var(--ds-royal); position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border); flex-shrink: 0; cursor: pointer; transition: background 150ms; }
+  .switch { --on: var(--ds-primary); position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border); flex-shrink: 0; cursor: pointer; transition: background 150ms; }
   .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 150ms; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
   .switch[data-on="true"] { background: var(--on); }
   .switch[data-on="true"]::after { transform: translateX(20px); }
@@ -208,8 +208,8 @@
   /* SegmentedControl (profanity reject/mask) */
   .segctl { display: inline-flex; padding: 3px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; gap: 2px; width: 100%; }
   .segctl button { flex: 1; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--dimmed); background: transparent; border: 0; border-radius: 6px; padding: 7px; cursor: pointer; }
-  .segctl button[aria-pressed="true"] { background: var(--ds-royal); color: #fff; }
-  .open-q { font-size: 11px; color: var(--ds-purple); font-weight: 600; margin-top: 8px; }
+  .segctl button[aria-pressed="true"] { background: var(--ds-primary); color: #fff; }
+  .open-q { font-size: 11px; color: var(--ds-accent); font-weight: 600; margin-top: 8px; }
 
   .stack { display: flex; flex-direction: column; gap: 14px; }
   .divider { height: 1px; background: var(--border); margin: 4px 0; }
@@ -229,11 +229,11 @@
   .askcard .prompt { font-size: 21px; font-weight: 700; text-align: center; letter-spacing: -0.01em; margin: 0 0 18px; line-height: 1.25; }
   .askcard .ta { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 12px; color: rgba(255,255,255,0.85); font-size: 14px; min-height: 54px; }
   .askcard .send-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-  .askcard .send { background: var(--ds-sunshine); color: var(--ds-midnight); font-weight: 700; font-size: 13px; border: 0; border-radius: 8px; padding: 8px 16px; }
+  .askcard .send { background: var(--ds-highlight); color: var(--ds-ink); font-weight: 700; font-size: 13px; border: 0; border-radius: 8px; padding: 8px 16px; }
   .askcard.closed { text-align: center; }
   .askcard .closed-msg { font-size: 15px; font-weight: 600; padding: 14px 4px; }
   .preview-note { font-size: 12px; color: var(--dimmed); margin-top: 12px; line-height: 1.5; }
-  .live { font-size: 11px; font-weight: 700; color: var(--ds-royal); text-transform: uppercase; letter-spacing: 0.05em; }
+  .live { font-size: 11px; font-weight: 700; color: var(--ds-primary); text-transform: uppercase; letter-spacing: 0.05em; }
 
   .hidden { display: none !important; }
   .field-note { font-size: 12px; color: var(--dimmed); margin-top: 8px; line-height: 1.5; }

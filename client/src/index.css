@@ -111,7 +111,7 @@ body {
       Nothing outside this file should reference them directly; they exist so
       the semantic layer has a single place to read a hue from.
    2. Semantic tokens — named for the job rather than the colour (`--ds-surface`,
-      not `--ds-lavender-ish`). Light values live on `:root` and dark values
+      not `--ds-accent-soft-ish`). Light values live on `:root` and dark values
       override them under [data-mantine-color-scheme="dark"], so a component
       writes `var(--ds-surface)` once and both schemes follow. This is why no
       component needs `useComputedColorScheme` to pick a background.
@@ -126,15 +126,15 @@ body {
 
 /* ── Layer 1: brand primitives ── */
 :root {
-  --ds-midnight: #1e1b4b;
-  --ds-royal: #3b5bff;
-  --ds-royal-deep: #2a47e6;
-  --ds-purple: #8b5cf6;
-  --ds-purple-deep: #7847e0;
-  --ds-lavender: #c4b5fd;
+  --ds-ink: #1e1b4b;
+  --ds-primary: #3b5bff;
+  --ds-primary-deep: #2a47e6;
+  --ds-accent: #8b5cf6;
+  --ds-accent-deep: #7847e0;
+  --ds-accent-soft: #c4b5fd;
   --ds-paper: #fdf8ff;
-  --ds-sunshine: #facc15;
-  --ds-crimson: #c92a2a;
+  --ds-highlight: #facc15;
+  --ds-danger: #c92a2a;
 
   --ds-grad-mark: linear-gradient(135deg, #3349e0 0%, #5322c5 55%, #4f1fa6 100%);
   --ds-grad-dark: linear-gradient(135deg, #1e1b4b 0%, #3b2e78 50%, #6b3fd4 100%);
@@ -174,20 +174,20 @@ body {
   /* Keyboard-focus wash on a suggestion row. */
   --ds-surface-highlight: rgba(51, 73, 224, 0.08);
 
-  --ds-link: var(--ds-purple-deep);
-  --ds-accent-text: var(--ds-royal-deep);
+  --ds-link: var(--ds-accent-deep);
+  --ds-accent-text: var(--ds-primary-deep);
 
   --ds-nav-active-bg: #ede9ff;
-  --ds-nav-active-color: var(--ds-midnight);
+  --ds-nav-active-color: var(--ds-ink);
 
   /* Sits between two areas of identical background, so it needs to read
      stronger than an ordinary card border. */
   --ds-boundary-border: rgba(30, 27, 75, 0.14);
 
-  --ds-danger-fg: var(--ds-crimson);
+  --ds-danger-fg: var(--ds-danger);
   --ds-danger-bg: rgba(201, 42, 42, 0.12);
   --ds-selected-bg: rgba(59, 91, 255, 0.12);
-  --ds-selected-border: var(--ds-royal);
+  --ds-selected-border: var(--ds-primary);
 
   /* Alert title colours. The alert's own background is an alpha tint of the
      tone, so these are read against a very pale wash and have to be far darker
@@ -195,8 +195,8 @@ body {
   --ds-tone-red: #b02525;
   --ds-tone-green: #166534;
   --ds-tone-yellow: #7a6105;
-  --ds-tone-royal: #2a47e6;
-  --ds-tone-purple: #522ba3;
+  --ds-tone-primary: #2a47e6;
+  --ds-tone-accent: #522ba3;
 
   /* Fallbacks for the card-local foreground pair below. A question card
      overrides both on its own root; anything using the classes outside one still
@@ -219,8 +219,8 @@ body {
   );
   --ds-surface-highlight: rgba(107, 63, 212, 0.2);
 
-  --ds-link: var(--ds-lavender);
-  --ds-accent-text: var(--ds-lavender);
+  --ds-link: var(--ds-accent-soft);
+  --ds-accent-text: var(--ds-accent-soft);
 
   --ds-nav-active-bg: rgba(107, 63, 212, 0.22);
   --ds-nav-active-color: var(--ds-paper);
@@ -235,8 +235,8 @@ body {
   --ds-tone-red: #ff8787;
   --ds-tone-green: #69db7c;
   --ds-tone-yellow: #ffe57a;
-  --ds-tone-royal: #849bff;
-  --ds-tone-purple: #ac8afd;
+  --ds-tone-primary: #849bff;
+  --ds-tone-accent: #ac8afd;
 }
 
 /* ── Mantine bridges ── */
@@ -278,10 +278,10 @@ body {
    read against white, not against the page. */
 :root {
   --ds-compose-bg: #ffffff;
-  --ds-compose-fg: var(--ds-midnight);
+  --ds-compose-fg: var(--ds-ink);
   --ds-compose-fg-muted: #5b5680;
-  --ds-compose-border: var(--ds-royal);
-  --ds-compose-accent: var(--ds-royal);
+  --ds-compose-border: var(--ds-primary);
+  --ds-compose-accent: var(--ds-primary);
   --ds-compose-warn: #8f7206;
   --ds-compose-track: rgba(30, 27, 75, 0.15);
 }
@@ -307,7 +307,7 @@ body {
 
 .ds-pin-btn:hover,
 .ds-pin-btn:focus-visible {
-  color: var(--ds-royal) !important;
+  color: var(--ds-primary) !important;
   background: var(--ds-selected-bg) !important;
 }
 

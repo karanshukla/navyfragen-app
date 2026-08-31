@@ -1,6 +1,6 @@
 import { Alert, Notification, createTheme, MantineColorsTuple } from "@mantine/core";
 
-const royal: MantineColorsTuple = [
+const primary: MantineColorsTuple = [
   "#EEF2FF",
   "#D9E0FF",
   "#B0BEFF",
@@ -13,7 +13,7 @@ const royal: MantineColorsTuple = [
   "#142899",
 ];
 
-const purple: MantineColorsTuple = [
+const accent: MantineColorsTuple = [
   "#F3EEFF",
   "#E2D5FF",
   "#C7B0FE",
@@ -26,7 +26,7 @@ const purple: MantineColorsTuple = [
   "#522BA3",
 ];
 
-const midnight: MantineColorsTuple = [
+const ink: MantineColorsTuple = [
   "#EDEBF7",
   "#D5D1EA",
   "#A8A2D0",
@@ -39,7 +39,7 @@ const midnight: MantineColorsTuple = [
   "#0B0A24",
 ];
 
-const sunshine: MantineColorsTuple = [
+const highlight: MantineColorsTuple = [
   "#FFF9E0",
   "#FFF1B8",
   "#FFE57A",
@@ -53,11 +53,11 @@ const sunshine: MantineColorsTuple = [
 ];
 
 /**
- * Destructive actions. Previously spelled `color="crimson"`, which is not a
- * Mantine palette entry — it fell through to the CSS named colour and so had no
- * hover, light or outline variants.
+ * Destructive actions. Was once spelled `color="crimson"` — a CSS named colour
+ * rather than a Mantine palette entry, so it had no hover, light or outline
+ * variants. Destructive intent is a role, so the key is named for the role.
  */
-const crimson: MantineColorsTuple = [
+const danger: MantineColorsTuple = [
   "#FFF0F0",
   "#FFD8D8",
   "#F5A9A9",
@@ -95,22 +95,21 @@ const dark: MantineColorsTuple = [
  */
 export const ALERT_TONES = {
   red: { rgb: "220,38,38", title: "var(--ds-tone-red)" },
-  crimson: { rgb: "201,42,42", title: "var(--ds-tone-red)" },
+  danger: { rgb: "201,42,42", title: "var(--ds-tone-red)" },
   green: { rgb: "34,197,94", title: "var(--ds-tone-green)" },
   yellow: { rgb: "250,204,21", title: "var(--ds-tone-yellow)" },
-  royal: { rgb: "59,91,255", title: "var(--ds-tone-royal)" },
-  blue: { rgb: "59,91,255", title: "var(--ds-tone-royal)" },
-  purple: { rgb: "139,92,246", title: "var(--ds-tone-purple)" },
+  primary: { rgb: "59,91,255", title: "var(--ds-tone-primary)" },
+  accent: { rgb: "139,92,246", title: "var(--ds-tone-accent)" },
 } as const;
 
-const DEFAULT_ALERT_TONE = ALERT_TONES.royal;
+const DEFAULT_ALERT_TONE = ALERT_TONES.primary;
 
-const navyfragenTheme = createTheme({
-  primaryColor: "royal",
+const appTheme = createTheme({
+  primaryColor: "primary",
   // Flat rather than {light: 6, dark: 4}: shade 4 as a filled background puts
   // white button labels at 3.6:1. Text keeps its own per-scheme token below.
   primaryShade: 6,
-  colors: { royal, purple, midnight, sunshine, crimson, dark },
+  colors: { primary, accent, ink, highlight, danger, dark },
   white: "#FDF8FF",
   black: "#1E1B4B",
 
@@ -167,4 +166,4 @@ const navyfragenTheme = createTheme({
   },
 });
 
-export default navyfragenTheme;
+export default appTheme;

@@ -5,7 +5,7 @@ import { useHaptic } from "use-haptic";
 import { useTranslations } from "../../lib/i18n";
 import type { TouchpointTranslations } from "../../lib/touchpointTranslations";
 import { useNumberFormat } from "../../lib/useNumberFormat";
-import { sunshineButton } from "../../styles/tokens";
+import { highlightButton } from "../../styles/tokens";
 
 import * as styles from "./AskCard.styles";
 
@@ -110,9 +110,9 @@ export function AskCard({
                 loading={sending}
                 radius="md"
                 leftSection={<IconSend size={16} />}
-                color="sunshine"
+                color="highlight"
                 variant="filled"
-                style={sunshineButton}
+                style={highlightButton}
               >
                 {translations.sendLabel}
               </Button>

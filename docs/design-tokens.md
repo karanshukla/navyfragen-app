@@ -18,7 +18,7 @@ component or a hook.
 `client/src/index.css` is the single source of truth for colour, and it is layered —
 components may only read from the last two layers:
 
-1. **Brand primitives** (`--ds-royal`, `--ds-grad-mark`, …) — scheme-independent raw
+1. **Brand primitives** (`--ds-primary`, `--ds-grad-mark`, …) — scheme-independent raw
    palette. Referenced only by the semantic layer in the same file.
 2. **Semantic tokens** (`--ds-surface`, `--ds-link`, `--ds-nav-active-bg`, …) — named
    for the job. Light values on `:root`, dark overrides under

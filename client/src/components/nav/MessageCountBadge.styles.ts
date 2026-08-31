@@ -2,10 +2,10 @@ import type { CSSProperties } from "react";
 
 import { radiusPill } from "../../styles/tokens";
 
-/** Sunshine fill demands the dark brand ink; white on it is 1.5:1. */
+/** The highlight fill demands the dark brand ink; white on it is 1.5:1. */
 export const badge: CSSProperties = {
-  background: "var(--ds-sunshine)",
-  color: "var(--ds-midnight)",
+  background: "var(--ds-highlight)",
+  color: "var(--ds-ink)",
   padding: "1px 7px",
   borderRadius: radiusPill,
   fontSize: 9,
