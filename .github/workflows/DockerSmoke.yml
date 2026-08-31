@@ -162,6 +162,20 @@ jobs:
           fi
           echo "Nuclei: no medium+ severity findings"
 
+      # The scan container runs as root, so the template tree it writes is
+      # unreadable to the runner user and actions/cache's tar exits with
+      # "Cannot open: Permission denied" — the cache step reports no error, it
+      # just never saves, and every run re-downloads. Hand the tree back before
+      # the post-job cache step runs. `always()` so a run that found something
+      # still leaves a usable cache behind.
+      - name: Hand the Nuclei templates back to the runner
+        if: always()
+        run: |
+          # always() also fires when the job failed before the scan created this.
+          if [ -d /tmp/nuclei-templates ]; then
+            sudo chown -R "$(id -u):$(id -g)" /tmp/nuclei-templates
+          fi
+
       - name: Dump container logs on failure
         if: failure()
         run: docker compose -f docker/docker-compose.yml logs --tail=100
