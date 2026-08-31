@@ -385,9 +385,9 @@ alpha-composited surfaces, every sampled point along each gradient ramp (not jus
 declared stops, which is how the old cyan and emerald ask-card presets looked
 compliant at 2.4:1), and every `Alert` tone against its own tint in both schemes.
 
-It also enforces token hygiene in both directions: a declared `--nf-*` token that no
+It also enforces token hygiene in both directions: a declared `--ds-*` token that no
 source references fails, and a referenced token that nothing declares fails. The
-second direction caught `--nf-font-mono`, which two components had been asking for
+second direction caught `--ds-font-mono`, which two components had been asking for
 without it ever having been defined.
 
 Its helpers (`colorMath.ts`, `readTokens.ts`) live under `src/tests/` rather than

@@ -16,7 +16,7 @@ export const header: CSSProperties = {
 
 export const chevron = (open: boolean): CSSProperties => ({
   color: "var(--mantine-color-dimmed)",
-  transition: "transform var(--nf-dur-fast) var(--nf-ease)",
+  transition: "transform var(--ds-dur-fast) var(--ds-ease)",
   transform: open ? "rotate(0deg)" : "rotate(-90deg)",
   flexShrink: 0,
 });
@@ -24,6 +24,6 @@ export const chevron = (open: boolean): CSSProperties => ({
 export const friendLink = {
   root: {
     borderRadius: 10,
-    transition: "background var(--nf-dur-fast) var(--nf-ease)",
+    transition: "background var(--ds-dur-fast) var(--ds-ease)",
   },
 } as const;

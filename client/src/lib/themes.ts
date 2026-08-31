@@ -9,7 +9,7 @@ export function imageThemeLabels(messages: Messages): Record<ImageThemeId, strin
 
 /**
  * Gradient tokens rather than arbitrary hexes, so white headline/textarea/Send
- * stay legible on every option and `--nf-*` remains the single source of truth
+ * stay legible on every option and `--ds-*` remains the single source of truth
  * for colour. Deliberately separate from the image-export themes above: a live
  * card and an exported image have different legibility constraints.
  *
@@ -21,10 +21,10 @@ export interface ProfileCardTheme {
 }
 
 const PROFILE_CARD_GRADIENTS: Record<string, string> = {
-  royal: "var(--nf-grad-mark)",
-  aurora: "var(--nf-grad-aurora)",
-  ember: "var(--nf-grad-ember)",
-  verdant: "var(--nf-grad-verdant)",
+  royal: "var(--ds-grad-mark)",
+  aurora: "var(--ds-grad-aurora)",
+  ember: "var(--ds-grad-ember)",
+  verdant: "var(--ds-grad-verdant)",
 };
 
 export function profileCardThemes(messages: Messages): Record<string, ProfileCardTheme> {

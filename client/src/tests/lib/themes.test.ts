@@ -38,31 +38,31 @@ describe("profileCardThemes (#275)", () => {
     for (const theme of Object.values(profileCardThemes(en))) {
       expect(typeof theme.label).toBe("string");
       expect(theme.label.length).toBeGreaterThan(0);
-      // Gradients reference --nf-grad-* tokens, never inline colours.
-      expect(theme.gradient).toMatch(/^var\(--nf-grad-/);
+      // Gradients reference --ds-grad-* tokens, never inline colours.
+      expect(theme.gradient).toMatch(/^var\(--ds-grad-/);
     }
   });
 
-  it("royal reuses the default --nf-grad-mark gradient", () => {
-    expect(profileCardThemes(en).royal.gradient).toBe("var(--nf-grad-mark)");
+  it("royal reuses the default --ds-grad-mark gradient", () => {
+    expect(profileCardThemes(en).royal.gradient).toBe("var(--ds-grad-mark)");
   });
 });
 
 describe("profileCardGradient", () => {
   it("resolves a known theme key to its gradient", () => {
-    expect(profileCardGradient("ember")).toBe("var(--nf-grad-ember)");
-    expect(profileCardGradient("aurora")).toBe("var(--nf-grad-aurora)");
+    expect(profileCardGradient("ember")).toBe("var(--ds-grad-ember)");
+    expect(profileCardGradient("aurora")).toBe("var(--ds-grad-aurora)");
   });
 
   it("falls back to the default gradient when unset (null)", () => {
-    expect(profileCardGradient(null)).toBe("var(--nf-grad-mark)");
+    expect(profileCardGradient(null)).toBe("var(--ds-grad-mark)");
   });
 
   it("falls back to the default gradient for an unknown theme key", () => {
-    expect(profileCardGradient("nonexistent")).toBe("var(--nf-grad-mark)");
+    expect(profileCardGradient("nonexistent")).toBe("var(--ds-grad-mark)");
   });
 
   it("falls back to the default gradient when undefined", () => {
-    expect(profileCardGradient(undefined)).toBe("var(--nf-grad-mark)");
+    expect(profileCardGradient(undefined)).toBe("var(--ds-grad-mark)");
   });
 });

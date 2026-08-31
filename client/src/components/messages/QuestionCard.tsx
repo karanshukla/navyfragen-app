@@ -6,7 +6,7 @@ import type { Message } from "../../api/messageService";
 import { formatTimestamp } from "../../lib/formatTimestamp";
 import { useLocale, useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
-import { sunshineButton } from "../../styles/tokens";
+import { highlightButton } from "../../styles/tokens";
 
 import * as styles from "./QuestionCard.styles";
 
@@ -84,7 +84,7 @@ export function QuestionCard({
           onToggleExpanded();
         }
       }}
-      className={justPinned ? "nf-pinned-card-enter" : undefined}
+      className={justPinned ? "ds-pinned-card-enter" : undefined}
       style={styles.card({ gradient, pinned, focused })}
       onClick={() => {
         triggerHaptic();
@@ -109,7 +109,7 @@ export function QuestionCard({
             >
               <ActionIcon
                 size="lg"
-                className={pinned ? "nf-pin-btn--active" : "nf-pin-btn"}
+                className={pinned ? "ds-pin-btn--active" : "ds-pin-btn"}
                 aria-label={
                   pinned
                     ? messages.questionCard.unpinThreadRootLabel
@@ -134,7 +134,7 @@ export function QuestionCard({
             >
               <ActionIcon
                 size="lg"
-                className={deleteRefusal ? undefined : "nf-delete-btn"}
+                className={deleteRefusal ? undefined : "ds-delete-btn"}
                 aria-label={deleteRefusal?.label ?? messages.questionCard.deleteMessageLabel}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -192,10 +192,10 @@ export function QuestionCard({
                 }}
                 fullWidth
                 radius="md"
-                color="sunshine"
+                color="highlight"
                 variant="filled"
                 fw={700}
-                style={{ ...sunshineButton, ...styles.replyButton(blocked) }}
+                style={{ ...highlightButton, ...styles.replyButton(blocked) }}
               >
                 {inThread ? messages.questionCard.replyToThread : messages.questionCard.reply}
               </Button>

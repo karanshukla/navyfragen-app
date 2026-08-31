@@ -880,14 +880,14 @@ describe("PublicProfile page", () => {
   it("renders the default ask-card gradient when no theme is set (#275)", () => {
     setupWithSettings({ profileCardTheme: null });
     const { container } = renderWithProviders(<PublicProfile />);
-    const askCard = container.querySelector("[style*='nf-grad-mark']") as HTMLElement | null;
+    const askCard = container.querySelector("[style*='ds-grad-mark']") as HTMLElement | null;
     expect(askCard).not.toBeNull();
   });
 
   it("applies the owner's selected profile card theme gradient (#275)", () => {
     setupWithSettings({ profileCardTheme: "ember" });
     const { container } = renderWithProviders(<PublicProfile />);
-    const askCard = container.querySelector("[style*='nf-grad-ember']") as HTMLElement | null;
+    const askCard = container.querySelector("[style*='ds-grad-ember']") as HTMLElement | null;
     expect(askCard).not.toBeNull();
   });
 });

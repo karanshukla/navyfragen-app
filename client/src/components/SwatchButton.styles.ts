@@ -13,7 +13,7 @@ export const button = (selected: boolean, disabled?: boolean): CSSProperties => 
   gap: 6,
   flex: 1,
   minWidth: 0,
-  transition: "border-color var(--nf-dur-fast) var(--nf-ease)",
+  transition: "border-color var(--ds-dur-fast) var(--ds-ease)",
 });
 
 export const preview = (aspectRatio: string): CSSProperties => ({

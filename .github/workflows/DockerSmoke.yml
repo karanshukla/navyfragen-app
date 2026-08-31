@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # Pinned: on `latest`, a nuclei release changes what this job does with no
+  # commit to bisect it against. Bump deliberately.
+  NUCLEI_VERSION: v3.11.1
+
 jobs:
   docker-smoke:
     name: Docker Smoke Test
@@ -95,27 +100,81 @@ jobs:
           [ "$STATUS" != "000" ] || { echo "No response on port 8081"; exit 1; }
           echo "Port 8081 → HTTP $STATUS"
 
+      # The templates are ~5900 files cloned from GitHub anonymously on every run,
+      # so an unrelated rate-limit or network blip failed the job and read as "this
+      # PR broke the build" — it already did once. The key rolls weekly, so the scan
+      # still picks up new templates without re-cloning on every push.
+      - name: Key the Nuclei template cache by week
+        id: nuclei-week
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Nuclei templates
+        uses: actions/cache@v4
+        with:
+          path: /tmp/nuclei-templates
+          key: nuclei-templates-${{ env.NUCLEI_VERSION }}-${{ steps.nuclei-week.outputs.week }}
+
       - name: Run Nuclei security scan
         run: |
-          mkdir -p /tmp/nuclei-out
-          chmod 777 /tmp/nuclei-out
-          docker run --rm \
-            --network docker_default \
-            -v /tmp/nuclei-out:/output \
-            projectdiscovery/nuclei:latest \
-            -u http://caddy \
-            -exclude-tags intrusive,dos,fuzzing,brute-force,token-spray \
-            -severity medium,high,critical \
-            -no-interactsh \
-            -timeout 10 \
-            -retries 1 \
-            -o /output/findings.txt
+          mkdir -p /tmp/nuclei-out /tmp/nuclei-templates
+          chmod 777 /tmp/nuclei-out /tmp/nuclei-templates
+
+          # A template download that fails leaves nuclei with nothing to scan, and
+          # it exits non-zero for that exactly as it does for a real finding. Retry
+          # rather than report an empty template dir as a security failure.
+          for attempt in 1 2 3; do
+            # Nuclei appends to -o, so a partial file from a failed attempt would
+            # otherwise survive into the findings check below.
+            rm -f /tmp/nuclei-out/findings.txt
+            if docker run --rm \
+              --network docker_default \
+              -v /tmp/nuclei-out:/output \
+              -v /tmp/nuclei-templates:/root/nuclei-templates \
+              "projectdiscovery/nuclei:$NUCLEI_VERSION" \
+              -u http://caddy \
+              -exclude-tags intrusive,dos,fuzzing,brute-force,token-spray \
+              -severity medium,high,critical \
+              -no-interactsh \
+              -timeout 10 \
+              -retries 1 \
+              -o /output/findings.txt
+            then
+              SCANNED=1
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              break
+            fi
+            echo "Nuclei attempt $attempt did not complete; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+
+          if [ -z "${SCANNED:-}" ]; then
+            echo "Nuclei could not complete a scan in 3 attempts — failing rather than"
+            echo "reporting an unscanned stack as clean."
+            exit 1
+          fi
+
           if [ -s /tmp/nuclei-out/findings.txt ]; then
             echo "Nuclei found medium+ severity security issues:"
             cat /tmp/nuclei-out/findings.txt
             exit 1
           fi
           echo "Nuclei: no medium+ severity findings"
+
+      # The scan container runs as root, so the template tree it writes is
+      # unreadable to the runner user and actions/cache's tar exits with
+      # "Cannot open: Permission denied" — the cache step reports no error, it
+      # just never saves, and every run re-downloads. Hand the tree back before
+      # the post-job cache step runs. `always()` so a run that found something
+      # still leaves a usable cache behind.
+      - name: Hand the Nuclei templates back to the runner
+        if: always()
+        run: |
+          # always() also fires when the job failed before the scan created this.
+          if [ -d /tmp/nuclei-templates ]; then
+            sudo chown -R "$(id -u):$(id -g)" /tmp/nuclei-templates
+          fi
 
       - name: Dump container logs on failure
         if: failure()

@@ -23,7 +23,7 @@ export function Wordmark({ size = 22, showMark = true }: WordmarkProps) {
       {showMark && <WinkMark size={size + 10} sparkle={false} aria-hidden />}
       <span
         style={{
-          fontFamily: "var(--nf-font-sans)",
+          fontFamily: "var(--ds-font-sans)",
           fontWeight: 800,
           fontSize: size,
           letterSpacing: "-0.04em",
@@ -37,7 +37,7 @@ export function Wordmark({ size = 22, showMark = true }: WordmarkProps) {
           component="span"
           inherit
           variant="gradient"
-          gradient={{ from: "royal", to: "purple", deg: 135 }}
+          gradient={{ from: "primary", to: "accent", deg: 135 }}
           style={{ paddingBottom: "0.2em" }}
         >
           {wordmarkSecond}

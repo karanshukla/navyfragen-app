@@ -24,7 +24,7 @@ export const summary: CSSProperties = {
 };
 
 export const chevron = (open: boolean): CSSProperties => ({
-  transition: "transform var(--nf-dur-base) var(--nf-ease)",
+  transition: "transform var(--ds-dur-base) var(--ds-ease)",
   transform: open ? "rotate(180deg)" : "rotate(0deg)",
   color: "var(--mantine-color-dimmed)",
 });

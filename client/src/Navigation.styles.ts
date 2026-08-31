@@ -12,16 +12,16 @@ export const root: CSSProperties = {
 export const navItem = (active: boolean) => ({
   root: {
     borderRadius: radiusControl,
-    transition: "background var(--nf-dur-fast) var(--nf-ease)",
+    transition: "background var(--ds-dur-fast) var(--ds-ease)",
     ...(active
       ? {
-          background: "var(--nf-nav-active-bg)",
-          color: "var(--nf-nav-active-color)",
+          background: "var(--ds-nav-active-bg)",
+          color: "var(--ds-nav-active-color)",
         }
       : {}),
   },
   label: {
-    fontFamily: "var(--nf-font-sans)",
+    fontFamily: "var(--ds-font-sans)",
     fontSize: 16,
     fontWeight: active ? 600 : 500,
   },

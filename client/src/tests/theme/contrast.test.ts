@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "vitest";
@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 import appTheme, { ALERT_TONES } from "../../Theme";
 
 import { contrast, flatten, parseColor, worstOnGradient, type Rgb } from "./colorMath";
-import { declaredTokens, referencedTokens, token, type Scheme } from "./readTokens";
+import { declaredTokens, paletteTokens, referencedTokens, token, type Scheme } from "./readTokens";
 
 /**
  * The palette's accessibility rules, executable.
@@ -35,7 +35,7 @@ const BODY: Record<Scheme, Rgb> = {
 };
 
 function surface(scheme: Scheme): Rgb {
-  return flatten(token("--nf-surface", scheme), BODY[scheme]);
+  return flatten(token("--ds-surface", scheme), BODY[scheme]);
 }
 
 function ratio(fg: string, bg: Rgb, scheme: Scheme): number {
@@ -54,23 +54,23 @@ describe("body text", () => {
   });
 
   it.each(SCHEMES)("dimmed text clears AA on the ghost surface (%s)", (scheme) => {
-    const ghost = flatten(token("--nf-surface-ghost", scheme), BODY[scheme]);
+    const ghost = flatten(token("--ds-surface-ghost", scheme), BODY[scheme]);
     expect(ratio("--mantine-color-dimmed", ghost, scheme)).toBeGreaterThanOrEqual(AA);
   });
 
   it("brand-accented body text clears AA on the light card surface", () => {
-    // The plain `royal` fill is 4.4:1 here, which is why text gets its own token.
-    expect(ratio("--nf-accent-text", surface("light"), "light")).toBeGreaterThanOrEqual(AA);
+    // The plain `primary` fill is 4.4:1 here, which is why text gets its own token.
+    expect(ratio("--ds-accent-text", surface("light"), "light")).toBeGreaterThanOrEqual(AA);
   });
 
   it.each(SCHEMES)("link colour clears AA on the card surface (%s)", (scheme) => {
-    expect(ratio("--nf-link", surface(scheme), scheme)).toBeGreaterThanOrEqual(AA);
+    expect(ratio("--ds-link", surface(scheme), scheme)).toBeGreaterThanOrEqual(AA);
   });
 });
 
 describe("text on brand gradients", () => {
-  const GRADIENTS = ["--nf-grad-mark", "--nf-grad-dark"];
-  const FOREGROUNDS = ["--nf-on-grad", "--nf-on-grad-muted", "--nf-on-grad-accent"];
+  const GRADIENTS = ["--ds-grad-mark", "--ds-grad-dark"];
+  const FOREGROUNDS = ["--ds-on-grad", "--ds-on-grad-muted", "--ds-on-grad-accent"];
 
   it.each(GRADIENTS.flatMap((g) => FOREGROUNDS.map((f) => [g, f])))(
     "%s carries %s at AA across the whole ramp",
@@ -83,11 +83,11 @@ describe("text on brand gradients", () => {
     }
   );
 
-  it.each(["--nf-grad-aurora", "--nf-grad-ember", "--nf-grad-verdant", "--nf-grad-mark"])(
+  it.each(["--ds-grad-aurora", "--ds-grad-ember", "--ds-grad-verdant", "--ds-grad-mark"])(
     "ask-card preset %s carries white text at AA across the whole ramp",
     (preset) => {
       expect(
-        worstOnGradient(parseColor(token("--nf-on-grad")), token(preset))
+        worstOnGradient(parseColor(token("--ds-on-grad")), token(preset))
       ).toBeGreaterThanOrEqual(AA);
     }
   );
@@ -95,34 +95,34 @@ describe("text on brand gradients", () => {
   it("the faint on-gradient token is not strong enough for text", () => {
     // Pinned so nobody promotes it to a Text colour: it exists for rules and
     // progress-ring tracks, where contrast is not a legibility requirement.
-    const grad = token("--nf-grad-dark");
-    const fg = flatten(token("--nf-on-grad-faint"), worstStop(grad));
+    const grad = token("--ds-grad-dark");
+    const fg = flatten(token("--ds-on-grad-faint"), worstStop(grad));
     expect(worstOnGradient(fg, grad)).toBeLessThan(AA_LARGE);
   });
 });
 
 describe("controls", () => {
-  it("the sunshine call-to-action carries its dark ink at AA", () => {
+  it("the highlight call-to-action carries its dark ink at AA", () => {
     expect(
-      contrast(parseColor(token("--nf-midnight")), parseColor(token("--nf-sunshine")))
+      contrast(parseColor(token("--ds-ink")), parseColor(token("--ds-highlight")))
     ).toBeGreaterThanOrEqual(AA);
   });
 
   it.each(SCHEMES)("filled primary buttons carry white labels at AA (%s)", (scheme) => {
-    const fill = appTheme.colors!.royal![appTheme.primaryShade as number];
+    const fill = appTheme.colors!.primary![appTheme.primaryShade as number];
     expect(contrast(parseColor(appTheme.white!), parseColor(fill))).toBeGreaterThanOrEqual(AA);
     expect(scheme).toBeTruthy();
   });
 
   it("destructive buttons carry white labels at AA", () => {
     expect(
-      contrast(parseColor(appTheme.white!), parseColor(appTheme.colors!.crimson![6]))
+      contrast(parseColor(appTheme.white!), parseColor(appTheme.colors!.danger![6]))
     ).toBeGreaterThanOrEqual(AA);
   });
 
   it.each(SCHEMES)("the active nav item is legible on its own tint (%s)", (scheme) => {
-    const bg = flatten(token("--nf-nav-active-bg", scheme), BODY[scheme]);
-    expect(ratio("--nf-nav-active-color", bg, scheme)).toBeGreaterThanOrEqual(AA);
+    const bg = flatten(token("--ds-nav-active-bg", scheme), BODY[scheme]);
+    expect(ratio("--ds-nav-active-color", bg, scheme)).toBeGreaterThanOrEqual(AA);
   });
 });
 
@@ -137,19 +137,77 @@ describe("alert tones", () => {
   });
 });
 
+/**
+ * Mantine's palette and `index.css` are two independent copies of the same brand
+ * colours, and they have to be: Mantine needs literal tuples to derive hover,
+ * light and outline variants from, the browser needs custom properties. So a
+ * repaint has to edit both, and a half-finished one is invisible — the filled
+ * buttons change and one border stays the old hue. Each pair below is pinned so
+ * that stops being something you have to notice.
+ */
+describe("the Mantine palette and the stylesheet agree", () => {
+  const SHADES: [string, string][] = [
+    ["--ds-primary", appTheme.colors!.primary![6]],
+    ["--ds-primary-deep", appTheme.colors!.primary![7]],
+    ["--ds-accent", appTheme.colors!.accent![6]],
+    ["--ds-accent-deep", appTheme.colors!.accent![7]],
+    ["--ds-ink", appTheme.colors!.ink![7]],
+    ["--ds-highlight", appTheme.colors!.highlight![5]],
+    ["--ds-danger", appTheme.colors!.danger![6]],
+    ["--ds-paper", appTheme.white!],
+    ["--ds-ink", appTheme.black!],
+  ];
+
+  it.each(SHADES)("%s is the same colour as its Mantine shade", (name, shade) => {
+    expect(parseColor(shade)).toEqual(parseColor(token(name)));
+  });
+
+  /** The Alert tints are built from raw channel triplets, a third copy again. */
+  const TONES: [string, string][] = [
+    ["--ds-primary", ALERT_TONES.primary.rgb],
+    ["--ds-accent", ALERT_TONES.accent.rgb],
+    ["--ds-danger", ALERT_TONES.danger.rgb],
+  ];
+
+  it.each(TONES)("%s is the same colour as its alert tone", (name, rgb) => {
+    expect(parseColor(`rgb(${rgb})`)).toEqual(parseColor(token(name)));
+  });
+});
+
 describe("token hygiene", () => {
-  it("declares no --nf-* token that nothing references", async () => {
+  it("declares no --ds-* token that nothing references", async () => {
     const sources = await collectSources(SRC);
-    const used = referencedTokens(sources);
+    const used = referencedTokens(sources.map((s) => s.text));
     const orphans = declaredTokens().filter((name) => !used.has(name));
     expect(orphans).toEqual([]);
   });
 
-  it("references no --nf-* token that nothing declares", async () => {
+  it("references no --ds-* token that nothing declares", async () => {
     const declared = new Set(declaredTokens());
     const sources = await collectSources(SRC);
-    const undeclared = [...referencedTokens(sources)].filter((name) => !declared.has(name));
+    const undeclared = [...referencedTokens(sources.map((s) => s.text))].filter(
+      (name) => !declared.has(name)
+    );
     expect(undeclared).toEqual([]);
+  });
+
+  /**
+   * The rule that makes a repaint a one-file change. A component naming a hue
+   * directly is invisible until someone swaps the palette and one border stays
+   * the old blue, so it fails here instead: give the colour a semantic token in
+   * index.css and reference that.
+   */
+  it("keeps the brand palette out of everything but index.css", async () => {
+    const palette = new Set(paletteTokens());
+    const sources = await collectSources(SRC);
+    const leaks = sources
+      .filter((s) => !s.path.endsWith("index.css"))
+      .flatMap((s) =>
+        [...referencedTokens([s.text])]
+          .filter((name) => palette.has(name))
+          .map((name) => `${relative(SRC, s.path).split(sep).join("/")} -> ${name}`)
+      );
+    expect(leaks).toEqual([]);
   });
 });
 
@@ -163,14 +221,19 @@ function worstStop(gradient: string): Rgb {
   );
 }
 
-async function collectSources(dir: string): Promise<string[]> {
-  const out: string[] = [];
+interface Source {
+  path: string;
+  text: string;
+}
+
+async function collectSources(dir: string): Promise<Source[]> {
+  const out: Source[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...(await collectSources(path)));
     } else if (/\.(tsx?|css)$/.test(entry.name)) {
-      out.push(readFileSync(path, "utf8"));
+      out.push({ path, text: readFileSync(path, "utf8") });
     }
   }
   return out;

@@ -34,9 +34,16 @@ Rules; reasoning in `docs/design-tokens.md`.
   not an inline ternary. If a style function needs a business rule, the rule belongs
   in the component or a hook.
 - **`src/index.css` is the single source of truth for colour**, in three layers:
-  brand primitives → semantic tokens (`--nf-surface`, `--nf-link`, …) → on-gradient
-  tokens (`--nf-on-grad*`, deliberately not scheme-aware). Components read only from
+  brand primitives → semantic tokens (`--ds-surface`, `--ds-link`, …) → on-gradient
+  tokens (`--ds-on-grad*`, deliberately not scheme-aware). Components read only from
   the last two.
+- **The brand palette (layer 1a) is off-limits outside `index.css`.** A component
+  spelling `var(--ds-primary)` survives a repaint as the old colour, so the contrast
+  suite fails on it; give it a semantic token instead. Gradients (1b) and the
+  type/motion/radius primitives (1c) are free to use.
+- **Palette keys are named for their role, not their hue** — `primary`, `accent`,
+  `ink`, `highlight`, `danger`. `color="sunshine"` was a claim about a hue that a
+  repaint would falsify.
 - **No component calls `useComputedColorScheme` to choose a colour** — light values
   sit on `:root`, dark under `:root[data-mantine-color-scheme="dark"]`, and the
   browser picks. Reaching for an `isDark` prop means you want a token.
@@ -44,7 +51,7 @@ Rules; reasoning in `docs/design-tokens.md`.
   `:root[data-mantine-color-scheme="…"]` exactly; a bare attribute selector loses on
   specificity and silently does nothing.
 - `src/tests/theme/contrast.test.ts` fails on any documented pair below WCAG AA, and
-  on any `--nf-*` token that is declared-but-unused or used-but-undeclared.
+  on any `--ds-*` token that is declared-but-unused or used-but-undeclared.
 
 ## Two tsconfigs, and why
 

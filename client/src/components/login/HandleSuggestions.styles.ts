@@ -6,7 +6,7 @@ import { surfaceHighlight } from "../../styles/tokens";
 const ROW_HEIGHT = 64;
 
 export const box: CSSProperties = {
-  background: "var(--nf-surface-ghost)",
+  background: "var(--ds-surface-ghost)",
   overflow: "hidden",
 };
 
@@ -18,7 +18,7 @@ export const staticRow: CSSProperties = {
 
 export const row = (focused: boolean): CSSProperties => ({
   ...staticRow,
-  outline: focused ? "2px solid var(--nf-purple)" : "none",
+  outline: focused ? "2px solid var(--ds-focus-ring)" : "none",
   outlineOffset: "-2px",
   background: focused ? surfaceHighlight : undefined,
 });

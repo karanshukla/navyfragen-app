@@ -135,7 +135,7 @@ describe("BouncingLogos", () => {
 
   it("applies the slow-spin class to the sparkle variant only", () => {
     renderWithBounceProvider("true");
-    const spinning = document.querySelectorAll(".nf-bounce-spin");
+    const spinning = document.querySelectorAll(".ds-bounce-spin");
     // One spin variant per side.
     expect(spinning).toHaveLength(2);
   });
