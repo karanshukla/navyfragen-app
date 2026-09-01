@@ -133,9 +133,9 @@ per-service config, verification steps).
 
 - **Every service builds from its Dockerfile, never Railway's native detection.** A
   RAILPACK build silently ignores the Bun-only `patchedDependencies` field and the
-  server crashes on boot. A committed `railway.json` does nothing until the service's
-  config-as-code path is set in the dashboard — confirm with `get-service-config` that
-  `build.builder` reads `DOCKERFILE`.
+  server crashes on boot. The builder is pinned in `.railway/railway.ts` and takes
+  effect only once applied with `railway config apply`. Confirm with
+  `get-service-config` that `build.builder` reads `DOCKERFILE`.
 - **Production server services must bind a wildcard `HOST` (`::` or `0.0.0.0`), never
   a loopback address.** Caddy reaches them only over Railway's IPv6-only private
   network. `assertProductionBindHost()` enforces this at boot.

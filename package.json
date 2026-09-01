@@ -28,7 +28,8 @@
     "happy-dom": "^20.11.6",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
-    "prettier": "^3.9.6"
+    "prettier": "^3.9.6",
+    "railway": "^3.11.0"
   },
   "dependencies": {
     "@types/ws": "^8.18.1",
