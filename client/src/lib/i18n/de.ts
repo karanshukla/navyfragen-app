@@ -210,12 +210,14 @@ export const de = {
     profanityFilter: "Schimpfwortfilter",
     profanityFilterDescription:
       "Wenn aktiviert, werden eingehende Nachrichten anhand von Wortlisten für Englisch, Spanisch, Portugiesisch, Deutsch und Französisch geprüft – jede Nachricht wird gegen alle fünf abgeglichen, unabhängig davon, welche Sprache du in der App eingestellt hast. Markierte Nachrichten werden stillschweigend verworfen – der Absender sieht eine Erfolgsmeldung, aber die Nachricht erreicht deinen Posteingang nie.",
-    answerLinks: "Antwortlinks",
-    answerLinksHelp: "Wohin die Links zu deinen veröffentlichten Antworten führen.",
-    defaultClient: "Standard-Client",
+    atmosphereLinks: "Atmosphere-Links",
+    atmosphereLinksHelp: "Wohin Links zu Beiträgen und Profilen führen.",
+    defaultClient: "Bevorzugter Client",
     defaultClientDescription:
-      "Auf welchen Atmosphere-Client deine Antworten verlinken. Leer lassen, um weiterhin auf Bluesky zu verlinken.",
-    defaultClientPlaceholder: "Bluesky",
+      "Welcher Atmosphere-Client die Beiträge und Profile öffnet, denen du von hier aus folgst.",
+    openProfilesInApp: (appName) => `Profile in ${appName} öffnen`,
+    openProfilesInAppDescription: (appName) =>
+      `Wenn aktiv, öffnet eine @Erwähnung in einer Bio das ${appName}-Profil dieser Person. Wenn nicht, öffnet sie sich in deinem bevorzugten Client.`,
   },
   publicProfilePage: {
     messageEmptyError: "Die Nachricht darf nicht leer sein.",
@@ -243,7 +245,7 @@ export const de = {
     clearMessage: "Nachricht löschen",
   },
   profileCard: {
-    viewOnBluesky: "Auf Bluesky ansehen",
+    viewOn: (client) => `Auf ${client} ansehen`,
   },
   profileUrlBar: {
     shareFailedTitle: "Teilen fehlgeschlagen",

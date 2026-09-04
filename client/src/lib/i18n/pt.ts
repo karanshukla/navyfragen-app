@@ -210,12 +210,14 @@ export const pt = {
     profanityFilter: "Filtro de palavrões",
     profanityFilterDescription:
       "Quando ativado, as mensagens recebidas são filtradas com listas de palavras em inglês, espanhol, português, alemão e francês - cada mensagem é verificada nos cinco idiomas, qualquer que seja o idioma configurado no app. Mensagens sinalizadas são descartadas silenciosamente - quem envia vê uma resposta de sucesso, mas a mensagem nunca chega à sua caixa de entrada.",
-    answerLinks: "Links das respostas",
-    answerLinksHelp: "Para onde apontam os links das suas respostas publicadas.",
-    defaultClient: "Cliente padrão",
+    atmosphereLinks: "Links do Atmosphere",
+    atmosphereLinksHelp: "Para onde levam os links de publicações e perfis.",
+    defaultClient: "Cliente preferido",
     defaultClientDescription:
-      "Para qual cliente do Atmosphere suas respostas apontam. Deixe vazio para continuar apontando para o Bluesky.",
-    defaultClientPlaceholder: "Bluesky",
+      "Qual cliente do Atmosphere abre as publicações e os perfis que você segue daqui.",
+    openProfilesInApp: (appName) => `Abrir os perfis no ${appName}`,
+    openProfilesInAppDescription: (appName) =>
+      `Quando ativo, uma @menção numa bio abre o perfil dessa pessoa no ${appName}. Quando não, ela abre no seu cliente preferido.`,
   },
   publicProfilePage: {
     messageEmptyError: "A mensagem não pode estar vazia.",
@@ -242,7 +244,7 @@ export const pt = {
     clearMessage: "Limpar mensagem",
   },
   profileCard: {
-    viewOnBluesky: "Ver no Bluesky",
+    viewOn: (client) => `Ver no ${client}`,
   },
   profileUrlBar: {
     shareFailedTitle: "Falha ao compartilhar",

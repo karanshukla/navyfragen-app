@@ -14,7 +14,7 @@ import { formatTimestamp } from "../../lib/formatTimestamp";
 import { useLocale, useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
 import { clientUrlFor } from "../../lib/waypointClients";
-import { waypointTargetFor } from "../../lib/waypointTarget";
+import { postWaypointTargetFor } from "../../lib/waypointTarget";
 import { highlightButton } from "../../styles/tokens";
 
 import { OpenInModal } from "./OpenInModal";
@@ -74,7 +74,7 @@ export function QuestionCard({
   const messages = useTranslations();
   const locale = useLocale();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const target = waypointTargetFor(threadLink?.uri, handle);
+  const target = postWaypointTargetFor(threadLink?.uri, handle);
   const clientLink = target ? clientUrlFor(target, defaultClientId) : null;
   /** The chosen client where there is one, else the Bluesky link as posted. */
   const postLink = clientLink ?? threadLink?.link;

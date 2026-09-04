@@ -1,10 +1,14 @@
-import { Container, Group, Text } from "@mantine/core";
+import { Anchor, Container, Group, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router";
 
 import { useSendMessage } from "../api/messageService";
 import { useResolveHandle, usePublicProfile } from "../api/profileService";
+import { useUserSettings } from "../api/settingsService";
+import { dbBoolean } from "../lib/dbBoolean";
+import { clientDestinationFor } from "../lib/waypointClients";
+import { profileWaypointTargetFor } from "../lib/waypointTarget";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { AskCard } from "../components/profile/AskCard";
 import { ProfileCard } from "../components/profile/ProfileCard";
@@ -41,6 +45,10 @@ export default function PublicProfile() {
   const profile = profileData?.profile || null;
 
   const { mutate: sendMessage, isPending: sendLoading } = useSendMessage();
+  // The viewer's own client, not this profile owner's: `defaultClient` is
+  // private, and `profile-service.ts` deliberately keeps it off the public
+  // payload. A logged-out visitor has none and gets Bluesky.
+  const { data: viewerSettings } = useUserSettings();
 
   useFocusScroll(textareaRef);
   useRevealAskCard(askCardRef, !handleLoading && !profileLoading && !!profile);
@@ -104,11 +112,28 @@ export default function PublicProfile() {
   if (handleLoading || profileLoading) return <ProfileSkeleton />;
 
   if (did && profileData && !profileData.exists) {
+    // Keeping @mentions in-app sends readers here for anyone who has not joined,
+    // so the notice carries the way back out to where that account does exist.
+    const elsewhere = clientDestinationFor(
+      profileWaypointTargetFor(handle, did),
+      viewerSettings?.defaultClient ?? null
+    );
     return (
       <ProfileNotice tone="yellow" title={messages.publicProfilePage.notOnAppTitle(APP_NAME)}>
         <strong>@{handle}</strong> {messages.publicProfilePage.notOnAppBodyPrefix}
         {APP_NAME}
         {messages.publicProfilePage.notOnAppBodySuffix}
+        {elsewhere && (
+          <Anchor
+            href={elsewhere.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            display="block"
+            mt="sm"
+          >
+            {messages.profileCard.viewOn(elsewhere.name)}
+          </Anchor>
+        )}
       </ProfileNotice>
     );
   }
@@ -133,7 +158,11 @@ export default function PublicProfile() {
         shareTitle={t.shareTitle(ownerName)}
       />
 
-      <ProfileCard profile={profile} />
+      <ProfileCard
+        profile={profile}
+        clientId={viewerSettings?.defaultClient ?? null}
+        openProfilesInApp={dbBoolean(viewerSettings?.openProfilesInApp, true)}
+      />
 
       <AskCard
         gradient={profileCardGradient(profileData?.profileCardTheme ?? null)}

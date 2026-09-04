@@ -36,3 +36,41 @@ export function clientUrlFor(target: WaypointTarget, clientId: string | null): s
   );
   return match?.url ?? null;
 }
+
+/**
+ * The client every link falls back to: the one the server's own post links
+ * already point at, and the only name a reader sees when nothing is chosen.
+ */
+export const FALLBACK_CLIENT_ID = "bluesky";
+
+export interface ClientDestination {
+  url: string;
+  name: string;
+}
+
+function destinationFor(target: WaypointTarget, clientId: string): ClientDestination | null {
+  const url = clientUrlFor(target, clientId);
+  const name = clientNameFor(clientId);
+  return url && name ? { url, name } : null;
+}
+
+/**
+ * Where to send someone for `target` and what to call that destination: the
+ * chosen client when it can render this record, else Bluesky. Null only when
+ * there is no target, or when even Bluesky cannot open it.
+ *
+ * Unlike an answer card, which already holds the Bluesky link the server
+ * posted, a link built from nothing but a target has no second source to fall
+ * back to — so the fallback is the catalog's own Bluesky entry.
+ *
+ * @see [waypointClients.test.ts](../tests/lib/waypointClients.test.ts): pins
+ * the fallback for no preference and for an id that outlived its entry.
+ */
+export function clientDestinationFor(
+  target: WaypointTarget | null,
+  clientId: string | null
+): ClientDestination | null {
+  if (target === null) return null;
+  const chosen = clientId === null ? null : destinationFor(target, clientId);
+  return chosen ?? destinationFor(target, FALLBACK_CLIENT_ID);
+}

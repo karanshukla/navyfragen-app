@@ -80,6 +80,14 @@ export class ProfileService {
   }
   /* v8 ignore stop */
 
+  /**
+   * The settings a visitor is allowed to see. `uiLocale`, `defaultClient` and
+   * `openProfilesInApp` are the viewer's own business, not the profile owner's,
+   * so none of them is selected here.
+   *
+   * @see [profile-service.test.ts](../tests/profile-service.test.ts): "never
+   * selects a setting that is private to its owner".
+   */
   private readPubliclyVisibleSettings(did: string) {
     return this.db
       .selectFrom("user_settings")

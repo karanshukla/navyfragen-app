@@ -254,6 +254,28 @@ describe("Settings (Hono)", () => {
       assert.strictEqual(service.updateSettings.mock.calls.length, 0);
     });
 
+    test("passes the profile-link switch through as a boolean", async () => {
+      const { app, service, headers } = makeApp();
+      const res = await app.request("/settings", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ openProfilesInApp: false }),
+      });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(service.updateSettings.mock.calls[0][1].openProfilesInApp, false);
+    });
+
+    test("rejects a profile-link switch that is not a boolean", async () => {
+      const { app, service, headers } = makeApp();
+      const res = await app.request("/settings", {
+        method: "POST",
+        headers: jsonHeaders(headers),
+        body: JSON.stringify({ openProfilesInApp: "no" }),
+      });
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(service.updateSettings.mock.calls.length, 0);
+    });
+
     test("accepts a default client id at the length limit", async () => {
       const { app, headers } = makeApp();
       const res = await app.request("/settings", {

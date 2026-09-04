@@ -64,6 +64,7 @@ export type UserSettings = {
   touchpointLocale: string | null;
   uiLocale: string | null;
   defaultClient: string | null;
+  openProfilesInApp: number;
   createdAt: string;
 };
 
@@ -334,6 +335,20 @@ migrations["012"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.alterTable("user_settings").dropColumn("defaultClient").execute();
+  },
+};
+
+// Added with a default rather than as a nullable column: every existing row has
+// to read as "on", and the client's `on()` reads a NULL as false.
+migrations["013"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable("user_settings")
+      .addColumn("openProfilesInApp", "integer", (col) => col.defaultTo(1))
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").dropColumn("openProfilesInApp").execute();
   },
 };
 

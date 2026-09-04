@@ -1,4 +1,4 @@
-import { parseAtUri, type ParsedURI } from "@aturi.to/waypoints-react";
+import { parseAtUri, parseURI, type ParsedURI } from "@aturi.to/waypoints-react";
 
 /**
  * The Aturi catalog target for a posted answer: what `useWaypoints` resolves
@@ -19,11 +19,31 @@ export type WaypointTarget = ParsedURI;
  * when the session knows one — the DID stays on `did`, which is what the
  * handful of DID-only clients in the catalog read anyway.
  */
-export function waypointTargetFor(
+export function postWaypointTargetFor(
   uri: string | undefined,
   handle: string | undefined
 ): WaypointTarget | null {
   const match = uri ? parseAtUri(uri) : null;
   if (!match) return null;
   return handle ? { ...match.parsed, handle } : match.parsed;
+}
+
+/**
+ * Derive the catalog target for an account's profile, or null without a handle
+ * to address it by.
+ *
+ * The DID is the mirror of what `postWaypointTargetFor` does with a handle:
+ * `pdsls`, `atptools`, `margin`, `grain` and `popfeed` address a repo only by
+ * DID, and the catalog drops all five from a target that carries none.
+ *
+ * @see [waypointTarget.test.ts](../tests/lib/waypointTarget.test.ts): pins that
+ * the DID-only clients appear only once a DID is supplied.
+ */
+export function profileWaypointTargetFor(
+  handle: string | undefined,
+  did: string | undefined
+): WaypointTarget | null {
+  if (!handle) return null;
+  const parsed = parseURI(handle);
+  return did ? { ...parsed, did } : parsed;
 }

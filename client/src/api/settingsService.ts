@@ -27,6 +27,11 @@ export interface UserSettings extends AskCardCustomisation {
    * to. Null keeps the Bluesky link the server posted. Private, like uiLocale.
    */
   defaultClient: string | null;
+  /**
+   * Whether an @mention in a bio opens that account's profile inside this app
+   * rather than in `defaultClient`. Private, like `uiLocale`.
+   */
+  openProfilesInApp: number | boolean;
   createdAt: string;
 }
 

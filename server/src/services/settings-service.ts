@@ -19,6 +19,7 @@ export interface UserSettings {
   touchpointLocale: string | null;
   uiLocale: string | null;
   defaultClient: string | null;
+  openProfilesInApp: number;
   createdAt: string;
 }
 
@@ -34,6 +35,7 @@ const SETTINGS_DEFAULTS = {
   touchpointLocale: USE_APP_DEFAULT,
   uiLocale: USE_APP_DEFAULT,
   defaultClient: USE_APP_DEFAULT,
+  openProfilesInApp: toDbBoolean(true),
 } satisfies Omit<UserSettings, "did" | "createdAt">;
 
 /**
@@ -56,12 +58,14 @@ export interface UpdatableSettings {
   touchpointLocale?: string | null;
   uiLocale?: string | null;
   defaultClient?: string | null;
+  openProfilesInApp?: boolean;
 }
 
 const BOOLEAN_SETTINGS = [
   "pdsSyncEnabled",
   "inboxEnabled",
   "profanityFilterEnabled",
+  "openProfilesInApp",
 ] as const satisfies readonly (keyof UpdatableSettings)[];
 
 /**

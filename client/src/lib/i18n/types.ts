@@ -231,11 +231,12 @@ export interface CustomisePageMessages {
   inboxDescription: string;
   profanityFilter: string;
   profanityFilterDescription: string;
-  answerLinks: string;
-  answerLinksHelp: string;
+  atmosphereLinks: string;
+  atmosphereLinksHelp: string;
   defaultClient: string;
   defaultClientDescription: string;
-  defaultClientPlaceholder: string;
+  openProfilesInApp: (appName: string) => string;
+  openProfilesInAppDescription: (appName: string) => string;
 }
 
 export interface PublicProfilePageMessages {
@@ -263,7 +264,7 @@ export interface AskCardMessages {
 }
 
 export interface ProfileCardMessages {
-  viewOnBluesky: string;
+  viewOn: (client: string) => string;
 }
 
 export interface ProfileUrlBarMessages {

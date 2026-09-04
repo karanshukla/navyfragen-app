@@ -6,10 +6,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { OpenInModal } from "../../components/messages/OpenInModal";
 import { en } from "../../lib/i18n/en";
-import { waypointTargetFor } from "../../lib/waypointTarget";
+import { postWaypointTargetFor } from "../../lib/waypointTarget";
 import { renderWithProviders } from "../testUtils";
 
-const target = waypointTargetFor(
+const target = postWaypointTargetFor(
   "at://did:plc:abc123/app.bsky.feed.post/3k7qw",
   "alice.bsky.social"
 )!;

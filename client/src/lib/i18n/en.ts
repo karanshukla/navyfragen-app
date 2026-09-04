@@ -202,12 +202,14 @@ export const en = {
     profanityFilter: "Profanity filter",
     profanityFilterDescription:
       "When on, incoming messages are screened against wordlists for English, Spanish, Portuguese, German and French - every message is checked against all five, whatever language you have the app set to. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
-    answerLinks: "Answer links",
-    answerLinksHelp: "Where the links to your posted answers point.",
-    defaultClient: "Default client",
+    atmosphereLinks: "Atmosphere links",
+    atmosphereLinksHelp: "Where links to posts and profiles take you.",
+    defaultClient: "Preferred client",
     defaultClientDescription:
-      "Which Atmosphere client your answers link to. Leave it empty to keep linking to Bluesky.",
-    defaultClientPlaceholder: "Bluesky",
+      "Which Atmosphere client opens the posts and profiles you follow from here.",
+    openProfilesInApp: (appName) => `Open profiles in ${appName}`,
+    openProfilesInAppDescription: (appName) =>
+      `When on, an @mention in someone's bio opens their ${appName} profile. When off, it opens in your preferred client.`,
   },
   publicProfilePage: {
     messageEmptyError: "Message cannot be empty.",
@@ -233,7 +235,7 @@ export const en = {
     clearMessage: "Clear message",
   },
   profileCard: {
-    viewOnBluesky: "View on Bluesky",
+    viewOn: (client) => `View on ${client}`,
   },
   profileUrlBar: {
     shareFailedTitle: "Share failed",

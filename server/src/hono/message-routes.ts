@@ -561,6 +561,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     // @see [settings-controller.test.ts](../tests/settings-controller.test.ts):
     // "rejects an over-long default client id".
     defaultClient: z.string().max(64).nullable().optional(),
+    openProfilesInApp: z.boolean().optional(),
   });
 
   app.post(
@@ -588,6 +589,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
           touchpointLocale: body.touchpointLocale,
           uiLocale: body.uiLocale,
           defaultClient: body.defaultClient,
+          openProfilesInApp: body.openProfilesInApp,
         });
         ctx.logger.info(
           { did: userSessionDid, updatedFields: Object.keys(body ?? {}) },

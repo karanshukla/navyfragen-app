@@ -1,12 +1,19 @@
 import { describe, it, expect } from "vitest";
 
-import { clientNameFor, clientUrlFor, postClientOptions } from "../../lib/waypointClients";
-import { waypointTargetFor } from "../../lib/waypointTarget";
+import {
+  clientDestinationFor,
+  clientNameFor,
+  clientUrlFor,
+  postClientOptions,
+} from "../../lib/waypointClients";
+import { postWaypointTargetFor, profileWaypointTargetFor } from "../../lib/waypointTarget";
 
-const target = waypointTargetFor(
+const target = postWaypointTargetFor(
   "at://did:plc:abc123/app.bsky.feed.post/3k7qw",
   "alice.bsky.social"
 )!;
+
+const profileTarget = profileWaypointTargetFor("alice.bsky.social", "did:plc:abc123")!;
 
 describe("postClientOptions", () => {
   it("offers Bluesky among the clients that can open a post", () => {
@@ -52,5 +59,34 @@ describe("clientUrlFor", () => {
 
   it("returns null for a stored id that outlived its catalog entry", () => {
     expect(clientUrlFor(target, "a-client-that-shut-down")).toBeNull();
+  });
+});
+
+describe("clientDestinationFor", () => {
+  it("names and links the chosen client", () => {
+    expect(clientDestinationFor(profileTarget, "deer")).toEqual({
+      name: "Deer",
+      url: "https://deer.social/profile/alice.bsky.social",
+    });
+  });
+
+  it("falls back to Bluesky when no client is chosen", () => {
+    expect(clientDestinationFor(profileTarget, null)).toEqual({
+      name: "Bluesky",
+      url: "https://bsky.app/profile/alice.bsky.social",
+    });
+  });
+
+  it("falls back to Bluesky for a stored id that outlived its catalog entry", () => {
+    expect(clientDestinationFor(profileTarget, "a-client-that-shut-down")?.name).toBe("Bluesky");
+  });
+
+  it("falls back to Bluesky for a client that cannot render this record", () => {
+    const withoutDid = profileWaypointTargetFor("alice.bsky.social", undefined)!;
+    expect(clientDestinationFor(withoutDid, "pdsls")?.name).toBe("Bluesky");
+  });
+
+  it("returns null when there is no target to open", () => {
+    expect(clientDestinationFor(null, "deer")).toBeNull();
   });
 });

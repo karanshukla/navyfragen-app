@@ -2,12 +2,16 @@ import { Avatar, Box, Button, Group, Paper, Text } from "@mantine/core";
 import { IconExternalLink } from "@tabler/icons-react";
 
 import { useTranslations } from "../../lib/i18n";
+import { mentionLinkFor } from "../../lib/mentionLink";
+import { clientDestinationFor } from "../../lib/waypointClients";
+import { profileWaypointTargetFor } from "../../lib/waypointTarget";
 import { parseRichText } from "../../utils/parseRichText";
 import { WinkMark } from "../WinkMark";
 
 import * as styles from "./ProfileCard.styles";
 
 export interface ProfileSummary {
+  did?: string;
   handle?: string;
   displayName?: string;
   description?: string;
@@ -15,9 +19,25 @@ export interface ProfileSummary {
   banner?: string;
 }
 
+interface ProfileCardProps {
+  profile: ProfileSummary;
+  /**
+   * The client the *viewer* picked on /customise, never the one the account
+   * being viewed picked — that setting is private and a public profile does
+   * not carry it. Null sends the viewer to Bluesky, as before.
+   */
+  clientId: string | null;
+  /** Whether the viewer keeps @mentions in this app instead of following them out. */
+  openProfilesInApp: boolean;
+}
+
 /** Bluesky-style banner + avatar + bio header for the profile being viewed. */
-export function ProfileCard({ profile }: { profile: ProfileSummary }) {
+export function ProfileCard({ profile, clientId, openProfilesInApp }: ProfileCardProps) {
   const messages = useTranslations();
+  const destination = clientDestinationFor(
+    profileWaypointTargetFor(profile.handle, profile.did),
+    clientId
+  );
   return (
     <Paper mb="lg" withBorder style={styles.card}>
       <Box style={styles.banner(profile.banner)}>
@@ -44,24 +64,26 @@ export function ProfileCard({ profile }: { profile: ProfileSummary }) {
               @{profile.handle}
             </Text>
           </Box>
-          <Button
-            component="a"
-            href={`https://bsky.app/profile/${profile.handle}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="outline"
-            size="xs"
-            radius="md"
-            style={styles.blueskyLink}
-            leftSection={<IconExternalLink size={12} />}
-          >
-            {messages.profileCard.viewOnBluesky}
-          </Button>
+          {destination && (
+            <Button
+              component="a"
+              href={destination.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outline"
+              size="xs"
+              radius="md"
+              style={styles.blueskyLink}
+              leftSection={<IconExternalLink size={12} />}
+            >
+              {messages.profileCard.viewOn(destination.name)}
+            </Button>
+          )}
         </Group>
 
         {profile.description && (
           <Text mt="sm" fz={14} style={styles.description}>
-            {parseRichText(profile.description)}
+            {parseRichText(profile.description, mentionLinkFor(clientId, openProfilesInApp))}
           </Text>
         )}
       </Box>

@@ -1,5 +1,8 @@
 import { tokenize, type Token } from "@atcute/bluesky-richtext-parser";
 import React from "react";
+import { Link } from "react-router";
+
+import { mentionLinkFor, type MentionLinkResolver } from "../lib/mentionLink";
 
 const WHITESPACE_REGEX = /^\s+|\s+$| +(?=\n)|\n(?=(?: *\n){2}) */g;
 const TRIM_HOST_RE = /^www\./;
@@ -96,23 +99,31 @@ const renderTextWithAutolinks = (content: string, keyPrefix: string): React.Reac
   return result;
 };
 
-const renderTokens = (tokens: Token[], keyPrefix: string): React.ReactNode[] =>
-  tokens.map((token, index) => renderToken(token, `${keyPrefix}-${index}`));
+const renderTokens = (
+  tokens: Token[],
+  keyPrefix: string,
+  mentionLink: MentionLinkResolver
+): React.ReactNode[] =>
+  tokens.map((token, index) => renderToken(token, `${keyPrefix}-${index}`, mentionLink));
 
-const renderToken = (token: Token, key: string): React.ReactNode => {
+const renderToken = (
+  token: Token,
+  key: string,
+  mentionLink: MentionLinkResolver
+): React.ReactNode => {
   switch (token.type) {
-    case "mention":
-      return (
-        <a
-          href={`https://bsky.app/profile/${token.handle}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          key={key}
-          style={linkStyle}
-        >
+    case "mention": {
+      const { href, internal } = mentionLink(token.handle);
+      return internal ? (
+        <Link to={href} key={key} style={linkStyle}>
+          {token.raw}
+        </Link>
+      ) : (
+        <a href={href} target="_blank" rel="noopener noreferrer" key={key} style={linkStyle}>
           {token.raw}
         </a>
       );
+    }
 
     case "autolink": {
       const href = ensureProtocol(token.url);
@@ -130,7 +141,7 @@ const renderToken = (token: Token, key: string): React.ReactNode => {
       const isBareUrlLink = token.children.length === 1 && token.children[0].raw === token.url;
       const displayText = isBareUrlLink
         ? toShortUrl(token.url)
-        : renderTokens(token.children, `${key}-c`);
+        : renderTokens(token.children, `${key}-c`, mentionLink);
       return (
         <a href={href} target="_blank" rel="noopener noreferrer" key={key} style={linkStyle}>
           {displayText}
@@ -139,16 +150,16 @@ const renderToken = (token: Token, key: string): React.ReactNode => {
     }
 
     case "strong":
-      return <strong key={key}>{renderTokens(token.children, `${key}-c`)}</strong>;
+      return <strong key={key}>{renderTokens(token.children, `${key}-c`, mentionLink)}</strong>;
 
     case "emphasis":
-      return <em key={key}>{renderTokens(token.children, `${key}-c`)}</em>;
+      return <em key={key}>{renderTokens(token.children, `${key}-c`, mentionLink)}</em>;
 
     case "underline":
-      return <u key={key}>{renderTokens(token.children, `${key}-c`)}</u>;
+      return <u key={key}>{renderTokens(token.children, `${key}-c`, mentionLink)}</u>;
 
     case "delete":
-      return <del key={key}>{renderTokens(token.children, `${key}-c`)}</del>;
+      return <del key={key}>{renderTokens(token.children, `${key}-c`, mentionLink)}</del>;
 
     case "code":
       return <code key={key}>{token.content}</code>;
@@ -164,9 +175,15 @@ const renderToken = (token: Token, key: string): React.ReactNode => {
   }
 };
 
-export const parseRichText = (text: string): React.ReactNode => {
+/** What a mention does for a reader with no settings of their own to consult. */
+const LEAVE_TO_BLUESKY = mentionLinkFor(null, false);
+
+export const parseRichText = (
+  text: string,
+  mentionLink: MentionLinkResolver = LEAVE_TO_BLUESKY
+): React.ReactNode => {
   if (!text) return null;
   const trimmedText = text.replace(WHITESPACE_REGEX, "");
   const tokens = tokenize(trimmedText);
-  return renderTokens(tokens, "t");
+  return renderTokens(tokens, "t", mentionLink);
 };

@@ -211,12 +211,14 @@ export const es = {
     profanityFilter: "Filtro de lenguaje ofensivo",
     profanityFilterDescription:
       "Cuando está activado, los mensajes entrantes se filtran con listas de palabras en inglés, español, portugués, alemán y francés - cada mensaje se comprueba en los cinco idiomas, sea cual sea el idioma que tengas configurado en la app. Los mensajes marcados se descartan en silencio - quien lo envía ve una respuesta de éxito, pero el mensaje nunca llega a tu bandeja.",
-    answerLinks: "Enlaces de respuestas",
-    answerLinksHelp: "Adónde apuntan los enlaces a tus respuestas publicadas.",
-    defaultClient: "Cliente predeterminado",
+    atmosphereLinks: "Enlaces de Atmosphere",
+    atmosphereLinksHelp: "Adónde te llevan los enlaces a publicaciones y perfiles.",
+    defaultClient: "Cliente preferido",
     defaultClientDescription:
-      "A qué cliente de Atmosphere enlazan tus respuestas. Déjalo vacío para seguir enlazando a Bluesky.",
-    defaultClientPlaceholder: "Bluesky",
+      "Qué cliente de Atmosphere abre las publicaciones y los perfiles que sigues desde aquí.",
+    openProfilesInApp: (appName) => `Abrir los perfiles en ${appName}`,
+    openProfilesInAppDescription: (appName) =>
+      `Cuando está activo, una @mención en una biografía abre el perfil de esa persona en ${appName}. Cuando no, se abre en tu cliente preferido.`,
   },
   publicProfilePage: {
     messageEmptyError: "El mensaje no puede estar vacío.",
@@ -242,7 +244,7 @@ export const es = {
     clearMessage: "Borrar mensaje",
   },
   profileCard: {
-    viewOnBluesky: "Ver en Bluesky",
+    viewOn: (client) => `Ver en ${client}`,
   },
   profileUrlBar: {
     shareFailedTitle: "Error al compartir",

@@ -31,9 +31,9 @@ describe("ProfileService", () => {
   // Separate builder for the user_settings leg so it can return its own row
   // independently of the user_profile existence check.
   const mockSettingsSelectBuilder = {
-    select() {
-      return this;
-    },
+    // Records its column list, unlike the user_profile builder: the public
+    // payload's column list is itself the thing one of the tests below asserts.
+    select: mock((_columns: string[]) => mockSettingsSelectBuilder),
     where() {
       return this;
     },
@@ -229,6 +229,22 @@ describe("ProfileService", () => {
       // Two legs: checkUserExists → user_profile, settings subset → user_settings.
       assert.ok(selectTables.includes("user_profile"));
       assert.ok(selectTables.includes("user_settings"));
+    });
+
+    it("never selects a setting that is private to its owner", async () => {
+      // Arrange
+      const testDid = "did:test:private-settings";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => undefined;
+
+      // Act
+      await profileService.getPublicProfile(testDid);
+
+      // Assert
+      const columns = mockSettingsSelectBuilder.select.mock.calls.at(-1)?.[0] ?? [];
+      assert.ok(!columns.includes("defaultClient"));
+      assert.ok(!columns.includes("uiLocale"));
+      assert.ok(!columns.includes("openProfilesInApp"));
     });
 
     it("should throw 'Profile not found' when Bluesky returns success: false", async () => {

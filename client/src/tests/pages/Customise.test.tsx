@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import * as authService from "../../api/authService";
 import * as settingsService from "../../api/settingsService";
+import { APP_NAME } from "../../lib/brand";
 import { uiLocaleOptions } from "../../lib/i18n";
 import { en } from "../../lib/i18n/en";
 import { touchpointLocales } from "../../lib/touchpointTranslations";
@@ -39,6 +40,8 @@ function mockSettings(overrides: Record<string, unknown> = {}) {
       profileCardTheme: null,
       touchpointLocale: null,
       uiLocale: null,
+      defaultClient: null,
+      openProfilesInApp: 1,
       createdAt: "2025-01-01T00:00:00.000Z",
       ...overrides,
     },
@@ -111,15 +114,47 @@ describe("Customise page", () => {
     expect(mutate).toHaveBeenCalledWith({ defaultClient: "deer" });
   });
 
-  it("reselecting the chosen client unsets it rather than leaving it alone", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: "deer" }));
+  it("takes no typed input: the client list is a picker, not a text box", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    const combobox = screen.getByRole("combobox", { name: en.customisePage.defaultClient });
+    expect(combobox).toHaveAttribute("readonly");
+    expect(combobox).toHaveValue("Bluesky");
+  });
+
+  it("shows Bluesky, not an empty box, when no client has been picked", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: null }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.defaultClient })).toHaveValue(
+      "Bluesky"
+    );
+  });
+
+  it("shows Bluesky for a stored client id that has left the catalog", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: "a-client-that-shut-down" }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.defaultClient })).toHaveValue(
+      "Bluesky"
+    );
+  });
+
+  it("toggling the profile switch fires updateSettings with only openProfilesInApp", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
     const mutate = mockMutation();
     renderWithProviders(<Customise />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: en.customisePage.defaultClient }));
-    fireEvent.click(screen.getByRole("option", { name: "Deer" }));
+    fireEvent.click(
+      screen.getByRole("switch", { name: en.customisePage.openProfilesInApp(APP_NAME) })
+    );
 
-    expect(mutate).toHaveBeenCalledWith({ defaultClient: null });
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate).toHaveBeenCalledWith({ openProfilesInApp: false });
   });
 
   it("shows the matching label when defaultClient is already set", () => {
