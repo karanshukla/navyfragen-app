@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { radiusPill, surfaceGhost, textDimmed } from "../../styles/tokens";
+import { border, radiusPill, surfaceGhost, textDimmed } from "../../styles/tokens";
 
 /**
  * Quieter than the copy and share buttons across the row: these say something
@@ -15,29 +15,26 @@ export const link: CSSProperties = {
   alignItems: "center",
   color: textDimmed,
   background: surfaceGhost,
+  border,
   borderRadius: radiusPill,
-  padding: "4px 6px",
+  padding: "6px 12px",
+  fontSize: 12,
 };
 
-/** Holds a mark at the padding a name gets, so the two swap without a jump. */
+/** Holds a mark inside the same bubble a name gets, so the two swap cleanly. */
 export const markSlot: CSSProperties = {
   display: "inline-flex",
-  padding: "0 2px",
 };
 
 /** The name a mark is replaced by once there is room to read one. */
 export const wordmark: CSSProperties = {
-  fontSize: 12,
   fontWeight: 600,
   lineHeight: 1.2,
-  padding: "0 2px",
 };
 
+/** The same bubble as a named app, so the row reads as one set of pills. */
 export const overflow: CSSProperties = {
-  background: surfaceGhost,
-  borderRadius: radiusPill,
-  color: textDimmed,
-  fontSize: 11,
+  ...link,
   fontWeight: 600,
 };
 

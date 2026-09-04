@@ -1,4 +1,4 @@
-import { ActionIcon, Anchor, Box, Group, Menu, Text, Tooltip } from "@mantine/core";
+import { Anchor, Box, Group, Menu, Text, Tooltip, UnstyledButton } from "@mantine/core";
 import { IconWorld } from "@tabler/icons-react";
 
 import { useTranslations } from "../../lib/i18n";
@@ -52,7 +52,7 @@ export function AtmosphereLinks({ apps }: AtmosphereLinksProps) {
   const overflow = apps.slice(INLINE_LIMIT);
 
   return (
-    <Group gap={4} align="center" aria-label={messages.profileUrlBar.atmosphereLinksLabel}>
+    <Group gap={6} align="center" aria-label={messages.profileUrlBar.atmosphereLinksLabel}>
       {inline.map((app) => (
         <Tooltip key={app.id} label={app.name} withArrow>
           <Anchor
@@ -78,15 +78,12 @@ export function AtmosphereLinks({ apps }: AtmosphereLinksProps) {
       {overflow.length > 0 && (
         <Menu position="bottom-end" withArrow>
           <Menu.Target>
-            <ActionIcon
-              variant="subtle"
-              radius="xl"
-              size="md"
+            <UnstyledButton
               aria-label={messages.profileUrlBar.moreAtmosphereApps(overflow.length)}
               style={styles.overflow}
             >
               +{overflow.length}
-            </ActionIcon>
+            </UnstyledButton>
           </Menu.Target>
           <Menu.Dropdown>
             {overflow.map((app) => (
