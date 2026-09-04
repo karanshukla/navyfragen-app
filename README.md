@@ -66,7 +66,7 @@ navyfragen-app/
 - A modern web browser
 - [Node.js](https://nodejs.org) — **only** if you want to run the Playwright E2E suite locally
 
-> **Runtime note:** Bun is the installer and the runtime for every workspace. The server has been Bun-only since #268/#288; the client's Vite dev server, build, lint, tests, and coverage now run on Bun too. Client coverage uses Vitest's istanbul provider rather than v8, since v8 coverage depends on a `node:inspector` API Bun does not implement. See `client/README.md`.
+> **Runtime note:** Bun is the installer and the runtime for every workspace. The server has been Bun-only since #268/#288; the client's Vite dev server, build, lint, tests, and coverage now run on Bun too. Client coverage uses Vitest's istanbul provider rather than v8; v8 coverage needed a `node:inspector` API Bun only implemented in 1.4, and istanbul stays because it needs no inspector at all. See `client/README.md`.
 >
 > Node is needed for exactly one thing: **Playwright**, which cannot load our E2E specs under Bun. Install it only if you plan to run `bun run test:e2e` locally. Everything else works with Bun alone.
 

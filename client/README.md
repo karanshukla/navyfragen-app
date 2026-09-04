@@ -35,7 +35,7 @@ bun run test:watch    # watch mode
 bun run test:coverage # coverage gate, 100% on all four metrics
 ```
 
-Coverage uses Vitest's **istanbul** provider. The v8 provider does not work under Bun: it drives `node:inspector`'s Profiler domain, which Bun does not implement, so every worker reports `Coverage APIs are not supported` and the totals come back 0% while the run still exits green on the test count. istanbul instruments the source at transform time instead, and needs no V8 inspector.
+Coverage uses Vitest's **istanbul** provider. The v8 provider did not work under Bun before 1.4: it drives `node:inspector`'s Profiler domain, which Bun did not implement, so every worker reported `Coverage APIs are not supported` and the totals came back 0% while the run still exited green on the test count. Bun 1.4 implements `Profiler.startPreciseCoverage`, so v8 is viable again. istanbul stays anyway: it instruments the source at transform time, needs no V8 inspector, and the client is at 100% on every metric, so a swap buys nothing.
 
 Suppress unreachable code with `/* istanbul ignore if */`, `/* istanbul ignore else */`, or `/* istanbul ignore next */`. The `/* v8 ignore */` form does nothing here. Note that istanbul only attaches these hints to statements, functions, and `if` nodes, so a marker in front of a bare sub-expression is silently dropped; hoist the expression into a statement first. Every use is catalogued in `docs/testing-notes.md`.
 

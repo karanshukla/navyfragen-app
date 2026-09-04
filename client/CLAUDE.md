@@ -73,7 +73,8 @@ bun run test:coverage   # run from client/
 
 100% on all four metrics (statements, lines, branches, functions) via Vitest's
 **istanbul** provider, enforced by `coverage.thresholds` in `vite.config.ts` plus the
-Coveralls threshold. (v8 coverage cannot work under Bun — `docs/runtime-notes.md`.)
+Coveralls threshold. (v8 coverage could not work under Bun before 1.4 and buys nothing
+now that it can — `docs/runtime-notes.md`.)
 
 ### `/* istanbul ignore */` convention
 

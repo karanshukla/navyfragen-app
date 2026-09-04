@@ -71,11 +71,11 @@ outside the workspace. The repo root deliberately has no such setting, because
   is enforced by the runtime rather than by a version check: the patched
   `@atproto-labs/fetch-node` imports `undici_v8` statically again, which throws
   `webidl.util.markAsUncloneable is not a function` at module load on anything older.
-  It fails loudly on the first import, not silently. `@types/bun` still pins `1.3.14`
-  because `@types/bun` has published nothing for 1.4 yet (`latest` was still `1.3.14`
-  when 1.4.0 shipped); move it when they are.
+  It fails loudly on the first import, not silently. `@types/bun` pins `1.4.0`, which
+  is the newest DefinitelyTyped publish; the types lag the runtime by a patch and
+  there is no `1.4.1` to move to.
 - The `unicastFetchWrap` SSRF guard requires `process.versions.undici`, which Bun does
-  not expose at all (still true on 1.4), so it is resolved by a **patched
+  not expose at all (still `undefined` on 1.4.1), so it is resolved by a **patched
   `@atproto-labs/fetch-node`** — see
   `patches/@atproto-labs%2Ffetch-node@0.3.7.patch`, applied via `patchedDependencies`
   in the root `package.json`. The patch gives `unicastFetchWrap` a Bun branch.
@@ -148,8 +148,9 @@ Bun 1.4 does implement `Profiler.startPreciseCoverage` / `takePreciseCoverage`, 
 gives branch data and the client is at 100%, so a swap buys nothing.
 
 Bun's own coverage reporter (server) honors neither `/* v8 ignore */` nor
-`/* istanbul ignore */`, and its lcov carries line + function coverage only, with no
-branch data (verified on 1.3.14 and unchanged on 1.4). Per-file exclusion is done via
+`/* istanbul ignore */` nor `/* c8 ignore */`, and its lcov carries line + function
+coverage only, with no branch data (verified on 1.3.14 and unchanged on 1.4.1: a
+server run emits 2657 `DA:` records and zero `BRDA:`). Per-file exclusion is done via
 `coveragePathIgnorePatterns` globs in `server/bunfig.toml`. These are the accepted
 trade-off of moving coverage onto the production runtime (#287); the prior c8/Node
 path that did honor `v8 ignore` and report branches was retired with the Node test
