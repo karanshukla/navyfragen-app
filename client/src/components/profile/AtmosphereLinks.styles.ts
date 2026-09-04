@@ -26,8 +26,15 @@ export const markSlot: CSSProperties = {
   display: "inline-flex",
 };
 
-/** The name a mark is replaced by once there is room to read one. */
+/**
+ * The name a mark is replaced by once there is room to read one.
+ *
+ * Carries its own `fontSize` rather than inheriting the pill's: Mantine's
+ * `Text` sets one itself and defaults to `md`, so a size left on the anchor
+ * around it is overridden and the name renders at 16px.
+ */
 export const wordmark: CSSProperties = {
+  fontSize: 11,
   fontWeight: 600,
   lineHeight: 1.2,
 };
