@@ -321,6 +321,26 @@ body {
   color: var(--ds-card-fg-muted);
 }
 
+/* ── Atmosphere app marks ── */
+/* Every mark in Aturi's catalog hardcodes width="24" height="24" on its own
+   <svg>, which beats any size set on the element wrapping it. These marks sit
+   beside the 14px copy and share icons in the profile URL bar, so the size has
+   to come from the wrapper instead. `preserveAspectRatio` then letterboxes the
+   one portrait mark (Anisota, a 516x741 viewBox) rather than squashing it. */
+.ds-atmosphere-mark {
+  /* Leaflet's mark knocks a shape out with `var(--bg-primary)`, its own token
+     and not one this app declares. Undefined, that fill collapses to
+     currentColor and the mark renders as a solid blob, so the knockout is
+     given the surface it sits on. Scoped here, not global: the name is
+     Leaflet's, not ours. */
+  --bg-primary: var(--ds-surface);
+}
+.ds-atmosphere-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* ── Icon buttons on a question card ── */
 .ds-delete-btn:hover,
 .ds-delete-btn:focus-visible {
