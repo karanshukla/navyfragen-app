@@ -17,8 +17,8 @@ export const link: CSSProperties = {
   background: surfaceGhost,
   border,
   borderRadius: radiusPill,
-  padding: "6px 12px",
-  fontSize: 12,
+  padding: "4px 10px",
+  fontSize: 11,
 };
 
 /** Holds a mark inside the same bubble a name gets, so the two swap cleanly. */
@@ -45,6 +45,6 @@ export const overflow: CSSProperties = {
  */
 export const mark: CSSProperties = {
   display: "inline-flex",
-  width: 16,
-  height: 16,
+  width: 14,
+  height: 14,
 };

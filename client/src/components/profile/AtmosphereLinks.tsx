@@ -28,7 +28,7 @@ interface AtmosphereLinksProps {
 function AppMark({ app }: { app: AtmosphereApp }) {
   return (
     <Box className="ds-atmosphere-mark" style={styles.mark}>
-      {app.icon ?? <IconWorld size={16} />}
+      {app.icon ?? <IconWorld size={14} />}
     </Box>
   );
 }
