@@ -106,6 +106,22 @@ export const en = {
     deleteMessageLabel: "Delete message",
     replyToThread: "↩ Reply to thread",
     reply: "↩ Reply",
+    openInTooltip: "Open this answer in another client",
+    openInLabel: "Open in another client",
+  },
+
+  openInPicker: {
+    title: "Open in…",
+    yourDefaultHeading: "Your default",
+    recommendedHeading: "Recommended",
+    allHeading: "All clients",
+    openInLabel: (client: string) => `Open in ${client}`,
+    copyLinkTooltip: "Copy this client's link",
+    copyLinkLabel: (client: string) => `Copy the ${client} link`,
+    linkCopied: "Link copied",
+    copyFailed: "Could not copy the link",
+    shareUniversalLink: "Share a universal link",
+    shareFailed: "Could not share the link",
   },
   replyComposer: {
     stillRenderingImage: "Still rendering your question image…",
@@ -186,6 +202,12 @@ export const en = {
     profanityFilter: "Profanity filter",
     profanityFilterDescription:
       "When on, incoming messages are screened against wordlists for English, Spanish, Portuguese, German and French - every message is checked against all five, whatever language you have the app set to. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
+    answerLinks: "Answer links",
+    answerLinksHelp: "Where the links to your posted answers point.",
+    defaultClient: "Default client",
+    defaultClientDescription:
+      "Which Atmosphere client your answers link to. Leave it empty to keep linking to Bluesky.",
+    defaultClientPlaceholder: "Bluesky",
   },
   publicProfilePage: {
     messageEmptyError: "Message cannot be empty.",

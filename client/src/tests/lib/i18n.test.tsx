@@ -247,6 +247,8 @@ describe("es catalog interpolations", () => {
     expect(es.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(es.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(es.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.openInPicker.openInLabel("Bluesky")).toBe("Abrir en Bluesky");
+    expect(es.openInPicker.copyLinkLabel("Bluesky")).toBe("Copiar el enlace de Bluesky");
   });
 });
 
@@ -278,6 +280,8 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(pt.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(pt.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(pt.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.openInPicker.openInLabel("Bluesky")).toBe("Abrir em Bluesky");
+    expect(pt.openInPicker.copyLinkLabel("Bluesky")).toBe("Copiar o link do Bluesky");
   });
 
   it("interpolates every function-valued entry in de", () => {
@@ -302,6 +306,8 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(de.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(de.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(de.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.openInPicker.openInLabel("Bluesky")).toBe("In Bluesky öffnen");
+    expect(de.openInPicker.copyLinkLabel("Bluesky")).toBe("Den Bluesky-Link kopieren");
   });
 
   it("interpolates every function-valued entry in fr", () => {
@@ -326,6 +332,8 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(fr.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(fr.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(fr.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.openInPicker.openInLabel("Bluesky")).toBe("Ouvrir dans Bluesky");
+    expect(fr.openInPicker.copyLinkLabel("Bluesky")).toBe("Copier le lien Bluesky");
   });
 });
 

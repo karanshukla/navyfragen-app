@@ -113,6 +113,22 @@ export const de = {
     deleteMessageLabel: "Nachricht löschen",
     replyToThread: "↩ Auf Thread antworten",
     reply: "↩ Antworten",
+    openInTooltip: "Diese Antwort in einem anderen Client öffnen",
+    openInLabel: "In einem anderen Client öffnen",
+  },
+
+  openInPicker: {
+    title: "Öffnen in…",
+    yourDefaultHeading: "Dein Standard",
+    recommendedHeading: "Empfohlen",
+    allHeading: "Alle Clients",
+    openInLabel: (client: string) => `In ${client} öffnen`,
+    copyLinkTooltip: "Link dieses Clients kopieren",
+    copyLinkLabel: (client: string) => `Den ${client}-Link kopieren`,
+    linkCopied: "Link kopiert",
+    copyFailed: "Link konnte nicht kopiert werden",
+    shareUniversalLink: "Universellen Link teilen",
+    shareFailed: "Link konnte nicht geteilt werden",
   },
   replyComposer: {
     stillRenderingImage: "Bild deiner Frage wird noch erstellt…",
@@ -194,6 +210,12 @@ export const de = {
     profanityFilter: "Schimpfwortfilter",
     profanityFilterDescription:
       "Wenn aktiviert, werden eingehende Nachrichten anhand von Wortlisten für Englisch, Spanisch, Portugiesisch, Deutsch und Französisch geprüft – jede Nachricht wird gegen alle fünf abgeglichen, unabhängig davon, welche Sprache du in der App eingestellt hast. Markierte Nachrichten werden stillschweigend verworfen – der Absender sieht eine Erfolgsmeldung, aber die Nachricht erreicht deinen Posteingang nie.",
+    answerLinks: "Antwortlinks",
+    answerLinksHelp: "Wohin die Links zu deinen veröffentlichten Antworten führen.",
+    defaultClient: "Standard-Client",
+    defaultClientDescription:
+      "Auf welchen Atmosphere-Client deine Antworten verlinken. Leer lassen, um weiterhin auf Bluesky zu verlinken.",
+    defaultClientPlaceholder: "Bluesky",
   },
   publicProfilePage: {
     messageEmptyError: "Die Nachricht darf nicht leer sein.",

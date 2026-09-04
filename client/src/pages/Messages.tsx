@@ -376,6 +376,8 @@ export default function Messages() {
               triggerHaptic();
               thread.togglePin(tid);
             }}
+            handle={session?.profile?.handle}
+            defaultClientId={userSettings?.defaultClient ?? null}
           />
         </>
       ) : (

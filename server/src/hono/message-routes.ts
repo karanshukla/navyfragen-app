@@ -554,6 +554,13 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     profileCardTheme: z.string().nullable().optional(),
     touchpointLocale: localeTag.nullable().optional(),
     uiLocale: localeTag.nullable().optional(),
+    // A waypoint id from Aturi's catalog, which only the client knows. Bounded
+    // rather than enumerated: the catalog gains clients without a deploy here,
+    // and an id this server has never heard of reads as "no preference" on the
+    // way back out.
+    // @see [settings-controller.test.ts](../tests/settings-controller.test.ts):
+    // "rejects an over-long default client id".
+    defaultClient: z.string().max(64).nullable().optional(),
   });
 
   app.post(
@@ -580,6 +587,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
           profileCardTheme: body.profileCardTheme,
           touchpointLocale: body.touchpointLocale,
           uiLocale: body.uiLocale,
+          defaultClient: body.defaultClient,
         });
         ctx.logger.info(
           { did: userSessionDid, updatedFields: Object.keys(body ?? {}) },

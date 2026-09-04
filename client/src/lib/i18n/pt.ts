@@ -112,6 +112,22 @@ export const pt = {
     deleteMessageLabel: "Excluir mensagem",
     replyToThread: "↩ Responder ao tópico",
     reply: "↩ Responder",
+    openInTooltip: "Abrir esta resposta em outro cliente",
+    openInLabel: "Abrir em outro cliente",
+  },
+
+  openInPicker: {
+    title: "Abrir em…",
+    yourDefaultHeading: "Seu padrão",
+    recommendedHeading: "Recomendados",
+    allHeading: "Todos os clientes",
+    openInLabel: (client: string) => `Abrir em ${client}`,
+    copyLinkTooltip: "Copiar o link deste cliente",
+    copyLinkLabel: (client: string) => `Copiar o link do ${client}`,
+    linkCopied: "Link copiado",
+    copyFailed: "Não foi possível copiar o link",
+    shareUniversalLink: "Compartilhar um link universal",
+    shareFailed: "Não foi possível compartilhar o link",
   },
   replyComposer: {
     stillRenderingImage: "Ainda gerando a imagem da sua pergunta…",
@@ -194,6 +210,12 @@ export const pt = {
     profanityFilter: "Filtro de palavrões",
     profanityFilterDescription:
       "Quando ativado, as mensagens recebidas são filtradas com listas de palavras em inglês, espanhol, português, alemão e francês - cada mensagem é verificada nos cinco idiomas, qualquer que seja o idioma configurado no app. Mensagens sinalizadas são descartadas silenciosamente - quem envia vê uma resposta de sucesso, mas a mensagem nunca chega à sua caixa de entrada.",
+    answerLinks: "Links das respostas",
+    answerLinksHelp: "Para onde apontam os links das suas respostas publicadas.",
+    defaultClient: "Cliente padrão",
+    defaultClientDescription:
+      "Para qual cliente do Atmosphere suas respostas apontam. Deixe vazio para continuar apontando para o Bluesky.",
+    defaultClientPlaceholder: "Bluesky",
   },
   publicProfilePage: {
     messageEmptyError: "A mensagem não pode estar vazia.",

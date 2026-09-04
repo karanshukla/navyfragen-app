@@ -99,6 +99,39 @@ describe("Customise page", () => {
     expect(screen.queryByText(/what sends a push/i)).toBeNull();
   });
 
+  it("picking a client fires updateSettings with only defaultClient", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    const mutate = mockMutation();
+    renderWithProviders(<Customise />);
+
+    const combobox = screen.getByRole("combobox", { name: en.customisePage.defaultClient });
+    fireEvent.click(combobox);
+    fireEvent.click(screen.getByRole("option", { name: "Deer" }));
+
+    expect(mutate).toHaveBeenCalledWith({ defaultClient: "deer" });
+  });
+
+  it("reselecting the chosen client unsets it rather than leaving it alone", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: "deer" }));
+    const mutate = mockMutation();
+    renderWithProviders(<Customise />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: en.customisePage.defaultClient }));
+    fireEvent.click(screen.getByRole("option", { name: "Deer" }));
+
+    expect(mutate).toHaveBeenCalledWith({ defaultClient: null });
+  });
+
+  it("shows the matching label when defaultClient is already set", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: "deer" }));
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(screen.getByRole("combobox", { name: en.customisePage.defaultClient })).toHaveValue(
+      "Deer"
+    );
+  });
+
   it("toggling the inbox switch fires updateSettings with only inboxEnabled", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());
     const mutate = mockMutation();

@@ -18,6 +18,7 @@ export interface UserSettings {
   profileCardTheme: string | null;
   touchpointLocale: string | null;
   uiLocale: string | null;
+  defaultClient: string | null;
   createdAt: string;
 }
 
@@ -32,6 +33,7 @@ const SETTINGS_DEFAULTS = {
   profileCardTheme: USE_APP_DEFAULT,
   touchpointLocale: USE_APP_DEFAULT,
   uiLocale: USE_APP_DEFAULT,
+  defaultClient: USE_APP_DEFAULT,
 } satisfies Omit<UserSettings, "did" | "createdAt">;
 
 /**
@@ -53,6 +55,7 @@ export interface UpdatableSettings {
   profileCardTheme?: string | null;
   touchpointLocale?: string | null;
   uiLocale?: string | null;
+  defaultClient?: string | null;
 }
 
 const BOOLEAN_SETTINGS = [

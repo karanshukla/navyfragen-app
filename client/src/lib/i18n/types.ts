@@ -107,6 +107,22 @@ export interface QuestionCardMessages {
   deleteMessageLabel: string;
   replyToThread: string;
   reply: string;
+  openInTooltip: string;
+  openInLabel: string;
+}
+
+export interface OpenInPickerMessages {
+  title: string;
+  yourDefaultHeading: string;
+  recommendedHeading: string;
+  allHeading: string;
+  openInLabel: (client: string) => string;
+  copyLinkTooltip: string;
+  copyLinkLabel: (client: string) => string;
+  linkCopied: string;
+  copyFailed: string;
+  shareUniversalLink: string;
+  shareFailed: string;
 }
 
 export interface ReplyComposerMessages {
@@ -215,6 +231,11 @@ export interface CustomisePageMessages {
   inboxDescription: string;
   profanityFilter: string;
   profanityFilterDescription: string;
+  answerLinks: string;
+  answerLinksHelp: string;
+  defaultClient: string;
+  defaultClientDescription: string;
+  defaultClientPlaceholder: string;
 }
 
 export interface PublicProfilePageMessages {
@@ -344,6 +365,7 @@ export interface Messages {
   inboxLinkCard: InboxLinkCardMessages;
   postingPreferences: PostingPreferencesMessages;
   questionCard: QuestionCardMessages;
+  openInPicker: OpenInPickerMessages;
   replyComposer: ReplyComposerMessages;
   imageThemePicker: ImageThemePickerMessages;
   themes: ThemesMessages;

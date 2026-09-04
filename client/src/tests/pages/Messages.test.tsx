@@ -1194,6 +1194,94 @@ describe("Messages page", () => {
     expect(() => fireEvent.click(threadAnchor)).not.toThrow();
   });
 
+  /** Pin msg-1 and give it an answered post, which is what the picker hangs off. */
+  function pinAnsweredMessage(uri: string) {
+    localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-1"));
+    localStorage.setItem(
+      "threadLinks-did:example:1",
+      JSON.stringify({
+        "msg-1": { uri, link: "https://bsky.app/profile/user/post/abc" },
+      })
+    );
+  }
+
+  it("links an answer to the client chosen on /customise", async () => {
+    pinAnsweredMessage("at://did:plc:xyz/app.bsky.feed.post/abc");
+    setupMocks();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default", defaultClient: "deer" },
+      isLoading: false,
+    } as any);
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /deer\.social/i })).toHaveAttribute(
+        "href",
+        "https://deer.social/profile/karan.bsky.social/post/abc"
+      );
+    });
+  });
+
+  it("leaves the answer on its Bluesky link when no client is chosen", async () => {
+    pinAnsweredMessage("at://did:plc:xyz/app.bsky.feed.post/abc");
+    setupMocks();
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /bsky\.app/i })).toHaveAttribute(
+        "href",
+        "https://bsky.app/profile/user/post/abc"
+      );
+    });
+  });
+
+  it("opens the client picker from an answered card", async () => {
+    pinAnsweredMessage("at://did:plc:xyz/app.bsky.feed.post/abc");
+    setupMocks();
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    const openIn = await screen.findByRole("button", { name: en.questionCard.openInLabel });
+    fireEvent.click(openIn);
+
+    expect(
+      await screen.findByRole("button", { name: en.openInPicker.openInLabel("Bluesky") })
+    ).toBeInTheDocument();
+  });
+
+  it("closes the client picker again", async () => {
+    pinAnsweredMessage("at://did:plc:xyz/app.bsky.feed.post/abc");
+    setupMocks();
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    fireEvent.click(await screen.findByRole("button", { name: en.questionCard.openInLabel }));
+    const bluesky = en.openInPicker.openInLabel("Bluesky");
+    await screen.findByRole("button", { name: bluesky });
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: bluesky })).not.toBeInTheDocument()
+    );
+  });
+
+  it("offers no picker when the answer's uri names no record", async () => {
+    pinAnsweredMessage("not-an-at-uri");
+    setupMocks();
+    renderWithProviders(<Messages />);
+    await act(async () => {});
+
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: /bsky\.app/i })).toBeInTheDocument()
+    );
+    expect(
+      screen.queryByRole("button", { name: en.questionCard.openInLabel })
+    ).not.toBeInTheDocument();
+  });
+
   it("setThreadLinks is called after pinned message response succeeds with a link", async () => {
     localStorage.setItem("threadRootTid-did:example:1", JSON.stringify("msg-1"));
     let capturedCallbacks: any;

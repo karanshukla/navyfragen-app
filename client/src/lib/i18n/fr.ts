@@ -113,6 +113,22 @@ export const fr = {
     deleteMessageLabel: "Supprimer le message",
     replyToThread: "↩ Répondre au fil",
     reply: "↩ Répondre",
+    openInTooltip: "Ouvrir cette réponse dans un autre client",
+    openInLabel: "Ouvrir dans un autre client",
+  },
+
+  openInPicker: {
+    title: "Ouvrir dans…",
+    yourDefaultHeading: "Ton client par défaut",
+    recommendedHeading: "Recommandés",
+    allHeading: "Tous les clients",
+    openInLabel: (client: string) => `Ouvrir dans ${client}`,
+    copyLinkTooltip: "Copier le lien de ce client",
+    copyLinkLabel: (client: string) => `Copier le lien ${client}`,
+    linkCopied: "Lien copié",
+    copyFailed: "Impossible de copier le lien",
+    shareUniversalLink: "Partager un lien universel",
+    shareFailed: "Impossible de partager le lien",
   },
   replyComposer: {
     stillRenderingImage: "Génération de l'image de ta question en cours…",
@@ -195,6 +211,12 @@ export const fr = {
     profanityFilter: "Filtre de grossièretés",
     profanityFilterDescription:
       "Une fois activé, les messages entrants sont filtrés à l'aide de listes de mots en anglais, espagnol, portugais, allemand et français - chaque message est vérifié dans les cinq langues, quelle que soit la langue que tu as choisie dans l'appli. Les messages signalés sont discrètement écartés - l'expéditeur voit une réponse de succès, mais le message n'atteint jamais ta boîte de réception.",
+    answerLinks: "Liens des réponses",
+    answerLinksHelp: "Vers où pointent les liens de tes réponses publiées.",
+    defaultClient: "Client par défaut",
+    defaultClientDescription:
+      "Vers quel client Atmosphere tes réponses pointent. Laisse vide pour continuer à pointer vers Bluesky.",
+    defaultClientPlaceholder: "Bluesky",
   },
   publicProfilePage: {
     messageEmptyError: "Le message ne peut pas être vide.",

@@ -63,6 +63,7 @@ export type UserSettings = {
   profileCardTheme: string | null;
   touchpointLocale: string | null;
   uiLocale: string | null;
+  defaultClient: string | null;
   createdAt: string;
 };
 
@@ -324,6 +325,15 @@ migrations["011"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.alterTable("user_settings").dropColumn("uiLocale").execute();
+  },
+};
+
+migrations["012"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").addColumn("defaultClient", "varchar").execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").dropColumn("defaultClient").execute();
   },
 };
 

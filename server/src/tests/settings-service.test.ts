@@ -92,6 +92,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       mockSelectBuilder.executeTakeFirst = async () => mockUserSettings;
@@ -185,6 +186,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -206,6 +208,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
@@ -234,6 +237,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -263,6 +267,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       executeTakeFirstQueue.push({
@@ -275,6 +280,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockUpdateBuilder.execute as any) = async () => ({});
@@ -306,6 +312,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -347,6 +354,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -376,6 +384,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -409,6 +418,7 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });

@@ -20,6 +20,7 @@ import { SettingsToggle } from "../components/SettingsToggle";
 import { uiLocaleOptions, useTranslations } from "../lib/i18n";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 import { useNumberFormat } from "../lib/useNumberFormat";
+import { postClientOptions } from "../lib/waypointClients";
 
 import * as styles from "./Customise.styles";
 
@@ -209,7 +210,6 @@ export default function Customise() {
       <SettingsSection
         eyebrow={messages.customisePage.messageIntake}
         help={messages.customisePage.messageIntakeHelp}
-        last
       >
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
@@ -244,6 +244,33 @@ export default function Customise() {
             )}
           >
             {settingsError ? loadError : null}
+          </SettingsCard>
+        </Grid.Col>
+      </SettingsSection>
+
+      <SettingsSection
+        eyebrow={messages.customisePage.answerLinks}
+        help={messages.customisePage.answerLinksHelp}
+        last
+      >
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.customisePage.defaultClient}
+            description={messages.customisePage.defaultClientDescription}
+          >
+            {field(
+              36,
+              <Select
+                data={postClientOptions}
+                value={userSettings?.defaultClient ?? null}
+                onChange={(value) => updateSettings.mutate({ defaultClient: value })}
+                placeholder={messages.customisePage.defaultClientPlaceholder}
+                disabled={busy}
+                searchable
+                clearable
+                aria-label={messages.customisePage.defaultClient}
+              />
+            )}
           </SettingsCard>
         </Grid.Col>
       </SettingsSection>
