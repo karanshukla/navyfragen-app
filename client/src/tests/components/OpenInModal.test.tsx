@@ -27,6 +27,14 @@ function sectionFor(heading: string): HTMLElement {
   return screen.getByText(heading).parentElement!;
 }
 
+describe("OpenInModal client list", () => {
+  it("leaves out a client that cannot render a Bluesky post", () => {
+    renderModal();
+    expect(screen.queryByRole("button", { name: copy.openInLabel("Tangled") })).toBeNull();
+    expect(screen.getByRole("button", { name: copy.openInLabel("Bluesky") })).toBeInTheDocument();
+  });
+});
+
 function setClipboard(writeText: (() => Promise<void>) | null) {
   Object.defineProperty(navigator, "clipboard", {
     value: writeText ? { writeText } : undefined,

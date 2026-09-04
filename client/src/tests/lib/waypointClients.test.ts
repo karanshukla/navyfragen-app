@@ -5,6 +5,7 @@ import {
   clientNameFor,
   clientUrlFor,
   postClientOptions,
+  postedAnswerLink,
 } from "../../lib/waypointClients";
 import { postWaypointTargetFor, profileWaypointTargetFor } from "../../lib/waypointTarget";
 
@@ -18,6 +19,20 @@ const profileTarget = profileWaypointTargetFor("alice.bsky.social", "did:plc:abc
 describe("postClientOptions", () => {
   it("offers Bluesky among the clients that can open a post", () => {
     expect(postClientOptions).toContainEqual({ value: "bluesky", label: "Bluesky" });
+  });
+
+  it("leaves out a client that renders another lexicon entirely", () => {
+    const ids = postClientOptions.map((option) => option.value);
+    // Tangled is a git forge (sh.tangled.), Leaflet a publication reader.
+    expect(ids).not.toContain("tangled");
+    expect(ids).not.toContain("leaflet");
+    expect(ids).not.toContain("grain");
+  });
+
+  it("keeps the generic record browsers, which render any collection", () => {
+    const ids = postClientOptions.map((option) => option.value);
+    expect(ids).toContain("pdsls");
+    expect(ids).toContain("atptools");
   });
 
   it("is sorted by name rather than by the catalog's recommendation order", () => {
@@ -59,6 +74,35 @@ describe("clientUrlFor", () => {
 
   it("returns null for a stored id that outlived its catalog entry", () => {
     expect(clientUrlFor(target, "a-client-that-shut-down")).toBeNull();
+  });
+
+  it("returns null for a client that cannot render a Bluesky post", () => {
+    expect(clientUrlFor(target, "tangled")).toBeNull();
+  });
+});
+
+const POSTED_LINK = "https://bsky.app/profile/alice.bsky.social/post/3k7qw";
+const POST_URI = "at://did:plc:abc123/app.bsky.feed.post/3k7qw";
+
+describe("postedAnswerLink", () => {
+  it("opens the answer in the chosen client", () => {
+    expect(postedAnswerLink(POST_URI, POSTED_LINK, "alice.bsky.social", "deer")).toBe(
+      "https://deer.social/profile/alice.bsky.social/post/3k7qw"
+    );
+  });
+
+  it("keeps the link the server posted when no client is chosen", () => {
+    expect(postedAnswerLink(POST_URI, POSTED_LINK, "alice.bsky.social", null)).toBe(POSTED_LINK);
+  });
+
+  it("keeps the link the server posted for a client that cannot render a post", () => {
+    expect(postedAnswerLink(POST_URI, POSTED_LINK, "alice.bsky.social", "tangled")).toBe(
+      POSTED_LINK
+    );
+  });
+
+  it("has nothing to offer for an answer that never became a post", () => {
+    expect(postedAnswerLink(undefined, undefined, "alice.bsky.social", "deer")).toBeUndefined();
   });
 });
 

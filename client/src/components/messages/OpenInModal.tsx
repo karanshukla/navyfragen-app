@@ -9,6 +9,7 @@ import {
 import { IconCopy, IconShare } from "@tabler/icons-react";
 
 import { useTranslations } from "../../lib/i18n";
+import { clientRendersTarget } from "../../lib/waypointClients";
 import type { OpenInPickerMessages } from "../../lib/i18n/types";
 import type { WaypointTarget } from "../../lib/waypointTarget";
 
@@ -72,8 +73,11 @@ export function OpenInModal({ opened, onClose, target, defaultClientId }: OpenIn
     notifications.show({ message: copy[notice.key], color: notice.color });
   };
 
-  const chosen = waypoints.filter((waypoint) => waypoint.id === defaultClientId);
-  const rest = waypoints.filter((waypoint) => waypoint.id !== defaultClientId);
+  // The catalog lists every client that can address a post-shaped AT URI, which
+  // is a wider set than the clients that render one.
+  const renderable = waypoints.filter((waypoint) => clientRendersTarget(waypoint.id, target));
+  const chosen = renderable.filter((waypoint) => waypoint.id === defaultClientId);
+  const rest = renderable.filter((waypoint) => waypoint.id !== defaultClientId);
   const sections = [
     { heading: copy.yourDefaultHeading, waypoints: chosen },
     { heading: copy.recommendedHeading, waypoints: rest.filter((w) => w.isRecommended) },

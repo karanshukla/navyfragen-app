@@ -13,7 +13,7 @@ import type { Message } from "../../api/messageService";
 import { formatTimestamp } from "../../lib/formatTimestamp";
 import { useLocale, useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
-import { clientUrlFor } from "../../lib/waypointClients";
+import { postedAnswerLink } from "../../lib/waypointClients";
 import { postWaypointTargetFor } from "../../lib/waypointTarget";
 import { highlightButton } from "../../styles/tokens";
 
@@ -75,9 +75,7 @@ export function QuestionCard({
   const locale = useLocale();
   const [pickerOpen, setPickerOpen] = useState(false);
   const target = postWaypointTargetFor(threadLink?.uri, handle);
-  const clientLink = target ? clientUrlFor(target, defaultClientId) : null;
-  /** The chosen client where there is one, else the Bluesky link as posted. */
-  const postLink = clientLink ?? threadLink?.link;
+  const postLink = postedAnswerLink(threadLink?.uri, threadLink?.link, handle, defaultClientId);
   const deleteRefusal = pinned
     ? {
         tooltip: messages.questionCard.cannotDeleteThreadRootTooltip,

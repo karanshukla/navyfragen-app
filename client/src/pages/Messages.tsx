@@ -18,6 +18,7 @@ import { ImageThemePicker } from "../components/messages/ImageThemePicker";
 import { InboxLinkCard } from "../components/messages/InboxLinkCard";
 import { PostingPreferences } from "../components/messages/PostingPreferences";
 import { QuestionGrid } from "../components/messages/QuestionGrid";
+import { postedAnswerLink } from "../lib/waypointClients";
 import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useTranslations } from "../lib/i18n";
 import { getTouchpointTranslations } from "../lib/touchpointTranslations";
@@ -204,7 +205,17 @@ export default function Messages() {
             title: replyTo
               ? messages.messagesPage.threadReplyTitle
               : messages.messagesPage.responseSentTitle,
-            message: <PostedNotice link={data.link} inThread={!!replyTo} />,
+            message: (
+              <PostedNotice
+                link={postedAnswerLink(
+                  data.uri,
+                  data.link,
+                  session?.profile?.handle,
+                  userSettings?.defaultClient ?? null
+                )}
+                inThread={!!replyTo}
+              />
+            ),
             color: "green",
             autoClose: 8000,
           });

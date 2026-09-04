@@ -811,6 +811,44 @@ describe("Messages page", () => {
     });
   });
 
+  it("points the posted-answer toast at the client the user picked", async () => {
+    let capturedCallbacks: any;
+    const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
+      capturedCallbacks = callbacks;
+    });
+    setupMocks();
+    mockUseUserSettings.mockReturnValue({
+      data: { pdsSyncEnabled: false, imageTheme: "default", defaultClient: "deer" },
+      isLoading: false,
+    } as any);
+    mockUseRespondToMessage.mockReturnValue({
+      mutate: mockRespondMutate,
+      isPending: false,
+    } as any);
+    renderWithProviders(<Messages />);
+
+    const replyButtons = screen.getAllByRole("button", { name: isReplyTriggerName });
+    fireEvent.click(replyButtons.find((b) => b.textContent?.includes("↩"))!);
+    await waitFor(() => screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }));
+    fireEvent.change(screen.getByRole("textbox", { name: en.replyComposer.responseAriaLabel }), {
+      target: { value: "My answer!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: en.replyComposer.reply }));
+    await waitFor(() => expect(mockRespondMutate).toHaveBeenCalled());
+
+    act(() => {
+      capturedCallbacks.onSuccess({
+        uri: "at://did:plc:abc123/app.bsky.feed.post/3k7qw",
+        link: "https://bsky.app/profile/user/post/123",
+      });
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByText("https://deer.social/profile/karan.bsky.social/post/3k7qw")
+      ).toBeInTheDocument();
+    });
+  });
+
   it("handleSendResponse onSuccess without data.link shows plain success message", async () => {
     let capturedCallbacks: any;
     const mockRespondMutate = vi.fn((_data: any, callbacks: any) => {
@@ -1190,8 +1228,12 @@ describe("Messages page", () => {
       expect(screen.getByRole("link", { name: /bsky\.app/i })).toBeInTheDocument();
     });
 
+    // Asserted rather than clicked: happy-dom follows a real https href, fetching
+    // bsky.app and its script bundles, and the async continuation has outlived
+    // the worker and taken a whole green run down with it.
     const threadAnchor = screen.getByRole("link", { name: /bsky\.app/i });
-    expect(() => fireEvent.click(threadAnchor)).not.toThrow();
+    expect(threadAnchor).toHaveAttribute("href", "https://bsky.app/profile/user/post/abc");
+    expect(threadAnchor).toHaveAttribute("target", "_blank");
   });
 
   /** Pin msg-1 and give it an answered post, which is what the picker hangs off. */
