@@ -167,8 +167,12 @@ const renderToken = (
     case "escape":
       return token.escaped;
 
+    // `raw`, not `content`: @atcute/bluesky-richtext-parser truncates a text
+    // token's `content` at the first colon and leaves the remainder only on
+    // `raw`, so "my site: example.com" renders as "my site". `content` differs
+    // from `raw` nowhere else — an escape is its own token, handled above.
     case "text":
-      return renderTextWithAutolinks(token.content, key);
+      return renderTextWithAutolinks(token.raw, key);
 
     default:
       return token.raw;
