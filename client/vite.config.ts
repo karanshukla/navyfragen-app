@@ -75,10 +75,11 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, "**/*.e2e.test.ts"],
     coverage: {
       // istanbul, not v8: @vitest/coverage-v8 drives node:inspector's Profiler
-      // domain, which Bun does not implement, so under the Bun runtime every
-      // worker throws "Coverage APIs are not supported" and the run reports 0%.
-      // istanbul instruments the source at transform time instead and needs no
-      // V8 inspector, which is what lets the client drop Node entirely.
+      // domain, which Bun did not implement before 1.4, so every worker threw
+      // "Coverage APIs are not supported" and the run reported 0% while still
+      // exiting green. Bun 1.4 implements it, so v8 is viable again; istanbul
+      // stays because it needs no V8 inspector at all and the swap would buy
+      // nothing at 100% on every metric.
       // Unreachable code is suppressed with `/* istanbul ignore ... */` markers
       // (istanbul does not honor the `/* v8 ignore */` form) — see
       // docs/testing-notes.md.

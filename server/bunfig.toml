@@ -14,14 +14,17 @@ bun = true
 # `--coverage` flag on `test:coverage` enables it here.
 #
 # Three accepted limitations of Bun's coverage (verified on 1.3.14, re-checked on
-# 1.4 and unchanged; documented in docs/testing-notes.md "Coverage under Bun"):
-#   1. It does NOT honor `/* v8 ignore */` source annotations — per-file
-#      exclusion is done via `coveragePathIgnorePatterns` below.
+# 1.4.1 and unchanged; documented in docs/testing-notes.md "Coverage under Bun"):
+#   1. It honors NO coverage-ignore annotation: not `/* v8 ignore */`, not
+#      `/* istanbul ignore */`, not `/* c8 ignore */`. Per-file exclusion is done
+#      via `coveragePathIgnorePatterns` below.
 #   2. Its lcov carries line + function coverage only (no branch data).
-#   3. `coverageThreshold` is unusable, which is why none is set here. Any value
-#      makes the run exit 1 for coverage below 100% regardless of the threshold
-#      (verified on 1.3.14 at threshold=0 with 98%, and on 1.4.0 at threshold
-#      =0.97 with 99.59%). Setting one forced `continue-on-error` on the CI step,
+#   3. `coverageThreshold` is enforced PER FILE, not on the total, which is why
+#      none is set here: a run whose aggregate clears the bar still exits 1 if any
+#      single file is under it, and that is what threshold=0.97 against an
+#      aggregate of 99.59% was. (This was previously recorded as a Bun bug that
+#      exits 1 below 100% whatever the value. It is not; the behaviour is the same
+#      on 1.3.14 and 1.4.1.) Setting one forced `continue-on-error` on the CI step,
 #      which in turn swallowed *test* failures — #380 shipped a red server suite
 #      green that way. With no threshold, `bun test --coverage` exits on test
 #      results alone, so the CI step gates again. The coverage bar is Coveralls.

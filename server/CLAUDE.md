@@ -92,9 +92,10 @@ bun run test:coverage   # run from server/
 ```
 
 97% lines, gated by Coveralls rather than by `bunfig.toml`: Bun's own
-`coverageThreshold` exits 1 below 100% whatever it is set to, so none is set (setting
-one previously forced a `continue-on-error` that swallowed test failures — see
-`docs/testing-notes.md`). Bun's lcov has no branch data and honors no ignore markers,
+`coverageThreshold` is enforced per file rather than on the total, so a run whose
+aggregate clears the bar still exits 1 on any single file under it, and none is set
+(setting one previously forced a `continue-on-error` that swallowed test failures —
+see `docs/testing-notes.md`). Bun's lcov has no branch data and honors no ignore markers,
 so per-file exclusion goes in `coveragePathIgnorePatterns` in `bunfig.toml`. Check that
 file for the current list and per-file rationale; it is the source of truth and can
 drift ahead of this note. Adding an exclusion requires an entry in `docs/testing-notes.md`
