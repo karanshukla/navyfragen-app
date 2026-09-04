@@ -11,7 +11,26 @@ import { radiusPill, surfaceGhost, textDimmed } from "../../styles/tokens";
  * different brands being tellable apart at this size.
  */
 export const link: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
   color: textDimmed,
+  background: surfaceGhost,
+  borderRadius: radiusPill,
+  padding: "4px 6px",
+};
+
+/** Holds a mark at the padding a name gets, so the two swap without a jump. */
+export const markSlot: CSSProperties = {
+  display: "inline-flex",
+  padding: "0 2px",
+};
+
+/** The name a mark is replaced by once there is room to read one. */
+export const wordmark: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  lineHeight: 1.2,
+  padding: "0 2px",
 };
 
 export const overflow: CSSProperties = {

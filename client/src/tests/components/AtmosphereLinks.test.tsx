@@ -55,6 +55,22 @@ describe("AtmosphereLinks", () => {
     ).toBeInTheDocument();
   });
 
+  it("names each app for the width that can read a name", () => {
+    renderWithProviders(<AtmosphereLinks apps={withMarks([link("tangled", "Tangled")])} />);
+
+    expect(screen.getByText("Tangled")).toBeInTheDocument();
+  });
+
+  it("carries the mark alongside the name, for the width that cannot", () => {
+    // Both ship every time and CSS picks one, so the swap costs no JavaScript
+    // and cannot flash on a page this public.
+    const { container } = renderWithProviders(
+      <AtmosphereLinks apps={withMarks([link("tangled", "Tangled")])} />
+    );
+
+    expect(container.querySelector(".ds-atmosphere-mark")).toBeInTheDocument();
+  });
+
   it("shows four apps inline without an overflow menu", () => {
     renderWithProviders(<AtmosphereLinks apps={appsFor(4)} />);
 
