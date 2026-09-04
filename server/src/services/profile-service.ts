@@ -3,6 +3,8 @@ import { AtpAgent, Agent } from "@atproto/api";
 import { Logger } from "pino";
 
 import type { Database } from "../database/db";
+import type { AtmosphereAppLink, AtmosphereService } from "./atmosphere-service";
+import { appLinksFor } from "./atmosphere-service";
 import { fromDbBoolean } from "../lib/db-boolean";
 import { withRetry } from "../lib/retry";
 
@@ -12,6 +14,10 @@ export interface ProfileResolver {
 }
 
 const INBOX_OPEN_BY_DEFAULT = true;
+const ATMOSPHERE_LINKS_ON_BY_DEFAULT = true;
+
+/** What an account shows when it has asked not to advertise its other apps. */
+const NO_ATMOSPHERE_APPS: AtmosphereAppLink[] = [];
 const MAX_SOCIAL_GRAPH_PAGES = 5;
 
 type FriendEntry = { did: string; handle: string; displayName?: string; avatar?: string };
@@ -74,7 +80,8 @@ export class ProfileService {
   constructor(
     private db: Database,
     private resolver: ProfileResolver,
-    private logger: Logger
+    private logger: Logger,
+    private atmosphere: AtmosphereService
   ) {
     this.agent = new AtpAgent({ service: "https://api.bsky.app" });
   }
@@ -83,7 +90,8 @@ export class ProfileService {
   /**
    * The settings a visitor is allowed to see. `uiLocale`, `defaultClient` and
    * `openProfilesInApp` are the viewer's own business, not the profile owner's,
-   * so none of them is selected here.
+   * so none of them is selected here. `atmosphereLinksEnabled` is the mirror
+   * case: it governs what this account shows every visitor, so it belongs here.
    *
    * @see [profile-service.test.ts](../tests/profile-service.test.ts): "never
    * selects a setting that is private to its owner".
@@ -91,7 +99,13 @@ export class ProfileService {
   private readPubliclyVisibleSettings(did: string) {
     return this.db
       .selectFrom("user_settings")
-      .select(["inboxEnabled", "customPrompt", "profileCardTheme", "touchpointLocale"])
+      .select([
+        "inboxEnabled",
+        "customPrompt",
+        "profileCardTheme",
+        "touchpointLocale",
+        "atmosphereLinksEnabled",
+      ])
       .where("did", "=", did)
       .executeTakeFirst();
   }
@@ -103,19 +117,26 @@ export class ProfileService {
     customPrompt: string | null;
     profileCardTheme: string | null;
     touchpointLocale: string | null;
+    atmosphereApps: AtmosphereAppLink[];
   }> {
     let profileResponse: Awaited<ReturnType<typeof this.agent.getProfile>>;
     let exists: boolean;
     let publicSettings: Awaited<ReturnType<typeof this.readPubliclyVisibleSettings>>;
+    let atmosphereApps: string[];
 
     try {
-      [profileResponse, exists, publicSettings] = await Promise.all([
+      // The repo scan runs alongside the settings read rather than after it, so
+      // an opted-in account (the default, and so nearly all of them) does not
+      // pay a database round trip before its PDS is even dialled. An opted-out
+      // account discards the answer below.
+      [profileResponse, exists, publicSettings, atmosphereApps] = await Promise.all([
         withRetry(() => this.agent.getProfile({ actor: did }), this.logger, {
           did,
           op: "getProfile",
         }),
         this.checkUserExists(did),
         this.readPubliclyVisibleSettings(did),
+        this.atmosphere.presenceFor(did),
       ]);
     } catch (err) {
       this.logger.error({ err, did }, "Failed to fetch profile by DID");
@@ -133,6 +154,12 @@ export class ProfileService {
       customPrompt: publicSettings?.customPrompt ?? null,
       profileCardTheme: publicSettings?.profileCardTheme ?? null,
       touchpointLocale: publicSettings?.touchpointLocale ?? null,
+      atmosphereApps: fromDbBoolean(
+        publicSettings?.atmosphereLinksEnabled,
+        ATMOSPHERE_LINKS_ON_BY_DEFAULT
+      )
+        ? appLinksFor(atmosphereApps, profileResponse.data.handle, did)
+        : NO_ATMOSPHERE_APPS,
     };
   }
 

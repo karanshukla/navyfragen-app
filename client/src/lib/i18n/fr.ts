@@ -219,6 +219,9 @@ export const fr = {
     openProfilesInApp: (appName) => `Ouvrir les profils dans ${appName}`,
     openProfilesInAppDescription: (appName) =>
       `Quand c'est activé, une @mention dans une bio ouvre le profil ${appName} de cette personne. Sinon, elle s'ouvre dans ton client préféré.`,
+    atmosphereLinksSetting: "Afficher tes autres applis",
+    atmosphereLinksSettingDescription:
+      "Quand c'est activé, ton profil renvoie vers les autres applis Atmosphere depuis lesquelles tu publies, lues depuis ton PDS. Sinon, il n'en affiche aucune.",
   },
   publicProfilePage: {
     messageEmptyError: "Le message ne peut pas être vide.",
@@ -252,6 +255,8 @@ export const fr = {
     shareFailedMessage: "Impossible de partager le lien.",
     copyProfileLinkAriaLabel: "Copier le lien du profil",
     shareProfileLinkAriaLabel: "Partager le lien du profil",
+    atmosphereLinksLabel: "Aussi sur",
+    moreAtmosphereApps: (count) => `${count} autres applis`,
   },
   loginPage: {
     handleRequired: "Le nom d'utilisateur est requis",

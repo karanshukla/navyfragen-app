@@ -210,6 +210,9 @@ export const en = {
     openProfilesInApp: (appName) => `Open profiles in ${appName}`,
     openProfilesInAppDescription: (appName) =>
       `When on, an @mention in someone's bio opens their ${appName} profile. When off, it opens in your preferred client.`,
+    atmosphereLinksSetting: "Show your other apps",
+    atmosphereLinksSettingDescription:
+      "When on, your profile links the other Atmosphere apps you publish from, read from your PDS. When off, it shows none.",
   },
   publicProfilePage: {
     messageEmptyError: "Message cannot be empty.",
@@ -242,6 +245,8 @@ export const en = {
     shareFailedMessage: "Could not share link.",
     copyProfileLinkAriaLabel: "Copy profile link",
     shareProfileLinkAriaLabel: "Share profile link",
+    atmosphereLinksLabel: "Also on",
+    moreAtmosphereApps: (count) => `${count} more apps`,
   },
   loginPage: {
     handleRequired: "Handle is required",

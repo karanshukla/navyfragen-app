@@ -6,6 +6,7 @@ import { useParams } from "react-router";
 import { useSendMessage } from "../api/messageService";
 import { useResolveHandle, usePublicProfile } from "../api/profileService";
 import { useUserSettings } from "../api/settingsService";
+import { withMarks } from "../lib/atmosphereApps";
 import { dbBoolean } from "../lib/dbBoolean";
 import { clientDestinationFor } from "../lib/waypointClients";
 import { profileWaypointTargetFor } from "../lib/waypointTarget";
@@ -156,6 +157,7 @@ export default function PublicProfile() {
         handle={profile.handle!}
         url={profileUrl}
         shareTitle={t.shareTitle(ownerName)}
+        atmosphereApps={withMarks(profileData?.atmosphereApps ?? [])}
       />
 
       <ProfileCard

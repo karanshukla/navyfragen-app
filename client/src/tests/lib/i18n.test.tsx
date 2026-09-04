@@ -254,6 +254,7 @@ describe("es catalog interpolations", () => {
       "Abrir los perfiles en Navyfragen"
     );
     expect(es.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.profileUrlBar.moreAtmosphereApps(2)).toBe("2 aplicaciones más");
   });
 });
 
@@ -290,6 +291,7 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(pt.profileCard.viewOn("Tangled")).toBe("Ver no Tangled");
     expect(pt.customisePage.openProfilesInApp("Navyfragen")).toBe("Abrir os perfis no Navyfragen");
     expect(pt.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.profileUrlBar.moreAtmosphereApps(2)).toBe("2 outros apps");
   });
 
   it("interpolates every function-valued entry in de", () => {
@@ -319,6 +321,7 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(de.profileCard.viewOn("Tangled")).toBe("Auf Tangled ansehen");
     expect(de.customisePage.openProfilesInApp("Navyfragen")).toBe("Profile in Navyfragen öffnen");
     expect(de.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.profileUrlBar.moreAtmosphereApps(2)).toBe("2 weitere Apps");
   });
 
   it("interpolates every function-valued entry in fr", () => {
@@ -350,6 +353,7 @@ describe("pt/de/fr catalog interpolations", () => {
       "Ouvrir les profils dans Navyfragen"
     );
     expect(fr.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.profileUrlBar.moreAtmosphereApps(2)).toBe("2 autres applis");
   });
 });
 

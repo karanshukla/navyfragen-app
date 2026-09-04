@@ -4,6 +4,8 @@ import { STORAGE_PREFIX } from "../lib/contracts";
 import { readStoredJson, writeStoredJson, removeStored } from "../lib/safeLocalStorage";
 
 import { apiClient } from "./apiClient";
+import type { AtmosphereAppLink } from "../lib/atmosphereApps";
+
 import type { AskCardCustomisation } from "./settingsService";
 
 /** @see {@link https://docs.bsky.app/docs/api/app-bsky-actor-get-profile} */
@@ -18,6 +20,8 @@ export interface ProfileResponse extends Partial<AskCardCustomisation> {
   } | null;
   exists: boolean;
   inboxEnabled?: boolean; // true unless the owner explicitly closed their inbox
+  /** The other Atmosphere apps this account publishes to, named and addressed. */
+  atmosphereApps?: AtmosphereAppLink[];
 }
 
 export interface UserExistsResponse {

@@ -32,6 +32,11 @@ export interface UserSettings extends AskCardCustomisation {
    * rather than in `defaultClient`. Private, like `uiLocale`.
    */
   openProfilesInApp: number | boolean;
+  /**
+   * Whether this account's profile advertises the other Atmosphere apps it
+   * publishes to. Unlike the two above, this one is the owner's and is public.
+   */
+  atmosphereLinksEnabled: number | boolean;
   createdAt: string;
 }
 

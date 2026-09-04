@@ -218,6 +218,9 @@ export const pt = {
     openProfilesInApp: (appName) => `Abrir os perfis no ${appName}`,
     openProfilesInAppDescription: (appName) =>
       `Quando ativo, uma @menção numa bio abre o perfil dessa pessoa no ${appName}. Quando não, ela abre no seu cliente preferido.`,
+    atmosphereLinksSetting: "Mostrar os seus outros apps",
+    atmosphereLinksSettingDescription:
+      "Quando ativo, o seu perfil liga aos outros apps do Atmosphere onde você publica, lidos a partir do seu PDS. Quando não, não mostra nenhum.",
   },
   publicProfilePage: {
     messageEmptyError: "A mensagem não pode estar vazia.",
@@ -251,6 +254,8 @@ export const pt = {
     shareFailedMessage: "Não foi possível compartilhar o link.",
     copyProfileLinkAriaLabel: "Copiar link do perfil",
     shareProfileLinkAriaLabel: "Compartilhar link do perfil",
+    atmosphereLinksLabel: "Também em",
+    moreAtmosphereApps: (count) => `${count} outros apps`,
   },
   loginPage: {
     handleRequired: "O usuário é obrigatório",

@@ -69,6 +69,11 @@ describe("ProfileService", () => {
     ),
   };
 
+  // Presence is its own service with its own suite; here it is a seam, so the
+  // profile payload can be asserted against a known list.
+  const mockPresenceFor = mock(async () => ["tangled", "leaflet"]);
+  const mockAtmosphere = { presenceFor: mockPresenceFor };
+
   let profileService: ProfileService;
 
   beforeEach(() => {
@@ -82,6 +87,8 @@ describe("ProfileService", () => {
     mockGetProfile.mockClear();
     mockResolver.resolveDidToHandle.mockClear();
     mockResolver.resolveHandleToDid.mockClear();
+    mockPresenceFor.mockClear();
+    mockPresenceFor.mockImplementation(async () => ["tangled", "leaflet"]);
 
     // Reset both select builders' executeTakeFirst to the unset default.
     mockSelectBuilder.executeTakeFirst = async () => undefined;
@@ -91,7 +98,8 @@ describe("ProfileService", () => {
     profileService = new ProfileService(
       mockDb as unknown as Kysely<any>,
       mockResolver as ProfileResolver,
-      mockLogger as any
+      mockLogger as any,
+      mockAtmosphere as any
     );
 
     // Override the AtpAgent with our mock
@@ -245,6 +253,71 @@ describe("ProfileService", () => {
       assert.ok(!columns.includes("defaultClient"));
       assert.ok(!columns.includes("uiLocale"));
       assert.ok(!columns.includes("openProfilesInApp"));
+    });
+
+    it("selects the setting that governs what every visitor sees", async () => {
+      // Arrange — the mirror of the test above: atmosphereLinksEnabled is the
+      // owner's public choice, so the public payload has to read it.
+      const testDid = "did:test:public-settings";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => undefined;
+
+      // Act
+      await profileService.getPublicProfile(testDid);
+
+      // Assert
+      const columns = mockSettingsSelectBuilder.select.mock.calls.at(-1)?.[0] ?? [];
+      assert.ok(columns.includes("atmosphereLinksEnabled"));
+    });
+
+    it("returns the account's Atmosphere apps when it has not opted out", async () => {
+      // Arrange
+      const testDid = "did:test:atmosphere-on";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => ({
+        atmosphereLinksEnabled: 1,
+      });
+
+      // Act
+      const result = await profileService.getPublicProfile(testDid);
+
+      // Assert
+      assert.deepStrictEqual(
+        result.atmosphereApps.map((app) => app.id),
+        ["tangled", "leaflet"]
+      );
+    });
+
+    it("returns no Atmosphere apps for an account that opted out", async () => {
+      // Arrange
+      const testDid = "did:test:atmosphere-off";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => ({
+        atmosphereLinksEnabled: 0,
+      });
+
+      // Act
+      const result = await profileService.getPublicProfile(testDid);
+
+      // Assert
+      assert.deepStrictEqual(result.atmosphereApps, []);
+    });
+
+    it("shows Atmosphere apps for an account with no settings row at all", async () => {
+      // Arrange — the column defaults to on, so an account that never visited
+      // /customise is opted in.
+      const testDid = "did:test:atmosphere-default";
+      mockSelectBuilder.executeTakeFirst = async () => ({ did: testDid });
+      mockSettingsSelectBuilder.executeTakeFirst = async () => undefined;
+
+      // Act
+      const result = await profileService.getPublicProfile(testDid);
+
+      // Assert
+      assert.deepStrictEqual(
+        result.atmosphereApps.map((app) => app.id),
+        ["tangled", "leaflet"]
+      );
     });
 
     it("should throw 'Profile not found' when Bluesky returns success: false", async () => {

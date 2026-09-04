@@ -10,6 +10,7 @@ import { APP_NAME } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
 import { getTouchpointTranslations } from "../../lib/touchpointTranslations";
 import PublicProfile from "../../pages/PublicProfile";
+import type { AtmosphereAppLink } from "../../lib/atmosphereApps";
 import { renderWithProviders } from "../testUtils";
 
 const t = getTouchpointTranslations("en");
@@ -47,7 +48,7 @@ const mockUseParams = vi.mocked(reactRouterDom.useParams);
 
 const TEST_DID = "did:example:karan";
 
-function setupProfile() {
+function setupProfile(atmosphereApps: AtmosphereAppLink[] = []) {
   mockUseResolveHandle.mockReturnValue({
     data: { did: TEST_DID },
     isLoading: false,
@@ -56,6 +57,7 @@ function setupProfile() {
   mockUsePublicProfile.mockReturnValue({
     data: {
       exists: true,
+      atmosphereApps,
       profile: {
         did: TEST_DID,
         handle: "karan.bsky.social",
@@ -900,6 +902,27 @@ describe("PublicProfile page", () => {
     const askCard = container.querySelector("[style*='ds-grad-ember']") as HTMLElement | null;
     expect(askCard).not.toBeNull();
   });
+  it("links the other Atmosphere apps the owner publishes to", () => {
+    setupProfile([
+      { id: "tangled", name: "Tangled", url: "https://tangled.org/karan.bsky.social" },
+    ]);
+    renderWithProviders(<PublicProfile />);
+
+    expect(screen.getByRole("link", { name: en.profileCard.viewOn("Tangled") })).toHaveAttribute(
+      "href",
+      "https://tangled.org/karan.bsky.social"
+    );
+  });
+
+  it("shows no Atmosphere row for an owner who opted out", () => {
+    // The server sends an empty list for an opted-out account, which is the
+    // same shape as an account on nothing else — both render no row at all.
+    setupProfile([]);
+    renderWithProviders(<PublicProfile />);
+
+    expect(screen.queryByLabelText(en.profileUrlBar.atmosphereLinksLabel)).not.toBeInTheDocument();
+  });
+
   it("points the profile link at the client the viewer picked, not the owner's", () => {
     setupProfile();
     mockUseUserSettings.mockReturnValue({ data: { defaultClient: "deer" } } as any);

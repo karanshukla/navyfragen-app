@@ -218,6 +218,9 @@ export const de = {
     openProfilesInApp: (appName) => `Profile in ${appName} öffnen`,
     openProfilesInAppDescription: (appName) =>
       `Wenn aktiv, öffnet eine @Erwähnung in einer Bio das ${appName}-Profil dieser Person. Wenn nicht, öffnet sie sich in deinem bevorzugten Client.`,
+    atmosphereLinksSetting: "Deine anderen Apps zeigen",
+    atmosphereLinksSettingDescription:
+      "Wenn aktiv, verlinkt dein Profil die anderen Atmosphere-Apps, aus denen du veröffentlichst, ausgelesen aus deinem PDS. Wenn nicht, zeigt es keine.",
   },
   publicProfilePage: {
     messageEmptyError: "Die Nachricht darf nicht leer sein.",
@@ -252,6 +255,8 @@ export const de = {
     shareFailedMessage: "Der Link konnte nicht geteilt werden.",
     copyProfileLinkAriaLabel: "Profillink kopieren",
     shareProfileLinkAriaLabel: "Profillink teilen",
+    atmosphereLinksLabel: "Auch auf",
+    moreAtmosphereApps: (count) => `${count} weitere Apps`,
   },
   loginPage: {
     handleRequired: "Nutzername ist erforderlich",

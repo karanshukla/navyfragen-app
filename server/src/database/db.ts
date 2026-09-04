@@ -65,6 +65,7 @@ export type UserSettings = {
   uiLocale: string | null;
   defaultClient: string | null;
   openProfilesInApp: number;
+  atmosphereLinksEnabled: number;
   createdAt: string;
 };
 
@@ -349,6 +350,22 @@ migrations["013"] = {
   },
   async down(db: Kysely<unknown>) {
     await db.schema.alterTable("user_settings").dropColumn("openProfilesInApp").execute();
+  },
+};
+
+// Default-on like 013, and for the same reason: the column has to read as "on"
+// for every row that predates it. Unlike 013 this one is the profile owner's
+// setting rather than the viewer's, so it is public — see
+// `profile-service.ts`'s `readPubliclyVisibleSettings`.
+migrations["014"] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable("user_settings")
+      .addColumn("atmosphereLinksEnabled", "integer", (col) => col.defaultTo(1))
+      .execute();
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.alterTable("user_settings").dropColumn("atmosphereLinksEnabled").execute();
   },
 };
 

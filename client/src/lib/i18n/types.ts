@@ -237,6 +237,8 @@ export interface CustomisePageMessages {
   defaultClientDescription: string;
   openProfilesInApp: (appName: string) => string;
   openProfilesInAppDescription: (appName: string) => string;
+  atmosphereLinksSetting: string;
+  atmosphereLinksSettingDescription: string;
 }
 
 export interface PublicProfilePageMessages {
@@ -272,6 +274,8 @@ export interface ProfileUrlBarMessages {
   shareFailedMessage: string;
   copyProfileLinkAriaLabel: string;
   shareProfileLinkAriaLabel: string;
+  atmosphereLinksLabel: string;
+  moreAtmosphereApps: (count: number) => string;
 }
 
 export interface LoginPageMessages {

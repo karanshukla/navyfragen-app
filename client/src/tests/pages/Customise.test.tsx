@@ -42,6 +42,7 @@ function mockSettings(overrides: Record<string, unknown> = {}) {
       uiLocale: null,
       defaultClient: null,
       openProfilesInApp: 1,
+      atmosphereLinksEnabled: 1,
       createdAt: "2025-01-01T00:00:00.000Z",
       ...overrides,
     },
@@ -155,6 +156,29 @@ describe("Customise page", () => {
 
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate).toHaveBeenCalledWith({ openProfilesInApp: false });
+  });
+
+  it("toggling the Atmosphere links switch fires updateSettings with only that key", () => {
+    mockUseUserSettings.mockReturnValue(mockSettings());
+    const mutate = mockMutation();
+    renderWithProviders(<Customise />);
+
+    fireEvent.click(screen.getByRole("switch", { name: en.customisePage.atmosphereLinksSetting }));
+
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate).toHaveBeenCalledWith({ atmosphereLinksEnabled: false });
+  });
+
+  it("shows the Atmosphere links switch on for an account with no settings row", () => {
+    // Migration 014 backfills 1, so an account that never opened /customise is
+    // opted in and the switch has to say so.
+    mockUseUserSettings.mockReturnValue({ data: undefined, isLoading: false } as any);
+    mockMutation();
+    renderWithProviders(<Customise />);
+
+    expect(
+      screen.getByRole("switch", { name: en.customisePage.atmosphereLinksSetting })
+    ).toBeChecked();
   });
 
   it("shows the matching label when defaultClient is already set", () => {

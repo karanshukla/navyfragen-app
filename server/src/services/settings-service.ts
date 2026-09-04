@@ -20,6 +20,7 @@ export interface UserSettings {
   uiLocale: string | null;
   defaultClient: string | null;
   openProfilesInApp: number;
+  atmosphereLinksEnabled: number;
   createdAt: string;
 }
 
@@ -36,6 +37,7 @@ const SETTINGS_DEFAULTS = {
   uiLocale: USE_APP_DEFAULT,
   defaultClient: USE_APP_DEFAULT,
   openProfilesInApp: toDbBoolean(true),
+  atmosphereLinksEnabled: toDbBoolean(true),
 } satisfies Omit<UserSettings, "did" | "createdAt">;
 
 /**
@@ -59,6 +61,7 @@ export interface UpdatableSettings {
   uiLocale?: string | null;
   defaultClient?: string | null;
   openProfilesInApp?: boolean;
+  atmosphereLinksEnabled?: boolean;
 }
 
 const BOOLEAN_SETTINGS = [
@@ -66,6 +69,7 @@ const BOOLEAN_SETTINGS = [
   "inboxEnabled",
   "profanityFilterEnabled",
   "openProfilesInApp",
+  "atmosphereLinksEnabled",
 ] as const satisfies readonly (keyof UpdatableSettings)[];
 
 /**

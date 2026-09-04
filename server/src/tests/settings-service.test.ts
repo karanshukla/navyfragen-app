@@ -94,6 +94,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       mockSelectBuilder.executeTakeFirst = async () => mockUserSettings;
@@ -190,6 +191,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -213,6 +215,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
@@ -243,6 +246,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -274,6 +278,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...row });
@@ -301,6 +306,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       executeTakeFirstQueue.push({
@@ -315,6 +321,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockUpdateBuilder.execute as any) = async () => ({});
@@ -348,6 +355,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -391,6 +399,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -422,6 +431,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -457,6 +467,7 @@ describe("SettingsService", () => {
         uiLocale: null,
         defaultClient: null,
         openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });

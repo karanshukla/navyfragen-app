@@ -12,6 +12,7 @@ import {
   RECIPIENT_NOT_FOUND,
 } from "#/services/message-service";
 import { NotificationService } from "#/services/notification-service";
+import { AtmosphereService } from "#/services/atmosphere-service";
 import { ProfileService } from "#/services/profile-service";
 import {
   QUESTION_NOT_IN_INBOX,
@@ -360,7 +361,13 @@ export interface ProfileDeps {
 export function createProfileHono(ctx: AppContext, deps: ProfileDeps = {}): Hono {
   const app = new Hono();
   const profileService =
-    deps.profileService ?? new ProfileService(ctx.db, ctx.resolver, ctx.logger);
+    deps.profileService ??
+    new ProfileService(
+      ctx.db,
+      ctx.resolver,
+      ctx.logger,
+      new AtmosphereService(ctx.idResolver, ctx.logger)
+    );
 
   app.get(
     "/public-profile/:did",
@@ -562,6 +569,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
     // "rejects an over-long default client id".
     defaultClient: z.string().max(64).nullable().optional(),
     openProfilesInApp: z.boolean().optional(),
+    atmosphereLinksEnabled: z.boolean().optional(),
   });
 
   app.post(
@@ -590,6 +598,7 @@ export function createSettingsHono(ctx: AppContext, deps: SettingsDeps = {}): Ho
           uiLocale: body.uiLocale,
           defaultClient: body.defaultClient,
           openProfilesInApp: body.openProfilesInApp,
+          atmosphereLinksEnabled: body.atmosphereLinksEnabled,
         });
         ctx.logger.info(
           { did: userSessionDid, updatedFields: Object.keys(body ?? {}) },

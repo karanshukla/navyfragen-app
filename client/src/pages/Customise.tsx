@@ -277,6 +277,24 @@ export default function Customise() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
+            title={messages.customisePage.atmosphereLinksSetting}
+            description={messages.customisePage.atmosphereLinksSettingDescription}
+            control={headerToggle(
+              <SettingsToggle
+                label={messages.customisePage.atmosphereLinksSetting}
+                checked={dbBoolean(userSettings?.atmosphereLinksEnabled, true)}
+                onChange={(checked) => updateSettings.mutate({ atmosphereLinksEnabled: checked })}
+                disabled={busy}
+                saving={saving("atmosphereLinksEnabled")}
+              />
+            )}
+          >
+            {settingsError ? loadError : null}
+          </SettingsCard>
+        </Grid.Col>
+
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
             title={messages.customisePage.openProfilesInApp(APP_NAME)}
             description={messages.customisePage.openProfilesInAppDescription(APP_NAME)}
             control={headerToggle(
