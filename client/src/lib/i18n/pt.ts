@@ -212,9 +212,6 @@ export const pt = {
       "Quando ativado, as mensagens recebidas são filtradas com listas de palavras em inglês, espanhol, português, alemão e francês - cada mensagem é verificada nos cinco idiomas, qualquer que seja o idioma configurado no app. Mensagens sinalizadas são descartadas silenciosamente - quem envia vê uma resposta de sucesso, mas a mensagem nunca chega à sua caixa de entrada.",
     atmosphereLinks: "Links do Atmosphere",
     atmosphereLinksHelp: "Para onde levam os links de publicações e perfis.",
-    defaultClient: "Cliente preferido",
-    defaultClientDescription:
-      "Qual cliente do Atmosphere abre as publicações e os perfis que você segue daqui.",
     openProfilesInApp: (appName) => `Abrir os perfis no ${appName}`,
     openProfilesInAppDescription: (appName) =>
       `Quando ativo, uma @menção numa bio abre o perfil dessa pessoa no ${appName}. Quando não, ela abre no seu cliente preferido.`,
@@ -373,10 +370,9 @@ export const pt = {
     answersOnPds: "Respostas no PDS",
     activeSince: "Ativo desde",
     pdsLabel: "PDS",
-    installApplication: "Instalar aplicativo",
-    installApplicationDescription:
-      "Instale o app para acesso mais rápido em qualquer dispositivo: celular, tablet ou laptop. Ele roda no mesmo navegador, e você pode desinstalá-lo quando quiser.",
-    install: "Instalar ",
+    defaultClient: "Cliente preferido",
+    defaultClientDescription:
+      "Qual cliente do Atmosphere abre as publicações e os perfis que você segue daqui.",
     openFeedOnBluesky: "Abrir feed no Bluesky",
     dailyNotifications: "Notificações diárias",
     viewBotOnBluesky: "Ver bot no Bluesky",

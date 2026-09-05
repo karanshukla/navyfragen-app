@@ -37,9 +37,9 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 
 **What it would take to test:** Not worth pursuing — would require mocking `document.body.style` property assignment to throw, which doesn't reflect any real browser behavior.
 
-### `client/src/pages/Customise.tsx` — unreachable `null` fallback in the three `Select`s' `onChange`
+### `client/src/pages/Customise.tsx` and `client/src/pages/Settings.tsx` — unreachable `null` fallback in the three `Select`s' `onChange`
 
-**Lines:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange`, `uiLocale: value || null` inside the "App language" `Select`'s `onChange` beside it (the latter reachable at all only since #406 gave `uiLocaleOptions` a second entry — see below), and `defaultClient: value || null` inside the Atmosphere-client `Select`'s `onChange`.
+**Lines:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange`, `uiLocale: value || null` inside the "App language" `Select`'s `onChange` beside it (the latter reachable at all only since #406 gave `uiLocaleOptions` a second entry — see below), and `defaultClient: value || null` inside the preferred-client `Select`'s `onChange` on the Settings page.
 
 **Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. All three `Select`s are rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty codes from `touchpointLocales`/`uiLocaleOptions`/`postClientOptions` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
 
@@ -54,14 +54,6 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 ### `client/src/pages/Customise.tsx` — App language `Select`'s `onChange` (resolved by #406)
 
 **Status: no longer ignored.** `uiLocaleOptions` had exactly one entry (`en`) before #406 added `es`, so the `Select`'s displayed value and its only `data` option were always the same, and Mantine never fired `onChange` through the rendered UI. With a second option in place, `Customise.test.tsx` picks `es` from the "App language" `Select` the same way its "picking a locale" test already did for "Message language", and the `/* istanbul ignore next */` that wrapped the whole handler was removed — the `value || null` fallback inside it picked up its own marker instead (see the combined entry above).
-
-### `client/src/pages/Settings.tsx` — unreachable `!installPrompt` early-return guard
-
-**Line:** `if (!installPrompt) return;` inside `handleInstallClick`.
-
-**Why ignored:** The Install button that calls `handleInstallClick` is rendered with `disabled={!installPrompt}`. Mantine's `<Button disabled>` does not invoke `onClick` in the browser (or in JSDOM via `fireEvent.click`), so `handleInstallClick` can only be called when `installPrompt` is non-null, making the `!installPrompt` guard permanently unreachable through the UI.
-
-**What it would take to test:** Call `handleInstallClick` directly (bypassing the button's disabled state) by exporting it or via a component ref, with `installPrompt` set to `null`.
 
 ### `client/src/api/profileService.ts` — disabled-query reject branch in `useUserExists`
 

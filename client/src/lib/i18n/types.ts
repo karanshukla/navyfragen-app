@@ -192,9 +192,8 @@ export interface SettingsPageMessages {
   answersOnPds: string;
   activeSince: string;
   pdsLabel: string;
-  installApplication: string;
-  installApplicationDescription: string;
-  install: string;
+  defaultClient: string;
+  defaultClientDescription: string;
   openFeedOnBluesky: string;
   dailyNotifications: string;
   viewBotOnBluesky: string;
@@ -233,8 +232,6 @@ export interface CustomisePageMessages {
   profanityFilterDescription: string;
   atmosphereLinks: string;
   atmosphereLinksHelp: string;
-  defaultClient: string;
-  defaultClientDescription: string;
   openProfilesInApp: (appName: string) => string;
   openProfilesInAppDescription: (appName: string) => string;
   atmosphereLinksSetting: string;

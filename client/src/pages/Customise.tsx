@@ -22,7 +22,6 @@ import { SettingsToggle } from "../components/SettingsToggle";
 import { uiLocaleOptions, useTranslations } from "../lib/i18n";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 import { useNumberFormat } from "../lib/useNumberFormat";
-import { FALLBACK_CLIENT_ID, postClientOptions } from "../lib/waypointClients";
 
 import * as styles from "./Customise.styles";
 
@@ -246,35 +245,6 @@ export default function Customise() {
         help={messages.customisePage.atmosphereLinksHelp}
         last
       >
-        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
-          <SettingsCard
-            title={messages.customisePage.defaultClient}
-            description={messages.customisePage.defaultClientDescription}
-          >
-            {field(
-              36,
-              <Select
-                data={postClientOptions}
-                // A stored id that has left the catalog shows as Bluesky, the
-                // same destination it already falls back to when resolved.
-                value={
-                  postClientOptions.some((c) => c.value === userSettings?.defaultClient)
-                    ? userSettings!.defaultClient!
-                    : FALLBACK_CLIENT_ID
-                }
-                onChange={(value) => {
-                  // allowDeselect={false} — Mantine never emits null/"" here.
-                  /* istanbul ignore next */
-                  updateSettings.mutate({ defaultClient: value || null });
-                }}
-                disabled={busy}
-                allowDeselect={false}
-                aria-label={messages.customisePage.defaultClient}
-              />
-            )}
-          </SettingsCard>
-        </Grid.Col>
-
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
             title={messages.customisePage.atmosphereLinksSetting}
