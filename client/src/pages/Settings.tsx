@@ -1,6 +1,6 @@
-import { Alert, Button, Grid, Skeleton, Title } from "@mantine/core";
+import { Alert, Button, Grid, Select, Skeleton, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconDownload, IconExternalLink, IconTrash } from "@tabler/icons-react";
+import { IconExternalLink, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 import { useHaptic } from "use-haptic";
 
@@ -14,7 +14,6 @@ import {
   usePdsInfo,
 } from "../api/settingsService";
 import { ConfirmationModal } from "../components/ConfirmationModal";
-import { useInstallPrompt } from "../components/InstallPromptContext";
 import { PushNotificationsCard } from "../components/PushNotificationsCard";
 import { AccountOverview, type Stat } from "../components/settings/AccountOverview";
 import { SettingsCard } from "../components/SettingsCard";
@@ -24,6 +23,7 @@ import { FEED_RKEY } from "../lib/contracts";
 import { useLocale, useTranslations } from "../lib/i18n";
 import { resolveApiErrorMessage } from "../lib/i18n/apiErrors";
 import { useNumberFormat } from "../lib/useNumberFormat";
+import { FALLBACK_CLIENT_ID, postClientOptions } from "../lib/waypointClients";
 
 const NOTIFICATION_BOT = "https://bsky.app/profile/did:plc:3d4awubjiftylwrhhyp5vl7i";
 const CARD_SPAN = { base: 12, md: 6, lg: 4 };
@@ -52,22 +52,12 @@ export default function Settings() {
   });
   const { data: userStats, isLoading: statsLoading } = useUserStats();
   const { data: pdsInfo, isLoading: pdsLoading } = usePdsInfo();
-  const { installPrompt, setInstallPrompt } = useInstallPrompt();
   const { data: botFollowData, isLoading: botFollowLoading } = useBotFollow(
     Boolean(session?.isLoggedIn)
   );
   const isFollowingBot = Boolean(botFollowData?.following);
 
   const { triggerHaptic } = useHaptic(1);
-
-  const handleInstallClick = async () => {
-    triggerHaptic();
-    /* istanbul ignore if */
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === "accepted") setInstallPrompt(null);
-  };
 
   const settingsLoadError = (
     <Alert color="red" title={messages.common.settingsLoadErrorTitle} withCloseButton={false}>
@@ -138,23 +128,6 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
-            title={messages.settingsPage.installApplication}
-            description={messages.settingsPage.installApplicationDescription}
-          >
-            <Button
-              onClick={handleInstallClick}
-              fullWidth
-              disabled={!installPrompt}
-              leftSection={<IconDownload size={16} />}
-            >
-              {messages.settingsPage.install}
-              {APP_NAME}
-            </Button>
-          </SettingsCard>
-        </Grid.Col>
-
-        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
-          <SettingsCard
             title={messages.settingsPage.pdsSync}
             description={messages.settingsPage.pdsSyncDescription(APP_NAME)}
             control={pdsSyncControl}
@@ -165,6 +138,38 @@ export default function Settings() {
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <PushNotificationsCard />
+        </Grid.Col>
+
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.settingsPage.defaultClient}
+            description={messages.settingsPage.defaultClientDescription}
+          >
+            {settingsLoading ? (
+              <Skeleton height={36} radius="sm" />
+            ) : settingsError ? (
+              settingsLoadError
+            ) : (
+              <Select
+                data={postClientOptions}
+                // A stored id that has left the catalog shows as Bluesky, the
+                // same destination it already falls back to when resolved.
+                value={
+                  postClientOptions.some((c) => c.value === userSettings?.defaultClient)
+                    ? userSettings!.defaultClient!
+                    : FALLBACK_CLIENT_ID
+                }
+                onChange={(value) => {
+                  // allowDeselect={false} — Mantine never emits null/"" here.
+                  /* istanbul ignore next */
+                  updateSettings.mutate({ defaultClient: value || null });
+                }}
+                disabled={updateSettings.isPending}
+                allowDeselect={false}
+                aria-label={messages.settingsPage.defaultClient}
+              />
+            )}
+          </SettingsCard>
         </Grid.Col>
 
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>

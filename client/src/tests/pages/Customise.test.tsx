@@ -103,48 +103,6 @@ describe("Customise page", () => {
     expect(screen.queryByText(/what sends a push/i)).toBeNull();
   });
 
-  it("picking a client fires updateSettings with only defaultClient", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings());
-    const mutate = mockMutation();
-    renderWithProviders(<Customise />);
-
-    const combobox = screen.getByRole("combobox", { name: en.customisePage.defaultClient });
-    fireEvent.click(combobox);
-    fireEvent.click(screen.getByRole("option", { name: "Deer" }));
-
-    expect(mutate).toHaveBeenCalledWith({ defaultClient: "deer" });
-  });
-
-  it("takes no typed input: the client list is a picker, not a text box", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings());
-    mockMutation();
-    renderWithProviders(<Customise />);
-
-    const combobox = screen.getByRole("combobox", { name: en.customisePage.defaultClient });
-    expect(combobox).toHaveAttribute("readonly");
-    expect(combobox).toHaveValue("Bluesky");
-  });
-
-  it("shows Bluesky, not an empty box, when no client has been picked", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: null }));
-    mockMutation();
-    renderWithProviders(<Customise />);
-
-    expect(screen.getByRole("combobox", { name: en.customisePage.defaultClient })).toHaveValue(
-      "Bluesky"
-    );
-  });
-
-  it("shows Bluesky for a stored client id that has left the catalog", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: "a-client-that-shut-down" }));
-    mockMutation();
-    renderWithProviders(<Customise />);
-
-    expect(screen.getByRole("combobox", { name: en.customisePage.defaultClient })).toHaveValue(
-      "Bluesky"
-    );
-  });
-
   it("toggling the profile switch fires updateSettings with only openProfilesInApp", () => {
     mockUseUserSettings.mockReturnValue(mockSettings());
     const mutate = mockMutation();
@@ -179,16 +137,6 @@ describe("Customise page", () => {
     expect(
       screen.getByRole("switch", { name: en.customisePage.atmosphereLinksSetting })
     ).toBeChecked();
-  });
-
-  it("shows the matching label when defaultClient is already set", () => {
-    mockUseUserSettings.mockReturnValue(mockSettings({ defaultClient: "deer" }));
-    mockMutation();
-    renderWithProviders(<Customise />);
-
-    expect(screen.getByRole("combobox", { name: en.customisePage.defaultClient })).toHaveValue(
-      "Deer"
-    );
   });
 
   it("toggling the inbox switch fires updateSettings with only inboxEnabled", () => {

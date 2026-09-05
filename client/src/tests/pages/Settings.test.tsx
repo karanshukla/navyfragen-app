@@ -5,8 +5,7 @@ import * as authService from "../../api/authService";
 import * as notificationService from "../../api/notificationService";
 import * as profileService from "../../api/profileService";
 import * as settingsService from "../../api/settingsService";
-import * as installPromptContext from "../../components/InstallPromptContext";
-import { APP_DOMAIN, APP_NAME } from "../../lib/brand";
+import { APP_DOMAIN } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
 import Settings from "../../pages/Settings";
 import { renderWithProviders } from "../testUtils";
@@ -45,24 +44,17 @@ vi.mock("../../api/profileService", async (importOriginal) => {
   return { ...actual, useBotFollow: vi.fn() };
 });
 
-vi.mock("../../components/InstallPromptContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../components/InstallPromptContext")>();
-  return { ...actual, useInstallPrompt: vi.fn() };
-});
-
 const mockUseSession = vi.mocked(authService.useSession);
 const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
 const mockUseUpdateUserSettings = vi.mocked(settingsService.useUpdateUserSettings);
 const mockUseUserStats = vi.mocked(settingsService.useUserStats);
 const mockUsePdsInfo = vi.mocked(settingsService.usePdsInfo);
 const mockUseBotFollow = vi.mocked(profileService.useBotFollow);
-const mockUseInstallPrompt = vi.mocked(installPromptContext.useInstallPrompt);
 const mockUsePushAvailable = vi.mocked(notificationService.usePushAvailable);
 const mockUseEnablePushNotifications = vi.mocked(notificationService.useEnablePushNotifications);
 const mockUseDisablePushNotifications = vi.mocked(notificationService.useDisablePushNotifications);
 
 const noopMutation = { mutate: vi.fn(), isPending: false } as any;
-const noopInstall = { installPrompt: null, setInstallPrompt: vi.fn() };
 
 function setupLoggedIn() {
   mockUseSession.mockReturnValue({
@@ -71,11 +63,29 @@ function setupLoggedIn() {
   } as any);
 }
 
+/** The loaded-and-quiet page: every hook resolved, nothing pending or failed. */
+function setupLoadedPage(settings: Record<string, unknown> = {}) {
+  setupLoggedIn();
+  mockUseUserSettings.mockReturnValue({
+    data: { pdsSyncEnabled: 1, imageTheme: "default", defaultClient: null, ...settings },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  } as any);
+  mockUseUserStats.mockReturnValue({
+    data: { messageCount: 0, memberSince: null },
+    isLoading: false,
+  } as any);
+  mockUsePdsInfo.mockReturnValue({
+    data: { recordCount: 0, pdsUrl: null },
+    isLoading: false,
+  } as any);
+}
+
 describe("Settings page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUpdateUserSettings.mockReturnValue(noopMutation);
-    mockUseInstallPrompt.mockReturnValue(noopInstall);
     mockUseBotFollow.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -452,42 +462,53 @@ describe("Settings page", () => {
     await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
   });
 
-  it("handleInstallClick calls installPrompt.prompt() and clears it on acceptance", async () => {
-    const setInstallPromptMock = vi.fn();
-    const installPromptMock = {
-      prompt: vi.fn(),
-      userChoice: Promise.resolve({ outcome: "accepted" as const }),
-    };
-    mockUseInstallPrompt.mockReturnValue({
-      installPrompt: installPromptMock,
-      setInstallPrompt: setInstallPromptMock,
-    });
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default" },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
+  it("picking a client fires updateSettings with only defaultClient", () => {
+    const mutate = vi.fn();
+    mockUseUpdateUserSettings.mockReturnValue({ mutate, isPending: false } as any);
+    setupLoadedPage();
     renderWithProviders(<Settings />);
-    const installBtn = screen.getByRole("button", {
-      name: `${en.settingsPage.install}${APP_NAME}`,
-    });
-    fireEvent.click(installBtn);
-    await waitFor(() => {
-      expect(installPromptMock.prompt).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(setInstallPromptMock).toHaveBeenCalledWith(null);
-    });
+
+    const combobox = screen.getByRole("combobox", { name: en.settingsPage.defaultClient });
+    fireEvent.click(combobox);
+    fireEvent.click(screen.getByRole("option", { name: "Deer" }));
+
+    expect(mutate).toHaveBeenCalledWith({ defaultClient: "deer" });
+  });
+
+  it("takes no typed input: the client list is a picker, not a text box", () => {
+    setupLoadedPage();
+    renderWithProviders(<Settings />);
+
+    const combobox = screen.getByRole("combobox", { name: en.settingsPage.defaultClient });
+    expect(combobox).toHaveAttribute("readonly");
+    expect(combobox).toHaveValue("Bluesky");
+  });
+
+  it("shows Bluesky, not an empty box, when no client has been picked", () => {
+    setupLoadedPage({ defaultClient: null });
+    renderWithProviders(<Settings />);
+
+    expect(screen.getByRole("combobox", { name: en.settingsPage.defaultClient })).toHaveValue(
+      "Bluesky"
+    );
+  });
+
+  it("shows Bluesky for a stored client id that has left the catalog", () => {
+    setupLoadedPage({ defaultClient: "a-client-that-shut-down" });
+    renderWithProviders(<Settings />);
+
+    expect(screen.getByRole("combobox", { name: en.settingsPage.defaultClient })).toHaveValue(
+      "Bluesky"
+    );
+  });
+
+  it("shows the matching label when defaultClient is already set", () => {
+    setupLoadedPage({ defaultClient: "deer" });
+    renderWithProviders(<Settings />);
+
+    expect(screen.getByRole("combobox", { name: en.settingsPage.defaultClient })).toHaveValue(
+      "Deer"
+    );
   });
 
   it("renders correctly in dark mode (covers dark-style branches)", () => {
@@ -540,70 +561,6 @@ describe("Settings page", () => {
     await waitFor(() => {
       // The generic fallback (unique to this test — no error.error property)
       expect(screen.getByText(en.errors.generic)).toBeInTheDocument();
-    });
-  });
-
-  it("handleInstallClick returns early without calling prompt() when installPrompt is null", async () => {
-    // Default noopInstall has installPrompt: null; button is disabled but fireEvent bypasses it
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default" },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    // fireEvent.click dispatches even on disabled buttons in JSDOM
-    fireEvent.click(screen.getByRole("button", { name: `${en.settingsPage.install}${APP_NAME}` }));
-
-    // noopInstall.installPrompt is null → handleInstallClick returns early
-    expect(noopInstall.setInstallPrompt).not.toHaveBeenCalled();
-  });
-
-  it("handleInstallClick does not clear installPrompt when outcome is dismissed", async () => {
-    const setInstallPromptMock = vi.fn();
-    const installPromptMock = {
-      prompt: vi.fn(),
-      userChoice: Promise.resolve({ outcome: "dismissed" as const }),
-    };
-    mockUseInstallPrompt.mockReturnValue({
-      installPrompt: installPromptMock,
-      setInstallPrompt: setInstallPromptMock,
-    });
-    setupLoggedIn();
-    mockUseUserSettings.mockReturnValue({
-      data: { pdsSyncEnabled: 1, imageTheme: "default" },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    } as any);
-    mockUseUserStats.mockReturnValue({
-      data: { messageCount: 0, memberSince: null },
-      isLoading: false,
-    } as any);
-    mockUsePdsInfo.mockReturnValue({
-      data: { recordCount: 0, pdsUrl: null },
-      isLoading: false,
-    } as any);
-    renderWithProviders(<Settings />);
-
-    fireEvent.click(screen.getByRole("button", { name: `${en.settingsPage.install}${APP_NAME}` }));
-
-    await waitFor(() => {
-      expect(installPromptMock.prompt).toHaveBeenCalled();
-    });
-    // outcome is "dismissed" → setInstallPrompt(null) should NOT be called
-    await waitFor(() => {
-      expect(setInstallPromptMock).not.toHaveBeenCalledWith(null);
     });
   });
 

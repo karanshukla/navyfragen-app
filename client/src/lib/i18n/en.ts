@@ -204,9 +204,6 @@ export const en = {
       "When on, incoming messages are screened against wordlists for English, Spanish, Portuguese, German and French - every message is checked against all five, whatever language you have the app set to. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
     atmosphereLinks: "Atmosphere links",
     atmosphereLinksHelp: "Where links to posts and profiles take you.",
-    defaultClient: "Preferred client",
-    defaultClientDescription:
-      "Which Atmosphere client opens the posts and profiles you follow from here.",
     openProfilesInApp: (appName) => `Open profiles in ${appName}`,
     openProfilesInAppDescription: (appName) =>
       `When on, an @mention in someone's bio opens their ${appName} profile. When off, it opens in your preferred client.`,
@@ -364,10 +361,9 @@ export const en = {
     answersOnPds: "Answers on PDS",
     activeSince: "Active since",
     pdsLabel: "PDS",
-    installApplication: "Install Application",
-    installApplicationDescription:
-      "Install the app for faster access on any device: phone, tablet or laptop. It runs in the same browser, and you can uninstall it any time.",
-    install: "Install ",
+    defaultClient: "Preferred client",
+    defaultClientDescription:
+      "Which Atmosphere client opens the posts and profiles you follow from here.",
     openFeedOnBluesky: "Open Feed on Bluesky",
     dailyNotifications: "Daily Notifications",
     viewBotOnBluesky: "View bot on Bluesky",
