@@ -107,6 +107,22 @@ export interface QuestionCardMessages {
   deleteMessageLabel: string;
   replyToThread: string;
   reply: string;
+  openInTooltip: string;
+  openInLabel: string;
+}
+
+export interface OpenInPickerMessages {
+  title: string;
+  yourDefaultHeading: string;
+  recommendedHeading: string;
+  allHeading: string;
+  openInLabel: (client: string) => string;
+  copyLinkTooltip: string;
+  copyLinkLabel: (client: string) => string;
+  linkCopied: string;
+  copyFailed: string;
+  shareUniversalLink: string;
+  shareFailed: string;
 }
 
 export interface ReplyComposerMessages {
@@ -215,6 +231,14 @@ export interface CustomisePageMessages {
   inboxDescription: string;
   profanityFilter: string;
   profanityFilterDescription: string;
+  atmosphereLinks: string;
+  atmosphereLinksHelp: string;
+  defaultClient: string;
+  defaultClientDescription: string;
+  openProfilesInApp: (appName: string) => string;
+  openProfilesInAppDescription: (appName: string) => string;
+  atmosphereLinksSetting: string;
+  atmosphereLinksSettingDescription: string;
 }
 
 export interface PublicProfilePageMessages {
@@ -242,7 +266,7 @@ export interface AskCardMessages {
 }
 
 export interface ProfileCardMessages {
-  viewOnBluesky: string;
+  viewOn: (client: string) => string;
 }
 
 export interface ProfileUrlBarMessages {
@@ -250,6 +274,8 @@ export interface ProfileUrlBarMessages {
   shareFailedMessage: string;
   copyProfileLinkAriaLabel: string;
   shareProfileLinkAriaLabel: string;
+  atmosphereLinksLabel: string;
+  moreAtmosphereApps: (count: number) => string;
 }
 
 export interface LoginPageMessages {
@@ -344,6 +370,7 @@ export interface Messages {
   inboxLinkCard: InboxLinkCardMessages;
   postingPreferences: PostingPreferencesMessages;
   questionCard: QuestionCardMessages;
+  openInPicker: OpenInPickerMessages;
   replyComposer: ReplyComposerMessages;
   imageThemePicker: ImageThemePickerMessages;
   themes: ThemesMessages;

@@ -1,13 +1,23 @@
 import { ActionIcon, Box, Button, Group, Paper, Stack, Text, Tooltip } from "@mantine/core";
-import { IconExternalLink, IconPin, IconPinned, IconTrash } from "@tabler/icons-react";
+import {
+  IconAppWindow,
+  IconExternalLink,
+  IconPin,
+  IconPinned,
+  IconTrash,
+} from "@tabler/icons-react";
+import { useState } from "react";
 import { useHaptic } from "use-haptic";
 
 import type { Message } from "../../api/messageService";
 import { formatTimestamp } from "../../lib/formatTimestamp";
 import { useLocale, useTranslations } from "../../lib/i18n";
 import type { ThreadLink } from "../../lib/useThreadRoot";
+import { postedAnswerLink } from "../../lib/waypointClients";
+import { postWaypointTargetFor } from "../../lib/waypointTarget";
 import { highlightButton } from "../../styles/tokens";
 
+import { OpenInModal } from "./OpenInModal";
 import * as styles from "./QuestionCard.styles";
 
 interface QuestionCardProps {
@@ -26,6 +36,10 @@ interface QuestionCardProps {
   inThread: boolean;
   /** The Bluesky post this card's answer started, once it has one. */
   threadLink?: ThreadLink;
+  /** The answering account, so a destination reads as a handle and not a DID. */
+  handle?: string;
+  /** The client picked on /customise, which this card's link points at. */
+  defaultClientId: string | null;
   onFocus: () => void;
   onToggleExpanded: () => void;
   onTogglePin: () => void;
@@ -47,6 +61,8 @@ export function QuestionCard({
   blocked,
   inThread,
   threadLink,
+  handle,
+  defaultClientId,
   onFocus,
   onToggleExpanded,
   onTogglePin,
@@ -57,6 +73,9 @@ export function QuestionCard({
   const { triggerHaptic } = useHaptic(1);
   const messages = useTranslations();
   const locale = useLocale();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const target = postWaypointTargetFor(threadLink?.uri, handle);
+  const postLink = postedAnswerLink(threadLink?.uri, threadLink?.link, handle, defaultClientId);
   const deleteRefusal = pinned
     ? {
         tooltip: messages.questionCard.cannotDeleteThreadRootTooltip,
@@ -159,19 +178,41 @@ export function QuestionCard({
           </Text>
         </Box>
 
-        {threadLink?.link && (
-          <Box>
-            <a
-              href={threadLink.link}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={styles.threadLink}
-            >
+        {postLink && (
+          <Group gap={4} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
+            <a href={postLink} target="_blank" rel="noreferrer" style={styles.threadLink}>
               <IconExternalLink size={11} style={{ flexShrink: 0 }} />
-              <span style={styles.threadLinkText}>{threadLink.link.replace("https://", "")}</span>
+              <span style={styles.threadLinkText}>{postLink.replace("https://", "")}</span>
             </a>
-          </Box>
+            {target && (
+              <Tooltip
+                label={messages.questionCard.openInTooltip}
+                withArrow
+                position="top"
+                openDelay={500}
+              >
+                <ActionIcon
+                  size="sm"
+                  variant="transparent"
+                  radius="md"
+                  aria-label={messages.questionCard.openInLabel}
+                  onClick={() => setPickerOpen(true)}
+                  style={styles.iconButton(false)}
+                >
+                  <IconAppWindow size={14} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </Group>
+        )}
+
+        {target && pickerOpen && (
+          <OpenInModal
+            opened
+            onClose={() => setPickerOpen(false)}
+            target={target}
+            defaultClientId={defaultClientId}
+          />
         )}
 
         {expanded ? (

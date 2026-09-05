@@ -5,10 +5,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import * as messageService from "../../api/messageService";
 import * as profileService from "../../api/profileService";
+import * as settingsService from "../../api/settingsService";
 import { APP_NAME } from "../../lib/brand";
 import { en } from "../../lib/i18n/en";
 import { getTouchpointTranslations } from "../../lib/touchpointTranslations";
 import PublicProfile from "../../pages/PublicProfile";
+import type { AtmosphereAppLink } from "../../lib/atmosphereApps";
 import { renderWithProviders } from "../testUtils";
 
 const t = getTouchpointTranslations("en");
@@ -33,14 +35,20 @@ vi.mock("../../api/messageService", async (importOriginal) => {
   return { ...actual, useSendMessage: vi.fn() };
 });
 
+vi.mock("../../api/settingsService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/settingsService")>();
+  return { ...actual, useUserSettings: vi.fn() };
+});
+
 const mockUseResolveHandle = vi.mocked(profileService.useResolveHandle);
 const mockUsePublicProfile = vi.mocked(profileService.usePublicProfile);
 const mockUseSendMessage = vi.mocked(messageService.useSendMessage);
+const mockUseUserSettings = vi.mocked(settingsService.useUserSettings);
 const mockUseParams = vi.mocked(reactRouterDom.useParams);
 
 const TEST_DID = "did:example:karan";
 
-function setupProfile() {
+function setupProfile(atmosphereApps: AtmosphereAppLink[] = []) {
   mockUseResolveHandle.mockReturnValue({
     data: { did: TEST_DID },
     isLoading: false,
@@ -49,6 +57,7 @@ function setupProfile() {
   mockUsePublicProfile.mockReturnValue({
     data: {
       exists: true,
+      atmosphereApps,
       profile: {
         did: TEST_DID,
         handle: "karan.bsky.social",
@@ -69,6 +78,9 @@ describe("PublicProfile page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notifications.clean();
+    // Every page render reads the viewer's own settings; a test that cares
+    // about the client they picked overrides this.
+    mockUseUserSettings.mockReturnValue({ data: undefined } as any);
   });
 
   afterEach(() => {
@@ -889,5 +901,81 @@ describe("PublicProfile page", () => {
     const { container } = renderWithProviders(<PublicProfile />);
     const askCard = container.querySelector("[style*='ds-grad-ember']") as HTMLElement | null;
     expect(askCard).not.toBeNull();
+  });
+  it("links the other Atmosphere apps the owner publishes to", () => {
+    setupProfile([
+      { id: "tangled", name: "Tangled", url: "https://tangled.org/karan.bsky.social" },
+    ]);
+    renderWithProviders(<PublicProfile />);
+
+    expect(screen.getByRole("link", { name: en.profileCard.viewOn("Tangled") })).toHaveAttribute(
+      "href",
+      "https://tangled.org/karan.bsky.social"
+    );
+  });
+
+  it("shows no Atmosphere row for an owner who opted out", () => {
+    // The server sends an empty list for an opted-out account, which is the
+    // same shape as an account on nothing else — both render no row at all.
+    setupProfile([]);
+    renderWithProviders(<PublicProfile />);
+
+    expect(screen.queryByLabelText(en.profileUrlBar.atmosphereLinksLabel)).not.toBeInTheDocument();
+  });
+
+  it("points the profile link at the client the viewer picked, not the owner's", () => {
+    setupProfile();
+    mockUseUserSettings.mockReturnValue({ data: { defaultClient: "deer" } } as any);
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByRole("link", { name: /view on/i })).toHaveAttribute(
+      "href",
+      "https://deer.social/profile/karan.bsky.social"
+    );
+  });
+
+  it("points the profile link at Bluesky for a viewer with no client picked", () => {
+    setupProfile();
+    renderWithProviders(<PublicProfile />);
+    expect(screen.getByRole("link", { name: /view on/i })).toHaveAttribute(
+      "href",
+      "https://bsky.app/profile/karan.bsky.social"
+    );
+  });
+
+  it("offers the way out to a client when the account is not on the app", () => {
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: { exists: false, profile: null },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseUserSettings.mockReturnValue({ data: { defaultClient: "deer" } } as any);
+    renderWithProviders(<PublicProfile />);
+
+    expect(screen.getByRole("link", { name: /view on/i })).toHaveAttribute(
+      "href",
+      "https://deer.social/profile/karan.bsky.social"
+    );
+  });
+
+  it("offers no way out when the route carries no handle to address", () => {
+    mockUseParams.mockReturnValue({ handle: undefined } as any);
+    mockUseResolveHandle.mockReturnValue({
+      data: { did: TEST_DID },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUsePublicProfile.mockReturnValue({
+      data: { exists: false, profile: null },
+      isLoading: false,
+      error: null,
+    } as any);
+    renderWithProviders(<PublicProfile />);
+
+    expect(screen.queryByRole("link", { name: /view on/i })).not.toBeInTheDocument();
   });
 });

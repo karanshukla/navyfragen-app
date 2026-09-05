@@ -113,6 +113,22 @@ export const fr = {
     deleteMessageLabel: "Supprimer le message",
     replyToThread: "↩ Répondre au fil",
     reply: "↩ Répondre",
+    openInTooltip: "Ouvrir cette réponse dans un autre client",
+    openInLabel: "Ouvrir dans un autre client",
+  },
+
+  openInPicker: {
+    title: "Ouvrir dans…",
+    yourDefaultHeading: "Ton client par défaut",
+    recommendedHeading: "Recommandés",
+    allHeading: "Tous les clients",
+    openInLabel: (client: string) => `Ouvrir dans ${client}`,
+    copyLinkTooltip: "Copier le lien de ce client",
+    copyLinkLabel: (client: string) => `Copier le lien ${client}`,
+    linkCopied: "Lien copié",
+    copyFailed: "Impossible de copier le lien",
+    shareUniversalLink: "Partager un lien universel",
+    shareFailed: "Impossible de partager le lien",
   },
   replyComposer: {
     stillRenderingImage: "Génération de l'image de ta question en cours…",
@@ -195,6 +211,17 @@ export const fr = {
     profanityFilter: "Filtre de grossièretés",
     profanityFilterDescription:
       "Une fois activé, les messages entrants sont filtrés à l'aide de listes de mots en anglais, espagnol, portugais, allemand et français - chaque message est vérifié dans les cinq langues, quelle que soit la langue que tu as choisie dans l'appli. Les messages signalés sont discrètement écartés - l'expéditeur voit une réponse de succès, mais le message n'atteint jamais ta boîte de réception.",
+    atmosphereLinks: "Liens Atmosphere",
+    atmosphereLinksHelp: "Vers où mènent les liens vers les publications et les profils.",
+    defaultClient: "Client préféré",
+    defaultClientDescription:
+      "Quel client Atmosphere ouvre les publications et les profils que tu suis depuis ici.",
+    openProfilesInApp: (appName) => `Ouvrir les profils dans ${appName}`,
+    openProfilesInAppDescription: (appName) =>
+      `Quand c'est activé, une @mention dans une bio ouvre le profil ${appName} de cette personne. Sinon, elle s'ouvre dans ton client préféré.`,
+    atmosphereLinksSetting: "Afficher tes autres applis",
+    atmosphereLinksSettingDescription:
+      "Quand c'est activé, ton profil renvoie vers les autres applis Atmosphere depuis lesquelles tu publies, lues depuis ton PDS. Sinon, il n'en affiche aucune.",
   },
   publicProfilePage: {
     messageEmptyError: "Le message ne peut pas être vide.",
@@ -221,13 +248,15 @@ export const fr = {
     clearMessage: "Effacer le message",
   },
   profileCard: {
-    viewOnBluesky: "Voir sur Bluesky",
+    viewOn: (client) => `Voir sur ${client}`,
   },
   profileUrlBar: {
     shareFailedTitle: "Échec du partage",
     shareFailedMessage: "Impossible de partager le lien.",
     copyProfileLinkAriaLabel: "Copier le lien du profil",
     shareProfileLinkAriaLabel: "Partager le lien du profil",
+    atmosphereLinksLabel: "Aussi sur",
+    moreAtmosphereApps: (count) => `${count} autres applis`,
   },
   loginPage: {
     handleRequired: "Le nom d'utilisateur est requis",

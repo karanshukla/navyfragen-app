@@ -22,6 +22,21 @@ export interface UserSettings extends AskCardCustomisation {
   profanityFilterEnabled: number | boolean;
   /** The logged-in user's own app language. Private — never returned on a public profile. */
   uiLocale: string | null;
+  /**
+   * The Atmosphere client, by Aturi waypoint id, that this user's answers link
+   * to. Null keeps the Bluesky link the server posted. Private, like uiLocale.
+   */
+  defaultClient: string | null;
+  /**
+   * Whether an @mention in a bio opens that account's profile inside this app
+   * rather than in `defaultClient`. Private, like `uiLocale`.
+   */
+  openProfilesInApp: number | boolean;
+  /**
+   * Whether this account's profile advertises the other Atmosphere apps it
+   * publishes to. Unlike the two above, this one is the owner's and is public.
+   */
+  atmosphereLinksEnabled: number | boolean;
   createdAt: string;
 }
 

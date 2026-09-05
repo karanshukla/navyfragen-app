@@ -92,6 +92,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       mockSelectBuilder.executeTakeFirst = async () => mockUserSettings;
@@ -147,6 +150,7 @@ describe("SettingsService", () => {
       assert.deepStrictEqual(mockDb.insertInto.mock.calls[0], ["user_settings"]);
       assert.strictEqual(lastValuesArg.did, "user123");
       assert.strictEqual(lastValuesArg.pdsSyncEnabled, 1);
+      assert.strictEqual(lastValuesArg.openProfilesInApp, 1);
       assert.strictEqual(lastValuesArg.inboxEnabled, 1);
       assert.strictEqual(lastValuesArg.customPrompt, null);
     });
@@ -185,6 +189,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -206,6 +213,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       assert.strictEqual(mockDb.selectFrom.mock.calls.length, 2);
@@ -234,6 +244,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockInsertBuilder.execute as any) = async () => ({});
@@ -251,6 +264,34 @@ describe("SettingsService", () => {
       assert.strictEqual(lastValuesArg.profanityFilterEnabled, 1);
     });
 
+    it("stores the profile-link switch as 0/1, never as a raw boolean", async () => {
+      // Arrange
+      const row = {
+        did: "user123",
+        pdsSyncEnabled: 1,
+        imageTheme: "default",
+        inboxEnabled: 1,
+        profanityFilterEnabled: 0,
+        customPrompt: null,
+        profileCardTheme: null,
+        touchpointLocale: null,
+        uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
+        createdAt: "2025-06-07T12:00:00.000Z",
+      };
+      executeTakeFirstQueue.push({ ...row });
+      executeTakeFirstQueue.push({ ...row, openProfilesInApp: 0 });
+      (mockUpdateBuilder.execute as any) = async () => ({});
+
+      // Act
+      await settingsService.updateSettings("user123", { openProfilesInApp: false });
+
+      // Assert
+      assert.strictEqual(lastSetArg.openProfilesInApp, 0);
+    });
+
     it("should update only the provided fields on an existing row (partial update)", async () => {
       // Arrange
       executeTakeFirstQueue.push({
@@ -263,6 +304,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       executeTakeFirstQueue.push({
@@ -275,6 +319,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       });
       (mockUpdateBuilder.execute as any) = async () => ({});
@@ -306,6 +353,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -347,6 +397,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -376,6 +429,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });
@@ -409,6 +465,9 @@ describe("SettingsService", () => {
         profileCardTheme: null,
         touchpointLocale: null,
         uiLocale: null,
+        defaultClient: null,
+        openProfilesInApp: 1,
+        atmosphereLinksEnabled: 1,
         createdAt: "2025-06-07T12:00:00.000Z",
       };
       executeTakeFirstQueue.push({ ...baseRow });

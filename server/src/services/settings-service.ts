@@ -18,6 +18,9 @@ export interface UserSettings {
   profileCardTheme: string | null;
   touchpointLocale: string | null;
   uiLocale: string | null;
+  defaultClient: string | null;
+  openProfilesInApp: number;
+  atmosphereLinksEnabled: number;
   createdAt: string;
 }
 
@@ -32,6 +35,9 @@ const SETTINGS_DEFAULTS = {
   profileCardTheme: USE_APP_DEFAULT,
   touchpointLocale: USE_APP_DEFAULT,
   uiLocale: USE_APP_DEFAULT,
+  defaultClient: USE_APP_DEFAULT,
+  openProfilesInApp: toDbBoolean(true),
+  atmosphereLinksEnabled: toDbBoolean(true),
 } satisfies Omit<UserSettings, "did" | "createdAt">;
 
 /**
@@ -53,12 +59,17 @@ export interface UpdatableSettings {
   profileCardTheme?: string | null;
   touchpointLocale?: string | null;
   uiLocale?: string | null;
+  defaultClient?: string | null;
+  openProfilesInApp?: boolean;
+  atmosphereLinksEnabled?: boolean;
 }
 
 const BOOLEAN_SETTINGS = [
   "pdsSyncEnabled",
   "inboxEnabled",
   "profanityFilterEnabled",
+  "openProfilesInApp",
+  "atmosphereLinksEnabled",
 ] as const satisfies readonly (keyof UpdatableSettings)[];
 
 /**

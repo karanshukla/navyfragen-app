@@ -247,6 +247,14 @@ describe("es catalog interpolations", () => {
     expect(es.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(es.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(es.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.openInPicker.openInLabel("Bluesky")).toBe("Abrir en Bluesky");
+    expect(es.openInPicker.copyLinkLabel("Bluesky")).toBe("Copiar el enlace de Bluesky");
+    expect(es.profileCard.viewOn("Tangled")).toBe("Ver en Tangled");
+    expect(es.customisePage.openProfilesInApp("Navyfragen")).toBe(
+      "Abrir los perfiles en Navyfragen"
+    );
+    expect(es.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(es.profileUrlBar.moreAtmosphereApps(2)).toBe("2 aplicaciones más");
   });
 });
 
@@ -278,6 +286,12 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(pt.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(pt.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(pt.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.openInPicker.openInLabel("Bluesky")).toBe("Abrir em Bluesky");
+    expect(pt.openInPicker.copyLinkLabel("Bluesky")).toBe("Copiar o link do Bluesky");
+    expect(pt.profileCard.viewOn("Tangled")).toBe("Ver no Tangled");
+    expect(pt.customisePage.openProfilesInApp("Navyfragen")).toBe("Abrir os perfis no Navyfragen");
+    expect(pt.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(pt.profileUrlBar.moreAtmosphereApps(2)).toBe("2 outros apps");
   });
 
   it("interpolates every function-valued entry in de", () => {
@@ -302,6 +316,12 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(de.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(de.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(de.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.openInPicker.openInLabel("Bluesky")).toBe("In Bluesky öffnen");
+    expect(de.openInPicker.copyLinkLabel("Bluesky")).toBe("Den Bluesky-Link kopieren");
+    expect(de.profileCard.viewOn("Tangled")).toBe("Auf Tangled ansehen");
+    expect(de.customisePage.openProfilesInApp("Navyfragen")).toBe("Profile in Navyfragen öffnen");
+    expect(de.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(de.profileUrlBar.moreAtmosphereApps(2)).toBe("2 weitere Apps");
   });
 
   it("interpolates every function-valued entry in fr", () => {
@@ -326,6 +346,14 @@ describe("pt/de/fr catalog interpolations", () => {
     expect(fr.settingsPage.feedDescription("Navyfragen")).toContain("Navyfragen");
     expect(fr.settingsPage.dailyNotificationsDescription("Navyfragen")).toContain("Navyfragen");
     expect(fr.settingsPage.deleteMyDataDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.openInPicker.openInLabel("Bluesky")).toBe("Ouvrir dans Bluesky");
+    expect(fr.openInPicker.copyLinkLabel("Bluesky")).toBe("Copier le lien Bluesky");
+    expect(fr.profileCard.viewOn("Tangled")).toBe("Voir sur Tangled");
+    expect(fr.customisePage.openProfilesInApp("Navyfragen")).toBe(
+      "Ouvrir les profils dans Navyfragen"
+    );
+    expect(fr.customisePage.openProfilesInAppDescription("Navyfragen")).toContain("Navyfragen");
+    expect(fr.profileUrlBar.moreAtmosphereApps(2)).toBe("2 autres applis");
   });
 });
 

@@ -106,6 +106,22 @@ export const en = {
     deleteMessageLabel: "Delete message",
     replyToThread: "↩ Reply to thread",
     reply: "↩ Reply",
+    openInTooltip: "Open this answer in another client",
+    openInLabel: "Open in another client",
+  },
+
+  openInPicker: {
+    title: "Open in…",
+    yourDefaultHeading: "Your default",
+    recommendedHeading: "Recommended",
+    allHeading: "All clients",
+    openInLabel: (client: string) => `Open in ${client}`,
+    copyLinkTooltip: "Copy this client's link",
+    copyLinkLabel: (client: string) => `Copy the ${client} link`,
+    linkCopied: "Link copied",
+    copyFailed: "Could not copy the link",
+    shareUniversalLink: "Share a universal link",
+    shareFailed: "Could not share the link",
   },
   replyComposer: {
     stillRenderingImage: "Still rendering your question image…",
@@ -186,6 +202,17 @@ export const en = {
     profanityFilter: "Profanity filter",
     profanityFilterDescription:
       "When on, incoming messages are screened against wordlists for English, Spanish, Portuguese, German and French - every message is checked against all five, whatever language you have the app set to. Flagged messages are silently dropped - the sender sees a success response, but the message never reaches your inbox.",
+    atmosphereLinks: "Atmosphere links",
+    atmosphereLinksHelp: "Where links to posts and profiles take you.",
+    defaultClient: "Preferred client",
+    defaultClientDescription:
+      "Which Atmosphere client opens the posts and profiles you follow from here.",
+    openProfilesInApp: (appName) => `Open profiles in ${appName}`,
+    openProfilesInAppDescription: (appName) =>
+      `When on, an @mention in someone's bio opens their ${appName} profile. When off, it opens in your preferred client.`,
+    atmosphereLinksSetting: "Show your other apps",
+    atmosphereLinksSettingDescription:
+      "When on, your profile links the other Atmosphere apps you publish from, read from your PDS. When off, it shows none.",
   },
   publicProfilePage: {
     messageEmptyError: "Message cannot be empty.",
@@ -211,13 +238,15 @@ export const en = {
     clearMessage: "Clear message",
   },
   profileCard: {
-    viewOnBluesky: "View on Bluesky",
+    viewOn: (client) => `View on ${client}`,
   },
   profileUrlBar: {
     shareFailedTitle: "Share failed",
     shareFailedMessage: "Could not share link.",
     copyProfileLinkAriaLabel: "Copy profile link",
     shareProfileLinkAriaLabel: "Share profile link",
+    atmosphereLinksLabel: "Also on",
+    moreAtmosphereApps: (count) => `${count} more apps`,
   },
   loginPage: {
     handleRequired: "Handle is required",

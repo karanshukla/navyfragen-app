@@ -32,6 +32,10 @@ interface QuestionGridProps {
   deletingTid: string | null;
   onDelete: (tid: string) => void;
   onTogglePin: (tid: string) => void;
+  /** The answering account, so a destination reads as a handle and not a DID. */
+  handle?: string;
+  /** The client picked on /customise, which each answered card's link points at. */
+  defaultClientId: string | null;
 }
 
 /**
@@ -56,6 +60,8 @@ export function QuestionGrid({
   deletingTid,
   onDelete,
   onTogglePin,
+  handle,
+  defaultClientId,
 }: QuestionGridProps) {
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -122,6 +128,8 @@ export function QuestionGrid({
             blocked={blocked}
             inThread={inThread}
             threadLink={pinned ? thread.linkFor(message.tid) : undefined}
+            handle={handle}
+            defaultClientId={defaultClientId}
             onFocus={() => setFocusedIndex(index)}
             onToggleExpanded={toggleExpanded}
             onTogglePin={() => onTogglePin(message.tid)}

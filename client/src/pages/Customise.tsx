@@ -12,6 +12,8 @@ import {
 import { useState, useEffect } from "react";
 
 import { useSession } from "../api/authService";
+import { APP_NAME } from "../lib/brand";
+import { dbBoolean } from "../lib/dbBoolean";
 import { useUserSettings, useUpdateUserSettings, type UserSettings } from "../api/settingsService";
 import { ProfileThemeSwatches } from "../components/customise/ProfileThemeSwatches";
 import { SettingsSection } from "../components/customise/SettingsSection";
@@ -20,20 +22,12 @@ import { SettingsToggle } from "../components/SettingsToggle";
 import { uiLocaleOptions, useTranslations } from "../lib/i18n";
 import { touchpointLocales } from "../lib/touchpointTranslations";
 import { useNumberFormat } from "../lib/useNumberFormat";
+import { FALLBACK_CLIENT_ID, postClientOptions } from "../lib/waypointClients";
 
 import * as styles from "./Customise.styles";
 
 const MAX_PROMPT_LENGTH = 100;
 const CARD_SPAN = { base: 12, md: 6 };
-
-/**
- * SQLite sends 0/1 and Postgres sends false/true for the same column.
- *
- * @see [Customise.test.tsx](../tests/pages/Customise.test.tsx) — pins both.
- */
-function on(value: number | boolean | null | undefined): boolean {
-  return value === 1 || value === true;
-}
 
 export default function Customise() {
   const messages = useTranslations();
@@ -209,7 +203,6 @@ export default function Customise() {
       <SettingsSection
         eyebrow={messages.customisePage.messageIntake}
         help={messages.customisePage.messageIntakeHelp}
-        last
       >
         <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
           <SettingsCard
@@ -218,7 +211,7 @@ export default function Customise() {
             control={headerToggle(
               <SettingsToggle
                 label={messages.customisePage.inbox}
-                checked={on(userSettings?.inboxEnabled)}
+                checked={dbBoolean(userSettings?.inboxEnabled, false)}
                 onChange={(checked) => updateSettings.mutate({ inboxEnabled: checked })}
                 disabled={busy}
                 saving={saving("inboxEnabled")}
@@ -236,10 +229,81 @@ export default function Customise() {
             control={headerToggle(
               <SettingsToggle
                 label={messages.customisePage.profanityFilter}
-                checked={on(userSettings?.profanityFilterEnabled)}
+                checked={dbBoolean(userSettings?.profanityFilterEnabled, false)}
                 onChange={(checked) => updateSettings.mutate({ profanityFilterEnabled: checked })}
                 disabled={busy}
                 saving={saving("profanityFilterEnabled")}
+              />
+            )}
+          >
+            {settingsError ? loadError : null}
+          </SettingsCard>
+        </Grid.Col>
+      </SettingsSection>
+
+      <SettingsSection
+        eyebrow={messages.customisePage.atmosphereLinks}
+        help={messages.customisePage.atmosphereLinksHelp}
+        last
+      >
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.customisePage.defaultClient}
+            description={messages.customisePage.defaultClientDescription}
+          >
+            {field(
+              36,
+              <Select
+                data={postClientOptions}
+                // A stored id that has left the catalog shows as Bluesky, the
+                // same destination it already falls back to when resolved.
+                value={
+                  postClientOptions.some((c) => c.value === userSettings?.defaultClient)
+                    ? userSettings!.defaultClient!
+                    : FALLBACK_CLIENT_ID
+                }
+                onChange={(value) => {
+                  // allowDeselect={false} — Mantine never emits null/"" here.
+                  /* istanbul ignore next */
+                  updateSettings.mutate({ defaultClient: value || null });
+                }}
+                disabled={busy}
+                allowDeselect={false}
+                aria-label={messages.customisePage.defaultClient}
+              />
+            )}
+          </SettingsCard>
+        </Grid.Col>
+
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.customisePage.atmosphereLinksSetting}
+            description={messages.customisePage.atmosphereLinksSettingDescription}
+            control={headerToggle(
+              <SettingsToggle
+                label={messages.customisePage.atmosphereLinksSetting}
+                checked={dbBoolean(userSettings?.atmosphereLinksEnabled, true)}
+                onChange={(checked) => updateSettings.mutate({ atmosphereLinksEnabled: checked })}
+                disabled={busy}
+                saving={saving("atmosphereLinksEnabled")}
+              />
+            )}
+          >
+            {settingsError ? loadError : null}
+          </SettingsCard>
+        </Grid.Col>
+
+        <Grid.Col span={CARD_SPAN} style={{ display: "flex" }}>
+          <SettingsCard
+            title={messages.customisePage.openProfilesInApp(APP_NAME)}
+            description={messages.customisePage.openProfilesInAppDescription(APP_NAME)}
+            control={headerToggle(
+              <SettingsToggle
+                label={messages.customisePage.openProfilesInApp(APP_NAME)}
+                checked={dbBoolean(userSettings?.openProfilesInApp, true)}
+                onChange={(checked) => updateSettings.mutate({ openProfilesInApp: checked })}
+                disabled={busy}
+                saving={saving("openProfilesInApp")}
               />
             )}
           >

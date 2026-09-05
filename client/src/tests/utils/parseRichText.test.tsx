@@ -200,4 +200,22 @@ describe("parseRichText", () => {
     const { container } = render(<>{result}</>);
     expect(container.textContent).toBe("*hi*");
   });
+
+  it("keeps the text that follows a colon", () => {
+    const result = parseRichText("my satire website: bluejays.space");
+    const { container } = render(<>{result}</>);
+    expect(container.textContent).toBe("my satire website: bluejays.space");
+  });
+
+  it("linkifies a bare domain that follows a colon", () => {
+    const result = parseRichText("my satire website: bluejays.space");
+    const { container } = render(<>{result}</>);
+    expect(container.querySelector("a")).toHaveAttribute("href", "https://bluejays.space");
+  });
+
+  it("keeps a time of day intact rather than cutting it at the colon", () => {
+    const result = parseRichText("streaming at 12:30 today");
+    const { container } = render(<>{result}</>);
+    expect(container.textContent).toBe("streaming at 12:30 today");
+  });
 });

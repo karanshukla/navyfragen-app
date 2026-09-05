@@ -112,6 +112,22 @@ export const pt = {
     deleteMessageLabel: "Excluir mensagem",
     replyToThread: "↩ Responder ao tópico",
     reply: "↩ Responder",
+    openInTooltip: "Abrir esta resposta em outro cliente",
+    openInLabel: "Abrir em outro cliente",
+  },
+
+  openInPicker: {
+    title: "Abrir em…",
+    yourDefaultHeading: "Seu padrão",
+    recommendedHeading: "Recomendados",
+    allHeading: "Todos os clientes",
+    openInLabel: (client: string) => `Abrir em ${client}`,
+    copyLinkTooltip: "Copiar o link deste cliente",
+    copyLinkLabel: (client: string) => `Copiar o link do ${client}`,
+    linkCopied: "Link copiado",
+    copyFailed: "Não foi possível copiar o link",
+    shareUniversalLink: "Compartilhar um link universal",
+    shareFailed: "Não foi possível compartilhar o link",
   },
   replyComposer: {
     stillRenderingImage: "Ainda gerando a imagem da sua pergunta…",
@@ -194,6 +210,17 @@ export const pt = {
     profanityFilter: "Filtro de palavrões",
     profanityFilterDescription:
       "Quando ativado, as mensagens recebidas são filtradas com listas de palavras em inglês, espanhol, português, alemão e francês - cada mensagem é verificada nos cinco idiomas, qualquer que seja o idioma configurado no app. Mensagens sinalizadas são descartadas silenciosamente - quem envia vê uma resposta de sucesso, mas a mensagem nunca chega à sua caixa de entrada.",
+    atmosphereLinks: "Links do Atmosphere",
+    atmosphereLinksHelp: "Para onde levam os links de publicações e perfis.",
+    defaultClient: "Cliente preferido",
+    defaultClientDescription:
+      "Qual cliente do Atmosphere abre as publicações e os perfis que você segue daqui.",
+    openProfilesInApp: (appName) => `Abrir os perfis no ${appName}`,
+    openProfilesInAppDescription: (appName) =>
+      `Quando ativo, uma @menção numa bio abre o perfil dessa pessoa no ${appName}. Quando não, ela abre no seu cliente preferido.`,
+    atmosphereLinksSetting: "Mostrar os seus outros apps",
+    atmosphereLinksSettingDescription:
+      "Quando ativo, o seu perfil liga aos outros apps do Atmosphere onde você publica, lidos a partir do seu PDS. Quando não, não mostra nenhum.",
   },
   publicProfilePage: {
     messageEmptyError: "A mensagem não pode estar vazia.",
@@ -220,13 +247,15 @@ export const pt = {
     clearMessage: "Limpar mensagem",
   },
   profileCard: {
-    viewOnBluesky: "Ver no Bluesky",
+    viewOn: (client) => `Ver no ${client}`,
   },
   profileUrlBar: {
     shareFailedTitle: "Falha ao compartilhar",
     shareFailedMessage: "Não foi possível compartilhar o link.",
     copyProfileLinkAriaLabel: "Copiar link do perfil",
     shareProfileLinkAriaLabel: "Compartilhar link do perfil",
+    atmosphereLinksLabel: "Também em",
+    moreAtmosphereApps: (count) => `${count} outros apps`,
   },
   loginPage: {
     handleRequired: "O usuário é obrigatório",

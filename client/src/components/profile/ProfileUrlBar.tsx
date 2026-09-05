@@ -3,7 +3,10 @@ import { notifications } from "@mantine/notifications";
 import { IconClipboard, IconShare, IconWorld } from "@tabler/icons-react";
 import { useHaptic } from "use-haptic";
 
+import type { AtmosphereApp } from "../../lib/atmosphereApps";
 import { useTranslations } from "../../lib/i18n";
+
+import { AtmosphereLinks } from "./AtmosphereLinks";
 
 import * as styles from "./ProfileUrlBar.styles";
 
@@ -11,10 +14,12 @@ interface ProfileUrlBarProps {
   handle: string;
   url: string;
   shareTitle: string;
+  /** The other Atmosphere apps this account is on; empty for most accounts. */
+  atmosphereApps: AtmosphereApp[];
 }
 
 /** The "fragen.navy/<handle>" pill, with copy and native-share affordances. */
-export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
+export function ProfileUrlBar({ handle, url, shareTitle, atmosphereApps }: ProfileUrlBarProps) {
   const { triggerHaptic } = useHaptic(1);
   const messages = useTranslations();
 
@@ -34,15 +39,15 @@ export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
 
   return (
     <Group justify="space-between" align="center" mb="sm">
-      <Box component="span" style={styles.pill}>
-        <IconWorld size={12} />
-        fragen.navy/
-        <Text component="span" inherit style={styles.pillHandle}>
-          {handle}
-        </Text>
-      </Box>
+      <Group gap="xs" align="center">
+        <Box component="span" style={styles.pill}>
+          <IconWorld size={12} />
+          fragen.navy/
+          <Text component="span" inherit style={styles.pillHandle}>
+            {handle}
+          </Text>
+        </Box>
 
-      <Group gap="xs">
         <CopyButton value={url}>
           {({ copied, copy }) => (
             <Tooltip label={copied ? messages.common.copied : messages.common.copyLink} withArrow>
@@ -76,6 +81,8 @@ export function ProfileUrlBar({ handle, url, shareTitle }: ProfileUrlBarProps) {
           </ActionIcon>
         )}
       </Group>
+
+      <AtmosphereLinks apps={atmosphereApps} />
     </Group>
   );
 }

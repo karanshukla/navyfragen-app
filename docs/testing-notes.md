@@ -37,11 +37,11 @@ These client sites carried `/* v8 ignore */` markers that istanbul does not need
 
 **What it would take to test:** Not worth pursuing — would require mocking `document.body.style` property assignment to throw, which doesn't reflect any real browser behavior.
 
-### `client/src/pages/Customise.tsx` — unreachable `null` fallback in both locale `Select`s' `onChange`
+### `client/src/pages/Customise.tsx` — unreachable `null` fallback in the three `Select`s' `onChange`
 
-**Lines:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange`, and `uiLocale: value || null` inside the "App language" `Select`'s `onChange` beside it (the latter reachable at all only since #406 gave `uiLocaleOptions` a second entry — see below).
+**Lines:** `touchpointLocale: value || null` inside the "Message language" `Select`'s `onChange`, `uiLocale: value || null` inside the "App language" `Select`'s `onChange` beside it (the latter reachable at all only since #406 gave `uiLocaleOptions` a second entry — see below), and `defaultClient: value || null` inside the Atmosphere-client `Select`'s `onChange`.
 
-**Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. Both `Select`s are rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty locale codes from `touchpointLocales`/`uiLocaleOptions` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
+**Why ignored:** Mantine's `Select` `onChange` signature is typed to allow `value: string | null`, but `null` is only ever passed when the currently-selected option is deselected, which requires `allowDeselect` (or `clearable`) to be enabled. All three `Select`s are rendered with `allowDeselect={false}` and no clear affordance, so every `onChange` reachable through the rendered UI carries one of the non-empty codes from `touchpointLocales`/`uiLocaleOptions`/`postClientOptions` — `value` is always truthy in practice. The `|| null` exists to satisfy the handler's declared parameter type, not to handle a reachable UI state.
 
 **Marker placement:** each `onChange` arrow was rewritten from a concise body to a block body so `/* istanbul ignore next */` has a statement to attach to. Inline on the `value || null` expression it does nothing.
 
